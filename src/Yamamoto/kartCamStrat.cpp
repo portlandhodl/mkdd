@@ -34,7 +34,7 @@ void KartCam::SetPtr() {}
 
 JGeometry::TVec3f *KartCam::GetCameraPos() { return &mCameraPos; }
 
-JGeometry::TVec3f *KartCam::GetCameraLookPos() {}
+JGeometry::TVec3f *KartCam::GetCameraLookPos() { return &mCameraLookPos; }
 
 void KartCam::SetFovyData() {}
 
