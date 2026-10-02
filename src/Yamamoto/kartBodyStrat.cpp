@@ -95,13 +95,14 @@ void KartStrat::DoAirCrl() {}
 void KartStrat::DoYawCrl() {}
 
 void KartStrat::DoSignalCrl() {
-    mBody->mWg.y = 0.0f;
-    mBody->mVel.x = 0.0f;
-    mBody->mVel.y = 0.0f;
-    mBody->mVel.z = 0.0f;
-    mBody->_2cc.x = 0.0f;
-    mBody->_2cc.y = 0.0f;
-    mBody->_2cc.z = 0.0f;
+    KartBody *body = mBody;
+    body->mWg.y = 0.0f;
+    body->mVel.x = 0.0f;
+    body->mVel.y = 0.0f;
+    body->mVel.z = 0.0f;
+    body->_2cc.x = 0.0f;
+    body->_2cc.y = 0.0f;
+    body->_2cc.z = 0.0f;
 }
 
 void KartStrat::DoSpeedCrl() {}
