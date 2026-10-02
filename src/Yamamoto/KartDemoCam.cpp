@@ -1,4 +1,5 @@
 #include "Yamamoto/KartDemoCam.h"
+#include "Yamamoto/kartCamera.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -13,7 +14,7 @@ void KartDemoCam::ChaseFovy(const CrsData::Camera *) {
 }
 
 void KartDemoCam::DoInitCol() {
-    _80.set(mBody->_1d0[2]);
+    _80.set(mCam->mCameraPos);
 }
 
 void KartDemoCam::DoCol() {}
