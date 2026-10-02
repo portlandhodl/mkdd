@@ -198,8 +198,21 @@ void TFreeRotate::angleUpdate() {
     JGeometry::TQuat4f q;
     if (_3c & 1) {
         q.slerp(_18, _8, mTarget);
+    } else {
+        q.x = _18.x + mTarget * (_8.x - _18.x);
+        q.y = _18.y + mTarget * (_8.y - _18.y);
+        q.z = _18.z + mTarget * (_8.z - _18.z);
+        q.w = _18.w + mTarget * (_8.w - _18.w);
     }
-    
+
+    f32 sq = q.squared();
+    if (sq <= 2.0f * FLT_EPSILON) {
+        q.set(0.0f, 0.0f, 0.0f, 1.0f);
+    } else {
+        q.scale(JGeometry::TUtilf::inv_sqrt(sq));
+    }
+
+    mpMatrix->setQuat(q);
     mTarget += mSpeed;
 }
 
