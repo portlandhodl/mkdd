@@ -33,7 +33,12 @@ void TPathMove::update() {}
 
 void TPathMove::init(JGeometry::TVec3f *, JGeometry::TVec3f *) {}
 
-void TPathMove::reset() {}
+void TPathMove::reset() {
+    _1d = false;
+    _1c = false;
+    _0a = true;
+    _8 = 0;
+}
 
 void TPathMove::setTargetNode() {}
 
