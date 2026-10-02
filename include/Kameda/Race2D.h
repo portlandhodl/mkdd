@@ -136,7 +136,9 @@ public:
 
     void endBombDemo() { mIsEndBombDemo = true; }
 private:
-    PLACEHOLDER_BYTES(0, 0x4ebc);
+    PLACEHOLDER_BYTES(0, 0x1c0);
+    class BombStart2D *mBombStart; // 0x1c0
+    PLACEHOLDER_BYTES(0x1c4, 0x4ebc);
     int mHideFrame;  // 4ebc
     bool mDrawFlag; // 4ec0
     bool mIsEndBombDemo; // 4ec1

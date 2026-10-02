@@ -1,4 +1,5 @@
 #include "Kameda/Race2D.h"
+#include "Kameda/BombStart2D.h"
 #include "Kaneshige/RaceTime.h"
 #include "mathHelper.h"
 
@@ -389,7 +390,9 @@ void Race2D::setEscapeColor(int) {}
 
 void Race2D::getTimeColor(JUTColor, JUTColor) {}
 
-void Race2D::startBombDemo() {}
+void Race2D::startBombDemo() {
+    mBombStart->start();
+}
 
 bool Race2D::isAlarm(int) {}
 
