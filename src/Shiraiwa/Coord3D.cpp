@@ -2,6 +2,7 @@
 #include "JSystem/JGeometry/Matrix.h"
 #include "JSystem/JGeometry/Quat.h"
 #include "JSystem/JUtility/JUTAssert.h"
+#include "Kaneshige/RaceMgr.h"
 
 TFreeMove::TFreeMove() {
     _18 = false;
@@ -66,7 +67,9 @@ void TPathMove::setTargetNode(u16 node, f32 a1, f32 a2) {
     _1c = true;
 }
 
-void TPathMove::getNodePosition(JGeometry::TVec3f *, u16) {}
+void TPathMove::getNodePosition(JGeometry::TVec3f *pos, u16 node) {
+    pos->set(RCMGetCourse()->getCrsData()->getPointData(mpObj->pathID, node)->pos);
+}
 
 void TPathMove::getNextNode() {}
 
