@@ -2,6 +2,7 @@
 #include "Yamamoto/kartBody.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Yamamoto/KartDamage.h"
+#include "Sato/ItemObjMgr.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -17,7 +18,30 @@ void KartGame::WatchAcceleration() {}
 
 void KartGame::DoItmCancel() {}
 
-void KartGame::DoStopItm() {}
+void KartGame::DoStopItm() {
+    KartBody *body = mBody;
+    u8 num = body->mMynum;
+    body->mCarStatus |= 0x80000000;
+    GetItemObjMgr()->abortItemShuffle(body->mMynum);
+
+    ItemObjMgr *mgr = GetItemObjMgr();
+    ItemObj *item = mgr->getKartEquipItem(num, 0);
+    mgr->deleteHeartItem(num);
+    if (item) {
+        if (item->IsSuccessionItem())
+            item->setChildStateForceDisappear();
+        else
+            item->setStateForceDisappear();
+    }
+
+    item = mgr->getKartEquipItem(num, 1);
+    if (item) {
+        if (item->IsSuccessionItem())
+            item->setChildStateForceDisappear();
+        else
+            item->setStateForceDisappear();
+    }
+}
 
 void KartGame::DoChange() {}
 
