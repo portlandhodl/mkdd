@@ -99,7 +99,14 @@ void KartSoundMgr::setChibiPitch(JAISoundHandle *) {}
 
 void KartSoundMgr::adjustEngine() {}
 
-void KartSoundMgr::crushRenzokuTaisaku() {}
+void KartSoundMgr::crushRenzokuTaisaku() {
+    if (_9c != 0) {
+        _9c--;
+        if (_9c == 0) {
+            _a0 = 0.0f;
+        }
+    }
+}
 
 void KartSoundMgr::slipParamSet() {}
 
