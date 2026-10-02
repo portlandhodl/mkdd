@@ -92,5 +92,12 @@ public:
     static const u64 mTag_submenu_bgm;
     static const u64 mTag_osusume;
     static const u64 mTagSP_all;
+
+private:
+    u8 _0[0x58];
+    u32 _58; // 0x58
+    u32 _5c; // 0x5c
+    u8 _60[0xa0 - 0x60];
+    u32 _a0; // 0xa0
 }; // class SceneOption
 #endif // SCENEOPTION_H
