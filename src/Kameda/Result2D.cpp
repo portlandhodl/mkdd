@@ -202,9 +202,25 @@ void Result2D::getVSPointYPos(int, int, f32 &) {}
 
 void Result2D::getMGPointYPos(int, f32 &) {}
 
-void Result2D::getVSScale(int, f32 &) {}
+void Result2D::getVSScale(int frame, f32 &scale) { // Nonmatching: one rematerialized addi
+    if (frame - 15 < 0) {
+        scale = 0.0f;
+    } else if (frame - 15 < 10) {
+        scale = _1bb4[frame - 15];
+    } else {
+        scale = 1.0f;
+    }
+}
 
-void Result2D::getMGScale(int, f32 &) {}
+void Result2D::getMGScale(int frame, f32 &scale) { // Nonmatching: one rematerialized addi
+    if (frame - 15 < 0) {
+        scale = 0.0f;
+    } else if (frame - 15 < 10) {
+        scale = _1bb4[frame - 15];
+    } else {
+        scale = 1.0f;
+    }
+}
 
 void Result2D::getVSColor(int, JUTColor &) {}
 

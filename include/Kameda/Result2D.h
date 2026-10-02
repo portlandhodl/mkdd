@@ -107,6 +107,8 @@ private:
     PLACEHOLDER_BYTES(0x1980, 0x1988);
     f32 _1988;                       // 0x1988
     int _198c;                       // 0x198c
+    PLACEHOLDER_BYTES(0x1990, 0x1bb4);
+    f32 _1bb4[10];                   // 0x1bb4, battle rank scale table
 }; // class Result2D
 
 #endif // RESULT2D_H
