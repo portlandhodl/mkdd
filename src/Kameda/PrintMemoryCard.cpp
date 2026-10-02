@@ -15,7 +15,7 @@ void PrintMemoryCard::init(PrintMemoryCard::MessageID msg) {
 void PrintMemoryCard::changeMessage() {}
 
 void PrintMemoryCard::draw() {
-    if (mMessageID != mcLoaded) {
+    if (mMessageID != mcMsg40) {
         mpWindow->draw();
     }
 }
