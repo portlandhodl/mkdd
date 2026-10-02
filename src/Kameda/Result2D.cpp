@@ -182,7 +182,15 @@ void Result2D::setMG() {}
 
 void Result2D::setBattleCharacter() {}
 
-void Result2D::getRaceRankLayoutAlpha(int, u8 &) {}
+void Result2D::getRaceRankLayoutAlpha(int frame, u8 &alpha) {
+    if (frame < 0) {
+        alpha = 0;
+    } else if (frame < 10) {
+        alpha = frame * 255 / 10;
+    } else {
+        alpha = 255;
+    }
+}
 
 void Result2D::getGPRankLayoutAlpha(int, u8 &) {}
 
