@@ -36,7 +36,10 @@ KartSoundMgr::~KartSoundMgr() {}
 
 void KartSoundMgr::startSoundHandleNumber(u8, u32, u32) {}
 
-void KartSoundMgr::dispose() {}
+void KartSoundMgr::dispose() {
+    JAUSoundObject::dispose();
+    clearInvincibleBgm(3);
+}
 
 void KartSoundMgr::init() {}
 
