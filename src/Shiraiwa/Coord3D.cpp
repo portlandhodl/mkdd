@@ -66,7 +66,30 @@ bool TFreeMove::checkReachTarget() {
     return diff.length() <= _1c;
 }
 
-void TFreeMove::velUpdate(JGeometry::TVec3f &, f32, f32) {}
+bool TFreeMove::velUpdate(JGeometry::TVec3f &vel, f32 speed, f32 maxSpeed) {
+    if (speed == 0.0f) return false;
+    bool result = false;
+    if (!(maxSpeed > 0.0f) || vel.length() >= maxSpeed) { // Nonmatching: branch shape
+    } else {
+        JGeometry::TVec3f diff;
+        diff.sub(mTagret, *mpPos);
+        f32 sq = diff.squared();
+        if (sq > 2.0f * FLT_EPSILON) {
+            diff.scale(JGeometry::TUtilf::inv_sqrt(sq));
+        }
+        diff.scale(speed);
+        vel.add(diff);
+        if (maxSpeed > 0.0f && vel.length() > maxSpeed) {
+            f32 sq2 = vel.squared();
+            if (sq2 > 2.0f * FLT_EPSILON) {
+                vel.scale(JGeometry::TUtilf::inv_sqrt(sq2));
+            }
+            vel.scale(maxSpeed);
+        }
+        result = true;
+    }
+    return result;
+}
 
 TPathMove::TPathMove(const CrsData::SObject *obj) {
     _8 = 0;
