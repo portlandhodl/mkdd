@@ -138,7 +138,9 @@ void Result2D::calcRaceRank() {}
 
 void Result2D::calcGPRank() {}
 
-void Result2D::calcResult() {}
+void Result2D::calcResult() {
+    getResultLinePos(_197c, _1988);
+}
 
 void Result2D::calcVS() {}
 
