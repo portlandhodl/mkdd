@@ -1,4 +1,5 @@
 #include "Kameda/Goal2D.h"
+#include "Kameda/PauseManager.h"
 #include "mathHelper.h"
 
 bool Goal2D::mDrawEndFlag = false;
@@ -17,7 +18,7 @@ void Goal2D::sequenceGP() {}
 
 void Goal2D::sequenceVS() {}
 
-void Goal2D::sequenceTA() {}
+void Goal2D::sequenceTA() { PauseManager::getManager()->setTA(); }
 
 void Goal2D::sequenceMG() {}
 
