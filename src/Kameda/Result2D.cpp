@@ -1,6 +1,7 @@
 #include "Kameda/Result2D.h"
 #include "JSystem/JUtility/TColor.h"
 #include "Kaneshige/KartInfo.h"
+#include "Kaneshige/RaceMgr.h"
 #include "Yamamoto/kartCtrl.h"
 #include "mathHelper.h"
 
@@ -213,7 +214,13 @@ void Result2D::getScale(int) {}
 
 void Result2D::setScale(int) {}
 
-void Result2D::setGPClr() {}
+void Result2D::setGPClr() {
+    mResultSelector = 5;
+    mResultState = 0;
+    if (RaceMgr::getManager()->isReplayMode()) {
+        mResultState = 2;
+    }
+}
 
 void Result2D::getAnmEnd() {}
 

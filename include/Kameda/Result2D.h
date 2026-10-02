@@ -82,7 +82,7 @@ public:
     void getScale(int); // 0x8015057c
     void setScale(int); // 0x801505c4
     void setGPClr(); // 0x80150804
-    void getAnmEnd(); // 0x80150830
+    bool getAnmEnd(); // 0x80150830
     
     static const u64 mSetWordLineTag[9]; // 0x8036ec18
     static const u64 mResultLayoutTag[11]; // 0x8036ec60
@@ -101,6 +101,12 @@ public:
     // Inline/Unused
     ~Result2D();
     void getCharPos(int);
+private:
+    PLACEHOLDER_BYTES(0, 0x197c);
+    int _197c;                       // 0x197c
+    PLACEHOLDER_BYTES(0x1980, 0x1998);
+    f32 _1998;                       // 0x1998
+    int _199c;                       // 0x199c
 }; // class Result2D
 
 #endif // RESULT2D_H
