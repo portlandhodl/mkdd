@@ -143,7 +143,14 @@ void KartDemoCam::DoExecution() {}
 
 u8 KartDemoCam::GetStartID() {}
 
-void KartDemoCam::InitStartID(bool) {}
+void KartDemoCam::InitStartID(bool isLast) {
+    _38 = 1;
+    if (isLast) {
+        SetLastDemo();
+    } else {
+        InitStartDemoCam();
+    }
+}
 
 void KartDemoCam::StartDemoView() { StartDemoCam(); }
 
