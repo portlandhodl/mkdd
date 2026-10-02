@@ -116,7 +116,11 @@ void SceneGhostLoadSave::confirm() {}
 
 void SceneGhostLoadSave::frameOutSlot() {}
 
-void SceneGhostLoadSave::frameInData() {}
+void SceneGhostLoadSave::frameInData() {
+    if (_2514 == 2) {
+        _c = 7;
+    }
+}
 
 void SceneGhostLoadSave::selectData() {}
 
