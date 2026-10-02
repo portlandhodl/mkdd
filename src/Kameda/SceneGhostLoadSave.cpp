@@ -98,7 +98,11 @@ void SceneGhostLoadSave::startFadeIn() {}
 
 void SceneGhostLoadSave::checkCard() {}
 
-void SceneGhostLoadSave::fadeIn() {}
+void SceneGhostLoadSave::fadeIn() {
+    if (_211c == 2) {
+        _c = 4;
+    }
+}
 
 void SceneGhostLoadSave::frameInSlot() {}
 

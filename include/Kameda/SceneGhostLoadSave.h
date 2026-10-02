@@ -153,6 +153,12 @@ public:
     void prevScene(); // 0x8018f768
     
     static SceneGhostLoadSave *mspSceneGhostLoadSave; // 0x80416370
+private:
+    int _c; // 0x0c
+    u8 _10[0x211c - 0x10];
+    int _211c; // 0x211c
+    u8 _2120[0x2514 - 0x2120];
+    int _2514; // 0x2514
 }; // class SceneGhostLoadSave
 
 #endif // SCENEGHOSTLOADSAVE_H
