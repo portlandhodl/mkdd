@@ -439,7 +439,10 @@ void Race2D::itemGetInit() {}
 
 void Race2D::itemGetMain() {}
 
-void Race2D::itemSpecialInit() {}
+void Race2D::itemSpecialInit() {
+    mTask->mCurCB->_10 = 0;
+    mTask->change(itemSpecialMain, mTask->mCurCB);
+}
 
 void Race2D::itemSpecialMain() {}
 
