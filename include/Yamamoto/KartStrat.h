@@ -46,7 +46,7 @@ public:
     void DoRollCrash();
     void DoTestPitchCrl();
     void DoDashCrl(f32);
-    void DoStarCrl(f32);
+    f32 DoStarCrl(f32);
     void DoAirCrl();
     void DoYawCrl();
     void DoSignalCrl();

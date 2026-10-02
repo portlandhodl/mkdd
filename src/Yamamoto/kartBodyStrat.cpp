@@ -120,7 +120,15 @@ void KartStrat::DoTestPitchCrl() {}
 
 void KartStrat::DoDashCrl(float) {}
 
-void KartStrat::DoStarCrl(float) {}
+f32 KartStrat::DoStarCrl(f32) {
+    f32 ret;
+    if ((mBody->mCarStatus & 0x40000) == 0)
+        return ret;
+    if ((mBody->mCarStatus & 0x8000) != 0)
+        return ret;
+    ret = mBody->_3f0 * 1.2f;
+    return ret;
+}
 
 void KartStrat::DoAirCrl() {}
 
