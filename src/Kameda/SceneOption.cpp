@@ -190,7 +190,9 @@ void SceneOption::init() {}
 
 void SceneOption::init_option() {}
 
-void SceneOption::init_back() {}
+void SceneOption::init_back() {
+    _4c8 = 0;
+}
 
  SceneOption::~SceneOption() {}
 

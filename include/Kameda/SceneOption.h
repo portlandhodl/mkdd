@@ -99,5 +99,7 @@ private:
     int _5c; // 0x5c
     u8 _60[0xa0 - 0x60];
     int _a0; // 0xa0
+    u8 _a4[0x4c8 - 0xa4];
+    int _4c8; // 0x4c8
 }; // class SceneOption
 #endif // SCENEOPTION_H
