@@ -3,6 +3,7 @@
 #include "JSystem/JAudio/System/JASAudioThread.h"
 #include "JSystem/JAudio/System/JASWaveArcLoader.h"
 #include "JSystem/JAudio/System/JASWaveBank.h"
+#include "JSystem/JAudio/System/JASDriver.h"
 
 namespace GameAudio {
 
@@ -95,7 +96,7 @@ void Main::startBombReachSe(u8, u8) {}
 
 void Main::setMasterVolume(s8) {}
 
-f32 Main::getMasterVolumeValue() {}
+f32 Main::getMasterVolumeValue() { return JASDriver::getDSPLevel(); }
 
 void Main::setBgmVolume(f32) {}
 
