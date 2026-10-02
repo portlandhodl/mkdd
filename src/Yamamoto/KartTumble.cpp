@@ -26,6 +26,12 @@ void KartTumble::MakePoiHanaTumble() {}
 
 void KartTumble::DoShootCrashCrl() {}
 
-void KartTumble::DoTumbleCrl() {}
+void KartTumble::DoTumbleCrl() {
+    if (_14 != 0) {
+        _14--;
+    } else {
+        _4 &= 0xfe;
+    }
+}
 
 void KartTumble::DoAfterTumbleCrl() {}

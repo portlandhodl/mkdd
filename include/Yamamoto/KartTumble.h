@@ -23,10 +23,14 @@ public:
     void DoShootCrashCrl();           // 0x80305bd0
     void DoTumbleCrl();               // 0x80305d3c
     void DoAfterTumbleCrl();          // 0x80305d64
-    u8 _0[8];             //
+    u8 _0[4];
+    u8 _4;                // 0x04
+    u8 _5[0x8 - 0x5];     //
 private:
     JGeometry::TVec3f _8; //
-    u8 _14[0x18 - 0x14];  //
+    u16 _14;              // 0x14, count-down timer
+    u16 _16;              //
+
 };                        // 18
 
 #endif // KARTTUMBLE_H
