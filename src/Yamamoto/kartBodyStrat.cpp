@@ -77,7 +77,14 @@ void KartStrat::DoWallCrl() {}
 
 void KartStrat::DoYawLimit() {}
 
-void KartStrat::DoRollLimit() {}
+void KartStrat::DoRollLimit() {
+    KartBody *body = mBody;
+    if (body->mWg.z > 0.0697777f) {
+        body->mWg.z = 0.0697777f;
+    } else if (body->mWg.z < -0.0697777f) {
+        body->mWg.z = -0.0697777f;
+    }
+}
 
 void KartStrat::DoLiftCrl() {}
 
