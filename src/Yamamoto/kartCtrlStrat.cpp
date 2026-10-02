@@ -169,7 +169,58 @@ check:
     }
 }
 
-void KartGame::DoSlide() {}
+void KartGame::DoSlide() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if (!body->getChecker()->CheckPartsClearKey(num))
+        return;
+    if (!(body->mGameStatus & 1))
+        return;
+    if (body->_5b6 != 0)
+        body->_5b6--;
+    if (body->_5b6 == 0)
+        body->mCarStatus &= ~4;
+    if ((body->mCarStatus & 4) != 0) {
+        if (body->_5b6 < 29)
+            return;
+        body->_2cc.x += body->_2f0.x * body->_528;
+        body->_2cc.y += body->_2f0.y * body->_528;
+        body->_2cc.z += body->_2f0.z * body->_528;
+        return;
+    }
+    KartGamePad *coCont = GetKartCtrl()->GetCoDriveCont(num);
+    if (body->getTouchNum() == 0)
+        return;
+    if (GetKartCtrl()->GetCarSpeed(num) <= 50.0f)
+        return;
+    if (coCont->testTrigger(64) || coCont->testTrigger(32)) {
+        body->_5b6 = 35;
+        if (RaceMgr::getCurrentManager()->isMirror()) {
+            if (coCont->testTrigger(64)) {
+                body->_528 = -50.0f * body->_3a4;
+                GetKartCtrl()->getKartAnime(num)->mFlags |= 0x10;
+                JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)27, num, body->mPos, 1);
+            } else if (coCont->testTrigger(32)) {
+                body->_528 = 50.0f * body->_3a4;
+                GetKartCtrl()->getKartAnime(num)->mFlags |= 0x20;
+                JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)27, num, body->mPos, 0);
+            }
+        } else {
+            if (coCont->testTrigger(32)) {
+                body->_528 = -50.0f * body->_3a4;
+                GetKartCtrl()->getKartAnime(num)->mFlags |= 0x10;
+                JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)27, num, body->mPos, 1);
+            } else if (coCont->testTrigger(64)) {
+                body->_528 = 50.0f * body->_3a4;
+                GetKartCtrl()->getKartAnime(num)->mFlags |= 0x20;
+                JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)27, num, body->mPos, 0);
+            }
+        }
+        body->_2cc.x += body->_2f0.x * body->_528;
+        body->_2cc.y += body->_2f0.y * body->_528;
+        body->_2cc.z += body->_2f0.z * body->_528;
+    }
+}
 
 void KartGame::DoDriftTurboSterr() {
     KartBody *body = mBody;
