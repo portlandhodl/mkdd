@@ -20,7 +20,11 @@ GrafPort::GrafPort(int, int, int, int, float, float, float) {}
 
 void GrafPort::setPort() {}
 
-void GrafPort::SetParam(float, float, float) {}
+void GrafPort::SetParam(f32 aspect, f32 near, f32 far) {
+    mCamAspect = aspect;
+    mCamNear = near;
+    mCamFar = far;
+}
 
 void KartCam::MakeShaker(float) {}
 
