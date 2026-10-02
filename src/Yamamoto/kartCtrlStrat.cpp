@@ -1,5 +1,6 @@
 #include "Yamamoto/KartGame.h"
 #include "Yamamoto/kartBody.h"
+#include "Kaneshige/RaceMgr.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -101,7 +102,11 @@ void KartGame::DoElementForce() {}
 
 bool KartGame::CheckBalloon() {}
 
-void KartGame::SetRank() {}
+void KartGame::SetRank() {
+    KartBody *body = mBody;
+    body->mMyRank = RCMGetKartChecker(body->mMynum)->getRank();
+    body->_59c = 0;
+}
 
 void KartGame::RankWatchMan() {}
 
