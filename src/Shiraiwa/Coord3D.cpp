@@ -10,7 +10,11 @@ TFreeMove::TFreeMove() {
 
 void TFreeMove::init(JGeometry::TVec3f *, JGeometry::TVec3f *, f32) {}
 
-void TFreeMove::reset() {}
+void TFreeMove::reset() {
+    _18 = false;
+    mTagret.zero();
+    _20 = 0.0f;
+}
 
 void TFreeMove::setTargetPos(const JGeometry::TVec3f &, f32, f32) {}
 
