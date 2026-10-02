@@ -41,24 +41,38 @@ void TFreeMove::velUpdate(JGeometry::TVec3f &, f32, f32) {}
 
 TPathMove::TPathMove(const CrsData::SObject *obj) {
     _8 = 0;
-    _0a = true;
+    _0a = 1;
     _1c = false;
     _1d = false;
     mpObj = obj;
 }
 
-void TPathMove::update() {}
+bool TPathMove::update() {
+    if (_1c) {
+        updatePos();
+        if (checkReachTarget()) {
+            if (_1d & 1) {
+                setTargetNode();
+            } else {
+                _1c = false;
+            }
+        }
+    }
+    return _1c;
+}
 
 void TPathMove::init(JGeometry::TVec3f *, JGeometry::TVec3f *) {}
 
 void TPathMove::reset() {
     _1d = false;
     _1c = false;
-    _0a = true;
+    _0a = 1;
     _8 = 0;
 }
 
-void TPathMove::setTargetNode() {}
+void TPathMove::setTargetNode() {
+    setTargetNode(getNextNode(), _14, _18);
+}
 
 void TPathMove::setTargetNode(u16 node, f32 a1, f32 a2) {
     _8 = node;
@@ -71,11 +85,35 @@ void TPathMove::getNodePosition(JGeometry::TVec3f *pos, u16 node) {
     pos->set(RCMGetCourse()->getCrsData()->getPointData(mpObj->pathID, node)->pos);
 }
 
-void TPathMove::getNextNode() {}
+u16 TPathMove::getNextNode() {
+    u16 next = _8;
+    next += _0a;
+    if (next >= RCMGetCourse()->getCrsData()->getPathData(mpObj->pathID)->getPointNumber() - 1) {
+        if (!RCMGetCourse()->getCrsData()->getPathData(mpObj->pathID)->isClosed()) {
+            _0a = -1;
+        } else {
+            next = 0;
+        }
+    } else if (next == 0) {
+        _0a = 1;
+    }
+    return next;
+}
 
 void TPathMove::updatePos() {}
 
-void TPathMove::checkReachTarget() {}
+bool TPathMove::checkReachTarget() {
+    JGeometry::TVec3f nodePos;
+    getNodePosition(&nodePos, _8);
+    nodePos.sub(*mpPos);
+    bool result;
+    if (nodePos.squared() < _20) {
+        result = true;
+    } else {
+        result = false;
+    }
+    return result;
+}
 
 TFreeRotate::TFreeRotate() {
     mpMatrix = nullptr;

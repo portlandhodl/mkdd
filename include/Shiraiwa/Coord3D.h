@@ -49,15 +49,15 @@ class TPathMove {
 public:
     TPathMove(const CrsData::SObject *);
     virtual ~TPathMove() {}
-    void update();
+    bool update();
     void init(JGeometry::TVec3f *, JGeometry::TVec3f *);
     void reset();
     void setTargetNode();
     void setTargetNode(u16, f32, f32);
     void getNodePosition(JGeometry::TVec3f *, u16);
-    void getNextNode();
+    u16 getNextNode();
     void updatePos();
-    void checkReachTarget();
+    bool checkReachTarget();
 
     // Inline/Unused
     void setTargetNode(f32, f32);
@@ -66,15 +66,16 @@ public:
 
 protected:
     const CrsData::SObject *mpObj; // 0x04
-    s16 _8;                        // 0x08
-    bool _0a;                      // 0x0a
+    u16 _8;                        // 0x08, current node
+    s8 _0a;                        // 0x0a, direction (-1/1)
     JGeometry::TVec3f *mpPos;      // 0x0c
     JGeometry::TVec3f *mpVel;      // 0x10
     f32 _14;
     f32 _18;
     bool _1c;
     bool _1d;
-    PLACEHOLDER_BYTES(0x1e, 0x24);
+    PLACEHOLDER_BYTES(0x1e, 0x20);
+    f32 _20;
 }; // Size: 0x24
 
 class TFreeRotate {
