@@ -1,4 +1,5 @@
 #include "Kameda/PrintMemoryCard.h"
+#include "Kameda/PrintWindow.h"
 
 PrintMemoryCard::PrintMemoryCard(JKRHeap *) {}
 
@@ -13,7 +14,11 @@ void PrintMemoryCard::init(PrintMemoryCard::MessageID msg) {
 
 void PrintMemoryCard::changeMessage() {}
 
-void PrintMemoryCard::draw() {}
+void PrintMemoryCard::draw() {
+    if (mMessageID != mcLoaded) {
+        mpWindow->draw();
+    }
+}
 
 void PrintMemoryCard::calc() {}
 

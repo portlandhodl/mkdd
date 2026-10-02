@@ -94,7 +94,8 @@ private:
     //  TODO
     u8 _0[0x4];
     void *mpBmg; // 0x4
-    u8 _8[0xc - 0x8];
+    class PrintWindow *mpWindow; // 0x8
+    u8 _9[0xc - 0x9];
     u8 _c;
     u8 _d;
     u8 _e;
