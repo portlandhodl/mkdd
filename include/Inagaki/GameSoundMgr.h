@@ -242,7 +242,13 @@ public:
     f32 _6c;
     u8 _70[0x8d - 0x70];
     u8 _8d;
-    u8 _8e[0x134 - 0x8e];
+    u8 _8e[0x9c - 0x8e];
+    u8 _9c;                                  // 0x9c
+    u8 _9d[0xa0 - 0x9d];
+    f32 _a0;                                 // 0xa0
+    u8 _a4[0xd4 - 0xa4];
+    f32 mWaterDepth[8];                      // 0xd4
+    u8 _f4[0x134 - 0xf4];
 };
 
 class CharacterSoundMgr : public SoundMgr<CharacterSoundMgr> {
