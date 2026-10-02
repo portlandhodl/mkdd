@@ -6,7 +6,7 @@ SceneMap::SceneMap(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap) {
     init();
 }
 
-void SceneMap::init() {}
+void SceneMap::init() { _c = 0; }
 
 SceneMap::~SceneMap() {}
 

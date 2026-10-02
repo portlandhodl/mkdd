@@ -17,5 +17,8 @@ public:
     void nextAward(); // 0x80145ca0
     void nextEnding(); // 0x80146148
     void nextTrueEnding(); // 0x801461c4
+
+private:
+    u32 _c; // 0x0c
 }; // class SceneMap
 #endif // SCENEMAP_H
