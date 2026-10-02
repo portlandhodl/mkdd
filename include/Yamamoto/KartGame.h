@@ -30,9 +30,9 @@ public:
     void DoLiftTurbo();
     void DoTurbo();
     void DoRollThrow();
-    void DoRollOver();
+    bool DoRollOver();
     void DoWanWan();
-    void DoPushStart();
+    bool DoPushStart();
     void DoBalance(f32 *, f32);
     void MakeClear();
     void MakeBoardDash();
@@ -90,12 +90,22 @@ public:
     // void DoTurboPower();
     // void CheckBalloonPlayer();
     KartBody *mBody;
-    u8 _4[0x12 - 004];
+    u32 _04;
+    u8 _08;
+    u8 _09;
+    u8 _0a;
+    u8 _0b;
+    u8 _0c;
+    u8 _0d;  // padding
+    u16 _0e;
+    u16 _10;
     u16 mCountDownDuration;
-    u8 _14[0x20 - 0x14];
+    u32 _14; // padding
+    f32 _18;
+    f32 _1c;
     JGeometry::TVec3f _20;
     JGeometry::TVec3f _2C;
-    JGeometry::TVec3f _34;
+    JGeometry::TVec3f _38;
 };
 
 #endif KARTGAME_H

@@ -8,7 +8,23 @@
 
 // comments inside functions are inline functions being called in that function
 
-void KartGame::Init(int) {}
+void KartGame::Init(int idx) {
+    mBody = GetKartCtrl()->getKartBody(idx);
+    _08 = 0;
+    _09 = 0;
+    _38.zero();
+    _04 = 0;
+    _18 = 0.0f;
+    _1c = 0.0f;
+    _0e = 0;
+    _10 = 0;
+    mCountDownDuration = 0;
+    _0a = 0;
+    _0b = 0;
+    _0c = 0;
+    RaceMgr::getCurrentManager()->getStartPoint(&_20, &_2C, idx);
+    _20.y += 300.0f;
+}
 
 void KartGame::GetGorundTireNum() {}
 
@@ -16,7 +32,11 @@ void KartGame::WatchEffectAcceleration() {}
 
 void KartGame::WatchAcceleration() {}
 
-void KartGame::DoItmCancel() {}
+void KartGame::DoItmCancel() {
+    KartBody *body = mBody;
+    body->mCarStatus |= 0x80000000;
+    GetItemObjMgr()->abortItemShuffle(body->mMynum);
+}
 
 void KartGame::DoStopItm() {
     KartBody *body = mBody;
@@ -64,7 +84,14 @@ void KartGame::DoWarmUpRoll() {}
 
 void KartGame::DoRollAnim() {}
 
-void KartGame::DoDriftClear() {}
+void KartGame::DoDriftClear() {
+    KartBody *body = mBody;
+    body->mMTBoost = 0;
+    body->mDriftSterr = 0;
+    body->mMTState = 0;
+    body->mCarStatus &= ~0x20000000000ull;
+    body->mCarStatus &= ~0x1800000000003ull;
+}
 
 void KartGame::DoRoll() {}
 
@@ -78,16 +105,32 @@ void KartGame::DoTurbo() {}
 
 void KartGame::DoRollThrow() {}
 
-void KartGame::DoRollOver() {}
+bool KartGame::DoRollOver() {}
 
 void KartGame::DoWanWan() {
     // void ItemWanWanObj::getDifVel() const {}
     // void ItemWanWanObj::getPullVec(JGeometry::TVec3<float> *) {}
 }
 
-void KartGame::DoPushStart() {}
+bool KartGame::DoPushStart() {
+    KartBody *body = mBody;
+    body->_594++;
+    body->_3c8 = body->_3d0;
+    if (body->_594 == 30) {
+        body->mCarStatus &= ~0x2000000ull;
+        return true;
+    }
+    return false;
+}
 
-void KartGame::DoBalance(float *, float) {}
+void KartGame::DoBalance(f32 *balance, f32 scale) {
+    KartBody *body = mBody;
+    if ((body->mCarStatus & 0xc000420) != 0)
+        return;
+    if (body->_468 > -0.40122193f && body->_468 < 0.40122193f)
+        return;
+    *balance *= scale;
+}
 
 void KartGame::MakeClear() {}
 
@@ -152,7 +195,12 @@ void KartGame::DoActionMgr() {
     // void ItemObjMgr::getKartHitList(int) {}
 }
 
-void KartGame::DoActionCtrl() {}
+void KartGame::DoActionCtrl() {
+    if (mBody->getChecker()->CheckCrash() != true) {
+        DoSlide();
+        DoWanWan();
+    }
+}
 
 void KartGame::DoStatus() {
     // void KartCtrl::DoAnime(int) {}
