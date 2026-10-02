@@ -16,7 +16,12 @@ void TFreeMove::reset() {
     _20 = 0.0f;
 }
 
-void TFreeMove::setTargetPos(const JGeometry::TVec3f &, f32, f32) {}
+void TFreeMove::setTargetPos(const JGeometry::TVec3f &pos, f32 a2, f32 a3) {
+    mTagret.set(pos);
+    _20 = a2;
+    _1c = a3;
+    _18 = true;
+}
 
 void TFreeMove::setTargetOffset(const JGeometry::TVec3f &, f32, f32) {}
 
