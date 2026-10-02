@@ -79,10 +79,11 @@ void KartStrat::DoYawLimit() {}
 
 void KartStrat::DoRollLimit() {
     KartBody *body = mBody;
-    if (body->mWg.z > 0.0697777f) {
-        body->mWg.z = 0.0697777f;
-    } else if (body->mWg.z < -0.0697777f) {
-        body->mWg.z = -0.0697777f;
+    f32 limit = 0.0697777f;
+    if (body->mWg.z > limit) {
+        body->mWg.z = limit;
+    } else if (body->mWg.z < -limit) {
+        body->mWg.z = -limit;
     }
 }
 
