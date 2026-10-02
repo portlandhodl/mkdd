@@ -71,6 +71,7 @@ public:
     void startWipe(int idx) { mMoveFlag[idx] = true; }
     void stopWipe(int idx) { mMoveFlag[idx] = false; }
     int getScreenCount() const { return mScrnCount; }
+    TWipeCurtain *getWipeCurtain() { return mWipeCurtain; }
 
     static WipeManager *getManager() { return mThis; }
 

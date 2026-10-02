@@ -1,5 +1,6 @@
 #include "Kameda/PauseManager.h"
 #include "Kameda/Result2D.h"
+#include "Kameda/WipeManager.h"
 #include "mathHelper.h"
 
 PauseManager *PauseManager::mThis;    // 0x80416298
@@ -24,7 +25,11 @@ bool PauseManager::tstPause() {
     return mIsPause;
 }
 
-void PauseManager::wipeOut(int) {}
+void PauseManager::wipeOut(int wipeType) {
+    mWipeState = 1;
+    mWipeType = wipeType;
+    GETWipeManager()->getWipeCurtain()->reset();
+}
 
 int PauseManager::getPauseChoice() {}
 

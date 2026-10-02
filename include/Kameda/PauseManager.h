@@ -47,7 +47,10 @@ private:
     bool mPauseEnd;
     u8 _19[0x20 - 0x19];
     class Result2D *mResult2D; // 0x20
-    u8 _24[0x3c - 0x24];
+    u8 _24[0x2c - 0x24];
+    int mWipeState; // 0x2c
+    int mWipeType;  // 0x30
+    u8 _34[0x3c - 0x34];
 };
 
 inline PauseManager *GETPauseManager() { return PauseManager::getManager(); }
