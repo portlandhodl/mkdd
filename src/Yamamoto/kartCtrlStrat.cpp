@@ -115,7 +115,59 @@ void KartGame::DoStopItm() {
     }
 }
 
-void KartGame::DoChange() {}
+void KartGame::DoChange() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    KartGamePad *driveCont = GetKartCtrl()->GetDriveCont(num);
+    KartGamePad *coDriveCont = GetKartCtrl()->GetCoDriveCont(num);
+    bool changed = false;
+    bool changePossible = GetKartCtrl()->MakeChangePossible(num);
+    if (body->getChecker()->CheckCheange(num)) {
+        _0b = 0;
+        return;
+    }
+    if (_0b != 0)
+        _0b--;
+    if ((body->mGameStatus & 1) == 0) {
+        if (driveCont->testTrigger(GetKartCtrl()->getKartPad(num)->mTrigZ))
+            _0b = 20;
+        if ((body->mCarStatus & 0x80) != 0) {
+            if (body->mDriverModels[2]->IsChange())
+                goto check;
+            if (body->mDriverModels[3]->IsChange())
+                goto check;
+            body->mCarStatus &= ~0x80ull;
+        } else {
+            if (driveCont->testTrigger(GetKartCtrl()->getKartPad(num)->mTrigZ) || changePossible || _0b != 0) {
+                _0b = 0;
+                changed = true;
+            }
+        }
+    } else {
+        if ((body->mCarStatus & 0x80) != 0) {
+            if (driveCont->testButton(GetKartCtrl()->getKartPad(num)->mTrigZ) && coDriveCont->testButton(GetKartCtrl()->getKartPad(num)->mTrigZ))
+                _0b = 20;
+            if (body->mDriverModels[2]->IsChange())
+                goto check;
+            if (body->mDriverModels[3]->IsChange())
+                goto check;
+            body->mCarStatus &= ~0x80ull;
+        } else {
+            if ((driveCont->testButton(GetKartCtrl()->getKartPad(num)->mTrigZ) && coDriveCont->testButton(GetKartCtrl()->getKartPad(num)->mTrigZ)) || _0b != 0) {
+                _0b = 0;
+                changed = true;
+            }
+        }
+    }
+check:
+    if (changed) {
+        body->mCarStatus &= ~0x4000000000ull;
+        body->mCarStatus |= 0x80;
+        GetKartCtrl()->getKartAnime(num)->mFlags |= 1;
+        GetKartCtrl()->getKartSound(num)->DoChangeVoice();
+        GetKartCtrl()->getKartSound(num)->DoChangeStarSound();
+    }
+}
 
 void KartGame::DoSlide() {}
 
