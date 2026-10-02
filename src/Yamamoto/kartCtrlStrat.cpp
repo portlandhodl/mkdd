@@ -245,9 +245,52 @@ void KartGame::CheckDriftTurbo() {
     body->mMTBoost = 0;
 }
 
-void KartGame::DoWarmUpRoll() {}
+f32 KartGame::DoWarmUpRoll() {}
 
-void KartGame::DoRollAnim() {}
+void KartGame::DoRollAnim() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    KartGamePad *cont = GetKartCtrl()->GetDriveCont(num);
+    if (cont->getMainStickX() >= 0.2f) {
+        body->_394 = -1.0f;
+    } else if (cont->getMainStickX() <= -0.2f) {
+        body->_394 = 1.0f;
+    } else {
+        body->_394 = 0.0f;
+    }
+    body->mLiftframe = GetKartCtrl()->fcnvge(body->mLiftframe, body->_394, 0.05f, 0.05f);
+    if (!GetKartCtrl()->getKartAnime(num)->IsDrift(num) && !GetKartCtrl()->getKartAnime(num)->IsDriftStart(num)) {
+        if (cont->getMainStickX() >= 0.2f) {
+            body->_39c = -1.0f;
+        } else if (cont->getMainStickX() <= -0.2f) {
+            body->_39c = 1.0f;
+        } else {
+            body->_39c = 0.0f;
+        }
+        body->_398 = GetKartCtrl()->fcnvge(body->_398, body->_39c, 0.05f, 0.05f);
+    }
+    if ((body->mCarStatus & 1) != 0) {
+        body->_394 = -1.0f;
+        body->mLiftframe = -1.0f;
+        if (GetKartCtrl()->getKartAnime(num)->IsDriftLeft(num)) {
+            body->_39c = 1.0f;
+            body->_398 = 1.0f;
+        } else {
+            body->_39c = -1.0f;
+            body->_398 = -1.0f;
+        }
+    } else if ((body->mCarStatus & 2) != 0) {
+        body->_394 = 1.0f;
+        body->mLiftframe = 1.0f;
+        if (GetKartCtrl()->getKartAnime(num)->IsDriftRight(num)) {
+            body->_39c = -1.0f;
+            body->_398 = -1.0f;
+        } else {
+            body->_39c = 1.0f;
+            body->_398 = 1.0f;
+        }
+    }
+}
 
 void KartGame::DoDriftClear() {
     KartBody *body = mBody;
@@ -258,7 +301,34 @@ void KartGame::DoDriftClear() {
     body->mCarStatus &= ~0x1800000000003ull;
 }
 
-void KartGame::DoRoll() {}
+void KartGame::DoRoll() {
+    KartBody *body = mBody;
+    MakeJump();
+    f32 roll = DoWarmUpRoll();
+    if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 30.0f || (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 40.0f && body->_3c8 == 0.0f))
+        DoDriftClear();
+    if (GetKartCtrl()->GetCarSpeed(body->mMynum) < 80.0f && body->_510 > 2.44222f)
+        DoDriftClear();
+    if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 80.0f && body->_3cc != 0.0f)
+        DoDriftClear();
+    if ((body->mCarStatus & 8) != 0)
+        DoDriftClear();
+    if (body->_458 < 2.0f) {
+        body->_4c4 = GetKartCtrl()->fcnvge(body->_4c4, 0.0088235294f * roll, 0.1f, 0.1f);
+    } else if (body->_458 < 18.0f) {
+        body->_4c4 = GetKartCtrl()->fcnvge(body->_4c4, 0.0023529413f * roll, 0.1f, 0.1f);
+    } else {
+        if (body->getTouchNum() == 0) {
+            roll = 0.023529412f * roll;
+        } else {
+            roll = (body->_4f8 / 170.0f) * roll;
+        }
+        GetKartCtrl()->ChaseFnumber(&body->_4c4, roll, body->_3b4);
+    }
+    if ((body->mCarStatus & 3) == 0)
+        body->_4c4 = 0.0f;
+    DoRollAnim();
+}
 
 void KartGame::DoTestPitch() {
     KartBody *body = mBody;

@@ -23,7 +23,7 @@ public:
     void DoDriftTurboSterr();
     void SetDriftTurboSterr();
     void CheckDriftTurbo();
-    void DoWarmUpRoll();
+    f32 DoWarmUpRoll();
     void DoRollAnim();
     void DoDriftClear();
     void DoRoll();
