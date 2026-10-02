@@ -69,8 +69,10 @@ public:
     void setDriveAnm(f32);
     void setTandemAnm(f32, f32);
     void Start1ShotAnm_base(DriversAnimator *, StateEnum);
+    void StartStart(); // 0x801e907c
     void StartAnimation2();
     void StartAnimation(StateEnum);
+    void BacktoDWait() { StartAnimation((StateEnum)0x95); } // 0x802faa94
     void updateFrame();
     void updateFrame_base(DriversAnimator *, StateEnum);
     void updateSetFrame();

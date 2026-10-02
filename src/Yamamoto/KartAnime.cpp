@@ -1,4 +1,6 @@
 #include "Yamamoto/KartAnime.h"
+#include "Yamamoto/kartCtrl.h"
+#include "Kawano/driver.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -96,10 +98,12 @@ void KartAnime::DoChangeAnime(int) {}
 
 void KartAnime::DoDriveAnime(int) {}
 
-void KartAnime::DoStartRunStartAnime(int) {}
+void KartAnime::DoStartRunStartAnime(int idx) {
+    GetKartCtrl()->getKartBody(idx)->mDriverModels[0]->StartStart();
+}
 
-void KartAnime::DoStartRunEndAnime(int) {
-    //void DriverModel::BacktoDWait() {}
+void KartAnime::DoStartRunEndAnime(int idx) {
+    GetKartCtrl()->getKartBody(idx)->mDriverModels[0]->BacktoDWait();
 }
 
 void KartAnime::DoDriverThrowAnime(int) {}
