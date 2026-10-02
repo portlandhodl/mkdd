@@ -50,7 +50,9 @@ void KartStrat::GravyClear() {}
 
 void KartStrat::LiftClear() {}
 
-void KartStrat::PitchClear() {}
+void KartStrat::PitchClear() {
+    mBody->mCarStatus &= ~0x300;
+}
 
 void KartStrat::DashClear() {}
 
