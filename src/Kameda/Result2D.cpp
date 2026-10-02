@@ -224,7 +224,7 @@ void Result2D::setGPClr() {
 
 bool Result2D::getAnmEnd() {
     bool ret = false;
-    if (_1998 == 0.0f && _199c >= 30) {
+    if (_1988 == 0.0f && _198c >= 30) {
         ret = true;
     }
     return ret;

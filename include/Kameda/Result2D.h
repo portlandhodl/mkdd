@@ -104,9 +104,9 @@ public:
 private:
     PLACEHOLDER_BYTES(0, 0x197c);
     int _197c;                       // 0x197c
-    PLACEHOLDER_BYTES(0x1980, 0x1998);
-    f32 _1998;                       // 0x1998
-    int _199c;                       // 0x199c
+    PLACEHOLDER_BYTES(0x1980, 0x1988);
+    f32 _1988;                       // 0x1988
+    int _198c;                       // 0x198c
 }; // class Result2D
 
 #endif // RESULT2D_H
