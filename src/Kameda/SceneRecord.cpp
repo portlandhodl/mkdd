@@ -253,7 +253,13 @@ void SceneRecord::calcMatAnm() {}
 
 void SceneRecord::calc() {}
 
-void SceneRecord::fadeIn() {}
+void SceneRecord::fadeIn() {
+    if (++_a0 > 15) {
+        _84 = 1;
+        _88 = 0;
+        _a0 = 0;
+    }
+}
 
 void SceneRecord::mode() {}
 

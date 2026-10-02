@@ -116,5 +116,11 @@ public:
     //static const u64 mTagRecordGPLine_tag;
     //static const u64 mTagRecordTA_course;
     //static const u64 mTagRecordTALine_all;
+private:
+    u8 _c[0x84 - 0xc];
+    int _84; // 0x84
+    int _88; // 0x88
+    u8 _8c[0xa0 - 0x8c];
+    int _a0; // 0xa0
 }; // class SceneRecord
 #endif // SCENERECORD_H
