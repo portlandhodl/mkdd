@@ -45,7 +45,9 @@ private:
     bool mExec;
     u32 _14;
     bool mPauseEnd;
-    u8 _19[0x3c - 0x19];
+    u8 _19[0x20 - 0x19];
+    class Result2D *mResult2D; // 0x20
+    u8 _24[0x3c - 0x24];
 };
 
 inline PauseManager *GETPauseManager() { return PauseManager::getManager(); }

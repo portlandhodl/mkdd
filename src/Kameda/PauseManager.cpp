@@ -28,7 +28,7 @@ void PauseManager::wipeOut(int) {}
 int PauseManager::getPauseChoice() {}
 
 void PauseManager::setTA() {
-    
+    mResult2D->setTA();
 }
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
