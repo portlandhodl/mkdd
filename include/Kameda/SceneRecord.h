@@ -122,5 +122,7 @@ private:
     int _88; // 0x88
     u8 _8c[0xa0 - 0x8c];
     int _a0; // 0xa0
+    u8 _a4[0x6b0 - 0xa4];
+    int _6b0; // 0x6b0
 }; // class SceneRecord
 #endif // SCENERECORD_H

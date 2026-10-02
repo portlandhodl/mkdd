@@ -223,7 +223,9 @@ void SceneRecord::init_ta() {}
 
 void SceneRecord::init_taline() {}
 
-void SceneRecord::init_back() {}
+void SceneRecord::init_back() {
+    _6b0 = 0;
+}
 
 SceneRecord::~SceneRecord() {}
 
