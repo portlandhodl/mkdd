@@ -90,7 +90,13 @@ void KartCam::InitRaceBackView() {}
 
 void KartCam::ParallelView() {}
 
-void KartCam::InitBackView() {}
+void KartCam::InitBackView() {
+    _184 = 0.0f;
+    _1a4 = 0.0f;
+    _164 = 0.0f;
+    _1b8 = 0.0f;
+    OutViewCalc();
+}
 
 void KartCam::BackView() {
     _1b8 = 0.0f;
