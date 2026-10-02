@@ -17,8 +17,8 @@ public:
     void setTargetPos(const JGeometry::TVec3f &, f32, f32);
     void setTargetOffset(const JGeometry::TVec3f &, f32, f32);
     void setTargetOffsetUniform(const JGeometry::TVec3f &, int);
-    void update();
-    void checkReachTarget();
+    bool update();
+    bool checkReachTarget();
     void velUpdate(JGeometry::TVec3f &, f32, f32);
     void TPathMove(const CrsData::SObject *);
 

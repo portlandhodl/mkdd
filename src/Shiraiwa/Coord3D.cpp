@@ -33,9 +33,24 @@ void TFreeMove::setTargetOffset(const JGeometry::TVec3f &offset, f32 a2, f32 a3)
 
 void TFreeMove::setTargetOffsetUniform(const JGeometry::TVec3f &, int) {}
 
-void TFreeMove::update() {}
+bool TFreeMove::update() {
+    if (_18) {
+        if (checkReachTarget()) {
+            mpPos->set(mTagret);
+            _18 = false;
+        } else {
+            mpPos->add(*mpVel);
+            velUpdate(*mpVel, _20, _1c);
+        }
+    }
+    return _18;
+}
 
-void TFreeMove::checkReachTarget() {}
+bool TFreeMove::checkReachTarget() {
+    JGeometry::TVec3f diff;
+    diff.sub(mTagret, *mpPos);
+    return diff.length() <= _1c;
+}
 
 void TFreeMove::velUpdate(JGeometry::TVec3f &, f32, f32) {}
 
