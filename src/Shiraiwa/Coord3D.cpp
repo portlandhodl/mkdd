@@ -3,7 +3,10 @@
 #include "JSystem/JGeometry/Quat.h"
 #include "JSystem/JUtility/JUTAssert.h"
 
-TFreeMove::TFreeMove() {}
+TFreeMove::TFreeMove() {
+    _18 = false;
+    _1c = 0.0f;
+}
 
 void TFreeMove::init(JGeometry::TVec3f *, JGeometry::TVec3f *, f32) {}
 
