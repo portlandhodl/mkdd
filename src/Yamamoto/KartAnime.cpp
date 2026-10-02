@@ -68,7 +68,12 @@ bool KartAnime::IsAttack(int) {}
 
 bool KartAnime::IsProhibition(int) {}
 
-void KartAnime::MakeThrowAnime(int, int, int) {}
+void KartAnime::MakeThrowAnime(int a, int b, int c) {
+    _20 = a;
+    _24 = b;
+    _1c = c;
+    mFlags |= 2;
+}
 
 void KartAnime::MakeBackAnime(int) {}
 
