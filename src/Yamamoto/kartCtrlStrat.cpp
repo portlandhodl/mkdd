@@ -417,7 +417,40 @@ void KartGame::MakeGoldenMashDash() {
     }
 }
 
-void KartGame::MakeStartDash() {}
+void KartGame::MakeStartDash() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if ((body->mCarStatus & 0x10000) != 0) {
+        body->mBoostTimer = 45;
+        return;
+    }
+    GetKartCtrl()->getKartSound(num)->DoTandemVoice(33);
+    body->mCarStatus |= 0x18000;
+    if (body->_590 & 2) {
+        GetKartCtrl()->getKartSound(num)->DoMashDashSound();
+        body->mBoostTimer = 45;
+        body->getStrat()->DoMotor(MotorManager::MotorType_5);
+    } else {
+        GetKartCtrl()->getKartSound(num)->DoKartsetSeSound(0x100b3);
+        body->mBoostTimer = 90;
+        body->getStrat()->DoMotor(MotorManager::MotorType_8);
+    }
+    body->_598 = body->mBoostTimer;
+    body->_52c = 0.4f;
+    body->_474 = 0.313f;
+    if (body->_590 & 2) {
+        JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)24, num, body->mPos, 0);
+    } else {
+        JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)25, num, body->mPos, 0);
+    }
+    if (GetKartCtrl()->CheckCamera(num)) {
+        int camNum = GetKartCtrl()->GetCameraNum(num);
+        if (GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 0 ||
+            (GetKartCtrl()->getKartCam(camNum)->GetDemoCam()->_38 & 4 && GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 10)) {
+            JPEffectPerformer::setEffectEachCam((JPEffectPerformer::EffectType)35, num, (u8)camNum, 0);
+        }
+    }
+}
 
 void KartGame::MakeCrashDash() {
     KartBody *body = mBody;
@@ -485,7 +518,38 @@ void KartGame::DoRearSlideBody() {
     // void JGeometry::TVec3<float>::div(float) {}
 }
 
-void KartGame::DoCorner() {}
+void KartGame::DoCorner() {
+    KartBody *body = mBody;
+    JGeometry::TVec3f vec;
+    if (body->getTouchNum() == 0 || body->_458 <= 30.0f || (body->mCarStatus & 0x1003) != 0)
+        body->_4d4 = 0.0f;
+    if ((body->mFrame <= 0.7f && body->mFrame >= -0.7f) || body->_458 < 45.0f) {
+        body->_4d4 = 0.0f;
+        return;
+    }
+    GetKartCtrl()->DevMatrixByVector(&vec, &body->_2cc, body->_110);
+    vec.x *= 0.3f;
+    f32 f31 = vec.x / body->_3a4;
+    if (f31 < 1.5f && f31 > -1.5f) {
+        f31 = 0.0f;
+    } else if (f31 > 2.5f) {
+        f31 = 2.5f;
+    } else if (f31 < -2.5f) {
+        f31 = -2.5f;
+    }
+    if (body->_468 > 0.261666f || body->_468 < -0.261666f)
+        f31 *= 0.1f;
+    if (f31 > 2.44222f)
+        f31 = 2.44222f;
+    if (f31 < -2.44222f)
+        f31 = -2.44222f;
+    if (body->mFrame > 0.0f && f31 < 0.0f)
+        f31 *= -1.0f;
+    else if (body->mFrame < 0.0f && f31 > 0.0f)
+        f31 *= -1.0f;
+    GetKartCtrl()->ChaseFnumber(&body->_4d4, f31, 0.1f);
+    DoBalance(&body->_4d4, 0.4f);
+}
 
 void KartGame::FrameWork(f32 speed, KartSus *sus1, KartSus *sus2) {
     KartBody *body = mBody;
@@ -536,7 +600,31 @@ void KartGame::SetRank() {
     body->_59c = 0;
 }
 
-void KartGame::RankWatchMan() {}
+void KartGame::RankWatchMan() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if (mCountDownDuration != 0)
+        return;
+    if (RaceMgr::getCurrentManager()->getRaceMode() == 1)
+        return;
+    if (GetKartCtrl()->IsMiniGame()) {
+    } else {
+        KartChecker *checker = RCMGetKartChecker(num);
+        if (body->_59c == 0 && body->mMyRank > checker->getRank() && GetKartCtrl()->GetCarSpeed(num) > 2.5f && !body->getChecker()->CheckOnlyTandemPartsClearKey(num))
+            body->_59c = 120;
+        if (body->mMyRank > checker->getRank() && (body->mCarStatus & 0x8000) != 0)
+            body->_59c = 100;
+        if (body->mMyRank < checker->getRank() && body->_59c >= 90)
+            body->_59c = 89;
+        if (body->_59c == 90 && GetKartCtrl()->GetCarSpeed(num) > 2.5f && !body->getChecker()->CheckOnlyTandemPartsClearKey(num))
+            GetKartCtrl()->getKartSound(num)->DoPathVoice();
+        if (body->_59c != 0)
+            body->_59c--;
+        body->mMyRank = checker->getRank();
+        if (_0e != 0)
+            _0e--;
+    }
+}
 
 void KartGame::ItemWatchMan(ItemObj *item) {
     if (item == nullptr)
