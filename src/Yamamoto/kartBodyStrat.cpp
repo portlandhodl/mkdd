@@ -8,7 +8,15 @@
 
 void KartStrat::Init(int) {}
 
-void KartStrat::GetBodySpeed() {}
+void KartStrat::GetBodySpeed() {
+    KartBody *body = mBody;
+    body->_454 = 2.16f * body->_448;
+    if (body->mGameStatus & 0x200) {
+        body->_458 = 0.0f;
+    } else {
+        body->_458 = body->_454;
+    }
+}
 
 void KartStrat::GetBodyRoll() {
     // void KartShadowModel::setRoll(float) {}
