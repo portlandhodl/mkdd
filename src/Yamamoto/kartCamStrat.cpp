@@ -92,7 +92,10 @@ void KartCam::ParallelView() {}
 
 void KartCam::InitBackView() {}
 
-void KartCam::BackView() {}
+void KartCam::BackView() {
+    _1b8 = 0.0f;
+    OutView();
+}
 
 void KartCam::HangRescueView() {}
 
