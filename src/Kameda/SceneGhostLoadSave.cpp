@@ -104,7 +104,11 @@ void SceneGhostLoadSave::fadeIn() {
     }
 }
 
-void SceneGhostLoadSave::frameInSlot() {}
+void SceneGhostLoadSave::frameInSlot() {
+    if (_211c == 2) {
+        _c = 4;
+    }
+}
 
 void SceneGhostLoadSave::selectSlot() {}
 
