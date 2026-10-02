@@ -1,6 +1,7 @@
 #include "Yamamoto/KartGame.h"
 #include "Yamamoto/kartBody.h"
 #include "Kaneshige/RaceMgr.h"
+#include "Yamamoto/KartDamage.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -114,7 +115,11 @@ void KartGame::ItemWatchMan(ItemObj *) {}
 
 void KartGame::AfterItemWatchMan() {}
 
-void KartGame::DoFlagCtrl() {}
+void KartGame::DoFlagCtrl() {
+    KartBody *body = mBody;
+    body->_590 &= ~0x5c;
+    body->getDamage()->mFlags &= ~2;
+}
 
 void KartGame::KeepWatch() {}
 
