@@ -143,7 +143,54 @@ void KartGame::SetDriftTurboSterr() {
 }
 
 void KartGame::CheckDriftTurbo() {
-    // void JUTGamePad::getMainStickX() const {}
+    KartBody *body = mBody;
+    int num = body->mMynum;
+
+    if (GetKartCtrl()->GetCarSpeed(num) <= 50.0f) {
+        body->mCarStatus &= ~0x20000000000ull;
+        body->mMTBoost = 0;
+        body->mDriftSterr = 0;
+        body->mMTState = 0;
+        return;
+    }
+    if (body->mGameStatus & 8)
+        return;
+    bool drifted = false;
+    KartGamePad *coCont = GetKartCtrl()->GetCoDriveCont(num);
+    if ((body->mCarStatus & 1) != 0) {
+        if ((body->mGameStatus & 1) != 0) {
+            if (coCont->getMainStickX() < -0.3f) {
+                drifted = true;
+                DoDriftTurboSterr();
+            }
+        } else if (body->mFrame >= -0.5f) {
+            drifted = true;
+            DoDriftTurboSterr();
+        }
+        if (!drifted) {
+            SetDriftTurboSterr();
+            body->mDriftSterr = 1;
+        }
+    } else if ((body->mCarStatus & 2) != 0) {
+        if ((body->mGameStatus & 1) != 0) {
+            if (coCont->getMainStickX() > 0.3f) {
+                drifted = true;
+                DoDriftTurboSterr();
+            }
+        } else if (body->mFrame <= 0.5f) {
+            drifted = true;
+            DoDriftTurboSterr();
+        }
+        if (!drifted) {
+            SetDriftTurboSterr();
+            body->mDriftSterr = 1;
+        }
+    } else {
+        body->mMTState = 0;
+        body->mDriftSterr = 0;
+    }
+    body->mCarStatus &= ~0x20000000000ull;
+    body->mMTBoost = 0;
 }
 
 void KartGame::DoWarmUpRoll() {}
