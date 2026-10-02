@@ -17,7 +17,7 @@ void KartSus::Init(int) {}
 
 void KartSus::NormalInit(int) {}
 
-void KartSus::ResetInit(int) {}
+void KartSus::ResetInit(int r4) { Init(r4); }
 
 void KartSus::CircleFriction(JGeometry::TVec3<float> *, float) {}
 
