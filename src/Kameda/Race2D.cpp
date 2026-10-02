@@ -409,7 +409,11 @@ void Race2D::calcLap() {}
 
 void Race2D::lapInit() {}
 
-void Race2D::lapMain() {}
+void Race2D::lapMain() {
+    Task::TCB *curCB = mTask->mCurCB;
+    curCB->_10++;
+    curCB->mRequestKill = true;
+}
 
 void Race2D::lapTimeInit() {}
 
