@@ -142,7 +142,7 @@ u8 KartDemoCam::GetStartID() {}
 
 void KartDemoCam::InitStartID(bool) {}
 
-void KartDemoCam::StartDemoView() {}
+void KartDemoCam::StartDemoView() { StartDemoCam(); }
 
 void KartDemoCam::InitStartMapCam() {}
 
