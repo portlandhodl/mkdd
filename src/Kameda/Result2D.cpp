@@ -222,6 +222,12 @@ void Result2D::setGPClr() {
     }
 }
 
-void Result2D::getAnmEnd() {}
+bool Result2D::getAnmEnd() {
+    bool ret = false;
+    if (_1998 == 0.0f && _199c >= 30) {
+        ret = true;
+    }
+    return ret;
+}
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
