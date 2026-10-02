@@ -6,7 +6,9 @@
 
 // comments inside functions are inline functions being called in that function
 
-void KartStrat::Init(int) {}
+void KartStrat::Init(int idx) {
+    mBody = GetKartCtrl()->getKartBody(idx);
+}
 
 void KartStrat::GetBodySpeed() {
     KartBody *body = mBody;
