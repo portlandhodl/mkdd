@@ -45,7 +45,7 @@ void KartStrat::FreezeClear() {}
 void KartStrat::RollCrashClear() {}
 
 void KartStrat::AllGravyClear() {
-    mBody->_390 = 0.0f;
+    mBody->mLiftframe = 0.0f;
     mBody->_398 = 0.0f;
     GravyClear();
 }
