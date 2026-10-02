@@ -51,7 +51,14 @@ void KartStrat::AllGravyClear() {
     GravyClear();
 }
 
-void KartStrat::GravyClear() {}
+void KartStrat::GravyClear() {
+    KartBody *body = mBody;
+    body->_4c0 = 0.0f;
+    body->_4c4 = 0.0f;
+    body->_4d4 = 0.0f;
+    body->_4d8 = 0.0f;
+    body->_35c.zero();
+}
 
 void KartStrat::LiftClear() {
     mBody->mCarStatus &= ~0x1800000000003ull;
