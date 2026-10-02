@@ -165,7 +165,7 @@ void Result2D::setDrawTA() {}
 
 void Result2D::setDrawMG() {}
 
-void Result2D::getResultSelector() {}
+int Result2D::getResultSelector() { return mResultSelector; }
 
 void Result2D::setRaceRank() {}
 

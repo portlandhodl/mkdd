@@ -57,7 +57,7 @@ public:
     void setDrawVS(); // 0x8014cb58
     void setDrawTA(); // 0x8014cc10
     void setDrawMG(); // 0x8014cd94
-    void getResultSelector(); // 0x8014ce48
+    int getResultSelector(); // 0x8014ce48
     void setRaceRank(); // 0x8014ce50
     void setGPRank(); // 0x8014d924
     void setVS(); // 0x8014df84
