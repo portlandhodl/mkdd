@@ -98,8 +98,8 @@ private:
     u8 _c;
     u8 _d;
     u8 _e;
-    u8 _f[0x14 - 0xf];
-    int _14;
+    u8 _f;                          // 0x0f
+    MessageID mMessageID;           // 0x10
     u8 _18[4];
     int _1c;
     int _20;

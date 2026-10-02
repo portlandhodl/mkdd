@@ -4,7 +4,12 @@ PrintMemoryCard::PrintMemoryCard(JKRHeap *) {}
 
 void PrintMemoryCard::reset() {}
 
-void PrintMemoryCard::init(PrintMemoryCard::MessageID) {}
+void PrintMemoryCard::init(PrintMemoryCard::MessageID msg) {
+    _f = 1;
+    mMessageID = msg;
+    _14 = 2;
+    _1c = 2;
+}
 
 void PrintMemoryCard::changeMessage() {}
 
