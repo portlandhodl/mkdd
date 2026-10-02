@@ -1,4 +1,5 @@
 #include "Yamamoto/KartGame.h"
+#include "Yamamoto/kartBody.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -20,7 +21,12 @@ void KartGame::DoChange() {}
 
 void KartGame::DoSlide() {}
 
-void KartGame::DoDriftTurboSterr() {}
+void KartGame::DoDriftTurboSterr() {
+    KartBody *body = mBody;
+    if (body->mDriftSterr != 0 && body->mDriftSterr < 30) {
+        body->mDriftSterr++;
+    }
+}
 
 void KartGame::SetDriftTurboSterr() {}
 
