@@ -32,7 +32,7 @@ void KartCam::DoShaker(JGeometry::TVec3<float> *, JGeometry::TVec3<float>) {}
 
 void KartCam::SetPtr() {}
 
-JGeometry::TVec3f *KartCam::GetCameraPos() {}
+JGeometry::TVec3f *KartCam::GetCameraPos() { return &mCameraPos; }
 
 JGeometry::TVec3f *KartCam::GetCameraLookPos() {}
 
