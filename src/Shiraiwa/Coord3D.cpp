@@ -42,7 +42,12 @@ void TPathMove::reset() {
 
 void TPathMove::setTargetNode() {}
 
-void TPathMove::setTargetNode(u16, f32, f32) {}
+void TPathMove::setTargetNode(u16 node, f32 a1, f32 a2) {
+    _8 = node;
+    _14 = a1;
+    _18 = a2;
+    _1c = true;
+}
 
 void TPathMove::getNodePosition(JGeometry::TVec3f *, u16) {}
 
