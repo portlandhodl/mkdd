@@ -9,7 +9,15 @@ TFreeMove::TFreeMove() {
     _1c = 0.0f;
 }
 
-void TFreeMove::init(JGeometry::TVec3f *, JGeometry::TVec3f *, f32) {}
+void TFreeMove::init(JGeometry::TVec3f *pos, JGeometry::TVec3f *vel, f32 p3) {
+    mpPos = pos;
+    mpVel = vel;
+    _24 = p3;
+    _1c = 0.0f;
+    reset();
+#line 84
+    JUT_ASSERT(pos != 0 && vel != 0);
+}
 
 void TFreeMove::reset() {
     _18 = false;
@@ -31,7 +39,13 @@ void TFreeMove::setTargetOffset(const JGeometry::TVec3f &offset, f32 a2, f32 a3)
     _18 = true;
 }
 
-void TFreeMove::setTargetOffsetUniform(const JGeometry::TVec3f &, int) {}
+void TFreeMove::setTargetOffsetUniform(const JGeometry::TVec3f &offset, int mag) {
+    _20 = 0.0f;
+    mpVel->scale(1.0f / mag, offset);
+    _1c = mpVel->length();
+    mTagret.add(offset, *mpPos);
+    _18 = true;
+}
 
 bool TFreeMove::update() {
     if (_18) {
