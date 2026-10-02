@@ -687,7 +687,7 @@ void CharacterSelect3D::isCancel(int) {}
 void CharacterSelect3D::isNext(int) {}
 
 MtxPtr CharacterSelect3D::getCameraMatrix() {
-    // return _fb8;
+    return _fb8;
 }
 
 f32 CharacterSelect3D::getFovy() {}

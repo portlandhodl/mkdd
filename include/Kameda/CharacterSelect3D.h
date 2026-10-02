@@ -113,7 +113,9 @@ public:
     static void *mKinopioDump;                    // 0x8041635c
     static CharacterSelect3D *mCharacterSelect3D; // 0x80416360
 private:
-    u8 _0[0x1018];
+    u8 _0[0xfb8];
+    Mtx _fb8;         // 0xfb8
+    u8 _fe8[0x30];    // 0xfe8..0x1018
 }; // Size: 0x1018
 
 #endif // CHARACTERSELECT3D_H
