@@ -159,7 +159,8 @@ TFreeRotate::TFreeRotate() {
 void TFreeRotate::init(JGeometry::TPos3f *matrix) {
     mpMatrix = matrix;
     _28 = false;
-    JUT_ASSERT(mpMatrix !=0);
+#line 712
+    JUT_ASSERT(mpMatrix != 0);
     mpMatrix->getQuat(_18);
     _8 = _18;
 }
