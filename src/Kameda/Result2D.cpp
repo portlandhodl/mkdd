@@ -192,7 +192,15 @@ void Result2D::getRaceRankLayoutAlpha(int frame, u8 &alpha) {
     }
 }
 
-void Result2D::getGPRankLayoutAlpha(int, u8 &) {}
+void Result2D::getGPRankLayoutAlpha(int frame, u8 &alpha) {
+    if (frame - 165 < 0) {
+        alpha = 255;
+    } else if (frame - 165 < 10) {
+        alpha = 255 - (frame - 165) * 255 / 10;
+    } else {
+        alpha = 0;
+    }
+}
 
 void Result2D::getRaceRankLinePos(int, int, f32 &) {}
 
