@@ -105,7 +105,15 @@ void KartGame::DoTurbo() {}
 
 void KartGame::DoRollThrow() {}
 
-bool KartGame::DoRollOver() {}
+bool KartGame::DoRollOver() {
+    KartBody *body = mBody;
+    if (body->getTouchNum() != 0 && (body->mCarStatus & 0x41000) == 0) {
+        if (body->mGameStatus & 8) {
+            return false;
+        }
+    }
+    return false;
+}
 
 void KartGame::DoWanWan() {
     // void ItemWanWanObj::getDifVel() const {}
