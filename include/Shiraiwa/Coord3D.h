@@ -65,14 +65,16 @@ public:
     void getNodeDir(u16, JGeometry::TVec3f *);
 
 protected:
-    const CrsData::SObject *mpObj; // 04
-    s16 _8;                      // 
-    JGeometry::TVec3f *mpPos;      // 0c
-    JGeometry::TVec3f *mpVel;      // 10
+    const CrsData::SObject *mpObj; // 0x04
+    s16 _8;                        // 0x08
+    bool _0a;                      // 0x0a
+    JGeometry::TVec3f *mpPos;      // 0x0c
+    JGeometry::TVec3f *mpVel;      // 0x10
     f32 _14;
     f32 _18;
     bool _1c;
-    PLACEHOLDER_BYTES(0x1d, 0x24);
+    bool _1d;
+    PLACEHOLDER_BYTES(0x1e, 0x24);
 }; // Size: 0x24
 
 class TFreeRotate {

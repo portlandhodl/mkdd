@@ -21,7 +21,13 @@ void TFreeMove::checkReachTarget() {}
 
 void TFreeMove::velUpdate(JGeometry::TVec3f &, f32, f32) {}
 
-TPathMove::TPathMove(const CrsData::SObject *) {}
+TPathMove::TPathMove(const CrsData::SObject *obj) {
+    _8 = 0;
+    _0a = true;
+    _1c = false;
+    _1d = false;
+    mpObj = obj;
+}
 
 void TPathMove::update() {}
 
