@@ -5,7 +5,10 @@
 // Unused function calls set from TVec3f
 // comments inside functions are inline functions being called in that function
 
-void KartCam::SetTargetNum(unsigned char) {}
+void KartCam::SetTargetNum(unsigned char num) {
+    mTargetIdx = num;
+    SetTarget();
+}
 
 void KartCam::SetClipper() {
     // void J3DUClipper::setFovy(float) {}
