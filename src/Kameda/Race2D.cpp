@@ -410,7 +410,10 @@ void Race2D::calcLapInit() {}
 
 void Race2D::calcLap() {}
 
-void Race2D::lapInit() {}
+void Race2D::lapInit() {
+    mTask->mCurCB->_10 = 0;
+    mTask->change(lapMain, mTask->mCurCB);
+}
 
 void Race2D::lapMain() {
     Task::TCB *curCB = mTask->mCurCB;
