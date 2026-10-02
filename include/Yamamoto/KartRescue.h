@@ -36,7 +36,9 @@ public:
     CrsGround mGround;     // c
     u8 _6c[0x74 - 0x6c];   // padding up to offset 0x74
     u8 mFlags;             // 74
-    u8 _75[0x8c - 0x75];   // remaining padding
+    u8 _75;                //
+    u8 _76;                //
+    u8 _77[0x8c - 0x77];   // remaining padding
     JGeometry::TVec3f _8c; //
     JGeometry::TVec3f _98; //
     JGeometry::TVec3f _a4; //

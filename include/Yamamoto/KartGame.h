@@ -100,7 +100,7 @@ public:
     u16 _0e;
     u16 _10;
     u16 mCountDownDuration;
-    u32 _14; // padding
+    ItemObj *_14;
     f32 _18;
     f32 _1c;
     JGeometry::TVec3f _20;
