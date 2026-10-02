@@ -1,5 +1,7 @@
 #include "Kameda/SceneOption.h"
 #include "Kameda/Scene.h"
+#include "Osako/kartPad.h"
+#include "JSystem/JUtility/JUTGamePad.h"
 #include "mathHelper.h"
 
 const u64 SceneOption::mTag_menu[] = {
@@ -226,7 +228,9 @@ void SceneOption::SceneChange_ExitOption(int) {}
 
 void SceneOption::rumble(int) {}
 
-void SceneOption::rumbleOff(int) {}
+void SceneOption::rumbleOff(int kart) {
+    JUTGamePad::CRumble::stopMotor(gpaGamePad[kart]->mPortNum, true);
+}
 
 void SceneOption::save() {}
 
