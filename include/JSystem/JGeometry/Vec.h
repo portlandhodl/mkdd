@@ -328,7 +328,7 @@ namespace JGeometry {
         void scaleAdd(f32 scalar, const TVec3 &operand) { JMAVECScaleAdd(&operand, this, this, scalar); }
 
         void div(f32 divisor) { scale(TUtilf::invert(divisor)); }
-        void div(f32 divisor, const TVec3 &operand) { scale(TUtilf::invert(divisor), operand); }
+        void div(f32 divisor, const TVec3 &operand);
 
         f32 squared() const { return JMathInlineVEC::PSVECSquareMag(this); }
         f32 squaredZX() const { return dotZX(*this); }
@@ -431,6 +431,10 @@ namespace JGeometry {
     typedef TVec4<f32> TVec4f;
     typedef TVec4<s16> TVec4s;
 
+
+#pragma use_lmw_stmw off
+    template <> inline void TVec3<f32>::div(f32 divisor, const TVec3<f32> &operand) { scale(TUtilf::invert(divisor), operand); }
+#pragma use_lmw_stmw on
 
     // These need to be specialized or explicitly instantiated here to emit them in the right order in RaceMgr, and
     // MWCC doesn't allow explicitly instantiating template constructors, so they're probably both specialized
