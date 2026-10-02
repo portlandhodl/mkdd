@@ -3,6 +3,7 @@
 #include "Kaneshige/RaceMgr.h"
 #include "Yamamoto/KartDamage.h"
 #include "Sato/ItemObjMgr.h"
+#include "Sato/JPEffectPerformer.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -167,7 +168,30 @@ void KartGame::DoLiftTurbo() {}
 
 void KartGame::DoTurbo() {}
 
-void KartGame::DoRollThrow() {}
+void KartGame::DoRollThrow() {
+    KartBody *body = mBody;
+    JGeometry::TVec3f vec1;
+    JGeometry::TVec3f vec2;
+    JGeometry::TVec3f vec3;
+    JGeometry::TVec3f vec4;
+    JGeometry::TVec3f vec5;
+    f32 push = 3.0f * body->_3a4;
+    vec1.set(0.0f, 70.0f, 0.0f);
+    PSMTXMultVec(body->_110, &vec1, &vec2);
+    vec1.set(0.0f, 70.0f, 100.0f);
+    PSMTXMultVec(body->_110, &vec1, &vec3);
+    vec4.x = vec2.x - vec3.x;
+    vec4.y = vec2.y - vec3.y;
+    vec4.z = vec2.z - vec3.z;
+    f32 len = GetKartCtrl()->VectorLengthSqrtf(&vec4);
+    f32 over = len - 1.0f;
+    if (over > 0.0f) {
+        vec5.x = vec4.x * (-push * over / len);
+        vec5.y = vec4.y * (-push * over / len);
+        vec5.z = vec4.z * (-push * over / len);
+        body->DoForce(&vec2, &vec5);
+    }
+}
 
 bool KartGame::DoRollOver() {
     KartBody *body = mBody;
@@ -214,7 +238,30 @@ void KartGame::MakeClear() {
     body->getStrat()->OtherClear();
 }
 
-void KartGame::MakeBoardDash() {}
+void KartGame::MakeBoardDash() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if ((body->mCarStatus & 0x1000) != 0)
+        return;
+    GetKartCtrl()->getKartSound(num)->DoDashSound();
+    body->mCarStatus &= ~0x40020004000ull;
+    body->getStrat()->DoMotor(MotorManager::MotorType_7);
+    if ((body->mCarStatus & 0x20000) != 0) {
+        body->mBoostTimer = 60;
+        return;
+    }
+    body->mCarStatus |= 0x28000;
+    body->mBoostTimer = 60;
+    body->_52c = 0.4f;
+    body->_474 = 0.313f;
+    JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)23, num, body->mPos, 2);
+    if (GetKartCtrl()->CheckCamera(num)) {
+        int camNum = GetKartCtrl()->GetCameraNum(num);
+        if (GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 0) {
+            JPEffectPerformer::setEffectEachCam((JPEffectPerformer::EffectType)35, num, (u8)camNum, 0);
+        }
+    }
+}
 
 void KartGame::MakeJumpDash() {}
 
@@ -228,13 +275,41 @@ void KartGame::MakeStartDash() {}
 
 void KartGame::MakeCrashDash() {}
 
-void KartGame::MakeWheelSpin() {}
+void KartGame::MakeWheelSpin() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    body->_584 = 8;
+    body->_588 = 0;
+    body->_594 = 0;
+    MakeClear();
+    body->getItem()->FallItem();
+    body->mCarStatus |= 0x800;
+    JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)0x20, num, body->mPos, 0);
+    JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)0x20, num, body->mPos, 1);
+    GetKartCtrl()->getKartSound(num)->DoWheelSpin();
+    GetKartCtrl()->getKartSound(num)->DoTandemVoice(36);
+}
 
 void KartGame::MakeJump() {}
 
 void KartGame::DoAirCheck() {}
 
-void KartGame::DoRearSlidePower() {}
+void KartGame::DoRearSlidePower() {
+    KartBody *body = mBody;
+    JGeometry::TVec3f vec1;
+    JGeometry::TVec3f vec2;
+    JGeometry::TVec3f vec3;
+    JGeometry::TVec3f vec4;
+    vec1.set(0.0f, 0.0f, -1.2f);
+    vec2.set(-body->_35c.x * body->_3a4, 0.0f, body->_35c.z * body->_3a4);
+    PSMTXMultVec(body->_110, &vec1, &vec3);
+    PSMTXMultVecSR(body->_110, &vec2, &vec4);
+    body->DoForce(&vec3, &vec4);
+    vec1.set(0.0f, 0.0f, 1.0f);
+    PSMTXMultVec(body->_110, &vec1, &vec3);
+    PSMTXMultVecSR(body->_110, &vec2, &vec4);
+    body->DoForce(&vec3, &vec4);
+}
 
 void KartGame::DoRearSlideBody() {
     // void JGeometry::TVec3<float>::div(float) {}
@@ -242,7 +317,16 @@ void KartGame::DoRearSlideBody() {
 
 void KartGame::DoCorner() {}
 
-void KartGame::FrameWork(float, KartSus *, KartSus *) {}
+void KartGame::FrameWork(f32 speed, KartSus *sus1, KartSus *sus2) {
+    KartBody *body = mBody;
+    JGeometry::TVec3f force;
+    f32 diff = sus1->_b4 - sus2->_b4;
+    f32 f = 0.313f * speed * (diff * (-14.0f * body->_3ac));
+    force.set(body->_110[0][1] * f, body->_110[1][1] * f, body->_110[2][1] * f);
+    body->DoForce(&sus2->_c0, &force);
+    GetKartCtrl()->MulVector(&force, -1.0f, -1.0f, -1.0f);
+    body->DoForce(&sus1->_c0, &force);
+}
 
 void KartGame::DoBodyAction() {
     KartBody *body = mBody;
@@ -257,7 +341,14 @@ void KartGame::DoBodyAction() {
     FrameWork(body->_3b0, sus1, sus2);
 }
 
-void KartGame::DoElementForce() {}
+void KartGame::DoElementForce() {
+    KartBody *body = mBody;
+    if (body->getTouchNum() != 0 || (body->mCarStatus & 0x100000) != 0)
+        body->mVel.scale(0.99f);
+    else
+        body->mVel.scale(-2.44222f);
+    body->mWg.scale(0.98f);
+}
 
 bool KartGame::CheckBalloon() {
     KartBody *body = mBody;
