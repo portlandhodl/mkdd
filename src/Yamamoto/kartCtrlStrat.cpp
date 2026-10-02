@@ -4,6 +4,7 @@
 #include "Yamamoto/KartDamage.h"
 #include "Sato/ItemObjMgr.h"
 #include "Sato/JPEffectPerformer.h"
+#include "Sato/stEffectMgr.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -161,7 +162,33 @@ void KartGame::DoDriftClear() {
 void KartGame::DoRoll() {}
 
 void KartGame::DoTestPitch() {
-    // void JUTGamePad::getMainStickY() const {}
+    KartBody *body = mBody;
+    KartGamePad *cont = GetKartCtrl()->GetDriveCont(body->mMynum);
+    if (body->getTouchNum() != 0) {
+        body->_4c0 = 0.0f;
+        if ((body->mCarStatus & 0x300) != 0)
+            body->getStrat()->PitchClear();
+        return;
+    }
+    f32 stick = cont->getMainStickY();
+    if (stick > 0.0f) {
+        body->mCarStatus |= 0x200;
+        body->mCarStatus &= ~0x100ull;
+    } else if (stick < 0.0f) {
+        body->mCarStatus |= 0x100;
+        body->mCarStatus &= ~0x200ull;
+    }
+    f32 step = 0.0f;
+    f32 target;
+    if (stick >= 0.8 || stick <= -0.5f) {
+        target = 1.5f * stick;
+        step = 0.2f;
+    } else {
+        target = step;
+    }
+    GetKartCtrl()->ChaseFnumber(&body->_4c0, target, step);
+    if (body->_4c0 == 0.0f)
+        body->getStrat()->PitchClear();
 }
 
 void KartGame::DoLiftTurbo() {}
@@ -267,13 +294,63 @@ void KartGame::MakeJumpDash() {}
 
 void KartGame::MakeSpJumpDash() {}
 
-void KartGame::MakeMashDash() {}
+void KartGame::MakeMashDash() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if ((body->mCarStatus & 0x1000) != 0)
+        return;
+    GetStEfctMgr()->createKinokoDashEmt(num);
+    GetKartCtrl()->getKartSound(num)->DoMashDashSound();
+    GetKartCtrl()->getKartSound(num)->DoDashVoice();
+    if ((body->mCarStatus & 0x40020020000ull) != 0)
+        return;
+    body->mCarStatus &= ~0x40020030000ull;
+    body->getStrat()->DoMotor(MotorManager::MotorType_5);
+    if ((body->mCarStatus & 0x4000) != 0) {
+        body->mBoostTimer = 80;
+        return;
+    }
+    body->mCarStatus |= 0xc000;
+    body->mBoostTimer = 80;
+    body->_52c = 0.4f;
+    body->_474 = 0.313f;
+    if (GetKartCtrl()->CheckCamera(num)) {
+        int camNum = GetKartCtrl()->GetCameraNum(num);
+        if (GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 0) {
+            JPEffectPerformer::setEffectEachCam((JPEffectPerformer::EffectType)35, num, (u8)camNum, 0);
+        }
+    }
+}
 
 void KartGame::MakeGoldenMashDash() {}
 
 void KartGame::MakeStartDash() {}
 
-void KartGame::MakeCrashDash() {}
+void KartGame::MakeCrashDash() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if ((body->mCarStatus & 0x1000) != 0)
+        return;
+    if ((body->mCarStatus & 0x4000) != 0) {
+        body->mBoostTimer = 45;
+        return;
+    }
+    GetKartCtrl()->getKartSound(num)->DoMashDashSound();
+    body->mCarStatus |= 0xc000;
+    body->mBoostTimer = 20;
+    body->_598 = body->mBoostTimer;
+    body->_52c = 0.4f;
+    body->_474 = 0.313f;
+    body->_3c8 = body->_3d0;
+    JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)26, num, body->mPos, 0);
+    if (GetKartCtrl()->CheckCamera(num)) {
+        int camNum = GetKartCtrl()->GetCameraNum(num);
+        if (GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 0 ||
+            (GetKartCtrl()->getKartCam(camNum)->GetDemoCam()->_38 & 4 && GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 10)) {
+            JPEffectPerformer::setEffectEachCam((JPEffectPerformer::EffectType)35, num, (u8)camNum, 0);
+        }
+    }
+}
 
 void KartGame::MakeWheelSpin() {
     KartBody *body = mBody;
