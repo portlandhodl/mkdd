@@ -37,7 +37,17 @@ public:
         mcBrokenNoUse,
         mcBrokenNeedFormat,
         mcGstLoad,
+        mcBmg13, // open slots to keep enum order (unused in target binary unless values 27-31 referenced)
+        mcBmg14,
+        mcBmg15,
+        mcBmg16,
+        mcBmg17,
         mcLoaded,
+        mcBmg19,
+        mcBmg20,
+        mcBmg21,
+        mcBmg22,
+        mcBmg23,
         mcNoSpaceNoSave,
         mcTooManyFiles,
         mcGstSave,
@@ -95,7 +105,6 @@ private:
     u8 _0[0x4];
     void *mpBmg; // 0x4
     class PrintWindow *mpWindow; // 0x8
-    u8 _9[0xc - 0x9];
     u8 _c;
     u8 _d;
     u8 _e;
