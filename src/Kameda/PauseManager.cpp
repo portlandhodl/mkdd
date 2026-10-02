@@ -1,4 +1,5 @@
 #include "Kameda/PauseManager.h"
+#include "Kameda/Result2D.h"
 #include "mathHelper.h"
 
 PauseManager *PauseManager::mThis;    // 0x80416298
