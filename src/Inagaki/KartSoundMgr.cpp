@@ -46,7 +46,7 @@ void KartSoundMgr::frameWork(u8) {}
 
 void KartSoundMgr::checkAfterGoalVolume() {}
 
-void KartSoundMgr::setWaterDepth(u8, f32) {}
+void KartSoundMgr::setWaterDepth(u8 idx, f32 depth) { mWaterDepth[idx] = depth; }
 
 void KartSoundMgr::setSlip(u8, u8, u8, f32) {}
 
@@ -70,6 +70,7 @@ void KartSoundMgr::setConductTrouble(f32, u8) {}
 
 void KartSoundMgr::setConductRace(bool) {}
 
+// Nonmatching: calls setConductRace(flag); emits bl only once setConductRace has a real body
 void KartSoundMgr::setConductAfterGoal(bool) {}
 
 void KartSoundMgr::setCrushSe(CrsGround::EMat, f32) {}
