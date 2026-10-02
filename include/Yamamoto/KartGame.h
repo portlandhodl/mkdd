@@ -5,6 +5,7 @@
 #include "Yamamoto/kartSus.h"
 #include "types.h"
 
+class JugemPoint;
 class KartBody;
 
 class KartGame
@@ -90,7 +91,7 @@ public:
     // void DoTurboPower();
     // void CheckBalloonPlayer();
     KartBody *mBody;
-    u32 _04;
+    JugemPoint *_04;
     u8 _08;
     u8 _09;
     u8 _0a;

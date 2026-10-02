@@ -290,9 +290,75 @@ void KartGame::MakeBoardDash() {
     }
 }
 
-void KartGame::MakeJumpDash() {}
+void KartGame::MakeJumpDash() {
+    KartBody *body = mBody;
+    if ((body->mCarStatus & 0x1000) != 0)
+        return;
+    int num = body->mMynum;
+    GetKartCtrl()->getKartSound(num)->DoDashSound();
+    body->mCarStatus &= ~0x40000034000ull;
+    body->getStrat()->DoMotor(MotorManager::MotorType_7);
+    if ((body->mCarStatus & 0x20000000) != 0) {
+        body->mBoostTimer = 20;
+        return;
+    }
+    body->mCarStatus |= 0x20008000;
+    body->mBoostTimer = 20;
+    body->_52c = 0.4f;
+    body->_474 = 0.313f;
+    JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)23, num, body->mPos, 2);
+    if (GetKartCtrl()->CheckCamera(num)) {
+        int camNum = GetKartCtrl()->GetCameraNum(num);
+        if (GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 0) {
+            JPEffectPerformer::setEffectEachCam((JPEffectPerformer::EffectType)35, num, (u8)camNum, 0);
+        }
+    }
+    _04 = body->mBodyGround.getJugemPoint();
+    if (_04 != nullptr) {
+        JGeometry::TVec3f vec;
+        _04->getPosition(&_38);
+    } else {
+        _1c = 0.0f;
+        _18 = 0.0f;
+        _04 = nullptr;
+        _38.set(body->mPos);
+    }
+}
 
-void KartGame::MakeSpJumpDash() {}
+void KartGame::MakeSpJumpDash() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if ((body->mCarStatus & 0x1000) != 0)
+        return;
+    GetKartCtrl()->getKartSound(num)->DoDashSound();
+    body->mCarStatus &= ~0x20034000ull;
+    body->getStrat()->DoMotor(MotorManager::MotorType_7);
+    if ((body->mCarStatus & 0x40000000000ull) != 0) {
+        body->mBoostTimer = 20;
+        return;
+    }
+    body->mCarStatus |= 0x40000008000ull;
+    body->mBoostTimer = 20;
+    body->_52c = 0.4f;
+    body->_474 = 0.313f;
+    JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)23, num, body->mPos, 2);
+    if (GetKartCtrl()->CheckCamera(num)) {
+        int camNum = GetKartCtrl()->GetCameraNum(num);
+        if (GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 0) {
+            JPEffectPerformer::setEffectEachCam((JPEffectPerformer::EffectType)35, num, (u8)camNum, 0);
+        }
+    }
+    _04 = body->mBodyGround.getJugemPoint();
+    if (_04 != nullptr) {
+        JGeometry::TVec3f vec;
+        _04->getPosition(&_38);
+    } else {
+        _1c = 0.0f;
+        _18 = 0.0f;
+        _04 = nullptr;
+        _38.set(body->mPos);
+    }
+}
 
 void KartGame::MakeMashDash() {
     KartBody *body = mBody;
@@ -322,7 +388,34 @@ void KartGame::MakeMashDash() {
     }
 }
 
-void KartGame::MakeGoldenMashDash() {}
+void KartGame::MakeGoldenMashDash() {
+    KartBody *body = mBody;
+    int num = body->mMynum;
+    if ((body->mCarStatus & 0x1000) != 0)
+        return;
+    GetStEfctMgr()->createKinokoDashEmt(num);
+    GetKartCtrl()->getKartSound(num)->DoMashDashSound();
+    if ((body->mCarStatus & 0x40020020000ull) != 0)
+        return;
+    body->mCarStatus &= ~0x40020020000ull;
+    body->getStrat()->DoMotor(MotorManager::MotorType_5);
+    if ((body->mCarStatus & 0x4000) != 0) {
+        body->mBoostTimer = 80;
+        GetKartCtrl()->getKartSound(num)->DoGoldenDashVoice();
+        return;
+    }
+    GetKartCtrl()->getKartSound(num)->DoGoldenDashVoice();
+    body->mCarStatus |= 0xc000;
+    body->mBoostTimer = 80;
+    body->_52c = 0.4f;
+    body->_474 = 0.313f;
+    if (GetKartCtrl()->CheckCamera(num)) {
+        int camNum = GetKartCtrl()->GetCameraNum(num);
+        if (GetKartCtrl()->getKartCam(camNum)->GetCameraMode() == 0) {
+            JPEffectPerformer::setEffectEachCam((JPEffectPerformer::EffectType)35, num, (u8)camNum, 0);
+        }
+    }
+}
 
 void KartGame::MakeStartDash() {}
 
