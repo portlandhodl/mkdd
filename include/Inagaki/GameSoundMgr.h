@@ -231,7 +231,9 @@ public:
 
     static u8 smKartRankClassMem[7];
 
-    u8 _5c[0x61 - 0x5c];
+    u8 _5c[2];
+    u8 _5e;                // 0x5e
+    u8 _5f[0x61 - 0x5f];
     u8 _61;
     u8 mKartCount; // 62
     u8 _63;

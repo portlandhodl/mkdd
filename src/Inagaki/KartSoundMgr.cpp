@@ -54,7 +54,11 @@ void KartSoundMgr::setConductStatus(f32, f32, bool, bool, bool, u8, CrsArea *) {
 
 void KartSoundMgr::setWaterCutoffPort(u16) {}
 
-void KartSoundMgr::countGoalKart() {}
+void KartSoundMgr::countGoalKart() {
+    if (_5e == 0 && _63 != _8d) {
+        smGoalKartCount++;
+    }
+}
 
 void KartSoundMgr::setConductLocomotiveAccel() {}
 
