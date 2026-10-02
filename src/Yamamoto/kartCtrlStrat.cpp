@@ -360,7 +360,51 @@ void KartGame::DoTestPitch() {
         body->getStrat()->PitchClear();
 }
 
-void KartGame::DoLiftTurbo() {}
+void KartGame::DoLiftTurbo() {
+    KartBody *body = mBody;
+    JGeometry::TVec3f vec2c;
+    JGeometry::TVec3f vec20;
+    JGeometry::TVec3f vec14;
+    JGeometry::TVec3f vec8;
+
+    if ((body->mCarStatus & 3) == 0)
+        body->_518 = 0.0f;
+    if ((body->mCarStatus & 3) == 0 || body->getTouchNum() <= 1 || (body->mCarStatus & 0xc000420ull) != 0 || body->mBodyGround.getAttribute() == 6) {
+        body->_564 = 0.0f;
+        body->_518 = 0.0f;
+        return;
+    }
+    if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 30.0f)
+        return;
+    if (GetKartCtrl()->GetCarSpeed(body->mMynum) >= 40.0f && body->_3c8 != 0.0f) {
+        GetKartCtrl()->DevMatrixByVector(&vec20, &body->mVel, body->_110);
+        vec20.z *= 1.015f;
+        vec20.x *= 1.05f;
+        if (vec20.z < 0.0f)
+            vec20.z *= -1.0f;
+        PSMTXMultVecSR(body->_110, &vec20, &body->mVel);
+    }
+    body->_518 = body->_514;
+    f32 f1 = body->_4dc * body->_3c8;
+    body->_564 = 0.38f;
+    f32 total = body->_518 * f1;
+    vec2c.set(body->_344.x, body->_344.y, body->_344.z);
+    f32 share0 = total * body->_564;
+    f32 share1 = total * (1.0f - body->_564);
+    vec20.set(body->_3a4 * share0, 0.0f, body->_3a4 * share1);
+    if ((body->mCarStatus & 2) != 0)
+        vec20.x *= -1.0f;
+    PSMTXMultVec(body->_110, &vec2c, &vec14);
+    PSMTXMultVecSR(body->_110, &vec20, &vec8);
+    body->DoForce(&vec14, &vec8);
+    vec2c.set(body->_344.x, body->_344.y, 0.5f * -body->_344.z);
+    vec20.set(body->_3a4 * share0, 0.0f, body->_3a4 * (body->_4dc * share1));
+    if ((body->mCarStatus & 2) != 0)
+        vec20.x *= -1.0f;
+    PSMTXMultVec(body->_110, &vec2c, &vec14);
+    PSMTXMultVecSR(body->_110, &vec20, &vec8);
+    body->DoForce(&vec14, &vec8);
+}
 
 void KartGame::DoTurbo() {}
 
