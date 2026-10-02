@@ -31,7 +31,8 @@ public:
 
     u8 _0[0x8];            //
     u8 mFlags;             // 08
-    u8 _9[0x1c - 0x9];     //
+    u8 _9;                  // 0x09
+    u8 _a[0x1c - 0xa];     //
     JGeometry::TVec3f _1c; //
     JGeometry::TVec3f _28; //
     JGeometry::TVec3f _34; //

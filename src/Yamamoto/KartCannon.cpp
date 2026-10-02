@@ -39,7 +39,13 @@ void KartCannon::DoRainbowLanding() {}
 
 void KartCannon::DoRainbowCheckEnd() {}
 
-void KartCannon::DoCannonCrl() {}
+void KartCannon::DoCannonCrl() {
+    if (_9 & 5) {
+        DoDonkyCannonCrl();
+    } else {
+        DoRainbowCannonCrl();
+    }
+}
 
 void KartCannon::DoDonkyCannonCrl() {}
 
