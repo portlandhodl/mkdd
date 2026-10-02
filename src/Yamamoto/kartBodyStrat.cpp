@@ -108,7 +108,7 @@ void KartStrat::DoMotor(MotorManager::MotorType) {
 
 void KartStrat::DoPowerMotor(float, unsigned char, unsigned char) {}
 
-void KartStrat::DashSpeedCtrl(float) {}
+void KartStrat::DashSpeedCtrl(float scale) { DashSpSpeedCtrl(scale); }
 
 void KartStrat::DashSpSpeedCtrl(float) {}
 
