@@ -12,7 +12,9 @@ void KartDemoCam::ChaseFovy(const CrsData::Camera *) {
     // void CrsData::Camera::getFovy2() const {}
 }
 
-void KartDemoCam::DoInitCol() {}
+void KartDemoCam::DoInitCol() {
+    _80.set(mBody->mCameraPos);
+}
 
 void KartDemoCam::DoCol() {}
 
