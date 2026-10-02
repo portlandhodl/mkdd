@@ -205,8 +205,7 @@ void SceneOption::calcMatAnmCursor() {}
 void SceneOption::calc() {}
 
 void SceneOption::fadeIn() {
-    _a0++;
-    if (_a0 > 15) {
+    if (++_a0 > 15) {
         _58 = 1;
         _5c = 0;
         _a0 = 0;
