@@ -90,7 +90,13 @@ bool TPathMove::update() {
     return _1c;
 }
 
-void TPathMove::init(JGeometry::TVec3f *, JGeometry::TVec3f *) {}
+void TPathMove::init(JGeometry::TVec3f *pos, JGeometry::TVec3f *vel) {
+    mpPos = pos;
+    mpVel = vel;
+    reset();
+#line 448
+    JUT_ASSERT(pos != 0 && vel != 0);
+}
 
 void TPathMove::reset() {
     _1d = false;
