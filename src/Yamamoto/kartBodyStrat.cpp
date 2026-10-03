@@ -1419,7 +1419,133 @@ void KartStrat::DoSpeedCrl() {
     }
 }
 
-void KartStrat::DoComSpeedCrl() {}
+void KartStrat::DoComSpeedCrl() {
+    KartBody *body = mBody;
+    JGeometry::TVec3f vec;
+    JGeometry::TVec3f unkVec;
+    f32 f30 = 0.0f;
+    DoDash();
+    if (body->_284.x != 0.0f || body->_284.y != 0.0f || body->_284.z != 0.0f) {
+        f30 = 1.0f;
+    }
+    switch (body->_584) {
+    case 0:
+    case 6:
+    case 17:
+    case 18:
+        DoVelCrl(body->_3f0 / 2.16f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 1:
+    case 2:
+        DoVelCrl(body->_3f0 / 2.16f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 3:
+    case 4:
+    case 5:
+        DoVelCrl(body->_3f0 / 2.16f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 15:
+        DoVelCrl(body->getPipe()->mSpeed / 2.16f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 16:
+        DoVelCrl(87.96296f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 12:
+    case 14:
+        DoVelCrl(92.59259f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 7:
+        DoVelCrl(27.777777f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 8:
+        DoVelCrl(46.296295f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 11:
+        DoVelCrl(body->getCannon()->_14 / 2.16f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    default: {
+        f32 f31 = GetKartCtrl()->GetMaxSpeed(body->mMynum);
+        f31 = f31 + GetKartCtrl()->getKartEnemy(body->mMynum)->getOffsetMaxSpeed();
+        f32 f29 = GetKartCtrl()->getKartEnemy(body->mMynum)->getMaxSpeed();
+        if (body->getTouchNum() != 0 && f31 > f29 && (body->mCarStatus & 0x400) == 0) {
+            f31 = f29;
+        }
+        f29 = 0.2f * f31;
+        f29 = f29 * (body->_3cc / body->_3d8);
+        if (f31 > f29 && body->getTouchNum() != 0) {
+            f31 -= f29;
+        }
+        f31 = DoDashCrl(DoStarCrl(f31));
+        GetKartCtrl()->DevMatrixByVector(&vec, &body->mVel, body->_110);
+        if (0.0f != f31 && vec.z < 0.0f) {
+            f31 = 40.0f;
+        }
+        if ((body->mCarStatus & 0x1000) != 0 || body->mBodyGround.getAttribute() == 6) {
+            GetKartCtrl()->ChaseFnumber(&body->_3ec, f31, 1.0f);
+        } else if (body->getTouchNum() == 0 || (body->mCarStatus & 0x40) != 0) {
+            GetKartCtrl()->ChaseFnumber(&body->_3ec, 135.0f, 0.1f);
+        } else if ((body->mCarStatus & 0x48004) != 0 || f30 != 0.0f) {
+            GetKartCtrl()->ChaseFnumber(&body->_3ec, f31, 0.2f);
+        } else {
+            GetKartCtrl()->ChaseFnumber(&body->_3ec, f31, 0.1f);
+            if (body->_3ec > 200.0f) {
+                body->_3ec = 200.0f;
+            }
+            GetKartCtrl()->DevMatrixByVector(&vec, &body->mVel, body->_110);
+            if (vec.z < 0.0f && (body->mCarStatus & 3) == 0) {
+                vec.x = 0.0f;
+                vec.z = 1.0f;
+                PSMTXMultVecSR(body->_110, &vec, &body->mVel);
+            }
+            if (f31 == 0.0f) {
+                body->_3c8 = 0.0f;
+                body->mVel.x = 0.0f;
+                body->mVel.z = 0.0f;
+                if (body->getTouchNum() == 4) {
+                    body->mVel.y = 0.0f;
+                }
+            } else {
+                DoEnemyMaxmZCrl(body->_3ec / 2.16f / body->mSpeedScale);
+            }
+        }
+        if (body->_3ec > 200.0f) {
+            body->_3ec = 200.0f;
+        }
+        DoVelCrl(body->_3ec / 2.16f / body->mSpeedScale);
+        if (body->getTouchNum() != 0) {
+            if ((body->mCarStatus & 0x40020000000ull) != 0) {
+                if (body->mVel.y > 200.0f) {
+                    body->mVel.y = 200.0f;
+                } else if (body->mVel.y < -200.0f) {
+                    body->mVel.y = -200.0f;
+                }
+            } else {
+                if (body->mVel.y > 90.0f) {
+                    body->mVel.y = 90.0f;
+                } else if (body->mVel.y < -200.0f) {
+                    body->mVel.y = -200.0f;
+                }
+            }
+        } else {
+            if (body->mVel.y > 300.0f) {
+                body->mVel.y = 300.0f;
+            } else if (body->mVel.y < -200.0f) {
+                body->mVel.y = -200.0f;
+            }
+        }
+        break;
+    }
+    }
+}
 
 void KartStrat::DoCutSlide() {
     KartBody *body = mBody;
