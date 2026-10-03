@@ -5,6 +5,7 @@
 #include "Sato/JPEffectPerformer.h"
 #include "Yamamoto/kartCamera.h"
 #include "Yamamoto/kartCtrl.h"
+#include "Yamamoto/kartParams.h"
 
 #include <std/math.h>
 
@@ -431,10 +432,169 @@ void KartStrat::OtherClear() {
     body->getGame()->_0b = 0;
 }
 
-void KartStrat::ShakeGround() {}
+void KartStrat::ShakeGround() {
+    JGeometry::TVec3f shakeVec;
+    JGeometry::TVec3f groundVel;
+    KartBody *body = mBody;
+    f32 depth = bridgeDepth[body->mIdx];
+    if (body->getThunder()->mFlags & 1) {
+        depth = bridgeThunderDepth[body->mIdx];
+        depth *= body->getThunder()->getScale();
+    }
+    if (body->mBodyGround.isObject() && body->mBodyGround.getObject()->getKind() == 7) {
+        if ((body->mCarStatus & 0x40000) != 0 && body->mBodyGround.getAttribute() == 16) {
+            groundVel.zero();
+        }
+        body->mBodyGround.getVelocity(&groundVel);
+        if (!body->getChecker()->CheckSpecialDyn() && body->getTouchNum() != 0) {
+            f32 depthY = body->_1a0[1][3] - depth - body->mBodyGround.getHeight();
+            if (depthY > 0.0f) {
+                groundVel.y = 0.0f;
+            } else {
+                if (body->getThunder()->mFlags & 1 && (mBody->mIdx == BOO_PIPES || mBody->mIdx == PIRANHA_PIPES ||
+                                                        mBody->mIdx == GOO_GOO_BUGGY || mBody->mIdx == RATTLE_BUGGY)) {
+                    depthY *= 0.1f;
+                }
+                groundVel.y = -depthY;
+            }
+            body->_29c.add(groundVel);
+        }
+        return;
+    }
+    depth = floorDepth[body->mIdx];
+    if (body->getThunder()->mFlags & 1) {
+        depth = floorThunderDepth[body->mIdx];
+        depth *= body->getThunder()->getScale();
+    }
+    if (!body->mBodyGround.isShaking()) {
+        return;
+    }
+    JGeometry::TVec3f unusedVec;
+    body->mBodyGround.getVelocity(&groundVel);
+    if (body->mBodyGround.getAttribute() == 16) {
+        if ((body->mCarStatus & 0x40000) != 0) {
+            groundVel.zero();
+        }
+        if (!body->getChecker()->CheckSpecialDyn() && body->getTouchNum() != 0) {
+            groundVel.scale(body->mSpeedScale);
+            body->mVel.add(groundVel);
+        }
+    } else {
+        if (!body->getChecker()->CheckSpecialDyn() && body->getTouchNum() != 0) {
+            groundVel.x *= 1.3f;
+            groundVel.z *= 1.3f;
+            f32 depthY = body->_1a0[1][3] - depth - body->mBodyGround.getHeight();
+            if (depthY > 0.0f) {
+                groundVel.y = 0.0f;
+            } else {
+                groundVel.y = -depthY;
+            }
+            body->_29c.add(groundVel);
+        }
+    }
+}
 
-void KartStrat::DoAdjustment() { 
-    // void KartBody::getPipe() {}
+void KartStrat::DoAdjustment() {
+    JGeometry::TVec3f adjustVel;
+    KartBody *body = mBody;
+    body->mEffctVel.zero();
+    body->mEffctVel.set(body->mVel);
+    body->mEffctVel.scale(body->mSpeedScale);
+    body->_284.add(body->getDossin()->mVelocity);
+    body->_284.add(body->_29c);
+    body->_284.add(body->_314);
+    if ((body->_2a8.x != 0.0f) | (body->_2a8.y != 0.0f) | (body->_2a8.z != 0.0f)) {
+        body->_284.add(body->mEffctVel);
+        f32 angle = body->_2a8.angle(body->_284);
+        if (angle > 2.44222f) {
+            body->mEffctVel.set(body->_2a8);
+        } else {
+            body->mEffctVel.set(body->_284);
+            body->mEffctVel.add(body->_2a8);
+        }
+    } else {
+        body->mEffctVel.add(body->_284);
+        body->mEffctVel.add(body->_2a8);
+    }
+    f32 speed = body->_3ec;
+    if (body->_3ec < body->_3f0) {
+        if (body->mBodyGround.isShaking() || body->_58c == 7) {
+            speed = body->_3f0;
+        }
+    }
+    switch (body->_584) {
+    case 1:
+    case 18:
+        speed = body->_3f0;
+        break;
+    case 2:
+    case 3:
+        speed = body->_3f0;
+        break;
+    case 4:
+    case 5:
+    case 6:
+        speed = body->_3f0;
+        break;
+    case 16:
+        speed = body->getPipe()->mSpeed;
+        break;
+    case 17:
+        speed = 190.0f;
+        break;
+    case 13:
+    case 15:
+        speed = 200.0f;
+        break;
+    case 8:
+        speed = 60.0f;
+        break;
+    case 9:
+        speed = body->getRescue()->_88;
+        break;
+    case 12:
+        speed = body->getCannon()->_14;
+        break;
+    case 14:
+        speed = body->getDossin()->_20;
+        break;
+    }
+    f32 velY = body->mEffctVel.y;
+    f32 len = body->mEffctVel.length();
+    f32 target = speed / 2.16f;
+    if (len > target && len > 0.0f) {
+        body->mEffctVel.scale(target / len);
+    }
+    if (body->_2b4.x == 0.0f && body->_2b4.y == 0.0f && body->_2b4.z == 0.0f) {
+    } else if (body->getItem()->CompulsionReleseWanWan()) {
+        body->getItem()->ReleseWanWan();
+        body->_29c.zero();
+        body->_2a8.zero();
+        body->_284.zero();
+        body->_2b4.zero();
+    } else if ((body->mCarStatus & 0x400) != 0) {
+        if (body->_2b4.angle(body->_2a8) > 1.74444f) {
+            if (body->_2b4.length() >= 50.0f) {
+                body->getItem()->ReleseWanWan();
+            }
+        }
+        body->_29c.zero();
+        body->_2a8.zero();
+        body->_284.zero();
+        body->_2b4.zero();
+    } else {
+        body->mEffctVel.add(body->_2b4);
+        body->mEffctVel.y = 0.0f;
+        f32 len2 = body->mEffctVel.length();
+        if (len2 > 92.59259f && len2 > 0.0f) {
+            body->mEffctVel.scale(92.59259f / len2);
+        }
+        body->mEffctVel.y = velY;
+    }
+    body->_29c.zero();
+    body->_2a8.zero();
+    body->_284.zero();
+    body->_2b4.zero();
 }
 
 void KartStrat::DoWheelSpinCrl() {
@@ -1027,7 +1187,8 @@ void KartStrat::DoSpeedCrl() {
         break;
     default: {
         f32 f29 = GetKartCtrl()->GetMaxSpeed(body->mMynum);
-        f32 f31 = 0.2f * f29 * (body->_3cc / body->_3d8);
+        f32 f31 = 0.2f * f29;
+        f31 = f31 * (body->_3cc / body->_3d8);
         if (f29 > f31 && body->getTouchNum() != 0) {
             f29 -= f31;
         }
@@ -1037,7 +1198,7 @@ void KartStrat::DoSpeedCrl() {
         }
         KartGamePad *cont = GetKartCtrl()->GetDriveCont(body->mMynum);
         if ((body->mCarStatus & 0x8040) == 0 && f30 == 0.0f && !body->mBodyGround.isShaking()) {
-            if (cont->testButton(GetKartCtrl()->getKartPad(body->mMynum)->mTrigZ | GetKartCtrl()->getKartPad(body->mMynum)->mBtnY)) {
+            if (cont->testButton(GetKartCtrl()->getKartPad(body->mMynum)->mTrigL | GetKartCtrl()->getKartPad(body->mMynum)->mTrigR)) {
                 if (GetKartCtrl()->GetCarSpeed(body->mMynum) < 100.0f && body->_3c8 == 0.0f && body->_3cc == 0.0f) {
                     f31 = 0.0f;
                 }
@@ -1052,7 +1213,7 @@ void KartStrat::DoSpeedCrl() {
             GetKartCtrl()->ChaseFnumber(&body->_3ec, f31, 1.0f);
         } else if (GetKartCtrl()->GetCarSpeed(body->mMynum) >= 20.0f && (body->getTouchNum() == 0 || (body->mCarStatus & 0x40) != 0)) {
             GetKartCtrl()->ChaseFnumber(&body->_3ec, 135.0f, 0.1f);
-        } else if ((body->mCarStatus & 0x20000048004ull) != 0) {
+        } else if ((body->mCarStatus & 0x20000048004ull) != 0 || f30 != 0.0f) {
             GetKartCtrl()->ChaseFnumber(&body->_3ec, f31, 0.2f);
         } else if (body->getTouchNum() == 0 || (body->mCarStatus & 0x40) != 0) {
             GetKartCtrl()->ChaseFnumber(&body->_3ec, 135.0f, 0.26f);

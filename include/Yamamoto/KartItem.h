@@ -15,7 +15,7 @@ public:
     void FallItem();
     void FallAllItem();
     void ReleseWanWan();
-    void CompulsionReleseWanWan();
+    bool CompulsionReleseWanWan();
     void KillWanWan();
     bool IsMyItem();
     bool IsChanging();

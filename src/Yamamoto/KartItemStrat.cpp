@@ -20,7 +20,7 @@ void KartItem::FallAllItem() {}
 
 void KartItem::ReleseWanWan() {}
 
-void KartItem::CompulsionReleseWanWan() {
+bool KartItem::CompulsionReleseWanWan() {
     // void ItemWanWanObj::tstReverseThrow() const {}
 }
 
