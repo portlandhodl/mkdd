@@ -2,6 +2,7 @@
 #include "Yamamoto/kartBody.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
+#include "Kaneshige/SysDebug.h"
 #include "Sato/JPEffectPerformer.h"
 #include "Yamamoto/kartCamera.h"
 #include "Yamamoto/kartCtrl.h"
@@ -90,7 +91,7 @@ void KartStrat::GetRoadBodyRoll() {
         body->_468 = body->_460 - body->_468;
     }
     len = GetKartCtrl()->SpeedySqrtf(vec2.x * vec2.x + vec2.z * vec2.z);
-    if (len != 0.0f) { // NON_MATCHING: branch layout
+    if (len != 0.0f) {
         body->_46c = std::atanf(vec2.y / len);
         body->_46c = body->_464 - body->_46c;
     }
@@ -120,10 +121,10 @@ void KartStrat::DoEnemyMaxmZCrl(f32 p1) {
     f32 diff = p1 - vec.length();
     if (diff <= 0.0f)
         return;
-    vec.y /= diff;
+    vec.y = vec.y / diff;
     vec.y = 0.0f;
-    vec.x /= diff;
-    vec.z /= diff;
+    vec.x = vec.x / diff;
+    vec.z = vec.z / diff;
     vec.scale(diff);
     body->mVel.add(vec);
 }
@@ -656,10 +657,9 @@ void KartStrat::DoWallCrl() {
     if ((body->mGameStatus & 8) != 0)
         return;
     if ((body->mCarStatus & 0x420) != 0 || (body->mCarStatus & 0x8000000) != 0) {
-        if (body->mTireAngle == 0.0f)
+        if (body->mTireAngle == 0.0f || body->getTouchNum() == 0) {
             return;
-        if (body->getTouchNum() == 0)
-            return;
+        }
         if (body->_3c8 == 0.0 && (body->mGameStatus & 0x200) != 0)
             return;
         if ((body->mCarStatus & 3) != 0) {
@@ -744,7 +744,159 @@ void KartStrat::DoLiftCrl() {
 }
 
 void KartStrat::DoLiftYawCrl() {
-    // void SysDebug::checkNaNVector(Vec *, char *) {}
+    KartBody *body = mBody;
+    if ((body->mCarStatus & 3) != 0) {
+        if (body->getTouchNum() != 0) {
+            body->mWg.y = 0.0697777f * body->mSterrFrame;
+        }
+        if ((body->mCarStatus & 1) != 0) {
+            body->mWg.y = -body->mWg.y;
+        }
+        if (body->getTouchNum() != 0) {
+            body->mWg.y += 0.00174444f * body->mLiftframe * body->mYawSterr;
+        }
+        if (body->getTouchNum() != 0) {
+            if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 50.0f) {
+                body->mWg.y *= 1.2f;
+            }
+        }
+    } else {
+        if (GetKartCtrl()->GetCarSpeed(body->mMynum) > 0.0f) {
+            f32 chase = body->_484 * 0.075;
+            if ((body->mCarStatus & 0x4000) != 0) {
+                body->mSterrFrameChase =
+                    GetKartCtrl()->fcnvge(body->mSterrFrameChase, -body->mSterrFrame, 0.1f, 0.1f);
+            } else {
+                body->mSterrFrameChase =
+                    GetKartCtrl()->fcnvge(body->mSterrFrameChase, -body->mSterrFrame, chase, chase);
+            }
+            f32 mult = 0.191888f;
+            if ((body->mCarStatus & 0x4000) != 0) {
+                mult = 0.348888f;
+            }
+            if ((body->mCarStatus & 8) != 0) {
+                body->mWg.y = 0.226777f * body->mSterrFrameChase;
+            } else if (body->getTouchNum() != 0) {
+                body->mWg.y = 0.0872222f * body->mSterrFrameChase;
+                if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 60.0f) {
+                    body->mWg.y += 0.1f * body->mSterrFrameChase;
+                } else {
+                    body->mWg.y += 0.15f * (body->mSterrFrameChase * mult);
+                }
+            }
+            f32 frame = body->mFrame;
+            if (frame < 0.0f) {
+                frame = frame * -1.0f;
+            }
+            f32 mult2 = 0.9f;
+            if (frame >= 0.9f) {
+                mult2 = 1.0f;
+            } else if (frame >= 0.8f) {
+                mult2 = 0.95f;
+            } else if (frame >= 0.6f) {
+                mult2 = 0.9f;
+            } else if (frame >= 0.3f) {
+                mult2 = 0.8f;
+            } else if (frame >= 0.2f) {
+                mult2 = 0.35f;
+            } else if (frame >= 0.1f) {
+                mult2 = 0.18f;
+            } else {
+                mult2 = 0.15f;
+            }
+            if (body->getTouchNum() != 0) {
+                body->mWg.y *= mult2;
+            }
+        }
+    }
+    if ((body->mCarStatus & 3) != 0) {
+        body->mSterrNorm = GetKartCtrl()->fcnvge(body->mSterrNorm, 0.00174444f, 0.0087222f, 0.0087222f);
+    } else {
+        body->mSterrNorm = 0.0f;
+    }
+    if ((body->mCarStatus & 3) == 0) {
+        f32 frame = body->mFrame;
+        if (body->_510 > 2.44222f || (body->_5c3 & 2) != 0) {
+            if (frame < 0.0f) {
+                if (body->mWg.y < 0.0f) {
+                    body->mWg.y = -body->mWg.y;
+                }
+            } else if (frame > 0.0f) {
+                if (body->mWg.y > 0.0f) {
+                    body->mWg.y = -body->mWg.y;
+                }
+            }
+        } else {
+            if (frame < 0.0f) {
+                if (body->mWg.y > 0.0f) {
+                    body->mWg.y = -body->mWg.y;
+                }
+            } else if (frame > 0.0f) {
+                if (body->mWg.y < 0.0f) {
+                    body->mWg.y = -body->mWg.y;
+                }
+            }
+        }
+    }
+    if ((body->mCarStatus & 3) != 0) {
+        if ((body->mCarStatus & 2) != 0) {
+            if (body->mWg.y < 0.0f) {
+                body->mWg.y = -body->mWg.y;
+            }
+            if (body->getTouchNum() != 0) {
+                if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 60.0f) {
+                    body->mWg.y += 3.0f * body->mSterrNorm;
+                } else {
+                    body->mWg.y += body->mSterrNorm;
+                }
+            }
+        } else if ((body->mCarStatus & 1) != 0) {
+            if (body->mWg.y > 0.0f) {
+                body->mWg.y = -body->mWg.y;
+            }
+            if (body->getTouchNum() != 0) {
+                if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 60.0f) {
+                    body->mWg.y -= 3.0f * body->mSterrNorm;
+                } else {
+                    body->mWg.y -= body->mSterrNorm;
+                }
+            }
+        }
+    }
+    if (body->getTouchNum() != 0 && (body->mCarStatus & 3) != 0) {
+        f32 frame = body->mFrame;
+        if ((body->mCarStatus & 2) != 0) {
+            if (frame == 0.0f) {
+                body->mWg.y *= 0.2695f;
+            } else if (frame < 0.2f) {
+                body->mWg.y *= body->mBtnMinusLiftSterr;
+            } else {
+                body->mWg.y *= 0.77f;
+            }
+        } else if ((body->mCarStatus & 1) != 0) {
+            if (frame == 0.0f) {
+                body->mWg.y *= 0.2695f;
+            } else if (frame >= -0.2f) {
+                body->mWg.y *= body->mBtnMinusLiftSterr;
+            } else {
+                body->mWg.y *= 0.77f;
+            }
+        }
+    }
+    if ((body->mCarStatus & 0x40020000000ull) != 0) {
+        if (body->getTouchNum() == 0) {
+            body->mWg.y = 0.0f;
+        }
+    }
+    SysDebug::checkInvalidFloat(body->mYawSterr, "mYawSterr");
+    SysDebug::checkInvalidFloat(body->mSterrFrameChase, "DoLiftYawCrl body->mSterrFrameChase");
+    SysDebug::checkInvalidFloat(body->mSterrFrame, "DoLiftYawCrl body->mSterrFrame");
+    SysDebug::checkInvalidFloat(body->mLiftframe, "DoLiftYawCrl body->mLiftframe");
+    SysDebug::checkInvalidFloat(body->mSterrFrameChase, "DoLiftYawCrl body->mSterrFrameChase");
+    SysDebug::checkInvalidFloat(body->mFrame, "DoLiftYawCrl body->mFrame");
+    SysDebug::checkInvalidFloat(body->mSterrNorm, "DoLiftYawCrl body->mSterrNorm");
+    SysDebug::checkInvalidFloat(body->mBtnMinusLiftSterr, "DoLiftYawCrl body->mBtnMinusLiftSterr");
+    SysDebug::checkNaNVector(&body->mWg, "mWg");
 }
 
 void KartStrat::DoRollLim(f32 roll, f32 lim) {
@@ -800,6 +952,7 @@ void KartStrat::DoPitchLim() {
         limit = 0.523333f;
     }
     if (pitch <= -limit || pitch >= limit) {
+        KartBody *body = mBody;
         JGeometry::TVec3f v50;
         JGeometry::TVec3f v44;
         JGeometry::TVec3f v38;
@@ -949,7 +1102,7 @@ f32 KartStrat::DoDashCrl(f32 speed) {
         } else {
             speed = 1.45f * body->_3f0;
         }
-    } else if ((body->mCarStatus & 0x20004000) != 0) {
+    } else if ((body->mCarStatus & 0x24000) != 0) {
         if (body->mClass == 0) {
             speed = 1.2f * body->_3f0;
         } else {
@@ -957,7 +1110,7 @@ f32 KartStrat::DoDashCrl(f32 speed) {
         }
     } else if ((body->mCarStatus & 0x40000000000ull) != 0) {
         speed = 1.9f * body->_3f0;
-    } else if ((body->mCarStatus & 0) != 0) {
+    } else if ((body->mCarStatus & 0x10000) != 0) {
         speed = body->_3f0;
     }
     return speed;
@@ -1333,58 +1486,61 @@ void KartStrat::DashSpSpeedCtrl(f32 speed) {
 
 bool KartStrat::CompulsionDash(JGeometry::TVec3f *dir) {
     KartBody *body = mBody;
-    if (body->getGame()->_04 == nullptr)
-        return false;
-    JGeometry::TVec3f aimVec;
-    aimVec.sub(body->getGame()->_38, body->mPos);
-    aimVec.normalize();
-    if (aimVec.angle(body->_308) > 1.57f)
-        return false;
-    JGeometry::TVec3f vecA;
-    JGeometry::TVec3f vecB;
-    JGeometry::TVec3f vecC;
-    JGeometry::TVec3f vecD;
-    JGeometry::TVec3f vecE;
-    vecA.set(0.0f, 1.0f, 0.0f);
-    vecB.cross(vecA, body->_308);
-    vecB.normalize();
-    vecC.cross(vecB, vecA);
-    vecC.normalize();
-    vecA.cross(vecC, vecB);
-    vecA.normalize();
-    Mtx mtx;
-    mtx[0][0] = vecB.x;
-    mtx[1][0] = vecB.y;
-    mtx[2][0] = vecB.z;
-    mtx[0][1] = vecA.x;
-    mtx[1][1] = vecA.y;
-    mtx[2][1] = vecA.z;
-    mtx[0][2] = vecC.x;
-    mtx[1][2] = vecC.y;
-    mtx[2][2] = vecC.z;
-    mtx[0][3] = body->mPos.x;
-    mtx[1][3] = body->mPos.y;
-    mtx[2][3] = body->mPos.z;
-    vecE.y = dir->y;
-    vecE.z = dir->z;
-    vecE.x = 0.0f;
-    body->getGame()->_04->getPosition(&vecD);
-    f32 dy = body->mPos.y - vecD.y;
-    vecD.y = body->mPos.y;
-    vecD -= body->mPos;
-    if (dy < 0.0f) {
-        vecE.y *= 1.1f;
-    } else if (dy < 700.0f) {
-        vecE.y *= 0.8f;
-    } else if (dy < 900.0f) {
-        vecE.y *= 0.95f;
-    } else if (dy < 1200.0f) {
-        vecE.y *= 1.1f;
-    } else if (dy > 1600.0f) {
-        vecE.y *= 0.9f;
+    if (body->getGame()->_04 != nullptr) {
+        JGeometry::TVec3f aimVec;
+        aimVec.sub(body->getGame()->_38, body->mPos);
+        aimVec.normalize();
+        if (aimVec.angle(body->_308) > 1.57f) {
+            return false;
+        }
+        JGeometry::TVec3f vecA;
+        JGeometry::TVec3f vecE;
+        JGeometry::TVec3f vecB;
+        JGeometry::TVec3f vecC;
+        JGeometry::TVec3f vecD;
+        vecB.set(0.0f, 1.0f, 0.0f);
+        vecC.cross(vecB, body->_308);
+        vecC.normalize();
+        vecD.cross(vecC, vecB);
+        vecD.normalize();
+        vecB.cross(vecD, vecC);
+        vecB.normalize();
+        Mtx mtx;
+        mtx[0][0] = vecC.x;
+        mtx[1][0] = vecC.y;
+        mtx[2][0] = vecC.z;
+        mtx[0][1] = vecB.x;
+        mtx[1][1] = vecB.y;
+        mtx[2][1] = vecB.z;
+        mtx[0][2] = vecD.x;
+        mtx[1][2] = vecD.y;
+        mtx[2][2] = vecD.z;
+        mtx[0][3] = body->mPos.x;
+        mtx[1][3] = body->mPos.y;
+        mtx[2][3] = body->mPos.z;
+        vecE.y = dir->y;
+        vecE.z = dir->z;
+        vecE.x = 0.0f;
+        JGeometry::TVec3f gamePos;
+        body->getGame()->_04->getPosition(&gamePos);
+        f32 dy = body->mPos.y - gamePos.y;
+        gamePos.y = body->mPos.y;
+        gamePos.sub(body->mPos);
+        if (dy < 0.0f) {
+            vecE.y *= 1.1f;
+        } else if (dy < 700.0f) {
+            vecE.y *= 0.7f;
+        } else if (dy < 900.0f) {
+            vecE.y *= 0.8f;
+        } else if (dy < 1200.0f) {
+            vecE.y *= 0.95f;
+        } else if (dy > 1600.0f) {
+            vecE.y *= 0.9f;
+        }
+        PSMTXMultVecSR(mtx, &vecE, &body->mVel);
+        return true;
     }
-    PSMTXMultVecSR(mtx, &vecE, &body->mVel);
-    return true;
+    return false;
 }
 
 void KartStrat::DoDash() {
@@ -1423,7 +1579,7 @@ void KartStrat::DoDash() {
         GetKartCtrl()->getKartAnime(num)->mFlags |= 0x1000000ull;
     }
     if ((body->mCarStatus & 0x8000) != 0) {
-        if ((body->mCarStatus & 0x20004000) != 0) {
+        if ((body->mCarStatus & 0x24000) != 0) {
             if (body->mClass == 0) {
                 maxSpeed = 1.2f * body->_3f0;
             } else {
@@ -1507,7 +1663,7 @@ void KartStrat::DoDash() {
             DashClear();
         }
     }
-    if ((body->mCarStatus & 0x400) != 0) {
+    if ((body->mCarStatus & 0x40000000000ull) != 0) {
         body->mBoostTimer--;
         body->mSpeedScale = body->_52c;
         body->_3c8 = body->_3d0;

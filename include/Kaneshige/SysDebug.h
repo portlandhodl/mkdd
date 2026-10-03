@@ -84,12 +84,20 @@ public:
 
     static SysDebug *getManager() { return sManager; }
 
-    static inline SysDebug *checkNaNMatrix(Mtx mtx, unsigned long unknown) {
+    static inline void checkNaNMatrix(Mtx mtx, unsigned long unknown) {
         checkInvalidMatrix(mtx, unknown);
     }
 
-    static inline SysDebug *checkNaNVector(Vec *vec, unsigned long unknown) {
+    static inline void checkNaNMatrix(Mtx mtx, char *name) {
+        checkInvalidMatrix(mtx, name);
+    }
+
+    static inline void checkNaNVector(Vec *vec, unsigned long unknown) {
         checkInvalidVector(vec, unknown);
+    }
+
+    static inline void checkNaNVector(Vec *vec, char *name) {
+        checkInvalidVector(vec, name);
     }
 
 private:
