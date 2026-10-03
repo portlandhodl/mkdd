@@ -38,7 +38,8 @@ public:
     u8 mFlags;             // 74
     u8 _75;                //
     u8 _76;                //
-    u8 _77[0x8c - 0x77];   // remaining padding
+    u8 _77[0x88 - 0x77];   // remaining padding
+    f32 _88;
     JGeometry::TVec3f _8c; //
     JGeometry::TVec3f _98; //
     JGeometry::TVec3f _a4; //

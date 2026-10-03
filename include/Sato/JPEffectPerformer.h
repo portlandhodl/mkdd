@@ -29,11 +29,11 @@ public:
     void reset();                                                      // 80266178
     void loadCourseParam(u32);                                         // 802662fc
     void calc();                                                       // 802663d4
-    void deleteKartEfctKoukasen(int, u8);                              // 80266458
+    static void deleteKartEfctKoukasen(int, u8);                        // 80266458
     void deleteKartEfctTireSand(int);                                  // 802664ac
     void getNearestCamPtr(const JGeometry::TVec3f &);                  // 8026651c
     static void setEffect(EffectType, int, const JGeometry::TVec3f &, u8);    // 80266728
-    void setEffectSplash(CrsGround *, int, const JGeometry::TVec3f &); // 80266858
+    static void setEffectSplash(CrsGround *, int, const JGeometry::TVec3f &); // 80266858
     static void setEffectEachCam(EffectType, int, u8, u8);             // 80266a8c
     void setLandEffect(const JGeometry::TVec3f &, CrsGround *, int);   // 80266bf0
     void getLandingEfctName(CrsGround *);                              // 80266d20

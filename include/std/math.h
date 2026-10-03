@@ -67,6 +67,7 @@ extern inline float fabsf(float x) { return ::fabs(x); }
 extern inline float fabs(float x) { return fabsf(x); }
 
 extern inline float atan2f(float y, float x) { return ::atan2(y, x); }
+extern inline float atanf(float x) { return ::atan(x); }
 extern inline float cosf(float x) { return ::cos(x); }
 extern inline float sinf(float x) { return ::sin(x); }
 extern inline float tanf(float x) { return ::tan(x); }

@@ -45,7 +45,7 @@ public:
     void DoPitchLim();
     void DoRollCrash();
     void DoTestPitchCrl();
-    void DoDashCrl(f32);
+    f32 DoDashCrl(f32);
     f32 DoStarCrl(f32);
     void DoAirCrl();
     void DoYawCrl();
@@ -58,7 +58,7 @@ public:
     void DoPowerMotor(f32, u8, u8);
     void DashSpeedCtrl(f32);
     void DashSpSpeedCtrl(f32);
-    void CompulsionDash(JGeometry::TVec3f *);
+    bool CompulsionDash(JGeometry::TVec3f *);
     void DoDash();
     int DoStatusCrl();
     // KartCtrlInfo
