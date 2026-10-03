@@ -75,7 +75,7 @@ const J2DIndTexMtxInfo j2dDefaultIndTexMtxInfo = {
     1, // scale exp
 };
 
-J2DTevStageInfo j2dDefaultTevStageInfo = {
+__declspec(section ".rodata") J2DTevStageInfo j2dDefaultTevStageInfo = {
     4, 10, 15, 15, 0, 0, 0, 0, 1, 0, // Color
     5, 7,  7,  0,  0, 0, 0, 1, 0,    // Alpha
 };
@@ -154,10 +154,10 @@ const J2DIndTexCoordScaleInfo j2dDefaultIndTexCoordScaleInfo = {
     0,
 };
 const GXColor j2dDefaultTevKColor                        = { 0xFF, 0xFF, 0xFF, 0xFF };
-J2DTevSwapModeInfo j2dDefaultTevSwapMode                 = { 0, 0 };
-J2DTevSwapModeTableInfo j2dDefaultTevSwapModeTable  = { 0, 1, 2, 3 };
+__declspec(section ".sdata2") J2DTevSwapModeInfo j2dDefaultTevSwapMode = { 0, 0 };
+__declspec(section ".sdata2") J2DTevSwapModeTableInfo j2dDefaultTevSwapModeTable = { 0, 1, 2, 3 };
 const J2DBlendInfo j2dDefaultBlendInfo                   = { 1, 4, 5, 5 };
 const u8 j2dDefaultDither                                = 0;
-J2DColorChanInfo j2dDefaultColorChanInfo                  = { 0, 3 };
+__declspec(section ".sdata2") J2DColorChanInfo j2dDefaultColorChanInfo = { 0, 3 };
 const u8 j2dDefaultTevSwapTable                          = 0x1B;
 const u16 j2dDefaultAlphaCmp                             = 0xE7;
