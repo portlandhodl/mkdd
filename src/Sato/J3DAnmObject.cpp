@@ -8,6 +8,8 @@
 #include "JSystem/J3D/J3DModelLoader.h"
 #include "types.h"
 #include "Sato/J3DAnmObject.h"
+#include "JSystem/JAudio/JASFakeMatch.h"
+#include "JSystem/JAudio/JASFakeMatch2.h"
 
 
 void J3DAnmObjBase::loadJ3DModelData(void *param_1, u32 param_2) {
