@@ -126,7 +126,7 @@ struct J2DColorChanInfo {
 };
 
 inline u8 J2DCalcColorChanID(u8 id) { return id; }
-extern const J2DColorChanInfo j2dDefaultColorChanInfo;
+extern J2DColorChanInfo j2dDefaultColorChanInfo;
 
 /**
  * @size{0x2}
@@ -206,8 +206,8 @@ struct J2DTevSwapModeTableInfo {
     u8 mA; // _03
 };
 
-extern const J2DTevSwapModeInfo j2dDefaultTevSwapMode;
-extern const J2DTevSwapModeTableInfo j2dDefaultTevSwapModeTable;
+extern J2DTevSwapModeInfo j2dDefaultTevSwapMode;
+extern J2DTevSwapModeTableInfo j2dDefaultTevSwapModeTable;
 extern const u8 j2dDefaultTevSwapTable;
 
 inline u8 J2DCalcTevSwapTable(u8 r, u8 g, u8 b, u8 a) { return ((r&0xff) << 6) + ((g&0xff) << 4) + ((b&0xff) << 2) + a; }
@@ -317,7 +317,7 @@ struct J2DTexCoord {
     J2DTexCoordInfo mTexCoordInfo; // _00
 };
 
-extern const J2DTevStageInfo j2dDefaultTevStageInfo;
+extern J2DTevStageInfo j2dDefaultTevStageInfo;
 extern const GXColor j2dDefaultColInfo;
 extern const GXColorS10 j2dDefaultTevColor;
 extern const GXColor j2dDefaultTevKColor;
