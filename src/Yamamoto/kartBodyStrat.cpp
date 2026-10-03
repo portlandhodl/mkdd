@@ -208,8 +208,10 @@ void KartStrat::DoPoseCrl() {
     v38.set(body->_110[0][0], body->_110[1][0], body->_110[2][0]);
     v2c.set(body->_110[0][1], body->_110[1][1], body->_110[2][1]);
     v20.set(body->_110[0][2], body->_110[1][2], body->_110[2][2]);
-    if (body->_584 == 13 || (body->_584 >= 2 && body->_584 < 7)) {
-        if (body->_588 != 1) {
+    int status = body->_584;
+    if (status == 13 || (status < 7 && status >= 2)) {
+        int crash = body->_588;
+        if (crash != 1) {
             return;
         }
         f32 dy = body->_110[1][3] - body->mBodyGround.getHeight();
@@ -264,7 +266,6 @@ void KartStrat::DoPoseCrl() {
         }
         if (d1 >= 0.8f && f31 >= 0.8f) {
             RollCrashClear();
-            return;
         }
         return;
     }
@@ -272,58 +273,54 @@ void KartStrat::DoPoseCrl() {
     if ((body->getRescue()->mFlags & 0x40) != 0) {
         return;
     }
-    f32 f1;
-    f32 f0;
-    f32 f30;
+    f32 val = v2c.y;
+    f32 limit;
+    f32 scale;
     if (body->getTouchNum() == 0) {
-        if (body->_4c0 > 0.1f || body->_4c0 < -0.1f || (body->mCarStatus & 1) != 0) {
-            f0 = 0.9f;
+        if (body->_4c0 > 0.1f || body->_4c0 < -0.1f || (body->mCarStatus & 0x100000000ull) != 0) {
+            limit = 0.9f;
             flag = 1;
-            f30 = 0.05f;
+            scale = 0.05f;
         } else {
-            f0 = 1.0f;
-            f30 = 0.03f;
+            limit = 1.0f;
+            scale = 0.03f;
         }
         if ((body->mCarStatus & 0x1000) != 0) {
-            f30 = 0.33f;
+            scale = 0.33f;
         }
+    } else if (val < 0.0f) {
+        limit = 1.0f;
+        scale = 0.4f;
     } else {
-        if (v2c.y < 0.0f) {
-            f0 = 1.0f;
-            f30 = 0.4f;
+        val = v2c.dot(body->_32c);
+        limit = 0.348888f;
+        scale = 0.0f;
+    }
+    if (val < limit) {
+        if (flag != 0 || val < 0.1f) {
+            v50.set(0.0f, 1.0f, 0.0f);
         } else {
-            f1 = v2c.dot(body->_32c);
-            f0 = 0.348888f;
-            f30 = 0.0f;
+            v50.set(body->_32c.x, body->_32c.y, body->_32c.z);
         }
+        v50.scale(scale * body->mSpeedScale);
+        v2c.add(v50);
+        v2c.normalize();
+        body->_110[0][1] = v2c.x;
+        body->_110[1][1] = v2c.y;
+        body->_110[2][1] = v2c.z;
+        v50.cross(v20, v2c);
+        v50.normalize();
+        body->_110[0][0] = v50.x;
+        body->_110[1][0] = v50.y;
+        body->_110[2][0] = v50.z;
+        v20.cross(v2c, v50);
+        body->_110[0][2] = v20.x;
+        body->_110[1][2] = v20.y;
+        body->_110[2][2] = v20.z;
+        body->mWg.x = 0.0f;
+        body->mWg.z = 0.0f;
     }
-    if (f1 >= f0) {
-        return;
-    }
-    if (flag != 0 || f1 < 0.1f) {
-        v50.set(0.0f, 1.0f, 0.0f);
-    } else {
-        v50.set(body->_32c);
-    }
-    v50.scale(f30 * body->mSpeedScale);
-    v2c.add(v50);
-    v2c.normalize();
-    body->_110[0][1] = v2c.x;
-    body->_110[1][1] = v2c.y;
-    body->_110[2][1] = v2c.z;
-    v50.cross(v20, v2c);
-    v50.normalize();
-    body->_110[0][0] = v50.x;
-    body->_110[1][0] = v50.y;
-    body->_110[2][0] = v50.z;
-    v20.cross(v2c, v50);
-    body->_110[0][2] = v20.x;
-    body->_110[1][2] = v20.y;
-    body->_110[2][2] = v20.z;
-    body->mWg.x = 0.0f;
-    body->mWg.z = 0.0f;
 }
-
 void KartStrat::MovingSpinClear() {
     KartBody *body = mBody;
     body->mCarStatus &= ~0x180000;
