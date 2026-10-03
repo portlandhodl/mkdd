@@ -30,7 +30,8 @@ else:
     for u in d["units"]:
         if sub.lower() not in u["name"].lower():
             continue
-        print(f"== {u['name']} ({u['measures']['matched_code_percent']:.1f}% code, {u['measures']['matched_functions']}/{u['measures']['total_functions']} funcs)")
+        m = u['measures']
+        print(f"== {u['name']} ({m.get('matched_code_percent', 0):.1f}% code, {m.get('matched_functions', 0)}/{m.get('total_functions', 0)} funcs)")
         for f in u.get("functions", []):
             pct = f.get("fuzzy_match_percent", 0)
             if pct < 99.9:

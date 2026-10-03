@@ -158,7 +158,7 @@ void JAUSoundAnimator::updateAnimation(f32 frame, const JGeometry::TVec3f &pos, 
         }
     }
 
-    if (!animation_) {
+    if (animation_ == NULL) {
         return;
     }
 
