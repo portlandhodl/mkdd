@@ -38,6 +38,17 @@ public:
         return mscpaDriverFolderName2[no];
     }
 
+    J3DModelData *getMdlData(int level) { return mMdlData[level]; }
+
+    u16 getJntBindNo(u16 ctrlNo) {
+#line 179
+        JUT_MINMAX_ASSERT(0, ctrlNo, 27);
+        return _c[ctrlNo];
+    }
+
+    u16 getJntNo(u16 i) const { return _c[i]; }
+
+
     static const u8 mscAnm2SoundList[82];
     static const u8 msAnmMRAMList[11];
     static const char mscaaMRAMAnmFileName[11][32];
@@ -66,6 +77,9 @@ public:
     static DriverManager *ptr();
     const char *getFolderName_Sound(int, int);
     void SetDriverModelPtr(DriverModel *);
+
+    u8 getGoodB2Flag(int dataID) { return _7e0[dataID]; }
+    u8 getHokanDamageCnt() { return _24; }
 
     // Inline/Unused
     bool IsAllARAMDMAFinished();
