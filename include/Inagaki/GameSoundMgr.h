@@ -34,6 +34,11 @@ public:
 
     static void setKillSwAll(bool killSw);
 
+    static void initAll();
+    static void frameWorkAll();
+    static void pauseAll(bool doPause);
+    static void stopAll();
+
     static T *smStart;
     static T *smEnd;
 
@@ -120,6 +125,46 @@ JAISoundHandle *SoundMgr<T>::startSoundCustom(u32 soundID, u32 p2) {
 }
 
 template<class T>
+void SoundMgr<T>::initAll() {
+    for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
+        mgr->init();
+        mgr->stopAllSounds();
+    }
+}
+
+template<class T>
+void SoundMgr<T>::frameWorkAll() {
+    for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
+        mgr->loop();
+    }
+}
+
+template<class T>
+void SoundMgr<T>::pauseAll(bool doPause) {
+    CustomSoundTable *table = Main::getAudio()->getSoundTable();
+    for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
+        for (int i = 0; i < mgr->_10; i++) {
+            if ((*mgr)[i].isSoundAttached()) {
+                u32 type = table->getSoundType((*mgr)[i]->getID());
+                if (type & 0x800000) {
+                    (*mgr)[i]->pause(doPause);
+                }
+                else if ((type & 0x400000) && doPause == true) {
+                    (*mgr)[i]->stop(0);
+                }
+            }
+        }
+    }
+}
+
+template<class T>
+void SoundMgr<T>::stopAll() {
+    for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
+        mgr->stopAllSounds();
+    }
+}
+
+template<class T>
 void SoundMgr<T>::setKillSwAll(bool killSw) {
     for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
         mgr->mKillSw = killSw;
@@ -186,7 +231,7 @@ class KartSoundMgr : public SoundMgr<KartSoundMgr>
 public:
     KartSoundMgr(Vec *, JKRHeap *, u8, u8);                           // 0x80123118
     ~KartSoundMgr();                                                  // 0x80123328
-    void startSoundHandleNumber(u8, u32, u32);                        // 0x801233fc
+    virtual void startSoundHandleNumber(u8, u32, u32);                // 0x801233fc
     virtual void dispose();                                           // 0x801236d0
     virtual void init();                                              // 0x80123708
     void changeDriver(bool);                                          // 0x80123ad4
@@ -231,26 +276,66 @@ public:
 
     static u8 smKartRankClassMem[7];
 
-    u8 _5c[2];
+    u8 _5c;
+    u8 _5d;
     u8 _5e;                // 0x5e
-    u8 _5f[0x61 - 0x5f];
+    u8 _5f;
+    u8 _60;
     u8 _61;
     u8 mKartCount; // 62
     u8 _63;
     u8 _64;
     u8 _65;
     u8 _66;
-    u8 _67[0x6c - 0x67];
+    u8 _67[0x68 - 0x67];
+    f32 _68;
     f32 _6c;
-    u8 _70[0x8d - 0x70];
+    f32 _70;
+    u32 _74;
+    u32 _78;
+    u32 _7c;
+    u32 _80;
+    f32 _84;
+    f32 _88;
+    u8 _8c;
     u8 _8d;
-    u8 _8e[0x9c - 0x8e];
+    u16 _8e;
+    u16 _90;
+    u16 _92;
+    u16 _94;
+    s16 _96;
+    f32 _98;
     u8 _9c;                                  // 0x9c
     u8 _9d[0xa0 - 0x9d];
     f32 _a0;                                 // 0xa0
-    u8 _a4[0xd4 - 0xa4];
-    f32 mWaterDepth[8];                      // 0xd4
-    u8 _f4[0x134 - 0xf4];
+    f32 _a4[4];                              // 0xa4
+    f32 _b4[4];                              // 0xb4
+    f32 _c4[4];                              // 0xc4
+    f32 mWaterDepth[4];                      // 0xd4
+    u8 _e4[4];                               // 0xe4
+    u8 _e8[4];                               // 0xe8
+    f32 _ec;                                 // 0xec
+    f32 _f0;                                 // 0xf0
+    u32 _f4;                                 // 0xf4
+    u16 _f8;                                 // 0xf8
+    u8 _fa[0xfc - 0xfa];
+    f32 _fc;                                 // 0xfc
+    u8 _100;                                 // 0x100
+    u8 _101;                                 // 0x101
+    u8 _102;                                 // 0x102
+    u8 _103;                                 // 0x103
+    u8 _104;                                 // 0x104
+    u8 _105;                                 // 0x105
+    u8 _106[0x110 - 0x106];
+    f32 _110;                                // 0x110
+    f32 _114;                                // 0x114
+    f32 _118;                                // 0x118
+    u32 _11c;                                // 0x11c
+    f32 _120;                                // 0x120
+    f32 _124;                                // 0x124
+    f32 _128;                                // 0x128
+    u32 _12c;                                // 0x12c
+    CrsArea *mArea;                          // 0x130
 };
 
 class CharacterSoundMgr : public SoundMgr<CharacterSoundMgr> {
@@ -350,7 +435,7 @@ public:
     void setStatus(bool, f32);                                  // 0x8012d814
 
     static CustomAudience<4> *getAudience() { return smAudience; }
-private:
+public:
     static CustomAudience<4> *smAudience; // 0x80416278
 
     u8 _5c;
