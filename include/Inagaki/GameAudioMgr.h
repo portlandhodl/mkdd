@@ -6,6 +6,7 @@
 namespace GameAudio {
 
 class CustomMgr : public JAUSoundMgr {
+public:
     CustomMgr();
     ~CustomMgr() {}
     bool startSound(JAISoundID soundID, JAISoundHandle *handlePtr, const JGeometry::TVec3f *pos);

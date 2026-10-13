@@ -12,6 +12,8 @@
 #include "types.h"
 
 class CrsArea;
+class JASAudioReseter;
+class JAISoundHandles;
 
 namespace GameAudio {
 
@@ -31,7 +33,9 @@ public:
 
     enum PAUSE_STATUS
     {
-        // TODO
+        PAUSE_NONE,
+        PAUSE_ALL,
+        PAUSE_SE,
     };
 
     Main();
@@ -77,7 +81,7 @@ public:
     void resumeAudio();
     void checkResetInner();
     void setGoalProcess();
-    void processSeqCallback(JASTrack *, u16);
+    static u16 processSeqCallback(JASTrack *, u16);
 
     f32 getTHPOptionVolume() { return getMasterVolumeValue() / 2; };
     JAUSectionHeap *getSectionHeap() { return mSectionHeap; }
@@ -122,6 +126,12 @@ public:
     
     static Main *getAudio() { return msBasic; };
 
+    struct InvincibleBgmEntry
+    {
+        u8 kartNo;   // +0
+        u8 type;     // +1
+    };
+
 private:
     static Main sJAudio;
     static Main *msBasic;
@@ -130,24 +140,49 @@ private:
     CustomAudience<4> *mAudience; // 04
     u8 _08[0xC - 0x8];            // 08
     CustomSoundTable *mTable;     // 0C
-    u8 _10[4];                    //
+    JASAudioReseter *mReseter;    // 10
     JAUSectionHeap *mSectionHeap; // 14
-    u8 _18[0x24 - 0x18];          //
+    const void **mBaaList;        // 18
+    u32 mOutputMode;              // 1C
+    u8 _20[0x24 - 0x20];          //
     JAISoundHandle _24[4];        //
     JAISoundHandle _34[4];        //
     FxLineConfig *mConfig;        // 44
-    u8 mState;                    // 48
-    u8 _padding[3];               //
+    union
+    {
+        struct
+        {
+            u8 resetting : 1;     // 80 - audio reset in progress
+            u8 _b40 : 1;          // 40
+            u8 bgmRequest : 1;    // 20 - pending BGM/stream restart after crossing line
+            u8 active : 1;        // 10 - isActive
+            u8 goalProcess : 1;   // 08 - goal fanfare active
+            u8 _b04 : 1;          // 04
+            u8 _b02 : 1;          // 02
+            u8 _b01 : 1;          // 01
+        } bits;
+        u8 pack;
+    } mState;                     // 48
+    u8 _49;                       //
+    u8 _4a;                       //
+    u8 _4b;                       //
     PAUSE_STATUS mPauseStatus;    // 4C
     int _50;                      //
-    u8 _54[0x64 - 0x54];          //
+    InvincibleBgmEntry _54[8];    //
     CameraMgr *mCamera;           // 64
     JAISoundHandle _68;           //
     JAISoundHandle _6c;           //
     JAISoundHandle _70;           //
-    u8 _74[0xa8 - 0x74];          //
-    JAISoundHandle _84[4];        // 
-    u8 _94[0xa8 - 0x94];          //
+    int _74;                      //
+    u32 _78;                      //
+    u32 _7c;                      //
+    int _80;                      //
+    JAISoundHandle _84[4];        // 84
+    JAISoundHandles *mSeHandles;  // 94
+    u8 _98[4];                    // 98
+    f32 mBgmVolume;               // 9C
+    f32 mStreamVolumeFactor;      // A0
+    const void *mCurrentBaa;      // A4
 
 }; // Size: 0xa8
 
