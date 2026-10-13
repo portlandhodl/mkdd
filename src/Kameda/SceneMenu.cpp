@@ -4,6 +4,24 @@
 #include "kartEnums.h"
 #include "mathHelper.h"
 
+#include "JSystem/J2D/J2DPicture.h"
+#include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J3D/J3DSys.h"
+#include "JSystem/JUtility/JUTDbg.h"
+#include "Kameda/SequenceInfo.h"
+#include "Kameda/CharacterSelect3D.h"
+#include "Kaneshige/RaceInfo.h"
+#include "Kaneshige/KartInfo.h"
+#include "Inagaki/GameAudioMain.h"
+#include "Sato/JPEffectMgr.h"
+#include "Osako/MenuBackground.h"
+#include "Osako/MenuTitleLine.h"
+#include "Osako/NameEntryHelper.h"
+#include "Osako/SequenceApp.h"
+#include "Osako/SystemRecord.h"
+#include "Osako/kartPad.h"
+#include "dolphin/gx/GXTransform.h"
+
 const u32 SceneMenu::mCharVoice[] = {
     0x00020014, 0x00020015, 0x00020012, 0x00020013, 
     0x00020018, 0x00020019, 0x0002000E, 0x0002000F, 
@@ -329,19 +347,319 @@ void SceneMenu::init() {}
 
 SceneMenu::~SceneMenu() {}
 
-void SceneMenu::draw() {}
+void SceneMenu::draw()
+{
+    mOrtho->setPort();
+    // the MenuBackground's J2DScreen is embedded at offset 0
+    ((J2DScreen *)MenuBackground::ptr())->draw(0.0f, 0.0f, mOrtho);
 
-void SceneMenu::calc() {}
+    switch (mInfo.mode)
+    {
+    case 0:
+    case 1:
+    case 2:
+        mScreenHowManyDrivers->draw(0.0f, 0.0f, mOrtho);
+        break;
+    case 3:
+    case 4:
+    case 5:
+        mScreenSingleTagSelect->draw(0.0f, 0.0f, mOrtho);
+        break;
+    case 6:
+    case 7:
+    case 8:
+        mScreenSelectMode->draw(0.0f, 0.0f, mOrtho);
+        mNameEntry->draw(mOrtho);
+        break;
+    case 9:
+    case 10:
+    case 11:
+        mScreenSelectBattle->draw(0.0f, 0.0f, mOrtho);
+        break;
+    default:
+        break;
+    }
 
-void SceneMenu::calcModeAnm() {}
+    if (mInfo.mode >= 12 && mInfo.mode < 15)
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            mCharScreens[i]->draw(mCharPos[i].x, mCharPos[i].y, mOrtho);
+        }
+        switch (mInfo.entryNum)
+        {
+        case 0:
+            mScreenChar1->draw(0.0f, 0.0f, mOrtho);
+            break;
+        case 1:
+            mScreenChar1Plus->draw(0.0f, 0.0f, mOrtho);
+            break;
+        case 2:
+            mScreenChar2->draw(0.0f, 0.0f, mOrtho);
+            break;
+        case 3:
+            mScreenChar3->draw(0.0f, 0.0f, mOrtho);
+            break;
+        default:
+#line 1938
+            JUT_ASSERT(0);
+        }
+    }
 
-void SceneMenu::caleEngine(SceneMenu::BckData *) {}
+    mScreenPlayerIcon->draw(0.0f, 0.0f, mOrtho);
+    MenuTitleLine::ptr()->draw(mOrtho);
 
-void SceneMenu::calcEngineMoji(SceneMenu::BckData *) {}
+    if (mInfo.mode >= 12 && mInfo.mode < 15)
+    {
+        for (int i = 0; i <= mInfo.entryNum; i++)
+        {
+            f32 ratio;
+            switch (mInfo.entryNum)
+            {
+            case 0:
+                mGrafs[0]->place(mCharRect[0].i.x, mCharRect[0].i.y + (mCharPaneBck[0].mPane->mOffset.y - 325.0f), mCharRect[0].f.x, mCharRect[0].f.y);
+                mGrafs[0]->setPort();
+                ratio = mCharRect[0].f.x / mCharRect[0].f.y;
+                break;
+            case 1:
+                mGrafs[1 + i]->place(mCharRect[1 + i].i.x, mCharRect[1 + i].i.y + (mChar2Bck[0].mPane->mOffset.y - 325.0f), mCharRect[1 + i].f.x, mCharRect[1 + i].f.y);
+                mGrafs[1 + i]->setPort();
+                ratio = mCharRect[1 + i].f.x / mCharRect[1 + i].f.y;
+                if (i == 0)
+                    GXSetScissorBoxOffset(76, 0);
+                else
+                    GXSetScissorBoxOffset(0, 0);
+                break;
+            case 2:
+                mGrafs[3 + i]->place(mCharRect[3 + i].i.x, mCharRect[3 + i].i.y + (mChar3Bck[0].mPane->mOffset.y - 325.0f), mCharRect[3 + i].f.x, mCharRect[3 + i].f.y);
+                mGrafs[3 + i]->setPort();
+                ratio = mCharRect[3 + i].f.x / mCharRect[3 + i].f.y;
+                if (i == 0)
+                    GXSetScissorBoxOffset(46, 0);
+                else
+                    GXSetScissorBoxOffset(0, 0);
+                break;
+            case 3:
+                mGrafs[6 + i]->place(mCharRect[6 + i].i.x, mCharRect[6 + i].i.y + (mChar4Bck[0].mPane->mOffset.y - 325.0f), mCharRect[6 + i].f.x, mCharRect[6 + i].f.y);
+                mGrafs[6 + i]->setPort();
+                ratio = mCharRect[6 + i].f.x / mCharRect[6 + i].f.y;
+                if (i == 0)
+                    GXSetScissorBoxOffset(25, 0);
+                else
+                    GXSetScissorBoxOffset(0, 0);
+                break;
+            default:
+#line 2010
+                JUT_ASSERT(0);
+            }
+            mCharacterSelect3D->draw(i, ratio);
+        }
+        mOrtho->setPort();
+    }
 
-void SceneMenu::calcEnginePic(SceneMenu::BckData *) {}
+    j3dSys.reinitGX();
+    JPEffectMgr::mThis->draw_for2D();
+    mOrtho->setPort();
 
-void SceneMenu::calcEngineBrkAnm(SceneMenu::BrkData *) {}
+    if (mInfo.mode == 13)
+    {
+        if (mInfo.entryNum == 0)
+        {
+            mScreenChar1Plus->draw(0.0f, 0.0f, mOrtho);  // hmm wait: 0x2004
+        }
+        else if (mInfo.entryNum < 0 || mInfo.entryNum >= 4)
+        {
+#line 2038
+            JUT_ASSERT(0);
+        }
+    }
+}
+
+void SceneMenu::calc()
+{
+    switch (mInfo.mode)
+    {
+    case 0:
+        entry_init();
+        break;
+    case 1:
+        entry();
+        break;
+    case 2:
+        entry_end();
+        break;
+    case 3:
+        vs_init();
+        break;
+    case 4:
+        vs();
+        break;
+    case 5:
+        vs_end();
+        break;
+    case 6:
+        mode_init();
+        break;
+    case 7:
+        mode();
+        break;
+    case 8:
+        mode_end();
+        break;
+    case 9:
+        battle_init();
+        break;
+    case 10:
+        battle();
+        break;
+    case 11:
+        battle_end();
+        break;
+    case 12:
+        character_init();
+        for (int i = 0; i < 19; i++)
+        {
+            mChar1PlusBck[i].mFrame = 0.0f;
+        }
+        for (int i = 0; i < 2; i++)
+        {
+            mChar1PlusBrk[i].mFrame = 0.0f;
+        }
+        mChar1PlusBpk.mFrame = 0.0f;
+        mChar1PlusBck[0].mPane->hide();
+        mChar1PlusBck[1].mPane->hide();
+        mChar1PlusBck[2].mPane->hide();
+        mChar1PlusBck[3].mPane->hide();
+        break;
+    case 13:
+        character();
+        setChar1Plus();
+        break;
+    case 14:
+        character_end();
+        break;
+    case 15:
+        nextScene();
+        break;
+    default:
+#line 2114
+        JUT_ASSERT(0);
+    }
+
+    MenuBackground::ptr()->calc();
+    MenuTitleLine::ptr()->calc();
+
+    for (int i = 0; i < 9; i++)
+    {
+        mIconBck[6 + i].mFrame += 1.0f;
+        if (mIconBck[6 + i].mFrame >= 75.0f)
+            mIconBck[6 + i].mFrame = 14.0f;
+    }
+    for (int i = 0; i < 33; i++)
+    {
+        mIconBck[i].mAnm->setFrame(mIconBck[i].mFrame);
+    }
+}
+
+void SceneMenu::calcModeAnm()
+{
+    calcEnginePic(&mModeBck[20]);
+    caleEngine(&mModeBck[23]);
+    caleEngine(&mModeBck[24]);
+    calcEngineMoji(&mModeBck[25]);
+    calcEnginePic(&mModeBck[27]);
+    caleEngine(&mModeBck[29]);
+    caleEngine(&mModeBck[30]);
+    calcEngineMoji(&mModeBck[28]);
+    calcEnginePic(&mModeBck[68]);
+    caleEngine(&mModeBck[64]);
+    caleEngine(&mModeBck[65]);
+    calcEngineMoji(&mModeBck[69]);
+    calcEngineBrkAnm(&mModeBrk[10]);
+    calcEngineBrkAnm(&mModeBrk[11]);
+    calcEngineBrkAnm(&mModeBrk[12]);
+    calcEngineBrkAnm(&mModeBrk[13]);
+    calcEngineBrkAnm(&mModeBrk[27]);
+    calcEngineBrkAnm(&mModeBrk[28]);
+}
+
+void SceneMenu::caleEngine(SceneMenu::BckData *data)
+{
+    if (data->mFrame <= 20.0f)
+    {
+        data->mFrame = 20.0f;
+    }
+    else if (data->mFrame < 28.0f)
+    {
+        data->mFrame += 1.0f;
+    }
+    else
+    {
+        data->mFrame = 20.0f;
+    }
+}
+
+void SceneMenu::calcEngineMoji(SceneMenu::BckData *data)
+{
+    if (data->mFrame <= 20.0f)
+    {
+        data->mFrame = 20.0f;
+    }
+    else if (data->mFrame >= 28.0f)
+    {
+        data->mFrame = 20.0f;
+    }
+    else
+    {
+        if (data->mFrame == 24.0f)
+        {
+            J2DPane *pane = data->mPane;
+#line 2366
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->changeTexture(mPowerMojiName[mInfo.engineType], 0);
+        }
+        data->mFrame += 1.0f;
+    }
+}
+
+void SceneMenu::calcEnginePic(SceneMenu::BckData *data)
+{
+    if (data->mFrame <= 20.0f)
+    {
+        data->mFrame = 20.0f;
+    }
+    else if (data->mFrame >= 28.0f)
+    {
+        data->mFrame = 20.0f;
+    }
+    else
+    {
+        if (data->mFrame == 24.0f)
+        {
+            J2DPane *pane = data->mPane;
+#line 2383
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->changeTexture(mPowerPicName[mInfo.engineType], 0);
+        }
+        data->mFrame += 1.0f;
+    }
+}
+
+void SceneMenu::calcEngineBrkAnm(SceneMenu::BrkData *data)
+{
+    if (data->mFrame <= 0.0f)
+    {
+        data->mFrame = 0.0f;
+    }
+    else if (data->mFrame < 29.0f)
+    {
+        data->mFrame += 1.0f;
+    }
+    else
+    {
+        data->mFrame = 0.0f;
+    }
+}
 
 void SceneMenu::calcModeOrder() {}
 
@@ -349,7 +667,21 @@ void SceneMenu::entry_init() {}
 
 void SceneMenu::entry() {}
 
-void SceneMenu::entry_end() {}
+void SceneMenu::entry_end()
+{
+    if (mInfo.timer < 15)
+    {
+        MenuTitleLine::ptr()->lift();
+        mHowManyDriversBck[0].mFrame = mInfo.timer + 75;
+    }
+    else
+    {
+        mInfo.oldMode = mInfo.mode;
+        mInfo.mode = mInfo.nextMode;
+        mInfo.timer = 0;
+        mInfo._18 = 0;
+    }
+}
 
 void SceneMenu::vs_init() {}
 
@@ -367,7 +699,38 @@ void SceneMenu::battle_init() {}
 
 void SceneMenu::battle() {}
 
-void SceneMenu::battle_end() {}
+void SceneMenu::battle_end()
+{
+    if (mInfo.timer < 15)
+    {
+        MenuTitleLine::ptr()->lift();
+        mHowManyDriversBck[0].mFrame = mInfo.timer + 75;
+        if (mInfo.timer >= 5)
+        {
+            mBattleBck[0].mFrame = 14 - mInfo.timer;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 15; i++)
+        {
+            mBattleBck[i].mPane->hide();
+        }
+        mInfo.oldMode = mInfo.mode;
+        mInfo.mode = mInfo.nextMode;
+        mInfo.timer = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            mPlayerData[i].mCursor = -1;
+            mPlayerData[i].mCharNoF = -1;
+            mPlayerData[i].mCharNoB = -1;
+            mPlayerData[i].mCharF = -1;
+            mPlayerData[i].mCharB = -1;
+            mPlayerData[i].mKart = -1;
+            mPlayerData[i].mState = 0;
+        }
+    }
+}
 
 void SceneMenu::character_init() {}
 
@@ -375,37 +738,605 @@ void SceneMenu::character() {}
 
 void SceneMenu::character_end() {}
 
-void SceneMenu::nextScene() {}
+void SceneMenu::nextScene()
+{
+#line 6206
+    JUT_ASSERT(mInfo.nextScene == Scene::SCENE_TITLE || mInfo.nextScene == Scene::SCENE_COURSE || mInfo.nextScene == Scene::SCENE_MAP_SELECT || mInfo.nextScene == Scene::SCENE_GHOST_LOAD_SAVE);
 
-void SceneMenu::selectA(int) {}
+    if (SEQUENCEAPP_isReady(mInfo.nextScene))
+    {
+        SequenceApp::ptr()->setNextScene(mInfo.nextScene);
+    }
+}
 
-void SceneMenu::selectB(int) {}
+void SceneMenu::selectA(int no)
+{
+    if (isSelectAnm(no))
+        return;
 
-void SceneMenu::selectUp(int) {}
+    int padNo = mPlayerPadNo[no];
+    switch (mPlayerData[padNo].mState)
+    {
+    case 0:
+    {
+        int cursor = mPlayerData[no].mCursor;
+        if (cursor == -1)
+            break;
+        GameAudio::Main::getAudio()->startSystemSe(mCharVoice[cursor]);
+        if (mPlayerData[padNo].mCharNoF == no && mPlayerData[padNo].mCharF == -1)
+        {
+            mPlayerData[padNo].mCharF = cursor;
+            mCharPane[cursor / 2][cursor % 2].mFrame = 19.0f;
+            mSelectAnm[cursor / 2][cursor % 2].mEnable = 1;
+            mSelectAnm[cursor / 2][cursor % 2].mNo = no;
+        }
+        else if (mPlayerData[padNo].mCharNoB == no && mPlayerData[padNo].mCharB == -1)
+        {
+            mPlayerData[padNo].mCharB = cursor;
+            mCharPane[cursor / 2][cursor % 2].mFrame = 19.0f;
+            mSelectAnm[cursor / 2][cursor % 2].mEnable = 1;
+            mSelectAnm[cursor / 2][cursor % 2].mNo = no;
+        }
+        break;
+    }
+    case 1:
+    {
+        int charF = mPlayerData[padNo].mCharF;
+        int charB = mPlayerData[padNo].mCharB;
+        if (charF >= 0 && charF < 20)
+        {
+            GameAudio::Main::getAudio()->startSystemSe(mCharGoVoice[charF]);
+        }
+        if (charB >= 0 && charB < 20)
+        {
+            GameAudio::Main::getAudio()->startSystemSe(mCharGoVoice[charB]);
+        }
+        mPlayerData[padNo].mState = 2;
+        break;
+    }
+    case 2:
+        break;
+    default:
+#line 6268
+        JUT_ASSERT(0);
+    }
+}
 
-void SceneMenu::selectDown(int) {}
+void SceneMenu::selectB(int no)
+{
+    if (isSelectAnm(no))
+        return;
 
-void SceneMenu::selectLeft(int) {}
+    int padNo = mPlayerPadNo[no];
+    switch (mPlayerData[padNo].mState)
+    {
+    case 0:
+        if (no == 0)
+        {
+            if ((mPlayerData[0].mCharNoF != 0 || mPlayerData[0].mCharF == -1) &&
+                (mPlayerData[0].mCharNoB != 0 || mPlayerData[0].mCharB == -1))
+            {
+                GameAudio::Main::getAudio()->startSystemSe(0x20005);
+                switch (mInfo._20)
+                {
+                case 0:
+                case 1:
+                case 2:
+                    mInfo.nextMode = 6;
+                    break;
+                case 3:
+                    mInfo.nextMode = 9;
+                    break;
+                default:
+#line 6303
+                    JUT_ASSERT(0);
+                }
+                mInfo.mode = 14;
+                mInfo.oldMode = 13;
+                mInfo.timer = 0;
+                for (int i = 0; i < 4; i++)
+                {
+                    mPlayerData[i].mCursor = -1;
+                    mPlayerData[i].mCharNoF = -1;
+                    mPlayerData[i].mCharNoB = -1;
+                    mPlayerData[i].mCharF = -1;
+                    mPlayerData[i].mCharB = -1;
+                    mPlayerData[i].mKart = -1;
+                    mPlayerData[i].mState = 0;
+                }
+            }
+        }
+        {
+            int cellNo = -1;
+            if (mPlayerData[padNo].mCharNoB == no && mPlayerData[padNo].mCharB != -1)
+            {
+                GameAudio::Main::getAudio()->startSystemSe(0x2000d);
+                cellNo = mPlayerData[padNo].mCharB;
+                mPlayerData[padNo].mCharB = -1;
+            }
+            else if (mPlayerData[padNo].mCharNoF == no && mPlayerData[padNo].mCharF != -1)
+            {
+                GameAudio::Main::getAudio()->startSystemSe(0x2000d);
+                cellNo = mPlayerData[padNo].mCharF;
+                mPlayerData[padNo].mCharF = -1;
+            }
+            if (cellNo != -1)
+            {
+                mPlayerData[no].mCursor = cellNo;
+                mPlayerData[padNo].mState = 0;
+                mPlayerData[padNo].mKart = -1;
+            }
+        }
+        break;
+    case 2:
+        // NOTE: CharacterSelect3D::isCancel is (currently) stubbed as void in its
+        // shared header; original code branched on its boolean result here.
+        CharacterSelect3D::ptr()->isCancel(padNo);
+        break;
+    default:
+#line 6352
+        JUT_ASSERT(0);
+    }
+}
 
-void SceneMenu::selectRight(int) {}
+void SceneMenu::selectUp(int no)
+{
+    if (isSelectAnm(no))
+        return;
+    switch (mPlayerData[mPlayerPadNo[no]].mState)
+    {
+    case 0:
+        if (mPlayerData[no].mCursor != -1)
+        {
+            if (gpaGamePad[no]->testRepeat(JUTGamePad::MAINSTICK_LEFT))
+                mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_UP_LEFT);
+            else if (gpaGamePad[no]->testRepeat(JUTGamePad::MAINSTICK_RIGHT))
+                mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_UP_RIGHT);
+            else
+                mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_UP);
+        }
+        break;
+    case 1:
+    case 2:
+        break;
+    default:
+#line 6392
+        JUT_ASSERT(0);
+    }
+}
 
-void SceneMenu::selectZ(int) {}
+void SceneMenu::selectDown(int no)
+{
+    if (isSelectAnm(no))
+        return;
+    switch (mPlayerData[mPlayerPadNo[no]].mState)
+    {
+    case 0:
+        if (mPlayerData[no].mCursor != -1)
+        {
+            if (gpaGamePad[no]->testRepeat(JUTGamePad::MAINSTICK_LEFT))
+                mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_DOWN_LEFT);
+            else if (gpaGamePad[no]->testRepeat(JUTGamePad::MAINSTICK_RIGHT))
+                mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_DOWN_RIGHT);
+            else
+                mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_DOWN);
+        }
+        break;
+    case 1:
+    case 2:
+        break;
+    default:
+#line 6432
+        JUT_ASSERT(0);
+    }
+}
 
-void SceneMenu::isSelectAnm(int) {}
+void SceneMenu::selectLeft(int no)
+{
+    if (isSelectAnm(no))
+        return;
 
-void SceneMenu::moveCursor(int, SceneMenu::Cursor) {}
+    int padNo = mPlayerPadNo[no];
+    switch (mPlayerData[padNo].mState)
+    {
+    case 0:
+        if (mPlayerData[no].mCursor != -1)
+        {
+            mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_LEFT);
+        }
+        break;
+    case 1:
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        mPlayerData[padNo].mKart = changeKart(mPlayerData[padNo].mCharF, mPlayerData[padNo].mCharB, mPlayerData[padNo].mKart, -1);
+        break;
+    case 2:
+        break;
+    default:
+#line 6468
+        JUT_ASSERT(0);
+    }
+}
 
-void SceneMenu::isRndRoulette() {}
+void SceneMenu::selectRight(int no)
+{
+    if (isSelectAnm(no))
+        return;
 
-void SceneMenu::rndRoulette() {}
+    int padNo = mPlayerPadNo[no];
+    switch (mPlayerData[padNo].mState)
+    {
+    case 0:
+        if (mPlayerData[no].mCursor != -1)
+        {
+            mPlayerData[no].mCursor = moveCursor(mPlayerData[no].mCursor, CURSOR_RIGHT);
+        }
+        break;
+    case 1:
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        mPlayerData[padNo].mKart = changeKart(mPlayerData[padNo].mCharF, mPlayerData[padNo].mCharB, mPlayerData[padNo].mKart, 1);
+        break;
+    case 2:
+        break;
+    default:
+#line 6504
+        JUT_ASSERT(0);
+    }
+}
 
-void SceneMenu::rndSelect() {}
+void SceneMenu::selectZ(int no)
+{
+    if (isSelectAnm(no))
+        return;
 
-void SceneMenu::setCharacterFlag() {}
+    int padNo = mPlayerPadNo[no];
+    int i;
+    for (i = 0; i <= mInfo.playerNum; i++)
+    {
+        if (no != i && mPlayerPadNo[i] == padNo)
+            break;
+    }
 
-void SceneMenu::getKart(int, int) {}
+    switch (mPlayerData[padNo].mState)
+    {
+    case 0:
+        break;
+    case 1:
+    {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        int charF = mPlayerData[padNo].mCharF;
+        mPlayerData[padNo].mCharF = mPlayerData[padNo].mCharB;
+        mPlayerData[padNo].mCharB = charF;
+        int charNoF = mPlayerData[padNo].mCharNoF;
+        mPlayerData[padNo].mCharNoF = mPlayerData[padNo].mCharNoB;
+        mPlayerData[padNo].mCharNoB = charNoF;
+        if (i <= mInfo.playerNum)
+        {
+            int cursor = mPlayerData[no].mCursor;
+            mPlayerData[no].mCursor = mPlayerData[i].mCursor;
+            mPlayerData[i].mCursor = cursor;
+        }
+        break;
+    }
+    case 2:
+        break;
+    default:
+#line 6552
+        JUT_ASSERT(0);
+    }
+}
 
-void SceneMenu::changeKart(int, int, int, int) {}
+bool SceneMenu::isSelectAnm(int no)
+{
+    for (int i = 0; i < 20; i++)
+    {
+        if (no == mSelectAnm[i / 2][i % 2].mNo && mSelectAnm[i / 2][i % 2].mEnable)
+            return true;
+    }
+    return false;
+}
+
+int SceneMenu::moveCursor(int no, SceneMenu::Cursor cursor)
+{
+    int keep = no;
+    int out = no;
+    setCharacterFlag();
+    mCharacterFlag[no] = 1;
+    switch (cursor)
+    {
+    case CURSOR_UP:
+    case CURSOR_DOWN:
+        if (no % 2 != 0)
+        {
+            if (mCharacterFlag[no - 1] != 0)
+                out = no - 1;
+        }
+        else
+        {
+            if (mCharacterFlag[no + 1] != 0)
+                out = no + 1;
+        }
+        break;
+    case CURSOR_UP_LEFT:
+    {
+        no = (no + 18) % 20;
+        if (no == 8 || no == 9)
+        {
+            if (!gSystemRecord.isGameUnlocked(SystemRecord::KinopioCombi))
+                no = (no + 18) % 20;
+        }
+        else
+        {
+            if (no == 18 || no == 19)
+            {
+                if (!gSystemRecord.isGameUnlocked(SystemRecord::BossCombi))
+                    no = (no + 18) % 20;
+            }
+        }
+        if (no % 2 != 0)
+        {
+            if (mCharacterFlag[no - 1] != 0)
+                out = no - 1;
+        }
+        break;
+    }
+    case CURSOR_UP_RIGHT:
+    {
+        int sel = (no + 22) % 20;
+        if (sel == 8 || sel == 9)
+        {
+            if (!gSystemRecord.isGameUnlocked(SystemRecord::KinopioCombi))
+                sel = (sel + 22) % 20;
+        }
+        else
+        {
+            if (sel == 18 || sel == 19)
+            {
+                if (!gSystemRecord.isGameUnlocked(SystemRecord::BossCombi))
+                    sel = (sel + 22) % 20;
+            }
+        }
+        if (sel % 2 != 0)
+        {
+            if (mCharacterFlag[sel - 1] != 0)
+                out = sel - 1;
+        }
+        break;
+    }
+    case CURSOR_DOWN_LEFT:
+    {
+        int sel = (no + 18) % 20;
+        if (sel == 8 || sel == 9)
+        {
+            if (!gSystemRecord.isGameUnlocked(SystemRecord::KinopioCombi))
+                sel = (sel + 18) % 20;
+        }
+        else
+        {
+            if (sel == 18 || sel == 19)
+            {
+                if (!gSystemRecord.isGameUnlocked(SystemRecord::BossCombi))
+                    sel = (sel + 18) % 20;
+            }
+        }
+        if (sel % 2 == 0)
+        {
+            if (mCharacterFlag[sel + 1] != 0)
+                out = sel + 1;
+        }
+        break;
+    }
+    case CURSOR_DOWN_RIGHT:
+    {
+        int sel = (no + 22) % 20;
+        if (sel == 8 || sel == 9)
+        {
+            if (!gSystemRecord.isGameUnlocked(SystemRecord::KinopioCombi))
+                sel = (sel + 22) % 20;
+        }
+        else
+        {
+            if (sel == 18 || sel == 19)
+            {
+                if (!gSystemRecord.isGameUnlocked(SystemRecord::BossCombi))
+                    sel = (sel + 22) % 20;
+            }
+        }
+        if (sel % 2 == 0)
+        {
+            if (mCharacterFlag[sel + 1] != 0)
+                out = sel + 1;
+        }
+        break;
+    }
+    case CURSOR_LEFT:
+        do
+        {
+            no = (no + 18) % 20;
+        } while (mCharacterFlag[no] == 0);
+        out = no;
+        break;
+    case CURSOR_RIGHT:
+        do
+        {
+            no = (no + 22) % 20;
+        } while (mCharacterFlag[no] == 0);
+        out = no;
+        break;
+    default:
+#line 6702
+        JUT_ASSERT(0);
+    }
+    if (keep != out)
+    {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+    }
+    return out;
+}
+
+bool SceneMenu::isRndRoulette()
+{
+    bool ret = true;
+    for (int i = 0; i <= mInfo.playerNum; i++)
+    {
+        if (isSelectAnm(i))
+        {
+            ret = false;
+            break;
+        }
+    }
+    for (int i = 0; i <= mInfo.entryNum; i++)
+    {
+        if (mPlayerData[i].mCharF != -1 || mPlayerData[i].mCharB != -1)
+        {
+            ret = false;
+            break;
+        }
+    }
+    return ret;
+}
+
+void SceneMenu::rndRoulette()
+{
+    if (mInfo.timer % 5 == 0)
+    {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        setCharSelFlag();
+        for (int i = 0; i <= mInfo.playerNum; i++)
+        {
+            int charF, charB;
+            getRndCharSel(charF, charB);
+            mPlayerData[i].mCursor = charB;
+        }
+    }
+}
+
+void SceneMenu::rndSelect()
+{
+    setCharSelFlag();
+    for (int i = 0; i <= mInfo.entryNum; i++)
+    {
+        int charF, charB;
+        getRndCharSel(charF, charB);
+        mPlayerData[i].mCharF = charF;
+        mCharPane[charF / 2][charF % 2].mFrame = 19.0f;
+        mSelectAnm[charF / 2][charF % 2].mEnable = 1;
+        mSelectAnm[charF / 2][charF % 2].mNo = mPlayerData[i].mCharNoF;
+        mPlayerData[i].mCharB = charB;
+        mCharPane[charB / 2][charB % 2].mFrame = 19.0f;
+        mSelectAnm[charB / 2][charB % 2].mEnable = 1;
+        mSelectAnm[charB / 2][charB % 2].mNo = mPlayerData[i].mCharNoB;
+    }
+}
+
+void SceneMenu::setCharacterFlag()
+{
+    for (int i = 0; i < 20; i++)
+    {
+        mCharacterFlag[i] = 1;
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        int no = mPlayerData[i].mCursor;
+        if (no >= 0 && no < 20)
+            mCharacterFlag[no] = 0;
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        int no = mPlayerData[i].mCharF;
+        if (no >= 0 && no < 20)
+            mCharacterFlag[no] = 0;
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        int no = mPlayerData[i].mCharB;
+        if (no >= 0 && no < 20)
+            mCharacterFlag[no] = 0;
+    }
+    if (!gSystemRecord.isGameUnlocked(SystemRecord::KinopioCombi))
+    {
+        mCharacterFlag[8] = 0;
+        mCharacterFlag[9] = 0;
+    }
+    if (gSystemRecord.isGameUnlocked(SystemRecord::BossCombi))
+        return;
+    mCharacterFlag[18] = 0;
+    mCharacterFlag[19] = 0;
+}
+
+int SceneMenu::getKart(int charF, int charB)
+{
+#line 6850
+    JUT_MINMAX_ASSERT(0, charF, 20);
+#line 6851
+    JUT_MINMAX_ASSERT(0, charB, 20);
+
+    int sel;
+    if (mChara[charF].mWeight > mChara[charB].mWeight)
+    {
+        sel = charF;
+    }
+    else if (mChara[charF].mWeight < mChara[charB].mWeight)
+    {
+        sel = charB;
+    }
+    else
+    {
+        sel = charF;
+    }
+
+    for (int i = 0; i < 21; i++)
+    {
+        if (mChara[sel].mKartId == mKartIndex[i])
+            return i;
+    }
+    return 0;
+}
+
+int SceneMenu::changeKart(int charF, int charB, int kart, int dir)
+{
+#line 6887
+    JUT_MINMAX_ASSERT(0, charF, 20);
+#line 6888
+    JUT_MINMAX_ASSERT(0, charB, 20);
+#line 6889
+    JUT_MINMAX_ASSERT(0, kart, 21);
+
+    int best = charB;
+    if (mChara[charF].mWeight > mChara[charB].mWeight)
+        best = charF;
+
+    int weight = mChara[best].mWeight;
+    int kartNo = kart;
+    while (true)
+    {
+        if (dir > 0)
+        {
+            for (int i = 0; i < dir; i++)
+            {
+                do
+                {
+                    kartNo = (kartNo + 1) % 21;
+                } while (mKartList[kartNo].mKartWeight != weight && kartNo != 20);
+            }
+        }
+        else if (dir < 0)
+        {
+            for (int i = 0; i < -dir; i++)
+            {
+                do
+                {
+                    kartNo = (kartNo + 20) % 21;
+                } while (mKartList[kartNo].mKartWeight != weight && kartNo != 20);
+            }
+        }
+        else
+        {
+            kartNo = kart;
+        }
+        if (SystemRecord::tstSecretKart((EKartID)mKartIndex[kartNo], gSystemRecord.mSecretKart))
+            return kartNo;
+    }
+}
 
 void SceneMenu::characterAnm() {}
 
@@ -415,13 +1346,198 @@ void SceneMenu::setChar1Plus() {}
 
 void SceneMenu::setRaceData() {}
 
-void SceneMenu::setCharSelFlag() {}
+void SceneMenu::setCharSelFlag()
+{
+    for (int i = 0; i < 20; i++)
+    {
+        mCharSelFlag[i] = true;
+    }
+    if (!gSystemRecord.isGameUnlocked(SystemRecord::KinopioCombi))
+    {
+        mCharSelFlag[8] = false;
+        mCharSelFlag[9] = false;
+    }
+    if (gSystemRecord.isGameUnlocked(SystemRecord::BossCombi))
+        return;
+    mCharSelFlag[18] = false;
+    mCharSelFlag[19] = false;
+}
 
-void SceneMenu::useCharSel(int, int) {}
+void SceneMenu::useCharSel(int charF, int charB)
+{
+    mCharSelFlag[charF] = false;
+    mCharSelFlag[charB] = false;
+}
 
-void SceneMenu::getCharSel(int &, int &) {}
+void SceneMenu::getCharSel(int &charF, int &charB)
+{
+    int num = 0;
+    for (int i = 0; i < 20; i++)
+    {
+        if (mCharSelFlag[i] != 0)
+            num++;
+    }
+    if (num < 2)
+    {
+#line 7746
+        JUT_ASSERT(0);
+    }
 
-void SceneMenu::getRndCharSel(int &, int &) {}
+    gSequenceInfo.setRandomSeed();
+    int no1 = gSequenceInfo.getRandom() % num-- + 1;
+    int no2 = gSequenceInfo.getRandom() % num + 1;
+
+    switch (gRaceInfo.getRaceLevel())
+    {
+    case LVL_50CC:
+    case LVL_100CC:
+    {
+        int cnt = 0;
+        for (int no = 0; no < 20; no++)
+        {
+            if (mCharSelFlag[no] != 0)
+            {
+                cnt++;
+                if (cnt == no1)
+                {
+                    charF = no;
+                    mCharSelFlag[no] = 0;
+                    break;
+                }
+            }
+        }
+        int pair = charF % 2 ? charF - 1 : charF + 1;
+        if (mCharSelFlag[pair] != 0)
+        {
+            charB = pair;
+            mCharSelFlag[pair] = 0;
+            break;
+        }
+        num = 0;
+        for (int no = 0; no < 10; no++)
+        {
+            if ((mCharSelFlag[no * 2] != 0 && mCharSelFlag[no * 2 + 1] == 0) || (mCharSelFlag[no * 2] == 0 && mCharSelFlag[no * 2 + 1] != 0))
+                num++;
+        }
+
+        if (num == 0)
+        {
+#line 7790
+            JUT_ASSERT(0);
+        }
+
+        int pairSel = gSequenceInfo.getRandom() % num + 1;
+        int n = 0;
+        for (int no = 0; no < 10; no++)
+        {
+            if ((mCharSelFlag[no * 2] != 0 && mCharSelFlag[no * 2 + 1] == 0) || (mCharSelFlag[no * 2] == 0 && mCharSelFlag[no * 2 + 1] != 0))
+            {
+                n++;
+                if (n == pairSel)
+                {
+                    if (mCharSelFlag[no * 2] != 0)
+                    {
+                        charB = no * 2;
+                        mCharSelFlag[no * 2] = 0;
+                        break;
+                    }
+                    if (mCharSelFlag[no * 2 + 1] != 0)
+                    {
+                        charB = no * 2 + 1;
+                        mCharSelFlag[no * 2 + 1] = 0;
+                        break;
+                    }
+                }
+            }
+        }
+        break;
+    }
+    case LVL_150CC:
+    case LVL_MIRROR:
+    {
+        int cnt = 0;
+        for (int no = 0; no < 20; no++)
+        {
+            if (mCharSelFlag[no] != 0)
+            {
+                cnt++;
+                if (cnt == no1)
+                {
+                    charF = no;
+                    mCharSelFlag[no] = 0;
+                    break;
+                }
+            }
+        }
+        cnt = 0;
+        for (int no = 0; no < 20; no++)
+        {
+            if (mCharSelFlag[no] != 0)
+            {
+                cnt++;
+                if (cnt == no2)
+                {
+                    charB = no;
+                    mCharSelFlag[no] = 0;
+                    break;
+                }
+            }
+        }
+        break;
+    }
+    default:
+#line 7836
+        JUT_ASSERT(0);
+    }
+}
+
+void SceneMenu::getRndCharSel(int &charF, int &charB)
+{
+    int num = 0;
+    for (int i = 0; i < 20; i++)
+    {
+        if (mCharSelFlag[i] != 0)
+            num++;
+    }
+    if (num < 2)
+    {
+#line 7858
+        JUT_ASSERT(0);
+    }
+
+    gSequenceInfo.setRandomSeed();
+    int no1 = gSequenceInfo.getRandom() % num-- + 1;
+    int no2 = gSequenceInfo.getRandom() % num + 1;
+
+    int cnt = 0;
+    for (int no = 0; no < 20; no++)
+    {
+        if (mCharSelFlag[no] != 0)
+        {
+            cnt++;
+            if (cnt == no1)
+            {
+                charF = no;
+                mCharSelFlag[no] = 0;
+                break;
+            }
+        }
+    }
+    cnt = 0;
+    for (int no = 0; no < 20; no++)
+    {
+        if (mCharSelFlag[no] != 0)
+        {
+            cnt++;
+            if (cnt == no2)
+            {
+                charB = no;
+                mCharSelFlag[no] = 0;
+                break;
+            }
+        }
+    }
+}
 
 void SceneMenu::changeText() {}
 
