@@ -39,10 +39,10 @@ public:
     void getBestLapColor(int, JUTColor &);                                                // 0x8015a874
     void drawMiniGame();                                                                          // 0x8015a90c
     void drawBomb();                                                                              // 0x8015a978
-    void getBombScale(int, int, int);                                                             // 0x8015af3c
-    void getReachBombScale(int, int);                                                             // 0x8015b13c
+    f32 getBombScale(int, int, int);                                                              // 0x8015af3c
+    f32 getReachBombScale(int, int);                                                              // 0x8015b13c
     void drawEscape();                                                                            // 0x8015b1e8
-    void getStartShineTimeScale(int);                                                             // 0x8015b42c
+    f32 getStartShineTimeScale(int);                                                              // 0x8015b42c
     void drawCourse();                                                                            // 0x8015b4b8
     void calc();                                                                                  // 0x8015c7ec
     void calcPlayerMark();                                                                        // 0x8015cfdc
@@ -50,15 +50,15 @@ public:
     void setLayoutData();                                                                         // 0x8015da18
     void calcMiniGame();                                                                          // 0x8015f688
     void calcBomb();                                                                              // 0x8015f6f4
-    void getBombColor(JUTColor, JUTColor);                                        // 0x80160590
-    void isBombReach(int);                                                                        // 0x80160708
-    void isBombWinner(int);                                                                       // 0x80160864
+    JUTColor getBombColor(JUTColor, JUTColor);                                        // 0x80160590
+    bool isBombReach(int);                                                                        // 0x80160708
+    bool isBombWinner(int);                                                                       // 0x80160864
     void setEffectPos(int);                                                                       // 0x80160980
     void calcEscape();                                                                            // 0x80160c14
     void calcTimeFrame(bool, int);                                                                // 0x80161114
     static J2DPicture::TCornerColor getCornerColor(int);                                          // 0x8016152c
     void setEscapeColor(int);                                                                     // 0x80161894
-    void getTimeColor(JUTColor, JUTColor);                                        // 0x80162844
+    JUTColor getTimeColor(JUTColor, JUTColor);                                        // 0x80162844
     void startBombDemo();                                                                         // 0x801629bc
     bool isAlarm(int);                                                                            // 0x801629e0
     void getMapPos(int, JGeometry::TVec3f &, JGeometry::TVec2f &);                    // 0x80162a40
@@ -91,9 +91,9 @@ public:
     void getGoalLapPos(int, f32 &);                                                             // 0x8016804c
     void getStartCharPos(int, int, f32 &);                                                      // 0x8016809c
     void getGoalCharPos(int, int, f32 &);                                                       // 0x8016819c
-    void getThunderCharScale(int);                                                                // 0x80168214
+    f32 getThunderCharScale(int);                                                                // 0x80168214
     void getStartRankPos(int, int, JGeometry::TVec2f &);                                    // 0x801682ec
-    void getRaceRankScale(int);                                                                   // 0x8016851c
+    f32 getRaceRankScale(int);                                                                   // 0x8016851c
     void getGoalRankPos(int, int, JGeometry::TVec2f &);                                     // 0x801685e4
     void getGoalRankScale(int, int, f32 &);                                                     // 0x801689e4
     void getGoalRankRot(int, f32 &);                                                            // 0x80168cb4
@@ -122,6 +122,8 @@ public:
     static const char *mTimeLapName[2];                                                             // 0x804145d8
     static Race2D *mThis;                                                                           // 0x80416300
     static Task *mTask;                                                                             // 0x80416304
+ public:
+     static int getWinBombPoint(); // helper mirroring KartChecker::getWinBombPoint
     // Inline/Unused
     ~Race2D();
     void getItemPos(int, int, JGeometry::TVec2f &);
@@ -135,10 +137,84 @@ public:
     void setDrawFlag(bool enable) { mDrawFlag = enable; }
 
     void endBombDemo() { mIsEndBombDemo = true; }
-private:
-    PLACEHOLDER_BYTES(0, 0x1c0);
+public:
+    PLACEHOLDER_BYTES(0, 0x1b4);
+    class J2DGrafContext *mGrafContext;   // 0x1b4
+    PLACEHOLDER_BYTES(0x1b8, 0x1c0);
     class BombStart2D *mBombStart; // 0x1c0
-    PLACEHOLDER_BYTES(0x1c4, 0x4ebc);
+    struct Race2DAlarmParam {
+        u32 mBase; // +0x0
+        u32 _4;    // +0x4
+        u32 mStep; // +0x8
+        u32 _c;    // +0xc
+    } mAlarm[4];                   // 0x1c4
+    PLACEHOLDER_BYTES(0x204, 0x234);
+    class J2DScreen *mMaskScreen;         // 0x234
+    PLACEHOLDER_BYTES(0x238, 0x594);
+    class J2DPicture *mRankDigits1[4][8]; // 0x594
+    class J2DPicture *mRankDigits2[4][8]; // 0x614
+    class J2DPicture *_694x[20];        // 0x694 (unconfirmed)
+    // The lap digit table owner's tail overlaps the shine-vector storage
+    // (mLapDigits[3][8][6..10+] aliases 0xd00..): only laps 0..8, digits 0..10 are real pictures.
+    union Race2DLapShine {
+        class J2DPicture *mLapDigits[4][9][11]; // 0x6e4 lap time pane table
+        struct
+        {
+            u8 _0[0x61c];
+            JGeometry::TVec2f mShineBase[4]; // 0xd00
+            JGeometry::TVec2f mShinePos[5];  // 0xd20
+            int mBattleTimeCount[4];         // 0xd48 (calcTimeFrame state counters)
+            u32 mShineKind[4];               // 0xd58
+            int mTimeColorFrame;             // 0xd68
+            int mBombColorFrame;             // 0xd6c
+            int mBombWinFrame[4];            // 0xd70
+            int mBombMarkFrame[4][4];        // 0xd80
+        } mShine;
+    } mLapShine;                         // 0x6e4..0xdc0
+#define mLapDigits mLapShine.mLapDigits
+#define mShineBase mLapShine.mShine.mShineBase
+#define mShinePos mLapShine.mShine.mShinePos
+#define mBattleTimeCount mLapShine.mShine.mBattleTimeCount
+#define mShineKind mLapShine.mShine.mShineKind
+#define mTimeColorFrame mLapShine.mShine.mTimeColorFrame
+#define mBombColorFrame mLapShine.mShine.mBombColorFrame
+#define mBombWinFrame mLapShine.mShine.mBombWinFrame
+#define mBombMarkFrame mLapShine.mShine.mBombMarkFrame
+    PLACEHOLDER_BYTES(0xdc0, 0x1588);
+    struct Race2DLapSlot {
+        u8 mAvailable;  // +0x00
+        u8 _1[3];       // +0x01
+        int mDigits[7]; // +0x04
+    };                        // size 0x20
+    struct Race2DPlayerHUD {
+        int mLap;              // +0x000
+        u8 _4[0x24];           // +0x004
+        u8 mRaceTimeAvailable; // +0x028
+        u8 _29[3];             // +0x029
+        int mDigits[7];        // +0x02c
+        u8 _48[0x30];          // +0x048
+        Race2DLapSlot mLapSlots[9]; // +0x078
+        u8 _198[0x7e8 - 0x198];
+        struct Race2DItemState { int mShown; int mNew; } mItem[2]; // +0x7e8
+        JGeometry::TVec2f mItemPos[2]; // +0x7f8
+        u8 _808[0x854 - 0x808];
+        f32 mGoalX;      // +0x854 (abs 0x1ddc)
+        f32 mGoalY;      // +0x858
+        u8 _85c[0x894 - 0x85c];
+        f32 mGoalX2;     // +0x894 (abs 0x1e1c)
+        f32 mGoalY2;     // +0x898
+        u8 _89c[0x8d5 - 0x89c];
+        bool mIsAlarm;   // +0x8d5 (abs 0x1e5d)
+        u8 _8d6[0x8e8 - 0x8d6];
+    };                              // size 0x8e8
+    Race2DPlayerHUD mPlayerHUD[4];  // 0x1588
+    int mGoalCount;                 // 0x3928
+    JGeometry::TVec3f mItemPos[4][2][39]; // 0x392c
+    JGeometry::TVec3f mCharPos[2][39];    // 0x47cc
+    f32 mSpecialItemScale[73];        // 0x4b74
+    PLACEHOLDER_BYTES(0x4c98, 0x4eb4);
+    int mEscapeTimer;                 // 0x4eb4
+    int mEscapeTimer4;                // 0x4eb8
     int mHideFrame;  // 4ebc
     bool mDrawFlag; // 4ec0
     bool mIsEndBombDemo; // 4ec1

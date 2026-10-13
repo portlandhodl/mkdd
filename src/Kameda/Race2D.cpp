@@ -1,6 +1,15 @@
 #include "Kameda/Race2D.h"
 #include "Kameda/BombStart2D.h"
+#include "Kameda/J2DManager.h"
+#include "Kameda/K2DPicture.h"
+#include "Kaneshige/KartChecker.h"
+#include "Kaneshige/RaceMgr.h"
+#include "Sato/ItemObjMgr.h"
+#include "Sato/ItemTurtle.h"
 #include "Kaneshige/RaceTime.h"
+#include "JSystem/JMath/JMath.h"
+#include "JSystem/JUtility/JUTAssert.h"
+#include "dolphin/os.h"
 #include "mathHelper.h"
 
 
@@ -330,7 +339,20 @@ void Race2D::init() {}
 
 void Race2D::drawPlayerMark() {}
 
-void Race2D::drawMask() {}
+void Race2D::drawMask()
+{
+    if (RCMGetManager()->getConsoleNumber() == 4 && RCMGetManager()->getStatusNumber() == 3 &&
+        RCMGetManager()->getRacePhase() != PHASE_CRS_DEMO && !J2DManager::mNetFlag)
+    {
+        mGrafContext->setPort();
+        if (RCMGetManager()->mRaceDirector->isRaceEnd())
+        {
+            J2DPane *pane = mMaskScreen->search('P3Mask');
+            pane->setAlpha((u8)(0xff - mHideFrame * 0xff / 20));
+        }
+        mMaskScreen->draw(0.0f, 0.0f, mGrafContext);
+    }
+}
 
 void Race2D::draw() {}
 
@@ -338,25 +360,163 @@ void Race2D::drawAlarm() {}
 
 void Race2D::anmTA(int) {}
 
-void Race2D::getAlphaAnmTA(int, u8 &) {}
+void Race2D::getAlphaAnmTA(int frame, u8 &alpha)
+{
+    int t = frame % 0x29;
+    if (t < 0xb)
+        alpha = 0xff;
+    else if (t < 0x15)
+        alpha = (u8)(255.0f - ((t - 0xb) * 0xff) / 10.0f);
+    else if (t < 0x1f)
+        alpha = (u8)(((t - 0x15) * 0xff) / 10.0f);
+    else
+        alpha = 0xff;
+}
 
-void Race2D::getBestTimeColor(int, JUTColor &, J2DPicture::TCornerColor &) {}
+void Race2D::getBestTimeColor(int frame, JUTColor &color, J2DPicture::TCornerColor &cornerColor)
+{
+    f32 t = -0.5f * JMASCos((s16)(frame % 16 * 0xffff / 16)) + 0.5f;
+    color.r = (u8)(255.0f * t);
+    color.g = (u8)(110.0f * t);
+    color.b = 0;
+    color.a = 0;
+    cornerColor.mColor0.set(255, 255, (u8)(127.0f * t + 128.0f), 255);
+    cornerColor.mColor1.set((u8)(177.0f * t + 78.0f), (u8)(255.0f * t), (u8)(128.0f * t), 255);
+    cornerColor.mColor2.set((u8)(177.0f * t + 78.0f), (u8)(255.0f * t), (u8)(128.0f * t), 255);
+    cornerColor.mColor3.set(255, 255, (u8)(127.0f * t + 128.0f), 255);
+}
 
-void Race2D::getBestLapColor(int, JUTColor &) {}
+void Race2D::getBestLapColor(int frame, JUTColor &color)
+{
+    f32 t = -0.5f * JMASCos((s16)(frame % 16 * 0xffff / 16)) + 0.5f;
+    color.r = (u8)(255.0f * t);
+    color.g = (u8)(128.0f * t);
+    color.b = (u8)(255.0f * t);
+    color.a = 0;
+}
 
-void Race2D::drawMiniGame() {}
+void Race2D::drawMiniGame()
+{
+    switch (RCMGetManager()->getRaceMode())
+    {
+    case BALLOON_BATTLE:
+        break;
+    case BOMB_BATTLE:
+        drawBomb();
+        mBombStart->draw();
+        break;
+    case ESCAPE_BATTLE:
+        drawEscape();
+        break;
+    }
+}
 
 void Race2D::drawBomb() {
     //KartChecker::getWinBombPoint() {}
 }
 
-void Race2D::getBombScale(int, int, int) {}
+// KartChecker::getWinBombPoint is not yet declared in the local KartChecker.h
+#pragma dont_inline on
+int Race2D::getWinBombPoint() { return KartChecker::sBombPointFull; }
+#pragma dont_inline reset
 
-void Race2D::getReachBombScale(int, int) {}
+f32 Race2D::getBombScale(int no, int type, int idx)
+{
+    f32 scale = 0.0f;
+    if (isBombReach(no))
+    {
+        switch (type)
+        {
+        case 0:
+        case 1:
+            scale = 1.0f;
+            break;
+        case 2:
+            scale = 2.1f * (-0.5f * JMASCos((s16)(mBombWinFrame[no] * 0xffff / 36)) + 0.5f);
+            break;
+        }
+    }
+    else
+    {
+        int frame = mBombMarkFrame[no][idx];
+        if (frame < 0x14)
+        {
+            switch (type)
+            {
+            case 0:
+            case 1:
+                scale = 1.0f;
+                break;
+            case 2:
+                scale = 0.0f;
+                break;
+            }
+        }
+        else if (frame - 0x15 < 0xb)
+        {
+            switch (type)
+            {
+            case 0:
+            case 1:
+                scale = 1.0f;
+                break;
+            case 2:
+                scale = 0.0f;
+                break;
+            }
+        }
+        else if (frame - 0x15 < 0x10)
+        {
+            scale = 1.0f + 1.5f * (frame - 0x20) / 5.0f;
+        }
+        else if (frame - 0x15 < 0x14)
+        {
+            scale = 2.5f + -2.0f * (frame - 0x25) * 0.25f;
+        }
+        else if (frame - 0x15 < 0x18)
+        {
+            scale = 0.5f + 0.5f * (frame - 0x29) * 0.25f;
+        }
+        else
+        {
+            scale = 1.0f;
+        }
+    }
+    return scale;
+}
+
+f32 Race2D::getReachBombScale(int no, int type)
+{
+    f32 scale = 0.0f;
+    switch (type)
+    {
+    case 0:
+        scale = getBombScale(no, 0, 0);
+        break;
+    case 1:
+        scale = getBombScale(no, 2, 0);
+        break;
+    default:
+#line 2762
+        JUT_ASSERT_F(0, "%s", "0");
+        break;
+    }
+    return scale;
+}
 
 void Race2D::drawEscape() {}
 
-void Race2D::getStartShineTimeScale(int) {}
+f32 Race2D::getStartShineTimeScale(int frame)
+{
+    f32 scale;
+    if (frame < 11)
+        scale = 1.6f * frame / 11.0f;
+    else if (frame < 14)
+        scale = 1.6f + -0.6f * (frame - 11) / 3.0f;
+    else
+        scale = 1.0f;
+    return scale;
+}
 
 void Race2D::drawCourse() {}
 
@@ -368,15 +528,57 @@ void Race2D::calcParticle() {}
 
 void Race2D::setLayoutData() {}
 
-void Race2D::calcMiniGame() {}
+void Race2D::calcMiniGame()
+{
+    switch (RCMGetManager()->getRaceMode())
+    {
+    case BALLOON_BATTLE:
+        break;
+    case BOMB_BATTLE:
+        calcBomb();
+        mBombStart->calc();
+        break;
+    case ESCAPE_BATTLE:
+        calcEscape();
+        break;
+    }
+}
 
 void Race2D::calcBomb() {}
 
-void Race2D::getBombColor(JUTColor, JUTColor) {}
+JUTColor Race2D::getBombColor(JUTColor c1, JUTColor c2)
+{
+    f32 t = -0.5f * JMASCos((s16)(mBombColorFrame * 0xffff / 50)) + 0.5f;
+    JUTColor color;
+    color.r = (u8)(t * (c2.r - c1.r) + c1.r);
+    color.g = (u8)(t * (c2.g - c1.g) + c1.g);
+    color.b = (u8)(t * (c2.b - c1.b) + c1.b);
+    color.a = (u8)(t * (c2.a - c1.a) + c1.a);
+    return color;
+}
 
-void Race2D::isBombReach(int) {}
+bool Race2D::isBombReach(int statusNo)
+{
+    int kartNo = J2DManager::getStatus2Kart(statusNo);
+    int winPoint = (RCMGetManager()->getKartChecker(kartNo), getWinBombPoint());
+    KartChecker *checker = RCMGetManager()->getKartChecker(kartNo);
+    int bombPoint = checker->getBombPoint();
 
-void Race2D::isBombWinner(int) {}
+    for (int i = 0; i < winPoint - 1; i++)
+    {
+        if (mBombMarkFrame[statusNo][i] != 0)
+            return false;
+    }
+    return winPoint - 1 == bombPoint;
+}
+
+bool Race2D::isBombWinner(int statusNo)
+{
+    int kartNo = J2DManager::getStatus2Kart(statusNo);
+    int winPoint = (RCMGetManager()->getKartChecker(kartNo), getWinBombPoint());
+    KartChecker *checker = RCMGetManager()->getKartChecker(kartNo);
+    return checker->getBombPoint() == winPoint;
+}
 
 void Race2D::setEffectPos(int) {}
 
@@ -384,58 +586,443 @@ void Race2D::calcEscape() {}
 
 void Race2D::calcTimeFrame(bool, int) {}
 
-J2DPicture::TCornerColor Race2D::getCornerColor(int) {}
+J2DPicture::TCornerColor Race2D::getCornerColor(int idx)
+{
+    J2DPicture::TCornerColor colors;
+    switch (idx)
+    {
+    case 0:
+        colors.mColor0.set(255, 160, 160, 255);
+        colors.mColor1.set(220, 0, 0, 255);
+        colors.mColor2.set(220, 0, 0, 255);
+        colors.mColor3.set(255, 160, 160, 255);
+        break;
+    case 1:
+        colors.mColor0.set(64, 255, 255, 255);
+        colors.mColor1.set(0, 0, 255, 255);
+        colors.mColor2.set(0, 0, 255, 255);
+        colors.mColor3.set(64, 255, 255, 255);
+        break;
+    case 2:
+        colors.mColor0.set(150, 255, 32, 255);
+        colors.mColor1.set(0, 100, 0, 255);
+        colors.mColor2.set(0, 100, 0, 255);
+        colors.mColor3.set(150, 255, 32, 255);
+        break;
+    case 3:
+        colors.mColor0.set(255, 255, 50, 255);
+        colors.mColor1.set(150, 64, 0, 255);
+        colors.mColor2.set(150, 64, 0, 255);
+        colors.mColor3.set(255, 255, 50, 255);
+        break;
+    case 4:
+        colors.mColor0.set(255, 120, 255, 255);
+        colors.mColor1.set(100, 0, 100, 255);
+        colors.mColor2.set(100, 0, 100, 255);
+        colors.mColor3.set(255, 120, 255, 255);
+        break;
+    case 5:
+        colors.mColor0.set(255, 160, 40, 255);
+        colors.mColor1.set(120, 50, 0, 255);
+        colors.mColor2.set(120, 50, 0, 255);
+        colors.mColor3.set(255, 160, 40, 255);
+        break;
+    case 6:
+        colors.mColor0.set(220, 255, 255, 255);
+        colors.mColor1.set(0, 200, 255, 255);
+        colors.mColor2.set(0, 200, 255, 255);
+        colors.mColor3.set(220, 255, 255, 255);
+        break;
+    case 7:
+        colors.mColor0.set(180, 90, 255, 255);
+        colors.mColor1.set(50, 0, 200, 255);
+        colors.mColor2.set(50, 0, 200, 255);
+        colors.mColor3.set(180, 90, 255, 255);
+        break;
+    default:
+#line 4540
+        JUT_ASSERT_F(0, "%s", "0");
+        break;
+    }
+    return colors;
+}
 
 void Race2D::setEscapeColor(int) {}
 
-void Race2D::getTimeColor(JUTColor, JUTColor) {}
+JUTColor Race2D::getTimeColor(JUTColor c1, JUTColor c2)
+{
+    f32 t = -0.5f * JMASCos((s16)(mTimeColorFrame * 0xffff / 60)) + 0.5f;
+    JUTColor color;
+    color.r = (u8)(t * (c2.r - c1.r) + c1.r);
+    color.g = (u8)(t * (c2.g - c1.g) + c1.g);
+    color.b = (u8)(t * (c2.b - c1.b) + c1.b);
+    color.a = (u8)(t * (c2.a - c1.a) + c1.a);
+    return color;
+}
 
 void Race2D::startBombDemo() {
     mBombStart->start();
 }
 
-bool Race2D::isAlarm(int) {}
+bool Race2D::isAlarm(int status)
+{
+    bool ret = false;
+    int kart = J2DManager::getKart2Status(status);
+    if (kart >= 0 && kart < RCMGetManager()->getStatusNumber())
+        ret = mPlayerHUD[kart].mIsAlarm;
+    return ret;
+}
 
 void Race2D::getMapPos(int, JGeometry::TVec3f &, JGeometry::TVec2f &) {}
 
-void Race2D::getCharacterInfo(int, int, f32 &, f32 &, f32 &) {}
+void Race2D::getCharacterInfo(int no, int which, f32 &x, f32 &y, f32 &z)
+{
+#line 4735
+    JUT_MINMAX_ASSERT(0, no, 2);
+    JUT_MINMAX_ASSERT(0, which, 39);
+    x = mCharPos[1 - no][which].x;
+    y = mCharPos[1 - no][which].y;
+    z = mCharPos[1 - no][which].z;
+}
 
 void Race2D::getCharacterClr(int, int, int, JUTColor &, JUTColor &, u8 &) {}
 
-void Race2D::getItemInfo(int, int, int, f32 &, f32 &, f32 &) {}
+void Race2D::getItemInfo(int no, int type, int which, f32 &x, f32 &y, f32 &z)
+{
+#line 4863
+    JUT_MINMAX_ASSERT(0, no, 4);
+    JUT_MINMAX_ASSERT(0, type, 2);
+    JUT_MINMAX_ASSERT(0, which, 39);
+    x = mItemPos[no][type][which].x;
+    y = mItemPos[no][type][which].y;
+    z = mItemPos[no][type][which].z;
+}
 
-void Race2D::decideItem(int, u8, int &) {}
+void Race2D::decideItem(int no, u8 driverNo, int &item)
+{
+#line 4905
+    JUT_MINMAX_ASSERT(0, no, 4);
+    JUT_MINMAX_ASSERT(0, driverNo, 2);
 
-void Race2D::calcLapInit() {}
+    int itemKind = ItemObjMgr::gItemMgr->getStockItem(J2DManager::getStatus2Kart(no), driverNo);
+    ItemObj *itemObj = ItemObjMgr::gItemMgr->getKartEquipItem(J2DManager::getStatus2Kart(no), driverNo);
+    if (itemKind == 0x10 && itemObj != NULL)
+        itemKind = itemObj->getKind();
 
-void Race2D::calcLap() {}
+    if (itemObj == NULL)
+    {
+        if (itemKind == 0x15)
+        {
+            int kartNo = J2DManager::getStatus2Kart(no);
+            if (RCMGetManager()->mRaceInfo->getKartInfo(kartNo)->getDriverCharID(driverNo) == 8)
+                itemKind = 0x1a;
+        }
+        if (itemKind == 0xb)
+        {
+            int kartNo = J2DManager::getStatus2Kart(no);
+            if (RCMGetManager()->mRaceInfo->getKartInfo(kartNo)->getDriverCharID(driverNo) == 0xc)
+                itemKind = 0x1b;
+        }
+    }
+    else
+    {
+        switch (itemKind)
+        {
+        case 0xb:
+        {
+            ItemObj *egg = ItemObjMgr::getItemYoshiEgg(itemObj);
+            if (egg != NULL && egg->getItemColorID() != 1)
+                itemKind = 0x1b;
+            break;
+        }
+        case 0x11:
+            switch (itemObj->getSuccessionItemNum())
+            {
+            case 1:
+                itemKind = 0x1c;
+                break;
+            case 2:
+                itemKind = 0x17;
+                break;
+            }
+            break;
+        case 0x12:
+            switch (itemObj->getSuccessionItemNum())
+            {
+            case 1:
+                itemKind = 0x1d;
+                break;
+            case 2:
+                itemKind = 0x18;
+                break;
+            }
+            break;
+        case 0x13:
+            switch (itemObj->getSuccessionItemNum())
+            {
+            case 1:
+                itemKind = 0x1e;
+                break;
+            case 2:
+                itemKind = 0x19;
+                break;
+            }
+            break;
+        case 0x15:
+        {
+            ItemObj *fire = ItemObjMgr::getItemFireBallSuc(itemObj);
+            if (fire != NULL && !((ItemFireBallSuc *)fire)->IsEfctTypeRed())
+                itemKind = 0x1a;
+            break;
+        }
+        }
+    }
+    item = itemKind;
+}
 
-void Race2D::lapInit() {
+void Race2D::calcLapInit()
+{
+    Task::TCB *curCB = mTask->mCurCB;
+    for (int i = 0; i < RCMGetManager()->getStatusNumber(); i++)
+    {
+        Task::TCB *tcb = mTask->make(NULL, 0x8000);
+        if (tcb != NULL)
+        {
+            tcb->mExecIdx = i;
+            mTask->change(calcLap, tcb);
+        }
+    }
+    curCB->mRequestKill = true;
+}
+
+void Race2D::calcLap()
+{
+    int no = mTask->mCurCB->mExecIdx;
+    int kartNo = J2DManager::getStatus2Kart(no);
+    KartChecker *checker = RCMGetManager()->getKartChecker(kartNo);
+
+    int lap = checker->getLap();
+    if (lap < 0)
+        lap = 0;
+    if (lap >= RCMGetManager()->getTotalLapNumber())
+        lap = RCMGetManager()->getTotalLapNumber();
+
+    int min, sec, ms;
+    checker->getTotalTime().get(&min, &sec, &ms);
+
+    int d0 = min % 10;
+    int d1 = min / 10 % 10;
+    int d2 = sec % 10;
+    int d3 = sec / 10 % 10;
+    int d4 = ms % 10;
+    int d5 = ms / 10 % 10;
+    int d6 = ms / 100 % 10;
+
+    u8 timeValid = (checker->getTotalTime().get() != MAX_TIME);
+
+    int dispLap = lap;
+    if (lap > RCMGetManager()->getTotalLapNumber() - 1)
+        dispLap = RCMGetManager()->getTotalLapNumber() - 1;
+
+    Race2DPlayerHUD *hud = &mThis->mPlayerHUD[no];
+    hud->mRaceTimeAvailable = timeValid;
+    hud->mLap = dispLap;
+    hud->mDigits[0] = d0;
+    hud->mDigits[1] = d1;
+    hud->mDigits[2] = d2;
+    hud->mDigits[3] = d3;
+    hud->mDigits[4] = d4;
+    hud->mDigits[5] = d5;
+    hud->mDigits[6] = d6;
+
+    if (lap != sPreLap[no] && lap != 0)
+    {
+        if (lap >= 1 && lap <= 10)
+        {
+            const RaceTime &lapTime = checker->getLapTime(lap - 1);
+            lapTime.get(&min, &sec, &ms);
+
+            u8 slotValid = (lapTime.get() != MAX_TIME);
+
+#line 520
+            JUT_MINMAX_ASSERT(0, no, 4);
+
+            Race2DLapSlot *slot = &hud->mLapSlots[lap];
+            slot->mAvailable = slotValid;
+            slot->mDigits[0] = min % 10;
+            slot->mDigits[1] = min / 10 % 10;
+            slot->mDigits[2] = sec % 10;
+            slot->mDigits[3] = sec / 10 % 10;
+            slot->mDigits[4] = ms % 10;
+            slot->mDigits[5] = ms / 10 % 10;
+            slot->mDigits[6] = ms / 100 % 10;
+
+#line 521
+            JUT_MINMAX_ASSERT(0, lap - 1, 9);
+        }
+        Task::TCB *tcb = mTask->make(NULL, 0x8000);
+        if (tcb != NULL)
+        {
+            tcb->mExecIdx = no;
+            mTask->change(lapInit, tcb);
+        }
+    }
+    sPreLap[no] = lap;
+
+    if (checker->isGoal() || RCMGetManager()->mRaceDirector->isRaceEnd())
+    {
+        if (checker->isGoal())
+            mThis->mGoalCount++;
+        if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2)
+            mTask->change(lapTimeInit, mTask->mCurCB);
+    }
+}
+
+void Race2D::lapInit()
+{
     mTask->mCurCB->_10 = 0;
     mTask->change(lapMain, mTask->mCurCB);
 }
 
-void Race2D::lapMain() {
+void Race2D::lapMain()
+{
     Task::TCB *curCB = mTask->mCurCB;
     curCB->_10++;
     curCB->mRequestKill = true;
 }
 
-void Race2D::lapTimeInit() {}
+void Race2D::lapTimeInit()
+{
+    mTask->mCurCB->_10 = 0;
+    int status = mTask->mCurCB->mExecIdx;
+    for (int lap = 0; lap < RCMGetManager()->getTotalLapNumber(); lap++)
+    {
+        for (int i = 0; i < 11; i++)
+        {
+#line 484
+            JUT_MINMAX_ASSERT(0, status, 4);
+            JUT_MINMAX_ASSERT(0, lap, 9);
+            JUT_MINMAX_ASSERT(0, i, 11);
+            mThis->mLapDigits[status][lap][i]->mIsVisible = true;
+        }
+    }
+    if (RCMGetManager()->getConsoleNumber() == 2)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+#line 490
+            JUT_MINMAX_ASSERT(0, status, 4);
+            JUT_MINMAX_ASSERT(0, i, 8);
+            mThis->mRankDigits1[status][i]->setAlpha(0xff);
+
+#line 495
+            JUT_MINMAX_ASSERT(0, status, 4);
+            JUT_MINMAX_ASSERT(0, i, 8);
+            mThis->mRankDigits2[status][i]->setAlpha(0);
+        }
+    }
+    mTask->change(lapTimeMain, mTask->mCurCB);
+}
 
 void Race2D::lapTimeMain() {}
 
-void Race2D::calcItem() {}
+void Race2D::calcItem()
+{
+    if (RCMGetManager()->getRaceMode() == BOMB_BATTLE)
+        return;
 
-void Race2D::itemStartInit() {}
+    int (*itemState)[2] = sItemState;
+    bool (*rollingFlag)[2] = (bool (*)[2])sRollingFlag;
+    Race2DPlayerHUD *hud = mThis->mPlayerHUD;
+    int itemKind2[2];
+    for (int no = 0; no < RCMGetManager()->getStatusNumber(); no++, itemState++, rollingFlag++, hud++)
+    {
+        int w = 0;
+        do
+        {
+            if (ItemObjMgr::gItemMgr->IsRollingSlot(J2DManager::getStatus2Kart(no), w))
+            {
+                if (!(*rollingFlag)[w])
+                {
+                    Task::TCB *tcb = mTask->make(NULL, 0x8000);
+                    if (tcb != NULL)
+                    {
+                        tcb->mExecIdx = no;
+                        *(u8 *)&tcb->_28 = w;
+                        mTask->change(itemStartInit, tcb);
+                    }
+                }
+                (*rollingFlag)[w] = true;
+            }
+            else
+            {
+                (*rollingFlag)[w] = false;
+            }
+
+            ItemObj *itemObj = ItemObjMgr::gItemMgr->getKartEquipItem(J2DManager::getStatus2Kart(no), w);
+            if (itemObj != NULL)
+            {
+                int state = itemObj->mState;
+                if (((*itemState)[w] != 5 && state == 5) || ((*itemState)[w] == 9 && state == 1))
+                {
+                    Task::TCB *tcb = mTask->make(NULL, 0x8000);
+                    if (tcb != NULL)
+                    {
+                        mThis->decideItem(no, w, itemKind2[0]);
+
+#line 550
+                        JUT_MINMAX_ASSERT(0, no, 4);
+                        JUT_MINMAX_ASSERT(0, w, 2);
+                        JUT_MINMAX_ASSERT(0, itemKind2[0], 0x1f);
+                        hud->mItem[w].mShown = itemKind2[0];
+                        JUT_MINMAX_ASSERT(0, no, 4);
+                        JUT_MINMAX_ASSERT(0, w, 2);
+                        JUT_MINMAX_ASSERT(0, itemKind2[1], 0x1f);
+                        hud->mItem[w].mNew = itemKind2[1];
+
+                        tcb->mExecIdx = no;
+                        *(u8 *)&tcb->_28 = w;
+                        mTask->change(itemGetInit, tcb);
+                    }
+                }
+                (*itemState)[w] = state;
+            }
+            else
+            {
+                (*itemState)[w] = 0;
+            }
+            w++;
+        } while (w < 2);
+    }
+}
+void Race2D::itemStartInit()
+{
+    mTask->mCurCB->_10 = 0;
+    Task::TCB *tcb = mTask->mCurCB;
+    *(u32 *)&tcb->_24 = 0;
+    tcb->_2a[1] = 0;
+    mTask->change(itemStart, mTask->mCurCB);
+}
 
 void Race2D::itemStart() {}
 
-void Race2D::itemBlinkInit() {}
+void Race2D::itemBlinkInit()
+{
+    mTask->mCurCB->_10 = 0;
+    mTask->mCurCB->_2a[0] = 1;
+    mTask->change(itemBlink, mTask->mCurCB);
+}
 
 void Race2D::itemBlink() {}
 
-void Race2D::itemGetInit() {}
+void Race2D::itemGetInit()
+{
+    mTask->mCurCB->_10 = 0;
+    Task::TCB *tcb = mTask->mCurCB;
+    *(u32 *)&tcb->_24 = 0;
+    tcb->_2a[1] = 1;
+    mTask->change(itemGetMain, mTask->mCurCB);
+}
 
 void Race2D::itemGetMain() {}
 
@@ -448,38 +1035,449 @@ void Race2D::itemSpecialMain() {}
 
 void Race2D::setUsisi(int, ECharID) {}
 
-void Race2D::alarmX(int, f32 &) {}
+void Race2D::alarmX(int no, f32 &x)
+{
+    x = mAlarm[no].mStep * 0.5f + mAlarm[no].mBase;
+}
 
-void Race2D::getStartScaleA(int, f32 &) {}
+void Race2D::getStartScaleA(int frame, f32 &scale)
+{
+    if (frame - 0x32 < 0)
+        scale = 0.0f;
+    else if (frame - 0x32 < 0xb)
+        scale = 1.2f * (frame - 0x32) / 11.0f;
+    else if (frame - 0x32 < 0x10)
+        scale = 1.2f + -0.50000006f * (frame - 0x3d) / 5.0f;
+    else if (frame - 0x32 < 0x14)
+        scale = 0.3f * (frame - 0x42) * 0.25f + 0.7f;
+    else
+        scale = 1.0f;
+}
 
-void Race2D::getStartScaleB(int, f32 &) {}
+void Race2D::getStartScaleB(int frame, f32 &scale)
+{
+    if (frame - 0x32 < 0)
+        scale = 1.0f;
+    else if (frame - 0x32 < 0xb)
+        scale = 1.0f + 0.20000005f * (frame - 0x32) / 11.0f;
+    else if (frame - 0x32 < 0x10)
+        scale = 1.2f + -0.50000006f * (frame - 0x3d) / 5.0f;
+    else if (frame - 0x32 < 0x14)
+        scale = 0.3f * (frame - 0x42) * 0.25f + 0.7f;
+    else
+        scale = 1.0f;
+}
 
-void Race2D::getStartSpeedMeterScale(int, int, f32 &) {}
+void Race2D::getStartSpeedMeterScale(int frame, int no, f32 &scale)
+{
+    int t = frame - no * 4;
+    if (t < 0)
+        scale = 0.0f;
+    else if (t < 9)
+        scale = 1.2f * t / 9.0f;
+    else if (t < 13)
+        scale = -0.20000005f * (t - 9) * 0.25f + 1.2f;
+    else
+        scale = 1.0f;
+}
 
-void Race2D::getGoalSpeedMeterPos(int, f32 &) {}
+void Race2D::getGoalSpeedMeterPos(int frame, f32 &x)
+{
+    if (frame < 15)
+        x = -182.0f * frame / 15.0f;
+    else
+        x = -182.0f;
+}
 
-void Race2D::getStartLapPos(int, int, f32 &) {}
+void Race2D::getStartLapPos(int kartNo, int frame, f32 &x)
+{
+    if (RCMGetManager()->getConsoleNumber() == 3 || RCMGetManager()->getConsoleNumber() == 4)
+    {
+        if (frame >= 10)
+        {
+            if (frame < 50)
+                frame = 10;
+            else
+                frame -= 40;
+        }
+        if (frame < 0)
+        {
+            if (kartNo % 2 != 0)
+                x = 140.0f;
+            else
+                x = -140.0f;
+        }
+        else if (frame < 15)
+        {
+            if (kartNo % 2 != 0)
+                x = 140.0f - 140.0f * frame / 15.0f;
+            else
+                x = -140.0f + 140.0f * frame / 15.0f;
+        }
+        else
+        {
+            x = 0.0f;
+        }
+    }
+    else
+    {
+        if (frame < 0)
+            x = -166.0f;
+        else if (frame < 15)
+            x = -166.0f + 168.0f * frame / 15.0f;
+        else if (frame < 18)
+            x = 2.0f + -5.0f * (frame - 15) / 3.0f;
+        else if (frame < 21)
+            x = -3.0f + 3.0f * (frame - 18) / 3.0f;
+        else
+            x = 0.0f;
+    }
+}
 
-void Race2D::getGoalLapPos(int, f32 &) {}
+void Race2D::getGoalLapPos(int frame, f32 &x)
+{
+    if (frame < 15)
+        x = -140.0f * frame / 15.0f;
+    else
+        x = -140.0f;
+}
 
-void Race2D::getStartCharPos(int, int, f32 &) {}
+void Race2D::getStartCharPos(int frame, int no, f32 &x)
+{
+    int t = frame - no * 4;
+    if (t < 0)
+        x = -140.0f;
+    else if (t < 15)
+        x = -140.0f + 178.0f * t / 15.0f;
+    else if (t < 21)
+        x = 38.0f + -55.0f * (t - 15) / 6.0f;
+    else if (t < 24)
+        x = -17.0f + 17.0f * (t - 21) / 3.0f;
+    else
+        x = 0.0f;
+}
 
-void Race2D::getGoalCharPos(int, int, f32 &) {}
+void Race2D::getGoalCharPos(int frame, int no, f32 &x)
+{
+    if (no < 4)
+        frame -= (3 - no) * 4;
+    if (frame < 0)
+        x = 0.0f;
+    else if (frame < 15)
+        x = -140.0f * frame / 15.0f;
+    else
+        x = -140.0f;
+}
 
-void Race2D::getThunderCharScale(int) {}
+f32 Race2D::getThunderCharScale(int frame)
+{
+    f32 scale;
+    if (frame < 6)
+        scale = 1.0f + -0.39999998f * frame / 6.0f;
+    else if (frame < 0x21c)
+        scale = 0.6f;
+    else if (frame < 0x222)
+        scale = 0.6f + 0.9f * (frame - 0x21c) / 6.0f;
+    else
+        scale = 1.5f + -0.5f * (frame - 0x222) / 6.0f;
+    return scale;
+}
 
-void Race2D::getStartRankPos(int, int, JGeometry::TVec2f &) {}
+void Race2D::getStartRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
+{
+    frame -= 0x14;
+    if (RCMGetManager()->getConsoleNumber() == 3 || RCMGetManager()->getConsoleNumber() == 4)
+        frame -= 0x28;
 
-void Race2D::getRaceRankScale(int) {}
+    int consoleNo = RCMGetManager()->getConsoleNumber();
+    if (frame < 0)
+    {
+        switch (consoleNo)
+        {
+        case 1:
+            pos.x = 0.0f;
+            pos.y = 0.0f;
+            break;
+        case 2:
+            pos.x = 0.0f;
+            pos.y = 0.0f;
+            break;
+        case 3:
+        case 4:
+            if (kartNo % 2 != 0)
+            {
+                pos.x = 140.0f;
+                pos.y = 0.0f;
+            }
+            else
+            {
+                pos.x = -140.0f;
+                pos.y = 0.0f;
+            }
+            break;
+        default:
+#line 5986
+            JUT_ASSERT_F(0, "%s", "0");
+            break;
+        }
+    }
+    else if (frame < 15)
+    {
+        switch (consoleNo)
+        {
+        case 1:
+            pos.x = 0.0f;
+            pos.y = 0.0f;
+            break;
+        case 2:
+            pos.x = 0.0f;
+            pos.y = 0.0f;
+            break;
+        case 3:
+        case 4:
+            if (kartNo % 2 != 0)
+            {
+                pos.x = 140.0f - 140.0f * frame / 15.0f;
+                pos.y = 0.0f;
+            }
+            else
+            {
+                pos.x = -140.0f + 140.0f * frame / 15.0f;
+                pos.y = 0.0f;
+            }
+            break;
+        default:
+#line 6007
+            JUT_ASSERT_F(0, "%s", "0");
+            break;
+        }
+    }
+    else
+    {
+        pos.x = 0.0f;
+        pos.y = 0.0f;
+    }
+}
 
-void Race2D::getGoalRankPos(int, int, JGeometry::TVec2f &) {}
+f32 Race2D::getRaceRankScale(int frame)
+{
+    f32 scale;
+    if (frame < 3)
+        scale = 1.0f + -0.3f * frame / 3.0f;
+    else if (frame < 6)
+        scale = 0.7f + 0.40000004f * (frame - 2) / 3.0f;
+    else
+        scale = 1.1f + -0.100000024f * (frame - 4) / 3.0f;
+    return scale;
+}
 
-void Race2D::getGoalRankScale(int, int, f32 &) {}
+void Race2D::getGoalRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
+{
+    f32 baseX = 0.0f;
+    f32 baseY = 0.0f;
+    int consoleNo = RCMGetManager()->getConsoleNumber();
+    switch (consoleNo)
+    {
+    case 1:
+        baseX = 101.0f - mPlayerHUD[kartNo].mGoalX;
+        baseY = 101.0f - mPlayerHUD[kartNo].mGoalY;
+        break;
+    case 2:
+        switch (kartNo)
+        {
+        case 0:
+            baseX = 90.0f - mPlayerHUD[kartNo].mGoalX2;
+            baseY = 82.0f - mPlayerHUD[kartNo].mGoalY2;
+            break;
+        case 1:
+            baseX = 90.0f - mPlayerHUD[kartNo].mGoalX2;
+            baseY = 368.0f - mPlayerHUD[kartNo].mGoalY2;
+            break;
+        default:
+#line 6070
+            JUT_ASSERT_F(0, "%s", "0");
+            break;
+        }
+        break;
+    case 3:
+    case 4:
+        switch (kartNo)
+        {
+        case 0:
+            baseX = 78.0f - mPlayerHUD[kartNo].mGoalX;
+            baseY = 68.0f - mPlayerHUD[kartNo].mGoalY;
+            break;
+        case 1:
+            baseX = 529.0f - mPlayerHUD[kartNo].mGoalX;
+            baseY = 68.0f - mPlayerHUD[kartNo].mGoalY;
+            break;
+        case 2:
+            baseX = 78.0f - mPlayerHUD[kartNo].mGoalX;
+            baseY = 291.0f - mPlayerHUD[kartNo].mGoalY;
+            break;
+        case 3:
+            baseX = 529.0f - mPlayerHUD[kartNo].mGoalX;
+            baseY = 291.0f - mPlayerHUD[kartNo].mGoalY;
+            break;
+        default:
+#line 6098
+            JUT_ASSERT_F(0, "%s", "0");
+            break;
+        }
+        break;
+    default:
+#line 6103
+        JUT_ASSERT_F(0, "%s", "0");
+        break;
+    }
 
-void Race2D::getGoalRankRot(int, f32 &) {}
+    if (frame - 0x80 < 0)
+    {
+        pos.x = 0.0f;
+        pos.y = 0.0f;
+    }
+else if (frame - 0x80 < 0x1e)
+    {
+        JGeometry::TVec2f tmp(baseX * (frame - 0x80), baseY * (frame - 0x80));
+        pos.x = tmp.x * 0.033333335f;
+        pos.y = tmp.y * 0.033333335f;
+    }
+    else if (frame - 0x80 < 0xd7)
+    {
+        pos.x = baseX;
+        pos.y = baseY;
+    }
+    else if (frame - 0x80 < 0xe1)
+    {
+        f32 dir = -140.0f;
+        if ((RCMGetManager()->getConsoleNumber() == 3 || RCMGetManager()->getConsoleNumber() == 4) &&
+            kartNo % 2 != 0)
+            dir *= -1.0f;
+        pos.x = baseX + (2.0f * dir - baseX) * (frame - 0x157) / 10.0f;
+        pos.y = baseY;
+    }
+    else
+    {
+        f32 dir = -140.0f;
+        if ((RCMGetManager()->getConsoleNumber() == 3 || RCMGetManager()->getConsoleNumber() == 4) &&
+            kartNo % 2 != 0)
+            dir *= -1.0f;
+        pos.x = 2.0f * dir;
+        pos.y = baseY;
+    }
+}
 
-void Race2D::getStartLapTimePos(int, int, f32 &) {}
+void Race2D::getGoalRankScale(int kartNo, int frame, f32 &scale)
+{
+    f32 startScale, endScale, midScale;
+    switch (RCMGetManager()->getConsoleNumber())
+    {
+    case 1:
+        startScale = 1.2f;
+        endScale = 1.6f;
+        midScale = 2.0f;
+        break;
+    case 2:
+        startScale = 1.5f;
+        endScale = 1.8f;
+        midScale = 2.1f;
+        break;
+    case 3:
+    case 4:
+        startScale = 2.6f;
+        endScale = 2.8f;
+        midScale = 3.2f;
+        break;
+    default:
+#line 6171
+        JUT_ASSERT_F(0, "%s", "0");
+        break;
+    }
+    if (RCMGetManager()->getRaceMode() == VERSUS_RACE)
+    {
+        kartNo = J2DManager::getStatus2Kart(kartNo);
+        if (RCMGetManager()->getKartChecker(kartNo)->getRank() >= 2)
+        {
+            startScale *= 0.7f;
+            endScale *= 0.7f;
+            midScale *= 0.7f;
+        }
+    }
+    if (frame - 0x80 < 0)
+        scale = 1.0f;
+    else if (frame - 0x80 < 0xf)
+        scale = 1.0f + (endScale - 1.0f) * (frame - 0x80) / 15.0f;
+    else if (frame - 0x80 < 0x1e)
+        scale = endScale;
+    else if (frame - 0x80 < 0x22)
+        scale = endScale + 0.25f * (startScale - endScale) * (frame - 0x9e);
+    else if (frame - 0x80 < 0x25)
+        scale = startScale + (midScale - startScale) * (frame - 0xa2) / 3.0f;
+    else if (frame - 0x80 < 0x28)
+        scale = midScale + (endScale - midScale) * (frame - 0xa5) / 3.0f;
+    else
+        scale = endScale;
+}
 
-void Race2D::getGoalLapTimePos(int, int, f32 &) {}
+void Race2D::getGoalRankRot(int frame, f32 &rot)
+{
+    if (frame - 0x80 < 0)
+        rot = 0.0f;
+    else if (frame - 0x80 < 0x1e)
+        rot = -720.0f * (frame - 0x80) / 30.0f;
+    else
+        rot = 0.0f;
+}
+
+void Race2D::getStartLapTimePos(int frame, int no, f32 &x)
+{
+    f32 pos;
+    if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2)
+        pos = 240.0f;
+    else
+        pos = 480.0f;
+
+    int t = frame - no * 3;
+    if (t < 0)
+        x = pos;
+    else if (t < 0xf)
+        x = pos + -pos * t / 15.0f;
+    else if (t < 0x13)
+        x = 3.0f * (t - 0xf) * 0.25f;
+    else if (t < 0x16)
+        x = 3.0f + -3.0f * (t - 0x13) / 3.0f;
+    else
+        x = 0.0f;
+}
+
+void Race2D::getGoalLapTimePos(int frame, int no, f32 &x)
+{
+    if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2)
+    {
+        int t = frame - 0x80;
+        if (t < 0xd2)
+        {
+            t -= no * 4;
+            if (t < 0)
+                x = 0.0f;
+            else if (t < 0x14)
+                x = -217.0f * t / 20.0f;
+            else
+                x = -217.0f;
+        }
+        else if (t - 0xd2 < 0xf)
+        {
+            x = -217.0f + 454.0f * (t - 0xd2) / 15.0f;
+        }
+        else
+        {
+            x = 237.0f;
+        }
+    }
+    else
+    {
+        x = 0.0f;
+    }
+}
 
 #include "JSystem/JAUdio/JASFakeMatch2.h"
