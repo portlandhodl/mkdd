@@ -72,6 +72,8 @@ public:
     // void scOrgLength_Rabbit;
     // Inline
     virtual const char *getBmdFileName() {return "/Objects/MiniGame_Balloon.bmd"; } // 0x802c0e4c
+private:
+    u8 _pad_geographyobjmgr[56]; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
 };                                        // class Balloon
 
 class TBalloonString : public TMapObjHioNode, JKRDisposer
@@ -114,6 +116,8 @@ public:
     // void sBreakUpVel;
     // void sShakePow;
     static TBalloonSupervisor *sSupervisor;
+private:
+    u8 _pad_geographyobjmgr[128]; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
 };
 
 class TBalloonManager : public TMapObjHioNode
@@ -154,7 +158,10 @@ public:
     u8 mKartIdx; // 16e
     u8 _16f;
     bool mIsWinning; // 170
-};
+private:
+    u8 _pad_geographyobjmgr[32];
+}; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
+
 
 
 #endif // BALLOON_H

@@ -19,6 +19,8 @@ public:
     f32 getHeight(f32 x, f32 y);
     // Inline
     void reset() {} // 0x802c2afc
+private:
+    u8 _pad_geographyobjmgr[52]; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
 };
 
 class TMapObjPool : public TMapObjHioNode, JKRDisposer {

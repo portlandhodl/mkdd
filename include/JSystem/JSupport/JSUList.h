@@ -139,8 +139,7 @@ public:
         return *this;
     }
 
-    // Investigate where and if this actually exists
-    // T &operator*() { return *getObject(); }
+    T &operator*() const { return *getObject(); }
 
     T *operator->() const { return mLink->getObject(); }
 

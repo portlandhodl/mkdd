@@ -121,9 +121,9 @@ public:
     bool IsPathMove() const { return mObjData->pathID != 0xffff; }
 
     template<class T>
-    static T *New(const CrsData::SObject &object) { return new T(object); }
+    static GeographyObj *New(const CrsData::SObject &object) { return new T(object); }
     template<class T>
-    static T *NewS(const CrsData::SObject &object) { return new T(object); }
+    static GeographyObj *NewS(const CrsData::SObject &) { return new T(); }
 
     void NewAnmCtrl() {
         if (mAnmCtrl == nullptr) {
@@ -307,14 +307,14 @@ public:
     virtual void lockDisplayList() {}
 
     template<class T>
-    static T *ExNew(const CrsData::SObject &object) { return new T(object); }
+    static ExGeographyObj *ExNew(const CrsData::SObject &object) { return new T(object); }
 
     ExObjColBase *getExBounds() const { return mExBounds; }
 
     ExObjColBase *mExBounds;
     JGeometry::TVec3f _150;
     f32 _15c;
-    JSULink<GeographyObj> mExLinks; // 160
+    JSULink<ExGeographyObj> mExLinks; // 160
 };
 
 #endif

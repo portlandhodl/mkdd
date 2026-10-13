@@ -3,6 +3,7 @@
 
 #include "Bando/EngineSound.h"
 #include "JSystem/JGeometry/Vec.h"
+#include "kartEnums.h"
 #include "JSystem/JParticle/JPAEmitter.h"
 #include "Kaneshige/Course/CrsGround.h"
 #include "Sato/J3DAnmObject.h"

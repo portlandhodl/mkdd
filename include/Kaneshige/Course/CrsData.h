@@ -438,6 +438,8 @@ public:
     PathData *getPathTable() const { return (PathData *)((u8 *)mObjectData + mObjectData->pathOffset); }
     PointData *getPointTable() const { return (PointData *)((u8 *)mObjectData + mObjectData->pointOffset); }
     MGParam *getMGParamTable() const { return (MGParam *)((u8 *)mObjectData + mObjectData->mgParamOffset); }
+    SObject *getObjectTable() const { return (SObject *)(((u8 *)mObjectData) + mObjectData->objectsOffset); }
+    u16 getObjectEntryNum() const { return mObjectData->objEntries; }
 
 
     static const u32 cPatchCamTagTable[];

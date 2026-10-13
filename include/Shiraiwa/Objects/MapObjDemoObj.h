@@ -14,6 +14,8 @@ public:
     virtual void calc(); // 0x802cafa0
     virtual void setCurrentViewNo(u32); // 0x802cb11c
 
+    virtual u32 getJ3DModelDataTevStageNum() const { return 0x20020; } // 0x802cb???
+
     void flagReset(); // 0x802cae84
     void checkKartLength(); // 0x802cb090
     bool checkVisible(); // 0x802cb190
@@ -24,6 +26,6 @@ public:
     //void scTargetKartRank;
     //void scCheckInterval;
 private:
-    // TODO
+    u8 _14c[0x20]; // unknown body members (offsets in unit reach 0x16c)
 }; // class MapObjDemoObj
 #endif // MAPOBJDEMOOBJ_H

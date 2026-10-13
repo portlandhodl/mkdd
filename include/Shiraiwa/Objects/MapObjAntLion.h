@@ -45,6 +45,9 @@ public:
     virtual ~TMapObjAntLion(); // 0x802ce010
     void InitExec();           // 0x802ce304
     void MoveExec();           // 0x802ce370
-};
+private:
+    u8 _pad_geographyobjmgr[8];
+}; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
+
 
 #endif // MAPOBJANTLION_H

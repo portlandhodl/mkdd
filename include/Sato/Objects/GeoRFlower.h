@@ -16,6 +16,7 @@ public:
 
 
 class GeoMarioFlower1 : public GeographyObj {
+    friend class GeographyObj;
     GeoMarioFlower1(const CrsData::SObject &);
     ~GeoMarioFlower1() {}
     void reset();

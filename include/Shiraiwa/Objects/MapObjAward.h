@@ -30,6 +30,8 @@ public:
     void calc() {} // 0x802cd620
 private:
     // TODO
+private:
+    u8 _pad_geographyobjmgr[76]; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
 };
 
 class TAwardCupSupervisor : public GeoObjSupervisor {
@@ -120,11 +122,88 @@ public:
     static TAwardCupSupervisor *sSupervisor;
     static J3DAnmBase *sAwardCupBtpAnm; // TODO: type
 
+    virtual const char *getBtpFileName() { return nullptr; }
+    virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
+    virtual u32 getJ3DModelDataTevStageNum() const { return 0x20000; }
+
     // Inline ptmf stuff
     void InitExec() { Observer_FindAndInit(TMapObjAwardCup, 3); } // 0x802cc5a4
     void MoveExec() { Observer_FindAndExec(TMapObjAwardCup, 3); } // 0x802cc610
 private:
     // TODO
+};
+
+
+class TMapObjAwardCupKinoko : public TMapObjAwardCup
+{
+public:
+    TMapObjAwardCupKinoko(u32 id = 0xd67) : TMapObjAwardCup(id) {}
+    virtual ~TMapObjAwardCupKinoko() {}
+    virtual const char *getBmdFileName() { return "/AwardKinokoCup.bmd"; }
+    virtual const char *getBtpFileName() { return "/AwardKinokoCup.btp"; }
+
+private:
+    u8 _pad[0xa8];
+};
+
+class TMapObjAwardCupFlower : public TMapObjAwardCup
+{
+public:
+    TMapObjAwardCupFlower(u32 id = 0xd68) : TMapObjAwardCup(id) {}
+    virtual ~TMapObjAwardCupFlower() {}
+    virtual const char *getBmdFileName() { return "/AwardFlowerCup.bmd"; }
+    virtual const char *getBtpFileName() { return "/AwardFlowerCup.btp"; }
+
+private:
+    u8 _pad[0xa8];
+};
+
+class TMapObjAwardCupStar : public TMapObjAwardCup
+{
+public:
+    TMapObjAwardCupStar(u32 id = 0xd69) : TMapObjAwardCup(id) {}
+    virtual ~TMapObjAwardCupStar() {}
+    virtual const char *getBmdFileName() { return "/AwardStarCup.bmd"; }
+    virtual const char *getBtpFileName() { return "/AwardStarCup.btp"; }
+
+private:
+    u8 _pad[0xa8];
+};
+
+class TMapObjAwardCupSpecial : public TMapObjAwardCup
+{
+public:
+    TMapObjAwardCupSpecial(u32 id = 0xd6a) : TMapObjAwardCup(id) {}
+    virtual ~TMapObjAwardCupSpecial() {}
+    virtual const char *getBmdFileName() { return "/AwardSpecialCup.bmd"; }
+    virtual const char *getBtpFileName() { return "/AwardSpecialCup.btp"; }
+
+private:
+    u8 _pad[0xa8];
+};
+
+class TMapObjAwardCupReverse : public TMapObjAwardCup
+{
+public:
+    TMapObjAwardCupReverse(u32 id = 0xd6b) : TMapObjAwardCup(id) {}
+    virtual ~TMapObjAwardCupReverse() {}
+    virtual const char *getBmdFileName() { return "/AwardReverseCup.bmd"; }
+    virtual const char *getBtpFileName() { return "/AwardReverseCup.btp"; }
+
+private:
+    u8 _pad[0xa8];
+};
+
+class TMapObjAwardCupAllTour : public TMapObjAwardCup
+{
+public:
+    TMapObjAwardCupAllTour(u32 id = 0xd6c) : TMapObjAwardCup(id) {}
+    virtual ~TMapObjAwardCupAllTour() {}
+    virtual const char *getBmdFileName() { return "/AwardAllCupTour.bmd"; }
+    virtual const char *getBtpFileName() { return "/AwardAllCupTour.btp"; }
+
+private:
+    u8 _pad[0xa8];
 };
 
 #endif // MAPOBJAWARD_H

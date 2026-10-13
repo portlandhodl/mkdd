@@ -5,6 +5,7 @@
 
 class GeoStartLine : public GeographyObj
 {
+    friend class GeographyObj;
     // Global
     GeoStartLine();                              // 0x801b4860
     virtual ~GeoStartLine() {}                   // 0x801b4bd0
