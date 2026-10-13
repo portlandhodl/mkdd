@@ -15,6 +15,7 @@
 // TODO: inlines getters, setters
 
 class ObjColBase;
+class JPABaseEmitter;
 class ItemMultiBase;
 class ItemJuggle;
 class ItemBuild;
@@ -51,10 +52,8 @@ public:
 
     struct ItemHandOffsetData
     {
-        f32 _0;
-        f32 _4;
-        f32 _8;
-        u16 _c[0x4];
+        JGeometry::TVec3f _0; // 0x0
+        u16 _c[3];            // 0xc
     };
 
     ItemObj(u32 kind); // 0x8024a2b0
@@ -72,12 +71,12 @@ public:
     virtual u32 getModelDataAppendLoadFlg() { return 0; }                            // 2C
     virtual void callHitItemSound(ItemObj *);                                        // 30
     virtual int getLockOnKartNo() const { return -1; }                               // 34
-    virtual void IsJuggleItem() const;                                               // 38
+    virtual bool IsJuggleItem() const;                                               // 38
     virtual f32 getForceEfctOffsetScale() const { return 1.0f; }                     // 3C
     virtual void createModel(JKRSolidHeap *, u32, u32);                              // 40
     virtual void createColModel(J3DModelData *);                                     // 44
     virtual void setCollideAddVel(const JGeometry::TVec3f &, const f32 &);           // 48
-    virtual void getItemBoundRatio() const;                                          // 4C
+    virtual f32 getItemBoundRatio() const;                                          // 4C
     virtual void doUniv();                                                           // 50
     virtual void initEquip() {}                                                      // 54
     virtual void initRelease() {}                                                    // 58
@@ -103,7 +102,7 @@ public:
     virtual void deleteEffect() {}                                                   // A8
     virtual void executeEquipHandFunc() { doHandOneEquip(false, 0.0f); }             // AC
     virtual const bool checkKartColDisappear(int);                                   // B0
-    virtual void selectSucChild();                                                   // B4
+    virtual JSUListIterator<ItemObj> selectSucChild();                               // B4
     virtual void doSucReleaseFunc(ItemObj *);                                        // B8
     virtual void doSucSpReleaseFunc(ItemObj *);                                      // BC
     virtual bool IsHitKart(int, const JGeometry::TVec3f &, f32);                     // C0
@@ -126,8 +125,8 @@ public:
     void setStateDisappear(bool);                                             // 0x8024b33c
     void setStateForceDisappear();                                            // 0x8024b428
     bool tstAnyObjectHitting();                                               // 0x8024b4ec
-    void doSucStateFunc(ItemState);                                           // 0x8024b52c
-    void disappearAllChild(bool);                                             // 0x8024bd50
+    int doSucStateFunc(ItemState);                                            // 0x8024b52c
+    bool disappearAllChild(bool);                                             // 0x8024bd50
     int getSuccessionItemNum();                                               // 0x8024bebc
     void setChildStateRelease();                                              // 0x8024bed8
     void setChildStateSpRelease();                                            // 0x8024befc
@@ -140,7 +139,7 @@ public:
     void createBoundSphere(J3DModelData *);                                   // 0x8024c4b0
     void createBoundSphere(f32, f32);                                         // 0x8024c52c
     void createBoundCylinder(J3DModelData *);                                 // 0x8024c59c
-    void getVelStickXThrow(JGeometry::TVec3f *, f32, f32);                    // 0x8024c624
+    int getVelStickXThrow(JGeometry::TVec3f *, f32, f32);                     // 0x8024c624
     void createShadowModel(JKRSolidHeap *, u32, u32);                         // 0x8024c708
     void setModelMatrixAndScale(Quaternion);                                  // 0x8024c7c0
     void setModelMatrixAndScale(f32 (*)[4]);                                  // 0x8024c868
@@ -186,8 +185,8 @@ public:
     void doColMoveReflectJumpDownAndDisappear(JGeometry::TVec3f, f32);        // 0x8024ef64
     void doColMoveCommonJumpAndReflect(JGeometry::TVec3f, f32, bool);         // 0x8024f0d4
     MtxPtr getHandAnmMtx();                                                   // 0x8024f3f8
-    void getJuggleHandAnmMtx();                                               // 0x8024f4fc
-    void IsAlwaysColItemToKart();                                             // 0x8024f600
+    MtxPtr getJuggleHandAnmMtx();                                               // 0x8024f4fc
+    bool IsAlwaysColItemToKart();                                           // 0x8024f600
     void initMoveColGround();                                                 // 0x8024f628
     void doMoveColGround(Quaternion *, bool);                                 // 0x8024f654
     void moveCommonAttr(CrsGround &, bool);                                   // 0x8024fa7c
@@ -324,7 +323,7 @@ public:
     ExModel mModel;                       // 80
     ShadowModel *mShadow;                 // 10c
     ObjColBase *mBounds;                  // 110
-    u8 _114[0x118 - 0x114];               //
+    ObjColBase *mBounds2;                 // 114
     int mState;                           // 118
     u32 mWaitFrame;                       // 11c
     int mOwnerNum;                        // 120
@@ -332,9 +331,11 @@ public:
     MtxPtr mpHandAnmMtx;                  // 128
     u32 _12c;                             // some flags
     u16 mTransferFlags;                   // 130
-    u8 _132[0x138 - 0x132];               //
+    u8 _132;                              //
+    u8 _133;                              //
+    u32 mHitObjNum;                       // 134
     u32 mEquipFlags;                      // 138
-    u8 _13c[0x140 - 0x13c];               //
+    int mGndAttr;                         // 13c
     int mKartReaction;                    // 140 probably an enum
     StateFunc mStateFunc;                 // 144
     JSULink<ItemObj> _150;                // 150
@@ -348,26 +349,42 @@ public:
     ItemObjSuc *mSuccessionParent;        // 1c0
     int mOrigOwnerNum;                    // 1c4
     u8 mOrigDriverNum;                    // 1c8
-    u8 _1c9[0x1ec - 0x1c9];               //
+    u8 _1c9[0x1cc - 0x1c9];               //
+    JGeometry::TVec3f mDivestedPos;       // 1cc
+    Quaternion _1d8;                      //
+    f32 mDivestedGravity;                 // 1e8
     int _1ec;
     ItemJuggle *mJuggle;                  // 1f0
     ItemBuild *mBuild;                    // 1f4
     ItemMultiBase *mMulti;                // 1f8
     u8 _1fc;                              //
-    u8 _1fd[0x210 - 0x1fd];               //
+    u8 mNoColKartCnt;                     // 1fd
+    u8 mNoColKartMax;                     // 1fe
+    u8 mNoColKart;                        // 1ff
+    u8 mNoColKartClr;                     // 200
+    u8 _201[0x204 - 0x201];               //
+    JGeometry::TVec3f mReflectWallVec;    // 204
     Mtx _210;                             //
     JGeometry::TVec3f _240;               //
     u8 _24c;                              //
+    u8 _24d[0x250 - 0x24d];               //
     JGeometry::TVec3f mNormal;            // 250
     f32 mShadowOffsetScale;               // 25c
-    u8 _260[0x280 - 0x260];               //
+    JGeometry::TVec3f mHandOffsetPos;     // 260
+    JGeometry::TVec3f mHandOffset;        // 26c
+    u8 mDivestedMaxFrame;                 // 278
+    u8 _279[0x27c - 0x279];               //
+    f32 mGroundHeight;                    // 27c
     GameAudio::ObjectSoundMgr *mSoundMgr; // 280
     DarkAnmPlayer *mAnmPlayer;            // 284
-    u8 _288[0x28c - 0x288];               //    
+    JPABaseEmitter *mDisappearEmt;        // 288
     int mDirectHitKartNo;                 // 28c
-    u8 _290[0x298 - 0x290];               //
+    JPABaseEmitter *mEquipEmt[2];         // 290
     u8 mColorID;                          // 298
-    u8 _299[0x2a8 - 0x299];               //
+    u8 _299[0x29c - 0x299];               //
+    f32 mDarkRatio;                       // 29c
+    f32 mDarkCount;                       // 2a0
+    f32 mDarkScale;                       // 2a4
     u32 _2a8;                             //
     f32 mShadowScaleY;                    // 2ac
 }; // 2b0

@@ -89,7 +89,7 @@ public:
     virtual void reset();
     virtual void initEquip();
     virtual void doEquip();
-    virtual void selectSucChild();    
+    virtual JSUListIterator<ItemObj> selectSucChild();    
     virtual void initDivested();
     virtual void doDivested();    
     virtual void initForceDisappear();

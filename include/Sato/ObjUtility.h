@@ -25,7 +25,7 @@ namespace ObjUtility
     void findNearKartAngle(const JGeometry::TVec3f &, const JGeometry::TVec3f &, f32, f32); // 0x8025e868
     void getCamDependLightMtx(u32, const JGeometry::TVec3f &, Mtx);                         // 0x8025ec6c
     bool isPlayerDriver(const int &);                                                       // 0x8025edb0
-    void getReflectVec(JGeometry::TVec3f, JGeometry::TVec3f, JGeometry::TVec3f *, bool);    // 0x8025eeb4
+    bool getReflectVec(JGeometry::TVec3f, JGeometry::TVec3f, JGeometry::TVec3f *, bool);    // 0x8025eeb4
     void chkAvailableEnemyByDistande(bool *, f32);                                          // 0x8025f118
     const char *concatSimpleFileName(char *, const u8);                                     // 0x8025f514
 

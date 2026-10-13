@@ -27,7 +27,7 @@ public:
     void doDisappear();                                                   // 0x802528dc
     void doFall();                                                        // 0x802529b4
     void moveNormal(CrsGround &);                                         // 0x80252a10
-    void getItemBoundRatio() const;                                       // 0x80252b6c
+    f32 getItemBoundRatio() const;                                          // 0x80252b6c
     void setAllUseBoundsScale();                                          // 0x80252b74
     void setAllUseInitReleaseVelMag();                                    // 0x80252ba4
     const bool checkKartColDisappear(int);                                // 0x80252bbc
