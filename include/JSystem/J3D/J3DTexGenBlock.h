@@ -77,27 +77,27 @@ struct J3DTexGenBlockPatched : public J3DTexGenBlock {
         initialize();
     }
 
-    virtual void reset(J3DTexGenBlock*);                         // _08
-    virtual void calc(const f32 (*)[4]);                         // _0C
-    virtual void calcWithoutViewMtx(const f32 (*)[4]);           // _10
-    virtual void calcPostTexMtx(const f32 (*)[4]);               // _14
-    virtual void calcPostTexMtxWithoutViewMtx(const f32 (*)[4]); // _18
-    virtual void load();                                         // _1C (weak)
-    virtual void patch();                                        // _20
-    virtual void diff(u32);                                      // _24
-    virtual void diffTexMtx();                                   // _28
-    virtual void diffTexGen();                                   // _2C
-    virtual u32 countDLSize();                                   // _30
-    virtual JBlockType getType();                                // _34 (weak)
-    virtual void setTexGenNum(const u32*);                       // _38 (weak)
-    virtual void setTexGenNum(u32);                              // _3C (weak)
-    virtual u32 getTexGenNum() const;                            // _40 (weak)
-    virtual void setTexCoord(u32, const J3DTexCoord*);           // _44 (weak)
-    virtual J3DTexCoord* getTexCoord(u32);                       // _48 (weak)
-    virtual void setTexMtx(u32, J3DTexMtx*);                     // _4C (weak)
-    virtual J3DTexMtx* getTexMtx(u32);                           // _50 (weak)
-    virtual u32 getTexMtxOffset() const;                         // _60 (weak)
-    virtual void setTexMtxOffset(u32);                           // _64 (weak)
+    virtual void reset(J3DTexGenBlock*);                                                          // _08
+    virtual void calc(const f32 (*)[4]);                                                          // _0C
+    virtual void calcWithoutViewMtx(const f32 (*)[4]);                                            // _10
+    virtual void calcPostTexMtx(const f32 (*)[4]);                                                // _14
+    virtual void calcPostTexMtxWithoutViewMtx(const f32 (*)[4]);                                  // _18
+    virtual void load() { }                                                                       // _1C (weak)
+    virtual void patch();                                                                         // _20
+    virtual void diff(u32);                                                                       // _24
+    virtual void diffTexMtx();                                                                    // _28
+    virtual void diffTexGen();                                                                    // _2C
+    virtual u32 countDLSize();                                                                    // _30
+    virtual JBlockType getType() { return JBT_TexGenPatched; }                                    // _34 (weak)
+    virtual void setTexGenNum(const u32* texGenNum) { mTexgenCnt = *texGenNum; }                  // _38 (weak)
+    virtual void setTexGenNum(u32 texGenNum) { mTexgenCnt = texGenNum; }                          // _3C (weak)
+    virtual u32 getTexGenNum() const { return mTexgenCnt; }                                       // _40 (weak)
+    virtual void setTexCoord(u32 index, const J3DTexCoord* coord) { mTexCoords[index] = *coord; } // _44 (weak)
+    virtual J3DTexCoord* getTexCoord(u32 index) { return &mTexCoords[index]; }                    // _48 (weak)
+    virtual void setTexMtx(u32 index, J3DTexMtx* mtx) { mTexMatrices[index] = mtx; }              // _4C (weak)
+    virtual J3DTexMtx* getTexMtx(u32 index) { return mTexMatrices[index]; }                       // _50 (weak)
+    virtual u32 getTexMtxOffset() const { return mDlistOffs; }                                    // _60 (weak)
+    virtual void setTexMtxOffset(u32 offset) { mDlistOffs = offset; }                             // _64 (weak)
     /**
      * @reifiedAddress{800619A0}
      * @reifiedFile{JSystem/J3D/J3DMaterial.cpp}
@@ -121,15 +121,15 @@ struct J3DTexGenBlockBasic : public J3DTexGenBlockPatched {
         initialize();
     }
 
-    virtual void reset(J3DTexGenBlock*);          // _08
-    virtual void load();                          // _1C
-    virtual void patch();                         // _20
-    virtual u32 countDLSize();                    // _30
-    virtual JBlockType getType();                 // _34 (weak)
-    virtual void setNBTScale(const J3DNBTScale*); // _54 (weak)
-    virtual void setNBTScale(J3DNBTScale);        // _58 (weak)
-    virtual J3DNBTScale* getNBTScale();           // _5C (weak)
-    virtual ~J3DTexGenBlockBasic() {};            // _68 (weak)
+    virtual void reset(J3DTexGenBlock*);                                       // _08
+    virtual void load();                                                       // _1C
+    virtual void patch();                                                      // _20
+    virtual u32 countDLSize();                                                 // _30
+    virtual JBlockType getType() { return JBT_TexGenBasic; }                   // _34 (weak)
+    virtual void setNBTScale(const J3DNBTScale* scale) { mNbtScale = *scale; } // _54 (weak)
+    virtual void setNBTScale(J3DNBTScale scale) { mNbtScale = scale; }         // _58 (weak)
+    virtual J3DNBTScale* getNBTScale() { return &mNbtScale; }                  // _5C (weak)
+    virtual ~J3DTexGenBlockBasic() {}                                          // _68 (weak)
 
     void initialize();
 
@@ -143,15 +143,15 @@ struct J3DTexGenBlock4 : public J3DTexGenBlockPatched {
     {
         initialize();
     }
-    virtual void reset(J3DTexGenBlock*);          // _08
-    virtual void load();                          // _1C
-    virtual void patch();                         // _20
-    virtual u32 countDLSize();                    // _30
-    virtual JBlockType getType();                 // _34 (weak)
-    virtual void setNBTScale(const J3DNBTScale*); // _54 (weak)
-    virtual void setNBTScale(J3DNBTScale);        // _58 (weak)
-    virtual J3DNBTScale* getNBTScale();           // _5C (weak)
-    virtual ~J3DTexGenBlock4() {};                // _68 (weak)
+    virtual void reset(J3DTexGenBlock*);                                       // _08
+    virtual void load();                                                       // _1C
+    virtual void patch();                                                      // _20
+    virtual u32 countDLSize();                                                 // _30
+    virtual JBlockType getType() { return JBT_TexGen4; }                       // _34 (weak)
+    virtual void setNBTScale(const J3DNBTScale* scale) { mNbtScale = *scale; } // _54 (weak)
+    virtual void setNBTScale(J3DNBTScale scale) { mNbtScale = scale; }         // _58 (weak)
+    virtual J3DNBTScale* getNBTScale() { return &mNbtScale; }                  // _5C (weak)
+    virtual ~J3DTexGenBlock4() {}                                              // _68 (weak)
 
     void initialize();
 

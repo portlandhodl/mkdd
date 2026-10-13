@@ -112,14 +112,14 @@ inline void J3DGDSetAlphaCompare(GXCompare cmp0, u8 ref0, GXAlphaOp op, GXCompar
 
 inline void J3DGDSetBlendMode(GXBlendMode mode, GXBlendFactor srcFactor, GXBlendFactor dstFactor, GXLogicOp logicOp)
 {
-    J3DGDWriteBPCmd(0xFE001FE3);
+    J3DGDWriteBPCmd(0xFE00FFE3);
     J3DGDWriteBPCmd((mode == GX_BM_BLEND || mode == GX_BM_SUBTRACT) << 0 | (mode == GX_BM_LOGIC) << 1 | dstFactor << 5 | srcFactor << 8
                     | (mode == GX_BM_SUBTRACT) << 11 | logicOp << 12 | 0x41 << 24);
 }
 
 inline void J3DGDSetBlendMode(GXBlendMode mode, GXBlendFactor srcFactor, GXBlendFactor dstFactor, GXLogicOp logicOp, u8 ditherEnable)
 {
-    J3DGDWriteBPCmd(0xFE001FE7);
+    J3DGDWriteBPCmd(0xFE00FFE7);
     J3DGDWriteBPCmd(u32(mode == GX_BM_BLEND || mode == GX_BM_SUBTRACT) << 0 | (mode == GX_BM_LOGIC) << 1 | ditherEnable << 2
                     | dstFactor << 5 | srcFactor << 8 | (mode == GX_BM_SUBTRACT) << 11 | logicOp << 12 | 0x41 << 24);
 }

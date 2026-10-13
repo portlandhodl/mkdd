@@ -252,10 +252,7 @@ struct J3DAlphaComp {
 struct J3DBlendInfo {
     inline J3DBlendInfo& operator=(const J3DBlendInfo& other)
     {
-        mBlendMode = other.mBlendMode;
-        mSrcFactor = other.mSrcFactor;
-        mDstFactor = other.mDstFactor;
-        mLogicOp   = other.mLogicOp;
+        *(u32*)this = *(u32*)&other;
         return *this;
     }
 
@@ -486,9 +483,7 @@ struct J3DLightObj {
 struct J3DTevOrderInfo {
     inline J3DTevOrderInfo& operator=(const J3DTevOrderInfo& other)
     {
-        mTexCoordID = other.mTexCoordID;
-        mTexMapID   = other.mTexMapID;
-        mChannelID  = other.mChannelID;
+        *(u32*)this = *(u32*)&other;
         return *this;
     }
 
@@ -702,12 +697,7 @@ struct J3DTexCoord : public J3DTexCoordInfo {
 
     void setTexCoordInfo(J3DTexCoordInfo* info) { *(J3DTexCoordInfo*)this = *info; }
 
-    void operator=(const J3DTexCoord& other)
-    {
-        mTexGenType = other.mTexGenType;
-        mTexGenSrc  = other.mTexGenSrc;
-        mTexGenMtx  = other.mTexGenMtx;
-    }
+    void operator=(const J3DTexCoord& other) { *(u32*)this = *(u32*)&other; }
 
     u8 getTexGenType() { return mTexGenType; }
     u8 getTexGenSrc() { return mTexGenSrc; }
@@ -750,11 +740,7 @@ struct J3DTransformInfo {
 extern const J3DTransformInfo j3dDefaultTransformInfo;
 
 struct J3DNBTScaleInfo {
-    inline void operator=(const J3DNBTScaleInfo& other)
-    {
-        mHasScale = other.mHasScale;
-        mScale    = other.mScale;
-    }
+    void operator=(const J3DNBTScaleInfo& other);
 
     u8 mHasScale; // _00
     Vec mScale;   // _04

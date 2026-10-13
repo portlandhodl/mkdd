@@ -20,19 +20,9 @@ struct J3DDisplayListInit {
     u32 _04; // _04
 };
 
-struct J3DFogInfo {
-    u8 _00;       // _00
-    u8 _01;       // _01
-    u16 _02;      // _02
-    f32 _04;      // _04
-    f32 _08;      // _08
-    f32 _0C;      // _0C
-    f32 _10;      // _10
-    u8 _14;       // _14
-    u8 _15;       // _15
-    u8 _16;       // _16
-    u16 _18[0xA]; // _18
-};
+// J3DFogInfo lives in J3DPE.h (included above); keep this typedef-free.
+
+
 
 struct J3DIndInitData {
     u8 _00;             // _00

@@ -4,26 +4,44 @@
 #include "JSystem/J3D/J3DTypes.h"
 #include "types.h"
 
-struct J3DFog {
-    /** @fabricated */
-    /*inline J3DFog& operator=(const J3DFog& other)
+struct J3DFogInfo {
+    J3DFogInfo& operator=(const J3DFogInfo& other);
+    J3DFogInfo& operator=(const J3DFogInfo* other)
     {
-        mType = other.mType;
-        _01 = other._01;
-        _02 = other._02;
-        _04 = other._04;
-        _08 = other._08;
-        _0C = other._0C;
-        _10 = other._10;
-        _14 = other._14;
-        _15 = other._15;
-        _16 = other._16;
-        _17 = other._17;
-        for (int i = 0; i < 10; i++) {
-            _18[i] = other._18[i];
-        }
+        *this = *other;
         return *this;
-    }*/
+    }
+
+    u8 mType;             // _00
+    u8 mAdjEnable;        // _01
+    u16 mCenter;          // _02
+    f32 mStartZ;          // _04
+    f32 mEndZ;            // _08
+    f32 mNearZ;           // _0C
+    f32 mFarZ;            // _10
+    GXColor mColor;       // _14
+    u16 mFogAdjTable[10]; // _18
+};
+
+extern const J3DFogInfo j3dDefaultFogInfo;
+
+struct J3DFog : J3DFogInfo {
+    J3DFog() { *(J3DFogInfo*)this = j3dDefaultFogInfo; }
+    J3DFog(const J3DFog& other)
+        : J3DFogInfo(other)
+    {
+    }
+
+    void setFogInfo(J3DFogInfo info) { *(J3DFogInfo*)this = info; }
+    void setFogInfo(const J3DFogInfo* info) { *(J3DFogInfo*)this = *info; }
+
+    J3DFogInfo* getFogInfo() { return (J3DFogInfo*)this; }
+
+    void load() const
+    {
+        J3DGDSetFog(GXFogType(mType), mStartZ, mEndZ, mNearZ, mFarZ, mColor);
+        J3DGDSetFogRangeAdj(mAdjEnable, mCenter, (GXFogAdjTable*)mFogAdjTable);
+    }
 
     u8 getType() const { return mType; }
     void setType(u8 type) { mType = type; }
@@ -32,25 +50,12 @@ struct J3DFog {
     void setNearZ(f32 nearZ) { mNearZ = nearZ; }
     void setFarZ(f32 farZ) { mFarZ = farZ; }
 
-    void setFogColor(GXColor &color) {
-        mColorR = color.r;
-        mColorG = color.g;
-        mColorB = color.b;
-        mColorA = color.a;
+    void setFogColor(GXColor& color) {
+        mColor.r = color.r;
+        mColor.g = color.g;
+        mColor.b = color.b;
+        mColor.a = color.a;
     }
-
-    u8 mType;     // _00
-    u8 _01;       // _01
-    u16 _02;      // _02
-    f32 mStartZ;  // _04
-    f32 mEndZ;    // _08
-    f32 mNearZ;   // _0C
-    f32 mFarZ;    // _10
-    u8 mColorR;   // _14
-    u8 mColorG;   // _15
-    u8 mColorB;   // _16
-    u8 mColorA;   // _17
-    u16 _18[0xA]; // _18
 };
 
 /**
@@ -89,39 +94,48 @@ struct J3DPEBlock {
 };
 
 struct J3DPEBlockFogOff : public J3DPEBlock {
-    virtual void reset(J3DPEBlock*);                // _08
-    virtual void load();                            // _0C
-    virtual void diff(unsigned long);               // _14 (weak)
-    virtual void diffBlend();                       // _1C
-    virtual u32 countDLSize();                      // _20
-    virtual JBlockType getType();                   // _24 (weak)
-    virtual void setAlphaComp(const J3DAlphaComp*); // _34 (weak)
-    virtual void setAlphaComp(const J3DAlphaComp&); // _38 (weak)
-    virtual J3DAlphaComp* getAlphaComp();           // _3C (weak)
-    virtual void setBlend(const J3DBlend*);         // _40 (weak)
-    virtual void setBlend(const J3DBlend&);         // _44 (weak)
-    virtual J3DBlend* getBlend();                   // _48 (weak)
-    virtual void setZMode(const J3DZMode*);         // _4C (weak)
-    virtual void setZMode(J3DZMode);                // _50 (weak)
-    virtual J3DZMode* getZMode();                   // _54 (weak)
-    virtual void setZCompLoc(const unsigned char*); // _58 (weak)
-    virtual void setZCompLoc(unsigned char);        // _5C (weak)
-    virtual u8 getZCompLoc() const;                 // _60 (weak)
-    virtual void setDither(const unsigned char*);   // _64 (weak)
-    virtual void setDither(unsigned char);          // _68 (weak)
-    virtual u8 getDither() const;                   // _6C (weak)
-    virtual ~J3DPEBlockFogOff() { }                 // _78 (weak)
+    J3DPEBlockFogOff() { initialize(); }
+
+    virtual void reset(J3DPEBlock*); // _08
+    virtual void load();             // _0C
+    virtual void diff(unsigned long flag) // _14 (weak)
+    {
+        if (flag & J3DMDF_DiffBlend) {
+            diffBlend();
+        }
+    }
+    virtual void diffBlend();                                                                          // _1C
+    virtual u32 countDLSize();                                                                         // _20
+    virtual JBlockType getType() { return JBT_PEFogOff; }                                              // _24 (weak)
+    virtual void setAlphaComp(const J3DAlphaComp* alphaComp) { mAlphaComp = *alphaComp; }              // _34 (weak)
+    virtual void setAlphaComp(const J3DAlphaComp& alphaComp) { mAlphaComp = alphaComp; }               // _38 (weak)
+    virtual J3DAlphaComp* getAlphaComp() { return &mAlphaComp; }                                       // _3C (weak)
+    virtual void setBlend(const J3DBlend* blend) { mBlend = *blend; }                                  // _40 (weak)
+    virtual void setBlend(const J3DBlend& blend) { mBlend = blend; }                                   // _44 (weak)
+    virtual J3DBlend* getBlend() { return &mBlend; }                                                   // _48 (weak)
+    virtual void setZMode(const J3DZMode* zMode) { mZMode = *zMode; }                                  // _4C (weak)
+    virtual void setZMode(J3DZMode zMode) { mZMode = zMode; }                                          // _50 (weak)
+    virtual J3DZMode* getZMode() { return &mZMode; }                                                   // _54 (weak)
+    virtual void setZCompLoc(const unsigned char* compLoc) { mZCompLoc = *compLoc; }                   // _58 (weak)
+    virtual void setZCompLoc(unsigned char compLoc) { mZCompLoc = compLoc; }                           // _5C (weak)
+    virtual u8 getZCompLoc() const { return mZCompLoc; }                                               // _60 (weak)
+    virtual void setDither(const unsigned char* dither) { mDither = *dither; }                         // _64 (weak)
+    virtual void setDither(unsigned char dither) { mDither = dither; }                                 // _68 (weak)
+    virtual u8 getDither() const { return mDither; }                                                   // _6C (weak)
+    virtual ~J3DPEBlockFogOff() { }                                                                    // _78 (weak)
 
     void initialize();
 
     J3DAlphaComp mAlphaComp; // _04
     J3DBlend mBlend;         // _08
     J3DZMode mZMode;         // _0C
-    u8 _0E;                  // _0E
+    u8 mZCompLoc;            // _0E
     u8 mDither;              // _0F
 };
 
 struct J3DPEBlockFull : public J3DPEBlock {
+    J3DPEBlockFull() { initialize(); }
+
     virtual void reset(J3DPEBlock*);  // _08
     virtual void load();              // _0C
     virtual void patch();             // _10
@@ -137,21 +151,21 @@ struct J3DPEBlockFull : public J3DPEBlock {
     {
         return JBT_PEFull;
     }
-    virtual void setFog(J3DFog);                    // _28 (weak)
-    virtual void setFog(J3DFog*);                   // _2C (weak)
-    virtual J3DFog* getFog();                       // _30 (weak)
-    virtual void setAlphaComp(const J3DAlphaComp*); // _34 (weak)
-    virtual void setAlphaComp(const J3DAlphaComp&); // _38 (weak)
-    virtual J3DAlphaComp* getAlphaComp();           // _3C (weak)
-    virtual void setBlend(const J3DBlend*);         // _40 (weak)
-    virtual void setBlend(const J3DBlend&);         // _44 (weak)
-    virtual J3DBlend* getBlend();                   // _48 (weak)
-    virtual void setZMode(const J3DZMode*);         // _4C (weak)
-    virtual void setZMode(J3DZMode);                // _50 (weak)
-    virtual J3DZMode* getZMode();                   // _54 (weak)
-    virtual void setZCompLoc(const unsigned char*); // _58 (weak)
-    virtual void setZCompLoc(unsigned char);        // _5C (weak)
-    virtual u8 getZCompLoc() const;                 // _60 (weak)
+    virtual void setFog(J3DFog fog) { mFog = fog; }                                                // _28 (weak)
+    virtual void setFog(J3DFog* fog) { mFog = *fog; }                                              // _2C (weak)
+    virtual J3DFog* getFog() { return &mFog; }                                                     // _30 (weak)
+    virtual void setAlphaComp(const J3DAlphaComp* alphaComp) { mAlphaComp = *alphaComp; }          // _34 (weak)
+    virtual void setAlphaComp(const J3DAlphaComp& alphaComp) { mAlphaComp = alphaComp; }           // _38 (weak)
+    virtual J3DAlphaComp* getAlphaComp() { return &mAlphaComp; }                                   // _3C (weak)
+    virtual void setBlend(const J3DBlend* blend) { mBlend = *blend; }                              // _40 (weak)
+    virtual void setBlend(const J3DBlend& blend) { mBlend = blend; }                               // _44 (weak)
+    virtual J3DBlend* getBlend() { return &mBlend; }                                               // _48 (weak)
+    virtual void setZMode(const J3DZMode* zMode) { mZMode = *zMode; }                              // _4C (weak)
+    virtual void setZMode(J3DZMode zMode) { mZMode = zMode; }                                      // _50 (weak)
+    virtual J3DZMode* getZMode() { return &mZMode; }                                               // _54 (weak)
+    virtual void setZCompLoc(const unsigned char* compLoc) { mZCompLoc = *compLoc; }               // _58 (weak)
+    virtual void setZCompLoc(unsigned char compLoc) { mZCompLoc = compLoc; }                       // _5C (weak)
+    virtual u8 getZCompLoc() const { return mZCompLoc; }                                           // _60 (weak)
     /**
      * @reifiedAddress{80081910}
      * @reifiedFile{JSystem/J3D/J3DMatBlock.cpp}
@@ -204,7 +218,7 @@ struct J3DPEBlockFull : public J3DPEBlock {
     J3DAlphaComp mAlphaComp; // _30
     J3DBlend mBlend;         // _34
     J3DZMode mZMode;         // _38
-    u8 _3A;                  // _3A
+    u8 mZCompLoc;            // _3A
     u8 mDither;              // _3B
     u32 mFogOffset;          // _3C
 };
@@ -229,30 +243,30 @@ struct J3DPEBlockNull : public J3DPEBlock {
  * @size{0x4}
  */
 struct J3DPEBlockOpa : public J3DPEBlock {
-    virtual void load();          // _0C
-    virtual u32 countDLSize();    // _20
-    virtual JBlockType getType(); // _24 (weak)
-    virtual ~J3DPEBlockOpa() { }  // _78 (weak)
+    virtual void load();                               // _0C
+    virtual u32 countDLSize();                         // _20
+    virtual JBlockType getType() { return JBT_PEOpa; } // _24 (weak)
+    virtual ~J3DPEBlockOpa() { }                       // _78 (weak)
 };
 
 /**
  * @size{0x4}
  */
 struct J3DPEBlockTexEdge : public J3DPEBlock {
-    virtual void load();             // _0C
-    virtual u32 countDLSize();       // _20
-    virtual JBlockType getType();    // _24 (weak)
-    virtual ~J3DPEBlockTexEdge() { } // _78 (weak)
+    virtual void load();                                   // _0C
+    virtual u32 countDLSize();                             // _20
+    virtual JBlockType getType() { return JBT_PETexEdge; } // _24 (weak)
+    virtual ~J3DPEBlockTexEdge() { }                       // _78 (weak)
 };
 
 /**
  * @size{0x4}
  */
 struct J3DPEBlockXlu : public J3DPEBlock {
-    virtual void load();          // _0C
-    virtual u32 countDLSize();    // _20
-    virtual JBlockType getType(); // _24 (weak)
-    virtual ~J3DPEBlockXlu() { }  // _78 (weak)
+    virtual void load();                               // _0C
+    virtual u32 countDLSize();                         // _20
+    virtual JBlockType getType() { return JBT_PEXlu; } // _24 (weak)
+    virtual ~J3DPEBlockXlu() { }                       // _78 (weak)
 };
 
 #endif

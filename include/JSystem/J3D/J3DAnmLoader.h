@@ -21,8 +21,7 @@ enum J3DAnmLoaderDataBaseFlag {
 struct J3DAnmLoaderDataBase {
     //static J3DAnmBase* load(const void*);
     static J3DAnmBase* load(const void *, J3DAnmLoaderDataBaseFlag);
-    // unused/inlined
-    void setResource(J3DAnmBase*, const void*);
+    static void setResource(J3DAnmBase *, const void *);
 };
 
 enum J3DMtxCalcFlag {

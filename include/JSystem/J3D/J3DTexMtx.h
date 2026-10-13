@@ -62,6 +62,7 @@ public:
         mTexMtxInfo = info;
     }
     ~J3DTexMtx() {}
+    void load(u32) const;
     /*void load(u32 i) const
     {
         GDOverflowCheck(53);
