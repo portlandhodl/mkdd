@@ -5,6 +5,10 @@
 #include "JSystem/JKernel/JKRHeap.h"
 #include "JSystem/JUtility/TColor.h"
 #include "JSystem/JORReflexible.h"
+#include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J2D/J2DPane.h"
+#include "JSystem/J2D/J2DPicture.h"
+#include "JSystem/J2D/J2DScreen.h"
 
 #include "Kaneshige/HioMgr.h"
 #include "Osako/kartPad.h"
@@ -14,6 +18,9 @@ public:
     // Inline/Unused
     Result2DParam();
     virtual ~Result2DParam() {}
+
+    u16 _48;  // 0x48
+    u8 mFlag; // 0x4a
 };
 
 class Result2DHioNode : public HioNode {
@@ -30,8 +37,29 @@ public:
     struct data2D {
         data2D() {} // 0x80149ce8
 
-        u8 _0[0xc];
+        J2DPicture *mPane; // 0x0
+        u8 _4[0x8];
     }; // size: 0xc
+
+    struct LineScale {
+        JGeometry::TVec2f a; // 0x0
+        JGeometry::TVec2f b; // 0x8
+    }; // size: 0x10
+
+    struct RankRow {
+        data2D main;     // 0x00
+        data2D sub[3];   // 0x0c
+    }; // size: 0x30
+
+    struct SelPanes {
+        data2D parts[6];        // 0x00
+        J2DPicture *cursor;     // 0x48
+        u8 _4c[0x8];
+        J2DPicture *icon;       // 0x54
+        u8 _58[0x8];
+        J2DPicture *num;        // 0x60
+        u8 _64[0x8];
+    }; // size: 0x6c
 
     Result2D(JKRHeap *); // 0x8014634c
     void init(); // 0x80149cec
@@ -79,7 +107,7 @@ public:
     void getVSColor(int, JUTColor &); // 0x80150038
     void getMGColor(int, JUTColor &); // 0x8015029c
     void getFrameColor(JUTColor &); // 0x80150500
-    void getScale(int); // 0x8015057c
+    f32 getScale(int); // 0x8015057c
     void setScale(int); // 0x801505c4
     void setGPClr(); // 0x80150804
     bool getAnmEnd(); // 0x80150830
@@ -94,21 +122,97 @@ public:
     static const char *mPlayerNumberName[4]; // 0x80394ce0
     static const char *mResultArrowName[3]; // 0x80394cf0
     static JUTColor mWhiteColor[4][2]; // 0x803fba20
-    static bool mDrawFlag; // 0x804162e8
+    static u8 mDrawFlag; // 0x804162e8
     static int mResultSelector; // 0x804162ec
     static int mResultState; // 0x804162f0
-    static const u64 mOverBackTag; // 0x80418f80
+    static u64 mOverBackTag; // 0x80418f80
     // Inline/Unused
     ~Result2D();
     void getCharPos(int);
 private:
-    PLACEHOLDER_BYTES(0, 0x197c);
-    int _197c;                       // 0x197c
-    PLACEHOLDER_BYTES(0x1980, 0x1988);
-    f32 _1988;                       // 0x1988
-    int _198c;                       // 0x198c
-    PLACEHOLDER_BYTES(0x1990, 0x1bb4);
+    Result2DHioNode *mNode;              // 0x000
+    J2DGrafContext *mOrtho;              // 0x004
+    J2DScreen *mScreenPw;                // 0x008
+    PLACEHOLDER_BYTES(0xc, 0x4c);
+    J2DScreen *mScreen;                  // 0x04c
+    J2DScreen *mWinScreens[6];           // 0x050
+    int mEntries;                        // 0x068
+    PLACEHOLDER_BYTES(0x6c, 0x80);
+    SelPanes mSelPanes[4];               // 0x080
+    PLACEHOLDER_BYTES(0x230, 0x278);
+    J2DPicture *mSceneQuitPicture;       // 0x278
+    PLACEHOLDER_BYTES(0x27c, 0x2e4);
+    J2DPicture *mSceneResultPicture2;    // 0x2e4
+    PLACEHOLDER_BYTES(0x2e8, 0x3cc);
+    f32 _3cc;                            // 0x3cc
+    PLACEHOLDER_BYTES(0x3d0, 0x4cc);
+    data2D mLines[8][20];                // 0x4cc
+    PLACEHOLDER_BYTES(0xc4c, 0xc5c);
+    RankRow mRankRows[8];                // 0xc5c
+    J2DScreen *mScoreScreens[2][4];      // 0xddc
+    J2DScreen *mPointScreens[4];         // 0xdfc
+    PLACEHOLDER_BYTES(0xe0c, 0xe58);
+    f32 _e58;                            // 0xe58
+    f32 _e5c;                            // 0xe5c
+    f32 _e60;                            // 0xe60
+    f32 _e64;                            // 0xe64
+    f32 _e68;                            // 0xe68
+    f32 _e6c;                            // 0xe6c
+    PLACEHOLDER_BYTES(0xe70, 0xe78);
+
+
+    data2D mVSBattle[2][4][14];          // 0xe78
+    data2D mPointRows[8][2];             // 0x13b8
+    PLACEHOLDER_BYTES(0x1478, 0x1710);
+    J2DScreen *mScreenMG;                // 0x1710
+    PLACEHOLDER_BYTES(0x1714, 0x1740);
+    f32 _1740[6];                        // 0x1740
+    JGeometry::TVec2f _1758[5];          // 0x1758
+    JGeometry::TVec2f _1780[6];          // 0x1780
+    f32 _17b0[4];                        // 0x17b0
+    JGeometry::TVec2f _17c0[5];          // 0x17c0
+    JGeometry::TVec2f _17e8[6];          // 0x17e8
+    PLACEHOLDER_BYTES(0x1818, 0x197c);
+    int _197c;                           // 0x197c
+    int _1980;                           // 0x1980
+    int _1984;                           // 0x1984
+    f32 _1988;                           // 0x1988
+    int _198c;                           // 0x198c
+    int _1990;                           // 0x1990
+    int _1994;                           // 0x1994
+    int _1998;                           // 0x1998
+    int mLinePoint[8];                   // 0x199c
+    f32 mLineYPos[8];                    // 0x19bc
+    LineScale mLineScale[8];             // 0x19dc
+    u8 mLayoutAlpha;                     // 0x1a5c
+    u8 _1a5d[3];
+    f32 mVSPointYPos[4][4];              // 0x1a60
+    f32 mVSScale[4];                     // 0x1aa0
+    u8 _1ab0;                            // 0x1ab0
+    u8 _1ab1[3];
+    int _1ab4;                           // 0x1ab4
+    u8 _1ab8;                            // 0x1ab8
+    u8 _1ab9[3];
+    f32 mMGPointYPos[4];                 // 0x1abc
+    f32 mMGScale[4];                     // 0x1acc
+    int mArrowTimer[6];                  // 0x1adc
+    int _1af4;                           // 0x1af4
+    f32 _1af8;                           // 0x1af8
+    int _1afc;                           // 0x1afc
+    f32 _1b00;                           // 0x1b00
+    f32 _1b04;                           // 0x1b04
+    f32 _1b08;                           // 0x1b08
+    bool mPASSWDAccepted;                // 0x1b0c
+    bool mPASSWDEnabled;                 // 0x1b0d
+    u8 _1b0e[2];
+    int mPASSWDCount;                    // 0x1b10
+    JGeometry::TVec2f mLineScaleTblA[10];// 0x1b14
+    JGeometry::TVec2f mLineScaleTblB[10];// 0x1b64
     f32 _1bb4[10];                   // 0x1bb4, battle rank scale table
+    PLACEHOLDER_BYTES(0x1bdc, 0x1bf4);
+    void (Result2D::*mDrawFunc)();       // 0x1bf4
+    void (Result2D::*mCalcFunc)();       // 0x1c00
+    void (Result2D::*mAutoFunc)();       // 0x1c0c
 }; // class Result2D
 
 #endif // RESULT2D_H
