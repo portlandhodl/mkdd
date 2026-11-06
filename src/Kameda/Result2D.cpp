@@ -198,11 +198,11 @@ void Result2D::init() {
     }
     _1af4 = 0;
     _1af8 = 1.0f;
+    u64 ot = mOverBackTag;
     _1afc = 0;
     _1b00 = 0.0f;
     _1b04 = 0.0f;
     _1b08 = 0.0f;
-    u64 ot = mOverBackTag;
     J2DPane *pane;
     pane = mScreen->search(ot);
     pane->setAlpha(0);

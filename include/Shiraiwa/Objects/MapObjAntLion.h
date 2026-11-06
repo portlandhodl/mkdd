@@ -7,6 +7,7 @@
 #include "Kaneshige/Course/CrsData.h"
 #include "Shiraiwa/Objects/MapObjHioNode.h"
 #include "Sato/StateObserver.h"
+#include "Inagaki/GameSoundMgr.h"
 
 #include "types.h"
 
@@ -36,18 +37,18 @@ public:
         }
     }
 
-    // void sTable;                                     // 0x803aa258
-    // void scJointName;                                // 0x804154b8
-    // void sAntLionBckAnmTrans;                        // 0x80417118
-    // void sAntLionBckMtxCalc;                         // 0x8041711c
-    // void sJointNo;                                   // 0x80417120
+    static StateObserver::StateFuncSet<TMapObjAntLion> sTable[3]; // 0x803aa258
+    static const char *scJointName;                  // 0x804154b8
+    static J3DAnmTransform *sAntLionBckAnmTrans;     // 0x80417118
+    static J3DMtxCalc *sAntLionBckMtxCalc;           // 0x8041711c
+    static int sJointNo;                             // 0x80417120
     //  Inline
     virtual ~TMapObjAntLion(); // 0x802ce010
     void InitExec();           // 0x802ce304
     void MoveExec();           // 0x802ce370
-private:
-    u8 _pad_geographyobjmgr[8];
-}; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
+    u32 _158;                                // 0x158
+    GameAudio::CircleSoundMgr *mCircleSoundMgr; // 0x15c
+};
 
 
 #endif // MAPOBJANTLION_H

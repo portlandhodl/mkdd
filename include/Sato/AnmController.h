@@ -98,6 +98,20 @@ public:
         return mObj[anm_no].getFrameCtrl();
     }
 
+    T *getObjAnt(u8 anm_no)
+    {
+#line 127
+        JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
+        return &mObj[anm_no];
+    }
+
+    T *getObjIce(u8 anm_no)
+    {
+#line 321
+        JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
+        return &mObj[anm_no];
+    }
+
 protected:
     T *mObj;
 };

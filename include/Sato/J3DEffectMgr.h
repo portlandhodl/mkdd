@@ -50,8 +50,16 @@ public:
     static J3DEffectMgr *getJ3DEffectMgr() { return sJ3DMgr; }
     static J3DEffectMgr *sJ3DMgr;
 
+    J3DModelData *getModelData() { return mModelData; }
+    J3DModelData *getSplashModelData() { return mSplashModelData; }
+    J3DModelData *getMudModelData() { return mMudModelData; }
+
 private:
-    u8 _00[0x78];
+    u8 _00[0x04];
+    J3DModelData *mSplashModelData; // 04
+    J3DModelData *mMudModelData;    // 08
+    J3DModelData *mModelData;       // 0c
+    u8 _10[0x78 - 0x10];
 };
 
 class J3DEfctKartAnmMgr

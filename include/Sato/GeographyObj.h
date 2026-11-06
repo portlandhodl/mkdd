@@ -58,6 +58,7 @@ public:
     virtual void createModel(JKRSolidHeap *, u32);
 
 private:
+    friend class ItemThunder;
     JSULink<GeoObjSupervisor> mLink;
     JSULink<GeoObjSupervisor> mLink2;
 };

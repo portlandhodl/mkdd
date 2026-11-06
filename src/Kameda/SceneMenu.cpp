@@ -605,11 +605,7 @@ void SceneMenu::calcEngineMoji(SceneMenu::BckData *data)
     {
         data->mFrame = 20.0f;
     }
-    else if (data->mFrame >= 28.0f)
-    {
-        data->mFrame = 20.0f;
-    }
-    else
+    else if (data->mFrame < 28.0f)
     {
         if (data->mFrame == 24.0f)
         {
@@ -620,6 +616,10 @@ void SceneMenu::calcEngineMoji(SceneMenu::BckData *data)
         }
         data->mFrame += 1.0f;
     }
+    else
+    {
+        data->mFrame = 20.0f;
+    }
 }
 
 void SceneMenu::calcEnginePic(SceneMenu::BckData *data)
@@ -628,11 +628,7 @@ void SceneMenu::calcEnginePic(SceneMenu::BckData *data)
     {
         data->mFrame = 20.0f;
     }
-    else if (data->mFrame >= 28.0f)
-    {
-        data->mFrame = 20.0f;
-    }
-    else
+    else if (data->mFrame < 28.0f)
     {
         if (data->mFrame == 24.0f)
         {
@@ -642,6 +638,10 @@ void SceneMenu::calcEnginePic(SceneMenu::BckData *data)
             static_cast<J2DPicture *>(pane)->changeTexture(mPowerPicName[mInfo.engineType], 0);
         }
         data->mFrame += 1.0f;
+    }
+    else
+    {
+        data->mFrame = 20.0f;
     }
 }
 

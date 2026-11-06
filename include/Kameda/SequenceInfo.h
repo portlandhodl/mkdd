@@ -123,6 +123,32 @@ public:
         return mGameFlag != 0 || mSecretKart != 0;
     }
 
+    int getStartNo(int kartNo) {
+#line 163
+        JUT_MINMAX_ASSERT(0, kartNo, 8);
+        return mStartNo[kartNo];
+    }
+
+    int getRankPoint(int kart) {
+#line 226
+        JUT_MINMAX_ASSERT(0, kart, 8);
+        return mRankPoint[kart];
+    }
+
+    int get_2d8(int rank) {
+#line 240
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        return _2d8[rank];
+    }
+
+    int get_3cc(int course) {
+#line 424
+        JUT_MINMAX_ASSERT(0, course, 16);
+        return _3cc[course];
+    }
+
+    friend class SceneMap;
+
 private:
     JMARandFast mRnd;          // 00
     int mStartNo[8];           // 004

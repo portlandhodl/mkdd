@@ -36,7 +36,7 @@ public:
     void rndRoulette(); // 0x8018a71c
 
     static const ERaceGpCup mRaceGpCup[5]; // 0x80375368
-    static const CourseData mCourseData[20]; // 0x80375788
+    static const CourseData mCourseData[5][4]; // 0x80375788
     static const u64 mCourseSelectBckTag[42]; // 0x80375878
     static const u64 mCourseSelectBtkTag[4]; // 0x803759c8
     static const u64 mCourseSelectBpkTag[2]; // 0x803759e8

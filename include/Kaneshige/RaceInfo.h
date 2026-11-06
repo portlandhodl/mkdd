@@ -72,6 +72,12 @@ public:
         mStartPosIndex[kartNo] = id;
     }
 
+    void setPointTable(int kartNo, int point) {
+#line 102
+        JUT_MINMAX_ASSERT(0, kartNo, 8);
+        mPointTable[kartNo] = point;
+    }
+
     void setRivalKartNo(int rivalNo, int kartNo) {
 #line 114
         JUT_MINMAX_ASSERT(0, rivalNo, 2);

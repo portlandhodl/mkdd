@@ -1817,8 +1817,23 @@ void GeographyObjManager::createModel_shadow(GeographyObj *obj, GeographyObj **o
         obj->mShadowMdl->_18 |= 1;
 }
 
-void GeographyObjManager::loadAnimation(GeographyObj *, GeographyObj **)
+struct GeoObjTransAnmInfo
 {
+    /* 0x00 */ void *mTransAnm;
+    /* 0x04 */ void *_04;
+    /* 0x08 */ void *_08;
+
+    GeoObjTransAnmInfo() // 0x80225e44
+    {
+        mTransAnm = 0;
+        _04 = 0;
+        _08 = 0;
+    }
+};
+
+void GeographyObjManager::loadAnimation(GeographyObj *obj, GeographyObj **)
+{
+    (new GeoObjTransAnmInfo[obj->_110]);
 }
 
 void GeographyObjManager::chkAnmTableNum(GeographyObj *, u8 *, MatAnmInfo *)

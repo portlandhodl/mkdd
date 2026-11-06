@@ -64,7 +64,7 @@ public:
     void setTargetNode(u16);
     void getNodeDir(u16, JGeometry::TVec3f *);
 
-protected:
+public:
     const CrsData::SObject *mpObj; // 0x04
     u16 _8;                        // 0x08, current node
     s8 _0a;                        // 0x0a, direction (-1/1)
@@ -112,5 +112,51 @@ public:
     f32 mTarget;
     bool _3c;
 };
- 
+class TFreeFall {
+public:
+    TFreeFall(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
+    virtual ~TFreeFall() {}
+    virtual void update();
+    virtual void reset();
+    virtual void addAccel(const JGeometry::TVec3f &);
+    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
+    virtual void getGravity(JGeometry::TVec3f *);
+    virtual void rotate();
+    virtual void reflect(const JGeometry::TVec3f &);
+    virtual void roll();
+
+    JGeometry::TVec3f *mPos;    // 04
+    JGeometry::TVec3f *mVel;    // 08
+    JGeometry::TPos3f *mMtx;    // 0C
+    void *_10;                  // 10
+    f32 _14;                    // 14
+    f32 _18;                    // 18
+    u8 _1C;                     // 1C
+    u8 _1D[3];                  // 1D
+    f32 _20;                    // 20
+    f32 _24;                    // 24
+    f32 _28;                    // 28
+    stRandom *_2C;              // 2C
+};
+
+class TFreeFallShakeSky : public TFreeFall {
+public:
+    TFreeFallShakeSky(JGeometry::TVec3f *pos, JGeometry::TVec3f *vel, JGeometry::TPos3f *mtx)
+        : TFreeFall(pos, vel, mtx)
+    {
+        _2C = NULL;
+    }
+    virtual ~TFreeFallShakeSky() {}
+    virtual void update();
+    virtual void reset();
+    virtual void addAccel(const JGeometry::TVec3f &);
+    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
+    virtual void getGravity(JGeometry::TVec3f *);
+    virtual void rotate();
+    virtual void reflect(const JGeometry::TVec3f &);
+    virtual void roll();
+
+    u8 _30[12];
+}; // Size: 0x3C
+
 #endif // COORD3D_H

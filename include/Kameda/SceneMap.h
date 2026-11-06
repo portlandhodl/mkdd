@@ -20,5 +20,6 @@ public:
 
 private:
     u32 _c; // 0x0c
+    SceneType mNextScene; // 0x10
 }; // class SceneMap
 #endif // SCENEMAP_H

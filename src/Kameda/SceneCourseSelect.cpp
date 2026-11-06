@@ -31,7 +31,7 @@ const char *SceneCourseSelect::mSelectCupName[] = {
 #define CourseDataBuilder(course_id, course_name) \
     course_id, "CoName_" #course_name ".bti", "COP_" #course_name ".bti" 
 
-const SceneCourseSelect::CourseData SceneCourseSelect::mCourseData[] = {
+const SceneCourseSelect::CourseData SceneCourseSelect::mCourseData[][4] = {
     CourseDataBuilder(LUIGI_CIRCUIT, LUIGI_CIRCUIT),
     CourseDataBuilder(PEACH_BEACH, PEACH_BEACH),
     CourseDataBuilder(BABY_PARK, BABY_PARK),
