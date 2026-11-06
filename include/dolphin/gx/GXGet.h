@@ -20,6 +20,7 @@ void GXGetLightPos(const GXLightObj* lt_obj, f32* x, f32* y, f32* z);
 void GXGetLightColor(const GXLightObj* lt_obj, GXColor* color);
 void GXGetVtxAttrFmt(GXVtxFmt idx, GXAttr attr, GXCompCnt* compCnt, GXCompType* compType,
                      u8* shift);
+void __GetImageTileCount(GXTexFmt fmt, u16 w, u16 h, u32* a, u32* b, u32* c);
 
 #ifdef __cplusplus
 }

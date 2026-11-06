@@ -58,6 +58,9 @@ void GXSetTexCopyDst(u16 wd, u16 ht, GXTexFmt fmt, GXBool mipmap);
 void GXCopyTex(void* dest, GXBool clear);
 
 void GXSetCopyClamp(GXFBClamp clamp);
+void GXSetDispCopyFrame2Field(GXCopyMode mode);
+void GXClearBoundingBox(void);
+void GXReadBoundingBox(u16* left, u16* top, u16* right, u16* bottom);
 
 #ifdef __cplusplus
 }

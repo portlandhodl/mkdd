@@ -465,10 +465,10 @@ config.libs = [
     trkLib(
         "TRK_MINNOW_DOLPHIN",
         [
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mainloop.c"),
+            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mainloop.c", extra_cflags=["-sdata", "0"]),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/nubevent.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/nubassrt.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/nubinit.c"),
+            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/nubinit.c", extra_cflags=["-sdata", "0"]),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msg.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msgbuf.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/serpoll.c"),
@@ -477,7 +477,7 @@ config.libs = [
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/support.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mutex_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/notify.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/main_TRK.c"),
+            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/main_TRK.c", extra_cflags=["-sdata", "0"]),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mem_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/string_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/flush_cache.c"),
@@ -489,7 +489,7 @@ config.libs = [
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/usr_put.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/dolphin_trk_glue.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/targcont.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/target_options.c"),
+            Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/target_options.c", extra_cflags=["-sdata", "0"]),
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/UDP_Stubs.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Export/mslsupp.c"),
 

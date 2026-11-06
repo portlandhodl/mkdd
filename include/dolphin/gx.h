@@ -22,5 +22,6 @@
 #include <dolphin/gx/GXTexture.h>
 #include <dolphin/gx/GXTransform.h>
 #include <dolphin/gx/GXVert.h>
+#include <dolphin/gx/GXPriv.h>
 
 #endif // _DOLPHIN_GX

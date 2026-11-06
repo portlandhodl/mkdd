@@ -18,6 +18,9 @@ void GXSetTevIndirect(GXTevStageID tev_stage, GXIndTexStageID ind_stage, GXIndTe
 void GXSetTevIndWarp(GXTevStageID tev_stage, GXIndTexStageID ind_stage, GXBool signed_offsets,
                      GXBool replace_mode, GXIndTexMtxID matrix_sel);
 void GXSetIndTexCoordScale(GXIndTexStageID ind_state, GXIndTexScale scale_s, GXIndTexScale scale_t);
+void __GXFlushTextureState(void);
+void __GXSetIndirectMask(u32 mask);
+void __GXSetTmemConfig(u32 config);
 
 #ifdef __cplusplus
 }

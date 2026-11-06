@@ -10,6 +10,7 @@ extern "C" {
 #define GX_PROJECTION_SZ 7
 
 void GXSetProjection(f32 mtx[4][4], GXProjectionType type);
+void __GXSetMatrixIndex(GXAttr index);
 void GXLoadPosMtxImm(f32 mtx[3][4], u32 id);
 void GXLoadNrmMtxImm(f32 mtx[3][4], u32 id);
 void GXLoadTexMtxImm(f32 mtx[][4], u32 id, GXTexMtxType type);

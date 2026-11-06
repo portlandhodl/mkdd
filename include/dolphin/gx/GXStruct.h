@@ -36,9 +36,29 @@ typedef struct _GXTexObj {
   u32 dummy[8];
 } GXTexObj;
 
+typedef struct _GXTexObjPriv {
+  u32 mode0;
+  u32 mode1;
+  u32 image0;
+  u32 image3;
+  void* userData;
+  GXTexFmt format;
+  u32 tlutName;
+  u16 loadCount;
+  u8 loadFormat;
+  u8 flags;
+} GXTexObjPriv;
+
 typedef struct _GXTlutObj {
   u32 dummy[3];
 } GXTlutObj;
+
+typedef struct _GXTlutObjPriv {
+  u32 unk0;
+  u32 unk4;
+  u16 numEntries;
+  u8 padding[2];
+} GXTlutObjPriv;
 
 typedef struct _GXLightObj {
   u32 dummy[16];
@@ -67,9 +87,24 @@ typedef struct _GXTexRegion {
   u32 dummy[4];
 } GXTexRegion;
 
+typedef struct _GXTexRegionPriv {
+  u32 unk0;
+  u32 unk4;
+  u16 sizeEven;
+  u16 sizeOdd;
+  u8 unkC;
+  u8 unkD;
+  u8 padding[2];
+} GXTexRegionPriv;
+
 typedef struct _GXTlutRegion {
   u32 dummy[4];
 } GXTlutRegion;
+
+typedef struct _GXTlutRegionPriv {
+  u32 unk0;
+  GXTlutObjPriv tlutObj;
+} GXTlutRegionPriv;
 
 typedef struct _GXFogAdjTable {
 	u16 fogVals[10]; // _00

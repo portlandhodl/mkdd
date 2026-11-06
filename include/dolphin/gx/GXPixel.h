@@ -2,12 +2,16 @@
 #define _DOLPHIN_GXPIXEL
 
 #include <dolphin/gx/GXEnum.h>
+#include <dolphin/gx/GXStruct.h>
+#include <dolphin/mtx.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void GXSetFog(GXFogType type, f32 startz, f32 endz, f32 nearz, f32 farz, GXColor color);
+void GXInitFogAdjTable(GXFogAdjTable* table, u16 width, const Mtx44 proj);
+void GXSetFogRangeAdj(GXBool enable, u16 center, GXFogAdjTable* table);
 void GXSetFogColor(GXColor color);
 // ? GXSetFogRangeAdj();
 void GXSetBlendMode(GXBlendMode type, GXBlendFactor src_factor, GXBlendFactor dst_factor,
@@ -19,8 +23,8 @@ void GXSetZCompLoc(GXBool before_tex);
 void GXSetPixelFmt(GXPixelFmt pix_fmt, GXZFmt16 z_fmt);
 void GXSetDither(GXBool dither);
 void GXSetDstAlpha(GXBool enable, u8 alpha);
-// ? GXSetFieldMask();
-// ? GXSetFieldMode();
+void GXSetFieldMask(GXBool enable_even, GXBool enable_odd);
+void GXSetFieldMode(GXBool tex_lod, GXBool adjust_ar);
 
 #ifdef __cplusplus
 }

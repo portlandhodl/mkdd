@@ -22,5 +22,8 @@ typedef struct IPHeader {
 } IPHeader;
 
 BOOL IPIsLocalAddr(u32, const u8 *addr);
+BOOL IPGetNetmask(u32 type, u32* addr);
+BOOL IPGetAddr(u32 type, u32* addr);
+BOOL IPGetAlias(u32 type, u32* addr);
 
 #endif

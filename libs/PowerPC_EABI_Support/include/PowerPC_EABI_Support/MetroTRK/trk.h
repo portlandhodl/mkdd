@@ -95,11 +95,8 @@ typedef struct TRKState {
 	u32 _90;
 	u32 _94;
 	BOOL mIsStopped;
-	u32 _9C;
-	u32 _A0;
-	u32 _A4;
-	u32 _A8;
-	u32 _AC;
+	BOOL _9C;
+	void* _A0;
 } TRKState;
 
 typedef struct TRKBuffer {

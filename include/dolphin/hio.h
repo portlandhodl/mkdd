@@ -28,8 +28,13 @@ typedef BOOL (*HIOEnumCallback)(s32 chan);
 typedef void (*HIOCallback)(void);
 
 BOOL HIOInit(s32 channel, HIOCallback cb);
+BOOL HIOInitEx(s32 channel, u32 dev, HIOCallback cb);
 BOOL HIOEnumDevices(HIOEnumCallback);
-BOOL HIOWrite(u32 chunkSize, void * buf, u32 bufSize);
+BOOL HIORead(u32 addr, void *buffer, s32 size);
+BOOL HIOWrite(u32 addr, void *buffer, s32 size);
+BOOL HIOReadAsync(u32 addr, void *buffer, s32 size, HIOCallback cb);
+BOOL HIOWriteAsync(u32 addr, void *buffer, s32 size, HIOCallback cb);
+BOOL HIOReadStatus(u32 *status);
 BOOL HIOReadMailbox(u32 *);
 BOOL HIOWriteMailbox(u32);
 
