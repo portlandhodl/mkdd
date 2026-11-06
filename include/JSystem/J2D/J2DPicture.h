@@ -260,6 +260,9 @@ struct J2DPictureEx : public J2DPicture {
     enum stage_enum { Stage_0 = 0, Stage_1, Stage_2, Stage_3, Stage_4, Stage_5, Stage_6, Stage_7 };
 
     J2DPictureEx();
+    J2DPictureEx(u32 matFlag);
+    J2DPictureEx(u8, u32 matFlag);
+    J2DPictureEx(JUTTexture*, u32 matFlag);
     J2DPictureEx(const ResTIMG* img, u32 matFlag);
     J2DPictureEx(J2DPane* parent, JSURandomInputStream* input, u32 flags, J2DMaterial* materials);
     J2DPictureEx(u64, const JGeometry::TBox2f&, const ResTIMG*, u32);

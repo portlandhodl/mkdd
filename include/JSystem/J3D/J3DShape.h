@@ -48,6 +48,10 @@ struct J3DShape
         Invalid = 0xFFFFFFFF,
     };
 
+    J3DShape() { initialize(); }
+
+    static const int kVcdVatDLSize = 0xC0;
+
     virtual void draw() const;              // _08
     virtual void drawFast() const;          // _0C
     virtual void simpleDraw() const;      // _10
@@ -75,6 +79,7 @@ struct J3DShape
     void setTexMtxLoadType(u32 type) { mFlags = type | (mFlags & 0xFFFF0FFF); }
     bool getNBTFlag() const { return mMode; }
     u32 getBumpMtxOffset() const { return mBumpMtxOffset; }
+    void setBumpMtxOffset(u32 offset) { mBumpMtxOffset = offset; }
 
     J3DMaterial *getMaterial() const { return mMaterial; }
     u16 getIndex() const { return mId; }
@@ -118,6 +123,8 @@ struct J3DShape
 struct J3DShapeMtx
 {
     typedef void (J3DShapeMtx::*LoadMtxIndxFunction)(int, u16) const;
+
+    J3DShapeMtx(u16 useMtxIndex) : mUseMtxIndex(useMtxIndex) {}
 
     virtual ~J3DShapeMtx() {}                                       // _08 (weak)
     virtual int getType() const { return 'SMTX'; }                   // _0C (weak)
@@ -182,6 +189,11 @@ struct J3DShapeTable
 
 struct J3DShapeMtxMulti : public J3DShapeMtx
 {
+    J3DShapeMtxMulti(u16 useMtxIndex, u16 useMtxNum, u16 *pMtxIndex)
+        : J3DShapeMtx(useMtxIndex), mUseMtxNum(useMtxNum), _0C(pMtxIndex)
+    {
+    }
+
     virtual ~J3DShapeMtxMulti() {}                                            // _08 (weak)
     virtual int getType() const { return 'SMML'; }                            // _0C (weak)
     virtual int getUseMtxNum() const { return mUseMtxNum; }                    // _10 (weak)
@@ -196,6 +208,8 @@ struct J3DShapeMtxMulti : public J3DShapeMtx
 struct J3DShapeMtxConcatView : public J3DShapeMtx
 {
     typedef void (J3DShapeMtxConcatView::*LoadMtxConcatViewFunction)(int, u16) const;
+
+    J3DShapeMtxConcatView(u16 useMtxIndex) : J3DShapeMtx(useMtxIndex) {}
 
     virtual ~J3DShapeMtxConcatView() {}                                // _08 (weak)
     virtual int getType() const { return 'SMCV'; }                    // _0C (weak)
@@ -216,6 +230,11 @@ struct J3DShapeMtxConcatView : public J3DShapeMtx
 
 struct J3DShapeMtxMultiConcatView : public J3DShapeMtxConcatView
 {
+    J3DShapeMtxMultiConcatView(u16 useMtxIndex, u16 useMtxNum, u16 *pMtxIndex)
+        : J3DShapeMtxConcatView(useMtxIndex), mUseMtxNum(useMtxNum), _0C(pMtxIndex)
+    {
+    }
+
     virtual ~J3DShapeMtxMultiConcatView() {}                                      // _08 (weak)
     virtual int getType() const { return 'SMMC'; }                                  // _0C (weak)
     virtual int getUseMtxNum() const { return mUseMtxNum; }                          // _10 (weak)
@@ -230,6 +249,8 @@ struct J3DShapeMtxMultiConcatView : public J3DShapeMtxConcatView
 
 struct J3DShapeMtxBBoardConcatView : public J3DShapeMtxConcatView
 {
+    J3DShapeMtxBBoardConcatView(u16 useMtxIndex) : J3DShapeMtxConcatView(useMtxIndex) {}
+
     virtual ~J3DShapeMtxBBoardConcatView() {}       // _08 (weak)
     virtual int getType() const { return 'SMBB'; } // _0C (weak)
     virtual void load() const;                       // _18
@@ -237,6 +258,8 @@ struct J3DShapeMtxBBoardConcatView : public J3DShapeMtxConcatView
 
 struct J3DShapeMtxYBBoardConcatView : public J3DShapeMtxConcatView
 {
+    J3DShapeMtxYBBoardConcatView(u16 useMtxIndex) : J3DShapeMtxConcatView(useMtxIndex) {}
+
     virtual ~J3DShapeMtxYBBoardConcatView() {}       // _08 (weak)
     virtual int getType() const { return 'SMYB'; } // _0C (weak)
     virtual void load() const;                       // _18

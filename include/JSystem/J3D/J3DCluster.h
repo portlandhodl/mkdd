@@ -10,7 +10,8 @@ struct J3DCluster {
     f32 _00;                // _00
     f32 _04;                // _04
     int _08;                // _08
-    int _0C;                // _0C
+    u8 _0C;                 // _0C
+    u8 _0D[3];              // _0D
     u16 _10;                // _10
     u16 _12;                // _12
     u16 _14;                // _14
@@ -21,6 +22,17 @@ struct J3DCluster {
 };
 
 struct J3DClusterKey {
+    u16 _00;
+    u16 _02;
+    u16* _04;
+    u16* _08;
+};
+
+struct J3DClusterVertex {
+    u16 _00;
+    u16 _02;
+    u16* _04;
+    u16* _08;
 };
 
 #endif

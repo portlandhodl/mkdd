@@ -357,7 +357,7 @@ inline u16 calcColorChanID(u16 enable, u8 matSrc, u8 lightMask, u8 diffuseFn, u8
 inline u32 setChanCtrlMacro(u8 enable, GXColorSrc ambSrc, GXColorSrc matSrc, u32 lightMask, GXDiffuseFn diffuseFn, GXAttnFn attnFn)
 {
     u32 ret = matSrc << 0; // Putting this as a separate statement fixes codegen, but regalloc is still wrong
-    return ret | enable << 1 | (lightMask & 0x0F) << 2 | ambSrc << 6 | ((attnFn == GX_AF_SPEC) ? GX_DF_NONE : diffuseFn) << 7
+    return ret | enable << 1 | (lightMask & 0x0F) << 2 | ambSrc << 6 | ((attnFn != GX_AF_SPEC) ? diffuseFn : GX_DF_NONE) << 7
          | (attnFn != GX_AF_NONE) << 9 | (attnFn != GX_AF_SPEC) << 10 | (lightMask >> 4 & 0x0F) << 11;
 }
 
@@ -400,8 +400,8 @@ struct J3DColorChan {
     u8 getEnable() { return !!(mChanCtrl & 0x02); }
     void load()
     {
-        // something in here is not quite right still
-        J3DGDWrite_u32(setChanCtrlMacro(getEnable(), getAmbSrc(), getMatSrc(), getLightMask(), getDiffuseFn(), getAttnFn()));
+        GXColorSrc ambSrc = getAmbSrc();
+        J3DGDWrite_u32(setChanCtrlMacro(getEnable(), ambSrc, getMatSrc(), getLightMask(), getDiffuseFn(), getAttnFn()));
     }
 
     u16 mChanCtrl; // _00

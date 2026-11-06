@@ -87,9 +87,9 @@ inline GXAttnFn J3DColorChan::getAttnFn()
 void J3DColorBlockLightOff::initialize()
 {
 	mColorChannelNum = 0;
-	for (u32 i = 0; i < ARRAY_SIZE(mMaterialColors); i++) {
-		u32 matCol       = *(u32*)&j3dDefaultColInfo;
-		mMaterialColors[i] = J3DGXColor(matCol);
+	for (u32 i = 0; i < 2; i++) {
+		u32 matCol         = *(u32*)&j3dDefaultColInfo;
+		mMaterialColors[i] = *(J3DGXColor*)&matCol;
 	}
 	mMaterialColorOffset = 0;
 	mColorChannelOffset  = 0;
@@ -104,11 +104,11 @@ void J3DColorBlockAmbientOn::initialize()
 	mColorChannelNum = 0;
 	for (u32 i = 0; i < ARRAY_SIZE(mMaterialColors); i++) {
 		u32 matCol         = *(u32*)&j3dDefaultColInfo;
-		mMaterialColors[i] = J3DGXColor(matCol);
+		mMaterialColors[i] = *(J3DGXColor*)&matCol;
 	}
 	for (u32 i = 0; i < ARRAY_SIZE(mAmbientColors); i++) {
 		u32 ambCol       = *(u32*)&j3dDefaultAmbInfo;
-		mAmbientColors[i] = J3DGXColor(ambCol);
+		mAmbientColors[i] = *(J3DGXColor*)&ambCol;
 	}
 	mMaterialColorOffset = 0;
 	mColorChannelOffset  = 0;
@@ -123,11 +123,11 @@ void J3DColorBlockLightOn::initialize()
 	mColorChannelNum = 0;
 	for (u32 i = 0; i < ARRAY_SIZE(mMaterialColors); i++) {
 		u32 matCol         = *(u32*)&j3dDefaultColInfo;
-		mMaterialColors[i] = J3DGXColor(matCol);
+		mMaterialColors[i] = *(J3DGXColor*)&matCol;
 	}
 	for (u32 i = 0; i < ARRAY_SIZE(mAmbientColors); i++) {
 		u32 ambCol          = *(u32*)&j3dDefaultAmbInfo;
-		mAmbientColors[i] = J3DGXColor(ambCol);
+		mAmbientColors[i] = *(J3DGXColor*)&ambCol;
 	}
 	for (u32 i = 0; i < ARRAY_SIZE(mLights); i++) {
 		mLights[i] = nullptr;
@@ -199,7 +199,7 @@ void J3DTevBlockPatched::initialize()
 	for (int i = 0; i < 8; i++) {
 		mTexIndices[i] = 0xFFFF;
 	}
-	for (int i = 0; i < 8; i++) {
+	for (u32 i = 0; i < 8; i++) {
 		mStages[i].mBPCommand1 = 0xC0 + (i * 2);
 		mStages[i].mBPCommand2 = 0xC1 + (i * 2);
 	}
@@ -209,7 +209,7 @@ void J3DTevBlockPatched::initialize()
 	}
 	for (int i = 0; i < 4; i++) {
 		u32 kColor = *(u32*)&j3dDefaultTevKColor;
-		mKColors[i] = J3DGXColor(kColor);
+		mKColors[i] = *(J3DGXColor*)&kColor;
 	}
 	for (int i = 0; i < 8; i++) {
 		mKColorSels[i] = 0xC;
@@ -243,29 +243,29 @@ void J3DTevBlock1::initialize()
  */
 void J3DTevBlock2::initialize()
 {
-	for (u32 i = 0; i < 2; i++) {
-		mTexIndices[i] = 0xFFFF;
+	for (int i = 0; i < 2; i++) {
+		mTexIndices[i] = -1;
 	}
 	mStageNum = 1;
 
-	for (u32 i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++) {
 		mStages[i].mBPCommand1 = 0xC0 + (i * 2);
 		mStages[i].mBPCommand2 = 0xC1 + (i * 2);
 	}
 
-	for (u32 i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++) {
 		mKColorSels[i] = 0xC;
 	}
-	for (u32 i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++) {
 		mKAlphaSels[i] = 0x1C;
 	}
 
-	for (u32 i = 0; i < 3; i++) {
+	for (int i = 0; i < 3; i++) {
 		mColors[i] = j3dDefaultTevColor;
 	}
-	for (u32 i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		u32 kColor = *(u32*)&j3dDefaultTevKColor;
-		mKColors[i] = J3DGXColor(kColor);
+		mKColors[i] = *(J3DGXColor*)&kColor;
 	}
 	mTexNoOffset = 0;
 	mRegOffset   = 0;
@@ -299,7 +299,7 @@ void J3DTevBlock4::initialize()
 	}
 	for (int i = 0; i < 4; i++) {
 		u32 kColor = *(u32*)&j3dDefaultTevKColor;
-		mKColors[i] = J3DGXColor(kColor);
+		mKColors[i] = *(J3DGXColor*)&kColor;
 	}
 	mTexNoOffset = 0;
 	mRegOffset   = 0;
@@ -320,7 +320,7 @@ void J3DTevBlock16::initialize()
 	}
 	for (int i = 0; i < 4; i++) {
 		u32 kColor = *(u32*)&j3dDefaultTevKColor;
-		mKColors[i] = J3DGXColor(kColor);
+		mKColors[i] = *(J3DGXColor*)&kColor;
 	}
 	for (int i = 0; i < 16; i++) {
 		mKColorSels[i] = 0xC;

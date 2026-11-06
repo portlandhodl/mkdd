@@ -124,7 +124,7 @@ struct J3DTevKColorAnm {
 struct J3DMaterialAnm {
     J3DMaterialAnm() { initialize(); }
 
-    virtual ~J3DMaterialAnm() { }          // _08 (weak)
+    virtual ~J3DMaterialAnm();             // _08 (weak)
     virtual void calc(J3DMaterial*) const; // _0C
 
     void initialize();

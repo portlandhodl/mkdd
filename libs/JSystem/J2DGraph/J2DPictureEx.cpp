@@ -16,6 +16,18 @@ J2DPictureEx::J2DPictureEx()
     initialize(0x1100000);
 }
 
+J2DPictureEx::J2DPictureEx(u32 matFlag)
+    : J2DPicture()
+{
+    initialize(matFlag);
+}
+
+J2DPictureEx::J2DPictureEx(u8, u32 matFlag)
+    : J2DPicture()
+{
+    initialize(matFlag);
+}
+
 J2DPictureEx::J2DPictureEx(const ResTIMG* img, u32 matFlag)
     : J2DPicture()
 {
@@ -28,6 +40,12 @@ J2DPictureEx::J2DPictureEx(const char* fileName, u32 matFlag)
 {
     initialize(matFlag);
     append(fileName, 1.0f);
+}
+
+J2DPictureEx::J2DPictureEx(JUTTexture*, u32 matFlag)
+    : J2DPicture()
+{
+    initialize(matFlag);
 }
 
 void J2DPictureEx::initiate(const ResTIMG* img, const ResTLUT* lut)
@@ -265,57 +283,191 @@ bool J2DPictureEx::insert(JUTTexture* texture, u8 index, f32 blendRatio)
     return true;
 }
 
-void J2DPictureEx::insertCommon(u8 index, f32 blendRatio)
+extern "C" {
+void shiftSetBlendRatio__12J2DPictureExFUcfbb();
+void setTexMtx__14J2DTexGenBlockFUlR9J2DTexMtx();
+void setTevOrder__12J2DPictureExFUcUcb();
+void setTevStage__12J2DPictureExFUcUcb();
+void setTevKColor__12J2DPictureExFUc();
+void setTevKColorSel__12J2DPictureExFUc();
+void setTevKAlphaSel__12J2DPictureExFUc();
+}
+
+asm void J2DPictureEx::insertCommon(u8 index, f32 blendRatio)
 {
-    u8 texGenNum = mMaterial->getTexGenBlock()->getTexGenNum();
-    mMaterial->getTevBlock()->getMaxStage();
-    u8 stageNum = mMaterial->getTevBlock()->getTevStageNum();
-
-    bool check;
-    if (texGenNum <= 1) {
-        check = stageNum != 1;
-    } else {
-        check = (stageNum != (texGenNum + 1));
-    }
-
-    shiftSetBlendRatio(index, blendRatio, true, true);
-    shiftSetBlendRatio(index, blendRatio, false, true);
-
-    texGenNum++;
-
-    mMaterial->getTexGenBlock()->setTexGenNum(texGenNum);
-
-    J2DTexCoordInfo coordInfo;
-    coordInfo.mTexGenType = 1;
-    coordInfo.mTexGenSrc = 4;
-
-    // some loop copy nonsense like this
-    for (int i = (texGenNum - 1); i >= index; i--) {
-        coordInfo.mTexGenMtx = (i * 3 + 30);
-        J2DTexCoord coord(coordInfo);
-        mMaterial->getTexGenBlock()->setTexCoord((u8)i, coord);
-    }
-
-    for (int i = texGenNum - 1; i > index; i--) {
-        mMaterial->getTexGenBlock()->setTexMtx((u8)i, mMaterial->getTexGenBlock()->getTexMtx((u8)(i - 1)));
-    }
-
-    J2DTexMtx texMtx;
-    mMaterial->getTexGenBlock()->setTexMtx(index, texMtx);
-
-    if (texGenNum == 1) {
-        stageNum = 1;
-    } else {
-        stageNum = texGenNum + (check ? 2 : 1);
-    }
-
-    mMaterial->getTevBlock()->setTevStageNum(stageNum);
-
-    setTevOrder(texGenNum, stageNum, check);
-    setTevStage(texGenNum, stageNum, check);
-    setTevKColor(texGenNum);
-    setTevKColorSel(texGenNum);
-    setTevKAlphaSel(texGenNum);
+    nofralloc
+    stwu r1,-160(r1)
+    mflr r0
+    stw r0,164(r1)
+    stfd f31,144(r1)
+    psq_st f31,152(r1),0,0
+    stmw r25,116(r1)
+    mr r26,r3
+    fmr f31,f1
+    lwz r5,360(r3)
+    mr r27,r4
+    lwz r3,112(r5)
+    lwz r0,40(r5)
+    lwz r12,0(r3)
+    clrlwi r29,r0,24
+    lwz r12,24(r12)
+    mtctr r12
+    bctrl
+    lwz r3,360(r26)
+    lwz r3,112(r3)
+    lwz r12,0(r3)
+    lwz r12,88(r12)
+    mtctr r12
+    bctrl
+    cmplwi r29,1
+    bgt- Lb2c
+    clrlwi r0,r3,24
+    subfic r3,r0,1
+    addic r0,r3,-1
+    subfe r28,r0,r3
+    b Lb40
+Lb2c:
+    clrlwi r3,r3,24
+    addi r0,r29,1
+    subf r3,r3,r0
+    addic r0,r3,-1
+    subfe r28,r0,r3
+Lb40:
+    fmr f1,f31
+    mr r3,r26
+    mr r4,r27
+    li r5,1
+    li r6,1
+    bl shiftSetBlendRatio__12J2DPictureExFUcfbb
+    fmr f1,f31
+    mr r3,r26
+    mr r4,r27
+    li r5,0
+    li r6,1
+    bl shiftSetBlendRatio__12J2DPictureExFUcfbb
+    addi r30,r29,1
+    clrlwi r29,r27,24
+    clrlwi r31,r30,24
+    lwz r3,360(r26)
+    addi r9,r31,-1
+    li r7,1
+    addi r0,r9,1
+    stw r31,40(r3)
+    subf r0,r29,r0
+    mr r10,r9
+    mulli r3,r9,3
+    li r6,4
+    mtctr r0
+    cmpw r9,r29
+    blt- Lbf4
+Lbac:
+    addi r5,r3,30
+    rlwinm r0,r10,2,22,29
+    lwz r4,360(r26)
+    addi r10,r10,-1
+    stb r7,12(r1)
+    addi r3,r3,-3
+    add r8,r4,r0
+    stb r6,13(r1)
+    stb r5,14(r1)
+    lwz r0,12(r1)
+    stw r0,8(r1)
+    lbz r0,8(r1)
+    lbz r4,9(r1)
+    stb r0,44(r8)
+    lbz r0,10(r1)
+    stb r4,45(r8)
+    stb r0,46(r8)
+    bdnz+ Lbac
+Lbf4:
+    mr r25,r9
+    b Lc20
+Lbfc:
+    addi r0,r25,-1
+    lwz r3,360(r26)
+    rlwinm r5,r0,2,22,29
+    clrlwi r4,r25,24
+    addi r3,r3,40
+    addi r0,r5,36
+    lwzx r5,r3,r0
+    bl setTexMtx__14J2DTexGenBlockFUlR9J2DTexMtx
+    addi r25,r25,-1
+Lc20:
+    cmpw r25,r29
+    bgt+ Lbfc
+    lis r3, j2dDefaultTexMtxInfo@ha
+    clrlwi r4,r27,24
+    addi r6,r3, j2dDefaultTexMtxInfo@l
+    addi r5,r1,16
+    lfs f7,4(r6)
+    lfs f6,8(r6)
+    lfs f5,12(r6)
+    lbz r3,0(r6)
+    lbz r0,1(r6)
+    lfs f4,16(r6)
+    lfs f3,20(r6)
+    lfs f2,24(r6)
+    lfs f1,28(r6)
+    lfs f0,32(r6)
+    stfs f7,20(r1)
+    stfs f6,24(r1)
+    stfs f5,28(r1)
+    stb r3,16(r1)
+    stb r0,17(r1)
+    stfs f4,32(r1)
+    stfs f3,36(r1)
+    stfs f2,40(r1)
+    stfs f1,44(r1)
+    stfs f0,48(r1)
+    lwz r3,360(r26)
+    addi r3,r3,40
+    bl setTexMtx__14J2DTexGenBlockFUlR9J2DTexMtx
+    clrlwi r0,r30,24
+    cmplwi r0,1
+    bne- Lca8
+    li r27,1
+    b Lcc0
+Lca8:
+    clrlwi r3,r28,24
+    addic r0,r3,-1
+    subfe r3,r0,r3
+    addi r0,r3,1
+    add r0,r31,r0
+    clrlwi r27,r0,24
+Lcc0:
+    lwz r3,360(r26)
+    mr r4,r27
+    lwz r3,112(r3)
+    lwz r12,0(r3)
+    lwz r12,84(r12)
+    mtctr r12
+    bctrl
+    mr r3,r26
+    mr r5,r27
+    mr r6,r28
+    clrlwi r4,r30,24
+    bl setTevOrder__12J2DPictureExFUcUcb
+    mr r3,r26
+    mr r5,r27
+    mr r6,r28
+    clrlwi r4,r30,24
+    bl setTevStage__12J2DPictureExFUcUcb
+    mr r3,r26
+    clrlwi r4,r30,24
+    bl setTevKColor__12J2DPictureExFUc
+    mr r3,r26
+    clrlwi r4,r30,24
+    bl setTevKColorSel__12J2DPictureExFUc
+    mr r3,r26
+    clrlwi r4,r30,24
+    bl setTevKAlphaSel__12J2DPictureExFUc
+    psq_l f31,152(r1),0,0
+    lfd f31,144(r1)
+    lmw r25,116(r1)
+    lwz r0,164(r1)
+    mtlr r0
+    addi r1,r1,160
+    blr
 }
 
 bool J2DPictureEx::isInsert(u8 p1) const

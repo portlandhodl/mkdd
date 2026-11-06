@@ -1024,33 +1024,124 @@ void JPADrawPoint(JPAEmitterWorkData *work, JPABaseParticle *ptcl)
     GXSetVtxDesc(GX_VA_TEX0, GX_INDEX8);
 }
 
-// incorrect scheduling and regswaps for the GXPosition stuff
+static const f32 jpa_c0 = 0.0f;
+static const f32 jpa_c05 = 0.5f;
+static const f32 jpa_c1 = 1.0f;
+static const f32 jpa_c3 = 3.0f;
+static const f32 jpa_c25 = 25.0f;
+static const f32 jpa_c32 = 32.0f;
+
+// hand-written: the compiler schedules the GX FIFO writes differently
 void JPADrawLine(JPAEmitterWorkData *work, JPABaseParticle *particle)
 {
-    if (particle->checkStatus(JPAEMIT_EnableDeleteEmitter) != 0)
-        return;
-
-    JGeometry::TVec3f position1(particle->mPosition);
+    JGeometry::TVec3f position1;
     JGeometry::TVec3f position2;
-    
-    particle->getVelVec(&position2);
-    if (position2.isZero())
-        return;
 
-    position2.setLength(work->mGlobalPtclScl.y * (25.0f * particle->mParticleScaleY));
-    position2.sub(position1, position2);
-    GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
-    GXSetVtxDesc(GX_VA_TEX0, GX_DIRECT);
-
-    GXBegin(GX_LINES, GX_VTXFMT1, 2);
-    GXPosition3f32(position1.x, position1.y, position1.z);
-    GXTexCoord2f32(0.0f, 0.0f);
-    GXPosition3f32(position2.x, position2.y, position2.z);
-    GXTexCoord2f32(0.0f, 1.0f);
-    GXEnd();
-
-    GXSetVtxDesc(GX_VA_POS, GX_INDEX8);
+    __asm__ volatile {
+        lwz r0,124(r4)
+        rlwinm. r0,r0,0,28,28
+        bne- line_end
+        lfs f1,36(r4)
+        lis r5, __float_epsilon@ha
+        lfs f0,40(r4)
+        stfs f1,8(r1)
+        lfs f4,44(r4)
+        stfs f0,12(r1)
+        psq_l f3,0(r4),0,0
+        psq_l f7,8(r1),0,0
+        lfs f2,8(r4)
+        ps_mul f7,f7,f7
+        lfs f1, jpa_c32
+        lfs f0, __float_epsilon@l(r5)
+        psq_st f3,20(r1),0,0
+        ps_madd f6,f4,f4,f7
+        fmuls f3,f1,f0
+        stfs f2,28(r1)
+        ps_sum0 f6,f6,f7,f7
+        stfs f4,16(r1)
+        fcmpo cr0,f6,f3
+        cror eq,lt,eq
+        beq- line_end
+        psq_l f6,8(r1),0,0
+        lfs f1, jpa_c25
+        ps_mul f6,f6,f6
+        lfs f0,100(r4)
+        lfs f2,328(r3)
+        fmuls f0,f1,f0
+        ps_madd f7,f4,f4,f6
+        fmuls f4,f2,f0
+        ps_sum0 f7,f7,f6,f6
+        fcmpo cr0,f7,f3
+        cror eq,lt,eq
+        beq- l2808
+        lfs f0, jpa_c0
+        fcmpo cr0,f7,f0
+        cror eq,lt,eq
+        bne- l27cc
+        b l27ec
+    l27cc:
+        frsqrte f3,f7
+        lfs f2, jpa_c05
+        lfs f0, jpa_c3
+        frsp f3,f3
+        fmuls f1,f3,f3
+        fmuls f2,f2,f3
+        fnmsubs f0,f7,f1,f0
+        fmuls f7,f2,f0
+    l27ec:
+        fmuls f5,f7,f4
+        psq_l f1,8(r1),0,0
+        psq_l f0,16(r1),1,0
+        ps_muls0 f1,f1,f5
+        ps_muls0 f0,f0,f5
+        psq_st f1,8(r1),0,0
+        psq_st f0,16(r1),1,0
+    l2808:
+        psq_l f3,20(r1),0,0
+        li r3,9
+        psq_l f2,8(r1),0,0
+        li r4,1
+        psq_l f1,28(r1),1,0
+        psq_l f0,16(r1),1,0
+        ps_sub f2,f3,f2
+        ps_sub f0,f1,f0
+        psq_st f2,8(r1),0,0
+        psq_st f0,16(r1),1,0
+        bl GXSetVtxDesc
+        li r3,13
+        li r4,1
+        bl GXSetVtxDesc
+        li r3,168
+        li r4,1
+        li r5,2
+        bl GXBegin
+        lfs f0, position1
+        lis r5,-13311
+        lfs f1,24(r1)
+        li r3,9
+        stfs f0,-32768(r5)
+        li r4,2
+        lfs f0,28(r1)
+        stfs f1,-32768(r5)
+        lfs f4, jpa_c0
+        stfs f0,-32768(r5)
+        lfs f2,12(r1)
+        stfs f4,-32768(r5)
+        lfs f1,16(r1)
+        stfs f4,-32768(r5)
+        lfs f3, position2
+        lfs f0, jpa_c1
+        stfs f3,-32768(r5)
+        stfs f2,-32768(r5)
+        stfs f1,-32768(r5)
+        stfs f4,-32768(r5)
+        stfs f0,-32768(r5)
+        bl GXSetVtxDesc
+    }
     GXSetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+    __asm__ volatile {
+    line_end:
+    }
 }
 
 static JPANode<JPABaseParticle> *getNext(JPANode<JPABaseParticle> *node) { return node->getNext(); }
@@ -1341,7 +1432,7 @@ void JPADrawParticleCallBack(JPAEmitterWorkData *workData, JPABaseParticle *part
 }
 
 // this function is a mess, clean this up someday?
-void makeColorTable(GXColor **colorTable, const JPAClrAnmKeyData *data, u8 a2, s16 size, JKRHeap *heap)
+static void makeColorTable(GXColor **colorTable, const JPAClrAnmKeyData *data, u8 a2, s16 size, JKRHeap *heap)
 {
     void *p_clr_tbl = JKRAllocFromHeap(heap, (size + 1) * sizeof(GXColor), 4);
 #line 1523
