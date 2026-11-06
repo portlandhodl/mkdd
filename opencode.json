@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "references": {
+    "petari": {
+      "repository": "shibbo/Petari",
+      "description": "Super Mario Galaxy decomp: matching JSystem/J3D and SDK implementations"
+    },
+    "sms": {
+      "repository": "doldecomp/sms",
+      "description": "Super Mario Sunshine decomp: matching JSystem/J3D and SDK implementations"
+    },
+    "pikmin2": {
+      "repository": "projectPiki/pikmin2",
+      "description": "Pikmin 2 decomp: matching JSystem and MSL implementations"
+    },
+    "prime": {
+      "repository": "PrimeDecomp/prime",
+      "description": "Metroid Prime decomp: matching JSystem and SDK implementations"
+    },
+    "tp": {
+      "repository": "zeldaret/tp",
+      "description": "Twilight Princess decomp: matching JSystem implementations"
+    }
+  },
+  "mcp": {
+    "mkdd-decomp": {
+      "type": "local",
+      "command": ["python3", "tools/decomp_mcp.py"],
+      "enabled": true
+    }
+  }
+}

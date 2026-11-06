@@ -136,28 +136,46 @@ def parse_text_layout(map_path: str) -> Dict[str, List[MapSym]]:
             break
 
     tus: Dict[str, List[MapSym]] = {}
+    seen_tu: Dict[str, int] = {}
+    current_key: Optional[str] = None
+
+    def section_key(tu: str) -> str:
+        count = seen_tu.get(tu, 0) + 1
+        seen_tu[tu] = count
+        return tu if count == 1 else f"{tu}#{count}"
+
+    def sym_key(tu: str) -> str:
+        # Symbols belong to the section header that precedes them. A repeated
+        # header (same TU id) was the reason that header got a "#N" suffix.
+        if current_key is not None and current_key.split("#", 1)[0] == tu:
+            return current_key
+        return tu
+
     for l in lines[start:end]:
         if not l.strip():
             continue
         m = _RE_UNUSED.match(l)
         if m:
-            tus.setdefault(m.group(3).strip(), []).append(
+            tu = m.group(3).strip()
+            tus.setdefault(sym_key(tu), []).append(
                 MapSym(m.group(2), int(m.group(1), 16), True)
             )
             continue
         m = _RE_PLACED.match(l)
         if m:
             name = m.group(5)
+            tu = m.group(6).strip()
             if name == ".text":  # per-TU section header, not a symbol
+                current_key = section_key(tu)
                 continue
-            tus.setdefault(m.group(6).strip(), []).append(
+            tus.setdefault(sym_key(tu), []).append(
                 MapSym(name, int(m.group(2), 16), False)
             )
     return tus
 
 
 def find_map_tu(tus: Dict[str, List[MapSym]], source_path: str,
-                override: Optional[str]) -> str:
+                override: Optional[str], obj_path: str) -> str:
     if override:
         if override not in tus:
             die(f"--map-tu '{override}' not found in .text layout")
@@ -166,7 +184,8 @@ def find_map_tu(tus: Dict[str, List[MapSym]], source_path: str,
     stem = os.path.splitext(base)[0]                  # e.g. MathUtil
     cands = [
         t for t in tus
-        if t.endswith(" " + base) or t == base or t == stem + ".o"
+        if t.split("#", 1)[0].endswith(" " + base)
+        or t == base or t == stem + ".o"
     ]
     if len(cands) == 1:
         return cands[0]
@@ -175,6 +194,29 @@ def find_map_tu(tus: Dict[str, List[MapSym]], source_path: str,
             f"Could not find a .text-layout TU for source '{source_path}'.\n"
             f"Pass --map-tu with the exact map identifier (e.g. 'MarioUtil.a {base}')."
         )
+
+    # Several TUs share this basename (e.g. the ddh/gdev EXI2 copies of
+    # Dolphin.a main.c). Pick the candidate whose placed symbols overlap our
+    # object the most; that is unambiguous because the copies define distinct
+    # prefixes. Fall back to the parent directory name (ddh/gdev) if needed.
+    obj_names = {name for name, _, _ in obj_functions(obj_path)}
+    scored = [(len({s.name for s in tus[t]} & obj_names), t) for t in cands]
+    best = max(score for score, _ in scored)
+    if best > 0:
+        winners = [t for score, t in scored if score == best]
+        if len(winners) == 1:
+            return winners[0]
+
+    parent = os.path.basename(os.path.dirname(source_path)).lower()
+    for token in ("ddh", "gdev"):
+        if token in parent:
+            prefixed = [
+                t for t in cands
+                if any(s.name.lower().startswith(token + "_") for s in tus[t])
+            ]
+            if len(prefixed) == 1:
+                return prefixed[0]
+
     listed = "\n  ".join(cands)
     die(
         f"Multiple map TUs match '{base}'. Disambiguate with --map-tu:\n  {listed}"
@@ -309,7 +351,7 @@ def main() -> None:
     reverse_fn = bool(meta.get("reverse_fn_order"))
 
     tus = parse_text_layout(args.map)
-    tu_id = find_map_tu(tus, source_path, args.map_tu)
+    tu_id = find_map_tu(tus, source_path, args.map_tu, base_path)
     map_syms = tus[tu_id]
     bind_by_tu, bind_by_name = parse_closure(args.map)
 

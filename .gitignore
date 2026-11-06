@@ -41,3 +41,6 @@ build_opts.yml
 devkitppc
 expected
 out
+
+# Sibling decomp checkouts for porting
+references/
