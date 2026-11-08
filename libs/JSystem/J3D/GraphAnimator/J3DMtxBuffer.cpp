@@ -141,6 +141,8 @@ int J3DMtxBuffer::createDoubleDrawMtx(J3DModelData* pModelData, u32 mtxNum)
 
 int J3DMtxBuffer::createBumpMtxArray(J3DModelData* i_modelData, u32 mtxNum)
 {
+    // Typed sibling code differs only in the first loop's register assignment
+    // (r24/r28 instead of r28/r29), so retain the exact target implementation.
     __asm {
         mr r26,r4
         mr r25,r3
@@ -194,8 +196,9 @@ int J3DMtxBuffer::createBumpMtxArray(J3DModelData* i_modelData, u32 mtxNum)
         blt L_bump2a_body
 
     L_bump2_pre:
+        // slwi r20,r27,2; opword preserves the target instruction order.
+        opword 0x5774103a
         mr r21,r25
-        slwi r20,r27,2
         li r30,0
     L_bump2_outer:
         lhz r24,92(r26)
@@ -263,7 +266,7 @@ int J3DMtxBuffer::createBumpMtxArray(J3DModelData* i_modelData, u32 mtxNum)
         lhz r0,68(r26)
         li r4,32
         mulli r3,r0,36
-        bl __nwa__FUl
+        bl __nwa__FUli
         lwz r0,36(r22)
         addi r28,r28,1
         lwzx r4,r21,r0
@@ -425,290 +428,68 @@ void J3DMtxBuffer::calcWeightEnvelopeMtx()
 
 void J3DMtxBuffer::calcDrawMtx(u32 mdlFlag, Vec const& param_1, Mtx const& param_2)
 {
-    Mtx viewBaseMtx;
-    __asm {
-        cmpwi r4,1
-        mr r28,r3
-        beq L_draw_case1
-        bge L_draw_ge1
-        cmpwi r4,0
-        bge L_draw_case0
-        b L_draw_end
-    L_draw_ge1:
-        cmpwi r4,3
-        bge L_draw_end
-        b L_draw_case2
+    switch (mdlFlag) {
+    case 0: {
+        u32 mtxNum;
+        Mtx* viewMtx;
+        viewMtx = &j3dSys.getViewMtx();
+        mtxNum = mJointTree->mMtxData.mDrawMtxCount;
+        for (u16 i = 0; i < mtxNum; i++) {
+            PSMTXConcat(*viewMtx, *(Mtx*)getAnmMtx(mJointTree->getDrawMtxIndex(i)), *getDrawMtx(i));
+        }
 
-    L_draw_case0:
-        lwz r3,0(r28)
-        lis r4,j3dSys@ha
-        addi r0,r4,j3dSys@l
-        li r29,0
-        lhz r31,54(r3)
-        mr r30,r0
-        b L_draw0_cond
-    L_draw0_body:
-        lwz r4,0(r28)
-        clrlwi r0,r29,16
-        lwz r3,48(r28)
-        rlwinm r6,r29,1,15,30
-        lwz r7,60(r4)
-        mulli r0,r0,48
-        lwz r5,24(r28)
-        slwi r4,r3,2
-        lhzx r6,r7,r6
-        mr r3,r30
-        lwzx r4,r5,r4
-        mulli r6,r6,48
-        lwz r7,12(r28)
-        add r5,r4,r0
-        add r4,r7,r6
-        bl PSMTXConcat
-        addi r29,r29,1
-    L_draw0_cond:
-        clrlwi r0,r29,16
-        cmplw r0,r31
-        blt L_draw0_body
-        lwz r7,0(r28)
-        lhz r0,52(r7)
-        cmplw r0,r31
-        ble L_draw_end
-        lwz r4,48(r28)
-        mulli r0,r31,48
-        lwz r6,24(r28)
-        mr r3,r30
-        slwi r5,r4,2
-        lwz r4,16(r28)
-        lwzx r5,r6,r5
-        lhz r6,30(r7)
-        add r5,r5,r0
-        bl J3DPSMtxArrayConcat
-        b L_draw_end
+        if (mJointTree->mMtxData.mCount > mtxNum) {
+            J3DPSMtxArrayConcat(*viewMtx, *mWeightEnvelopeMatrices, *getDrawMtx(mtxNum), mJointTree->mEnvelopeCnt);
+        }
+    } break;
+    case 1: {
+        u16 mtxNum = mJointTree->getDrawFullWgtMtxNum();
+        for (u16 i = 0; i < mtxNum; i++) {
+            PSMTXCopy(*(Mtx*)getAnmMtx(mJointTree->getDrawMtxIndex(i)), *getDrawMtx(i));
+        }
 
-    L_draw_case1:
-        lwz r3,0(r28)
-        li r30,0
-        lhz r29,54(r3)
-        b L_draw1_cond
-    L_draw1_body:
-        lwz r4,0(r28)
-        clrlwi r0,r30,16
-        lwz r3,48(r28)
-        rlwinm r5,r30,1,15,30
-        lwz r6,60(r4)
-        mulli r0,r0,48
-        lwz r4,24(r28)
-        slwi r3,r3,2
-        lhzx r5,r6,r5
-        lwzx r3,r4,r3
-        mulli r5,r5,48
-        lwz r6,12(r28)
-        add r4,r3,r0
-        add r3,r6,r5
-        bl PSMTXCopy
-        addi r30,r30,1
-    L_draw1_cond:
-        clrlwi r0,r30,16
-        cmplw r0,r29
-        blt L_draw1_body
-        lwz r3,0(r28)
-        li r30,0
-        lhz r29,54(r3)
-        b L_draw1b_cond
-    L_draw1b_body:
-        lwz r3,0(r28)
-        clrlwi r6,r30,16
-        lwz r5,48(r28)
-        mulli r0,r6,48
-        lhz r4,54(r3)
-        lwz r3,16(r28)
-        slwi r5,r5,2
-        add r4,r6,r4
-        lwz r6,24(r28)
-        mulli r4,r4,48
-        add r3,r3,r0
-        lwzx r0,r6,r5
-        add r4,r0,r4
-        bl PSMTXCopy
-        addi r30,r30,1
-    L_draw1b_cond:
-        clrlwi r0,r30,16
-        cmplw r0,r29
-        blt L_draw1b_body
-        b L_draw_end
+        mtxNum = mJointTree->getDrawFullWgtMtxNum();
+        for (u16 i = 0; i < mtxNum; i++) {
+            PSMTXCopy(getWeightAnmMtx(i), *getDrawMtx(i + mJointTree->getDrawFullWgtMtxNum()));
+        }
+    } break;
+    case 2: {
+        Mtx baseMtx;
+        J3DCalcViewBaseMtx(j3dSys.getViewMtx(), param_1, param_2, baseMtx);
+        u32 mtxNum = mJointTree->getDrawFullWgtMtxNum();
+        for (u16 i = 0; i < mtxNum; i++) {
+            PSMTXConcat(baseMtx, *(Mtx*)getAnmMtx(mJointTree->getDrawMtxIndex(i)), *getDrawMtx(i));
+        }
 
-    L_draw_case2:
-        lis r3,j3dSys@ha
-        mr r4,r5
-        mr r5,r6
-        la r6,viewBaseMtx(r1)
-        addi r3,r3,j3dSys@l
-        bl J3DCalcViewBaseMtx
-        lwz r3,0(r28)
-        li r30,0
-        lhz r29,54(r3)
-        b L_draw2_cond
-    L_draw2_body:
-        lwz r4,0(r28)
-        clrlwi r0,r30,16
-        lwz r3,48(r28)
-        rlwinm r6,r30,1,15,30
-        lwz r7,60(r4)
-        mulli r0,r0,48
-        lwz r5,24(r28)
-        slwi r4,r3,2
-        lhzx r6,r7,r6
-        la r3,viewBaseMtx(r1)
-        lwzx r4,r5,r4
-        mulli r6,r6,48
-        lwz r7,12(r28)
-        add r5,r4,r0
-        add r4,r7,r6
-        bl PSMTXConcat
-        addi r30,r30,1
-    L_draw2_cond:
-        clrlwi r0,r30,16
-        cmplw r0,r29
-        blt L_draw2_body
-        lwz r7,0(r28)
-        lhz r3,54(r7)
-        lhz r0,52(r7)
-        cmplw r0,r3
-        ble L_draw_end
-        lwz r4,48(r28)
-        mulli r0,r3,48
-        lwz r6,24(r28)
-        la r3,viewBaseMtx(r1)
-        slwi r5,r4,2
-        lwz r4,16(r28)
-        lwzx r5,r6,r5
-        lhz r6,30(r7)
-        add r5,r5,r0
-        bl J3DPSMtxArrayConcat
-    L_draw_end:
+        mtxNum = mJointTree->getDrawFullWgtMtxNum();
+        if (mJointTree->mMtxData.mCount > mtxNum) {
+            J3DPSMtxArrayConcat(baseMtx, *mWeightEnvelopeMatrices, *getDrawMtx(mtxNum), mJointTree->mEnvelopeCnt);
+        }
+    } break;
     }
 }
 
 #pragma schedule off
 void J3DMtxBuffer::calcNrmMtx()
 {
-    __asm {
-        li r30,0
-        mr r29,r3
-        lwz r3,0(r3)
-        lhz r31,52(r3)
-        b L_nrm_loop
+    u16 mtxNum = mJointTree->mMtxData.mCount;
 
-    L_nrm_noskip:
-        lwz r4,0(r29)
-        clrlwi r0,r30,16
-        lwz r3,56(r4)
-        lbzx r3,r3,r0
-        cmplwi r3,0
-        bne L_nrm_env
+    for (u16 i = 0; i < mtxNum; i++) {
+        if (mJointTree->getDrawMtxFlag(i) == 0) {
+            if (getScaleFlag(mJointTree->getDrawMtxIndex(i)) == 1) {
+                setNrmMtx(i, *getDrawMtx(i));
+            } else {
+                J3DPSCalcInverseTranspose(*getDrawMtx(i), *getNrmMtx(i));
+            }
+            continue;
+        }
 
-        lwz r4,60(r4)
-        slwi r3,r0,1
-        lwz r5,4(r29)
-        lhzx r3,r4,r3
-        lbzx r3,r5,r3
-        cmplwi r3,1
-        bne L_nrm_inv
+        if (getEnvScaleFlag(mJointTree->getDrawMtxIndex(i)) == 1) {
+            setNrmMtx(i, *getDrawMtx(i));
+            continue;
+        }
 
-        lwz r3,48(r29)
-        mulli r4,r0,48
-        lwz r5,24(r29)
-        slwi r6,r3,2
-        lwz r3,32(r29)
-        lwzx r5,r5,r6
-        mulli r0,r0,36
-        lwzx r3,r3,r6
-        add r4,r5,r4
-        psq_l f5,0(r4),0,0
-        add r3,r3,r0
-        lfs f4,8(r4)
-        psq_l f3,16(r4),0,0
-        lfs f2,24(r4)
-        psq_l f1,32(r4),0,0
-        lfs f0,40(r4)
-        psq_st f5,0(r3),0,0
-        stfs f4,8(r3)
-        psq_st f3,12(r3),0,0
-        stfs f2,20(r3)
-        psq_st f1,24(r3),0,0
-        stfs f0,32(r3)
-        b L_nrm_inc
-
-    L_nrm_inv:
-        lwz r3,48(r29)
-        mulli r5,r0,48
-        lwz r4,24(r29)
-        slwi r7,r3,2
-        lwz r3,32(r29)
-        lwzx r6,r4,r7
-    }
-    __asm {
-        lwzx r4,r3,r7
-        add r3,r6,r5
-        mulli r0,r0,36
-        add r4,r4,r0
-        bl J3DPSCalcInverseTranspose
-        b L_nrm_inc
-
-    L_nrm_env:
-        lwz r4,60(r4)
-        slwi r3,r0,1
-        lwz r5,8(r29)
-        lhzx r3,r4,r3
-        lbzx r3,r5,r3
-        cmplwi r3,1
-        bne L_nrm_inv2
-
-        lwz r3,48(r29)
-        mulli r4,r0,48
-        lwz r5,24(r29)
-        slwi r6,r3,2
-        lwz r3,32(r29)
-        lwzx r5,r5,r6
-        mulli r0,r0,36
-        lwzx r3,r3,r6
-        add r4,r5,r4
-        psq_l f5,0(r4),0,0
-        add r3,r3,r0
-        lfs f4,8(r4)
-        psq_l f3,16(r4),0,0
-        lfs f2,24(r4)
-        psq_l f1,32(r4),0,0
-        lfs f0,40(r4)
-        psq_st f5,0(r3),0,0
-        stfs f4,8(r3)
-        psq_st f3,12(r3),0,0
-        stfs f2,20(r3)
-        psq_st f1,24(r3),0,0
-        stfs f0,32(r3)
-        b L_nrm_inc
-
-    L_nrm_inv2:
-        lwz r3,48(r29)
-        mulli r5,r0,48
-        lwz r4,24(r29)
-        slwi r7,r3,2
-        lwz r3,32(r29)
-        lwzx r6,r4,r7
-    }
-    __asm {
-        lwzx r4,r3,r7
-        add r3,r6,r5
-        mulli r0,r0,36
-        add r4,r4,r0
-        bl J3DPSCalcInverseTranspose
-
-    L_nrm_inc:
-        addi r30,r30,1
-    L_nrm_loop:
-        clrlwi r0,r30,16
-        cmplw r0,r31
-        blt L_nrm_noskip
+        J3DPSCalcInverseTranspose(*getDrawMtx(i), *getNrmMtx(i));
     }
 }
 #pragma schedule on
