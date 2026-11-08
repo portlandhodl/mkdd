@@ -6,6 +6,106 @@
 #include "JSystem/JAudio/JASFakeMatch.h"
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
+template <>
+inline void JGeometry::TRotation3<JGeometry::TMtx34f>::getQuat(JGeometry::TQuat4f &rDest) const {
+    f32 z, y, x;
+    x = this->mMtx[0][0];
+    y = this->mMtx[1][1];
+    z = this->mMtx[2][2];
+    f32 len = x + y + z;
+    if (len >= 0.0f) {
+        len = JGeometry::TUtilf::sqrt(len + JGeometry::TUtilf::one());
+        f32 invS = 0.5f / len;
+
+        rDest.w = 0.5f * len;
+        rDest.x = (this->mMtx[2][1] - this->mMtx[1][2]) * invS;
+        rDest.y = (this->mMtx[0][2] - this->mMtx[2][0]) * invS;
+        rDest.z = (this->mMtx[1][0] - this->mMtx[0][1]) * invS;
+        return;
+    }
+
+    f32 maxDiagxyz = x >= y ? x : y;
+    maxDiagxyz = maxDiagxyz >= z ? maxDiagxyz : z;
+
+    if (maxDiagxyz == x) {
+        len = JGeometry::TUtilf::sqrt(x - (y + z) + 1.0f);
+        f32 invS = 0.5f / len;
+
+        rDest.x = 0.5f * len;
+        rDest.y = (this->mMtx[0][1] + this->mMtx[1][0]) * invS;
+        rDest.z = (this->mMtx[2][0] + this->mMtx[0][2]) * invS;
+        rDest.w = (this->mMtx[2][1] - this->mMtx[1][2]) * invS;
+    } else if (maxDiagxyz == y) {
+        f32 s = JGeometry::TUtilf::sqrt((y - (z + x)) + 1.0f);
+        f32 invS = 0.5f / s;
+
+        rDest.y = 0.5f * s;
+        rDest.z = (this->mMtx[1][2] + this->mMtx[2][1]) * invS;
+        rDest.x = (this->mMtx[0][1] + this->mMtx[1][0]) * invS;
+        rDest.w = (this->mMtx[0][2] - this->mMtx[2][0]) * invS;
+    } else {
+        f32 sum = x;
+        sum += y;
+        f32 s = JGeometry::TUtilf::sqrt((z - sum) + 1.0f);
+        f32 invS = 0.5f / s;
+
+        rDest.z = 0.5f * s;
+        rDest.x = (this->mMtx[2][0] + this->mMtx[0][2]) * invS;
+        rDest.y = (this->mMtx[1][2] + this->mMtx[2][1]) * invS;
+        rDest.w = (this->mMtx[1][0] - this->mMtx[0][1]) * invS;
+    }
+}
+
+inline f32 JMath::TAsinAcosTable<1024, f32>::acos_(f32 x) const {
+    if (x >= 1.0f) {
+        return 0.0f;
+    } else if (x <= -1.0f) {
+        return TAngleConstant_<f32>::RADIAN_DEG180();
+    } else if (x < 0.0f) {
+        return mTable[(u32)(-x * 1023.5f)] + TAngleConstant_<f32>::RADIAN_DEG090();
+    } else {
+        return TAngleConstant_<f32>::RADIAN_DEG090() - mTable[(u32)(x * 1023.5f)];
+    }
+}
+
+template <>
+inline void JGeometry::TQuat4<f32>::slerp(const JGeometry::TQuat4<f32> &other, f32 t) {
+    const f32 ratio = t;
+    f32 angle;
+    f32 sinAngle;
+    f32 weight;
+    JGeometry::TQuat4f q1;
+    q1.normalize(*this);
+
+    JGeometry::TQuat4f q2;
+    q2.normalize(other);
+
+    f32 dot = q1.squared(q2);
+    bool reverse;
+    if (dot < 0.0f) {
+        dot = -dot;
+        reverse = true;
+    } else {
+        reverse = false;
+    }
+
+    if (1.0f - dot <= JGeometry::TUtilf::epsilon()) {
+        weight = 1.0f - ratio;
+    } else {
+        angle = JMath::asinAcosTable_.acos_(dot);
+        sinAngle = sin(angle);
+        weight = (f32)sin((1.0f - ratio) * angle) / sinAngle;
+        t = (f32)sin(ratio * angle) / sinAngle;
+    }
+
+    if (reverse) {
+        t = -t;
+    }
+
+    this->set(weight * q1.x + t * q2.x, weight * q1.y + t * q2.y,
+              weight * q1.z + t * q2.z, weight * q1.w + t * q2.w);
+}
+
 TFreeMove::TFreeMove() {
     _18 = false;
     _1c = 0.0f;
@@ -45,7 +145,7 @@ void TFreeMove::setTargetOffsetUniform(const JGeometry::TVec3f &offset, int mag)
     _20 = 0.0f;
     mpVel->scale(1.0f / mag, offset);
     _1c = mpVel->length();
-    mTagret.add(offset, *mpPos);
+    mTagret.add(*mpPos, offset);
     _18 = true;
 }
 
@@ -71,21 +171,14 @@ bool TFreeMove::checkReachTarget() {
 bool TFreeMove::velUpdate(JGeometry::TVec3f &vel, f32 speed, f32 maxSpeed) {
     if (speed == 0.0f) return false;
     bool result = false;
-    if (!(maxSpeed > 0.0f) || vel.length() >= maxSpeed) { // Nonmatching: branch shape
-    } else {
+    if (maxSpeed <= 0.0f || vel.length() < maxSpeed) {
         JGeometry::TVec3f diff;
         diff.sub(mTagret, *mpPos);
-        f32 sq = diff.squared();
-        if (sq > 2.0f * FLT_EPSILON) {
-            diff.scale(JGeometry::TUtilf::inv_sqrt(sq));
-        }
+        diff.normalize();
         diff.scale(speed);
         vel.add(diff);
         if (maxSpeed > 0.0f && vel.length() > maxSpeed) {
-            f32 sq2 = vel.squared();
-            if (sq2 > 2.0f * FLT_EPSILON) {
-                vel.scale(JGeometry::TUtilf::inv_sqrt(sq2));
-            }
+            vel.normalize();
             vel.scale(maxSpeed);
         }
         result = true;
@@ -160,7 +253,20 @@ u16 TPathMove::getNextNode() {
     return next;
 }
 
-void TPathMove::updatePos() {}
+void TPathMove::updatePos() {
+    JGeometry::TVec3f nodePos;
+    JGeometry::TVec3f diff;
+    getNodePosition(&nodePos, _8);
+    diff.sub(nodePos, *mpPos);
+    diff.normalize();
+    diff.scale(_14);
+    mpVel->add(diff);
+    if (mpVel->length() > _18) {
+        mpVel->normalize();
+        mpVel->scale(_18);
+    }
+    mpPos->add(*mpVel);
+}
 
 bool TPathMove::checkReachTarget() {
     JGeometry::TVec3f nodePos;
@@ -190,9 +296,38 @@ void TFreeRotate::init(JGeometry::TPos3f *matrix) {
     _8 = _18;
 }
 
-void TFreeRotate::setTargetVec(const JGeometry::TVec3f &, const JGeometry::TVec3f &, f32, f32, f32) {}
+void TFreeRotate::setTargetVec(const JGeometry::TVec3f &from, const JGeometry::TVec3f &to, f32 inc, f32 maxSpd, f32 target) {
+    mpMatrix->getQuat(_18);
+    JGeometry::TQuat4f q;
+    q.setRotate(from, to);
+    PSQUATMultiply(&q, &_18, &_8);
+    mSpeedInc = inc;
+    mMaxSpeed = maxSpd;
+    mSpeed = 0.0f;
+    mTarget = target;
+    _28 = true;
+}
 
-void TFreeRotate::setTargetVec(const JGeometry::TVec3f &, f32, f32, f32, u8) {}
+void TFreeRotate::setTargetVec(const JGeometry::TVec3f &vec, f32 inc, f32 maxSpd, f32 target, u8 axis) {
+    JGeometry::TVec3f dir;
+    switch (axis) {
+    case 'X':
+    case 'x':
+        mpMatrix->getXDir(dir);
+        break;
+    case 'Y':
+    case 'y':
+        mpMatrix->getYDir(dir);
+        break;
+    case 'Z':
+    case 'z':
+    default:
+        mpMatrix->getZDir(dir);
+        break;
+    }
+    dir.normalize();
+    setTargetVec(dir, vec, inc, maxSpd, target);
+}
 
 void TFreeRotate::setTargetQuat(const JGeometry::TQuat4f &q, f32 inc, f32 maxSpd, f32 target) {
     mpMatrix->getQuat(_18);
