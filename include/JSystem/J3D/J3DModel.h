@@ -46,7 +46,7 @@ struct J3DModelData
     virtual ~J3DModelData() {} // _08 (weak)
 
     void clear();
-    void newSharedDisplayList(u32);
+    s32 newSharedDisplayList(u32);
     void indexToPtr();
     void makeSharedDL();
     void simpleCalcMaterial(u16, Mtx m);
