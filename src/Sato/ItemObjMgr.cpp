@@ -852,7 +852,7 @@ void ItemObjMgr::loadModelData(ItemObj *obj)
         mModel[kind]->newSharedDisplayList(0x40000);
         if ((sSimpleDrawItemFlg)[kind])
         {
-            mModel[kind]->simpleCalcMaterial(j3dDefaultMtx);
+            mModel[kind]->simpleCalcMaterial((f32(*)[4])j3dDefaultMtx);
             mModel[kind]->makeSharedDL();
         }
     }
@@ -885,7 +885,7 @@ void ItemObjMgr::loadOtherModelData()
 
         if (sSimpleDrawOtherItemFlg[i])
         {
-            mOtherModel[i]->simpleCalcMaterial(j3dDefaultMtx);
+            mOtherModel[i]->simpleCalcMaterial((f32(*)[4])j3dDefaultMtx);
             mOtherModel[i]->makeSharedDL();
         }
     }
@@ -1039,6 +1039,14 @@ void ItemObjMgr::createCharShadowModel(JKRSolidHeap *heap, u32 camera_index)
         SYSDBG_SetHeapGroup("OBJECT MODEL", nullptr);
         mpShadowMdl[i]->getModel()->lock();
     }
+}
+
+namespace
+{
+    const char sKartLoaderAssertFile[] = "KartLoader.h";
+    const char sKartLoaderDriverRangeAssert[] = "range over: %d <= driver=%d < %d";
+    const char sGeographyObjAssertFile[] = "GeographyObj.h";
+    const char sGeographyObjNumRangeAssert[] = "range over: %d <= num=%d < %d";
 }
 
 void ItemObjMgr::calcCharShadowModel() {}
