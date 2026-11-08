@@ -337,25 +337,28 @@ namespace JGeometry {
         void makeRotate(const TVec3f &, f32);
         void makeQuat(const TQuat4f &rSrc);
         void setPositionFromLookAt(const TPosition3<T> &rLookAt) {
-            // regswaps
-            this->ref(0, 0) = -rLookAt[0][0]; 
-            this->ref(1, 1) = rLookAt[1][1];
-            this->ref(2, 2) = -rLookAt[2][2];            
-            this->ref(1, 0) = -rLookAt[0][1]; 
-            this->ref(0, 1) = rLookAt[1][0]; 
-            this->ref(2, 0) = -rLookAt[0][2];
-            this->ref(0, 2) = -rLookAt[2][0]; 
-            this->ref(1, 2) = -rLookAt[2][1];
-            this->ref(2, 1) = rLookAt[1][2];
-            
+            this->ref(0, 0) = -rLookAt.at(0, 0);
+            this->ref(1, 1) = rLookAt.at(1, 1);
+            this->ref(2, 2) = -rLookAt.at(2, 2);
 
-            f32 x = rLookAt[0][3];
-            f32 y = rLookAt[1][3];
-            f32 z = rLookAt[2][3];
+            f32 yx = rLookAt.at(1, 0);
+            this->ref(1, 0) = -rLookAt.at(0, 1);
+            this->ref(0, 1) = yx;
 
-            this->ref(0, 3) = (rLookAt[0][3] * this->mMtx[0][0]) - (rLookAt[1][3] * this->mMtx[0][1]) + rLookAt[2][3] * this->mMtx[0][2];
-            this->ref(1, 3) = (rLookAt[0][3] * this->mMtx[1][0]) - (rLookAt[1][3] * this->mMtx[1][1]) + rLookAt[2][3] * this->mMtx[1][2];
-            this->ref(2, 3) = (rLookAt[0][3] * this->mMtx[2][0]) - (rLookAt[1][3] * this->mMtx[2][1]) + rLookAt[0][3] * this->mMtx[2][2];
+            f32 zx = rLookAt.at(2, 0);
+            this->ref(2, 0) = -rLookAt.at(0, 2);
+            this->ref(0, 2) = -zx;
+
+            f32 yz = rLookAt.at(1, 2);
+            this->ref(1, 2) = -rLookAt.at(2, 1);
+            this->ref(2, 1) = yz;
+
+            TVec3f pos;
+            rLookAt.getTrans(pos);
+
+            this->ref(0, 3) = pos.x * this->mMtx[0][0] - pos.y * this->mMtx[0][1] + pos.z * this->mMtx[0][2];
+            this->ref(1, 3) = pos.x * this->mMtx[1][0] - pos.y * this->mMtx[1][1] + pos.z * this->mMtx[1][2];
+            this->ref(2, 3) = pos.x * this->mMtx[2][0] - pos.y * this->mMtx[2][1] + pos.z * this->mMtx[2][2];
         }
 
         void setQT(const TQuat4f &rSrcQuat, const TVec3f &rSrcTrans);

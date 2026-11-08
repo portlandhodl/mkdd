@@ -205,6 +205,8 @@ public:
 template <int N, class Channel, class AbsPos>
 class JAUGenericAudible_ : public JAIAudible {
 public:
+    typedef Channel ChannelType;
+
     JAUGenericAudible_(const JGeometry::TVec3f &pos, const JGeometry::TVec3f *p3, u32 channel) {
         audiblep._00.raw = 0xffffffff;
         absPos_.init(&mPos, pos, p3);
@@ -425,17 +427,21 @@ public:
         u32 deltaPriority[N];
         
         Audible *audible = (Audible*)i_audible;
+        typename Audible::BaseAudible::ChannelType *channel;
         if (!audible->getAudibleParam()._00.bytes.b0_4) {
             
             for (int i = 0; i < numPlayers_; i++) {
-                state[i].convertAbsToRel(audible, i);
+                channel = audible->getChannel(i);
+                if (channel) {
+                    channel->_2C = state[i].convertAbsToRel(audible->mPos, &channel->_20, &channel->_14);
+                }
             }
             return 0;
         } 
         
         u32 rv = 0xffffffff;
         for (int i = 0; i < numPlayers_; i++) {
-            JAUAudibleChannel *channel = audible->getChannel(i);
+            channel = audible->getChannel(i);
             if (channel) {
                 // something is wrong here with convertAbsToRel,
                 // it's supposed to be this: state[i].convertAbsToRel(audible, i);
@@ -457,6 +463,7 @@ public:
     JAIAudible *newAudible(const JGeometry::TVec3f &pos, JAISoundID soundID, const JGeometry::TVec3f *p3, u32 channels) {
         u32 channelNum = channels | ~((1 << numPlayers_) - 1);
         if (channelNum == 0xffffffff) {
+#line 642
             JUT_WARNING_F2("%s", "You masked all audible channels !")
             return NULL;
         }
