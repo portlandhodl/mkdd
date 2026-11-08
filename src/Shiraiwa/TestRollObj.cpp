@@ -41,7 +41,8 @@ void TTestRollObj::doKartColCallBack(int kartNo) {
     dir.sub(mPos, kartPos);
     dir.normalize();
     dir.y = 0.5f;
-    mVel.scale(mScale.y, dir);
+    dir.scale(1.5f);
+    mVel.add(dir);
 }
 
 #include <JSystem/JAudio/JASFakeMatch2.h>
