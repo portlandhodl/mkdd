@@ -218,19 +218,21 @@ struct J3DMaterialTable
 
     void clear();
 
+    int createTexMtxForAnimator(J3DAnmTextureSRTKey *);
+
     J3DErrType allocTexMtxAnimator(J3DAnmTextureSRTKey *, J3DTexMtxAnm **);
-    void entryTexMtxAnimator(J3DAnmTextureSRTKey *);
-    void removeTexMtxAnimator(J3DAnmTextureSRTKey *);
+    int entryTexMtxAnimator(J3DAnmTextureSRTKey *);
+    int removeTexMtxAnimator(J3DAnmTextureSRTKey *);
 
     J3DErrType allocTevRegAnimator(J3DAnmTevRegKey *, J3DTevColorAnm **, J3DTevKColorAnm **);
     J3DErrType entryTevRegAnimator(J3DAnmTevRegKey *);
-    void removeTevRegAnimator(J3DAnmTevRegKey *);
+    int removeTevRegAnimator(J3DAnmTevRegKey *);
 
     J3DErrType entryMatColorAnimator(J3DAnmColor *);
-    void removeMatColorAnimator(J3DAnmColor *);
+    int removeMatColorAnimator(J3DAnmColor *);
 
     J3DErrType entryTexNoAnimator(J3DAnmTexPattern *);
-    void removeTexNoAnimator(J3DAnmTexPattern *);
+    int removeTexNoAnimator(J3DAnmTexPattern *);
 
     J3DMaterial *getMaterialNodePointer(u16 idx) const { return mMaterials[idx]; }
     J3DTexture *getTexture() const { return mTextures; }
