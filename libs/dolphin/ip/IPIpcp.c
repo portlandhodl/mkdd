@@ -422,28 +422,28 @@ asm void PPPInitIPCP(u8* ppp, u8* ip)
     sth r0,0(r31)
     addi r3,r31,56
     bl OSCreateAlarm
-    lis r3, ReceiveConfigureRequest@h
+    lis r3, ReceiveConfigureRequest@ha
     stw r30,96(r31)
     addi r0,r3,ReceiveConfigureRequest@l
-    lis r3, ReceiveConfigureAck@h
+    lis r3, ReceiveConfigureAck@ha
     stw r0,100(r31)
     addi r0,r3,ReceiveConfigureAck@l
-    lis r3, ReceiveConfigureNak@h
+    lis r3, ReceiveConfigureNak@ha
     stw r0,104(r31)
     addi r0,r3,ReceiveConfigureNak@l
-    lis r3, ReceiveConfigureReject@h
+    lis r3, ReceiveConfigureReject@ha
     stw r0,108(r31)
     addi r0,r3,ReceiveConfigureReject@l
-    lis r3, Up@h
+    lis r3, Up@ha
     stw r0,112(r31)
     addi r0,r3,Up@l
-    lis r3, Down@h
+    lis r3, Down@ha
     stw r0,116(r31)
     addi r0,r3,Down@l
-    lis r3, Started@h
+    lis r3, Started@ha
     stw r0,120(r31)
     addi r0,r3,Started@l
-    lis r3, Finished@h
+    lis r3, Finished@ha
     stw r0,124(r31)
     addi r0,r3,Finished@l
     stw r0,128(r31)
