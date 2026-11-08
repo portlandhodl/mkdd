@@ -151,12 +151,11 @@ void SceneMap::nextAward() {
         int rank = gSequenceInfo.getPlayerRankGP();
         gSequenceInfo.setSecretFlag();
 
-        if ((cup == ALL_CUP_TOUR || cup == SPECIAL_CUP) && rank == 0) {
-            if (gSystemRecord.isGameUnlocked(SystemRecord::SpecialEnding))
-                gSequenceInfo._35f = 1;
-            else if ((cup == ALL_CUP_TOUR || cup == SPECIAL_CUP) && rank >= 0 && rank < 3)
-                gSequenceInfo._35e = 1;
-        }
+        if ((cup == ALL_CUP_TOUR || cup == SPECIAL_CUP) && rank == 0 &&
+            gSystemRecord.isGameUnlocked(SystemRecord::SpecialEnding))
+            gSequenceInfo._35f = 1;
+        else if ((cup == ALL_CUP_TOUR || cup == SPECIAL_CUP) && rank >= 0 && rank < 3)
+            gSequenceInfo._35e = 1;
 
         gRaceInfo.setRace(AWARD_DEMO, 3, 0, 1, 1);
         gRaceInfo.mDemoNextPhase = (ERacePhase)11;
