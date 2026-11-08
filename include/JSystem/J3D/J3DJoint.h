@@ -28,7 +28,7 @@ struct J3DJoint {
     void appendChild(J3DJoint*);
     void entryIn();
     void recursiveCalc();
-    u8 getKind() const { return mKind; }
+    u8 getKind() const { return mKind & 0xf; }
     u8 getMtxType() const { return (mKind & 0xf0) >> 4; }
     u16 getJntNo() const { return mJointIdx; }
     f32 getRadius() const { return mRadius; }
