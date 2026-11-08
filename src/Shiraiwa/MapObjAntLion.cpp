@@ -67,7 +67,7 @@ void TMapObjAntLion::createModel(JKRSolidHeap *heap, u32 viewNo)
     anmCtrl->InitRegistration(1, &mModel);
     mAnmCtrl->RegisterTrans(0, sAntLionBckAnmTrans, sAntLionBckMtxCalc);
 
-    register J3DJoint *joint = mModel.getModelData()->getJointNodePointer(0);
+    register J3DJoint *const joint = mModel.getModelData()->getJointNodePointer(0);
     mCircleSoundMgr = new GameAudio::CircleSoundMgr((Vec *)&mPos, mScale.y * joint->getRadius(), 0.0f, 0.0f, nullptr);
 
     sJointNo = mModel.getModelData()->getJointName()->getIndex(scJointName);
