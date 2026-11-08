@@ -58,6 +58,12 @@ extern "C"
     }
 
     static inline void __GDSetCurrent(GDCurrentDL *obj) { __GDCurrentDL = obj; }
+    static inline void GDOverflowCheck(u32 len)
+    {
+        if (__GDCurrentDL->pDisplayListData + len > __GDCurrentDL->end)
+            GDOverflowed();
+    }
+
 
     static inline void __GDWriteU32(u32 data)
     {

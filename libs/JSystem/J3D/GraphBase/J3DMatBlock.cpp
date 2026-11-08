@@ -41,11 +41,6 @@ static size_t SizeOfLoadColorChans = 0x00000015;
 static size_t SizeOfJ3DColorBlockLightOffLoad  = SizeOfLoadMatColors + SizeOfLoadColorChans;
 static size_t SizeOfJ3DColorBlockAmbientOnLoad = SizeOfLoadMatColors + SizeOfLoadAmbColors + SizeOfLoadColorChans;
 
-static inline void GDOverflowCheck(u32 len)
-{
-	__GDCheckOverflowed((size_t)len);
-}
-
 static inline u8* GDGetCurrPointer()
 {
 	return __GDCurrentDL->pDisplayListData;
@@ -75,11 +70,43 @@ inline void loadAmbColors(const J3DGXColor* colors)
 	J3DGDWrite_u32(*(u32*)&colors[1]);
 }
 
+static inline J3DGXColor& assignGXColor(J3DGXColor& dst, const GXColor color)
+{
+	*(GXColor*)&dst = color;
+	return dst;
+}
+
+typedef void (*J3DGDSetIndTexMtxU8Fn)(GXIndTexMtxID, Mtx33, u8);
+
+static inline void loadIndTexMtx(J3DIndTexMtx& mtx, u32 id)
+{
+	((J3DGDSetIndTexMtxU8Fn)J3DGDSetIndTexMtx)(GXIndTexMtxID(id + GX_ITM_0), mtx.getOffsetMtx(), *(u8*)&mtx._18);
+}
+
+static inline void loadTexCoordScaleNonConst(GXTexCoordID coord, J3DTexCoordScaleInfo& info)
+{
+	J3DGDSetTexCoordScale2(coord, info.mScaleS, info.mBiasS == 1, 0, info.mScaleT, info.mBiasT == 1, 0);
+}
+
 inline GXAttnFn J3DColorChan::getAttnFn()
 {
 	u8 attnFnTbl[] = { GX_AF_NONE, GX_AF_SPEC, GX_AF_NONE, GX_AF_SPOT };
 	return (GXAttnFn)attnFnTbl[(u32)(mChanCtrl & (3 << 9)) >> 9];
 }
+
+static inline u32 setChanCtrl(u8 enable, GXColorSrc ambSrc, GXColorSrc matSrc, u32 lightMask, GXDiffuseFn diffuseFn, GXAttnFn attnFn)
+{
+	return matSrc << 0 | enable << 1 | (lightMask & 0x0F) << 2 | ambSrc << 6 | ((attnFn == GX_AF_SPEC) ? GX_DF_NONE : diffuseFn) << 7
+	     | (attnFn != GX_AF_NONE) << 9 | (attnFn != GX_AF_SPEC) << 10 | (lightMask >> 4 & 0x0F) << 11;
+}
+
+static inline void loadColorChan(J3DColorChan& chan)
+{
+	J3DGDWrite_u32(setChanCtrl((u32)(chan.mChanCtrl & 2) >> 1, (GXColorSrc)(u8)((u32)(chan.mChanCtrl & 0x40) >> 6),
+	                           (GXColorSrc)(u8)(chan.mChanCtrl & 1), chan.getLightMask(),
+	                           (GXDiffuseFn)(u8)((u32)(chan.mChanCtrl & 0x180) >> 7), (GXAttnFn)(u8)chan.getAttnFn()));
+}
+
 /**
  * @note Address: 0x800771C0
  * @note Size: 0x48
@@ -208,8 +235,7 @@ void J3DTevBlockPatched::initialize()
 		mColors[i] = j3dDefaultTevColor;
 	}
 	for (int i = 0; i < 4; i++) {
-		u32 kColor = *(u32*)&j3dDefaultTevKColor;
-		mKColors[i] = *(J3DGXColor*)&kColor;
+		assignGXColor(mKColors[i], j3dDefaultTevKColor);
 	}
 	for (int i = 0; i < 8; i++) {
 		mKColorSels[i] = 0xC;
@@ -536,10 +562,10 @@ void J3DColorBlockLightOff::load()
 	loadMatColors(mMaterialColors);
 	mColorChannelOffset = GDGetCurrOffset();
 	J3DGDWriteXFCmdHdr(0x100E, 4);
-	mColorChannels[0].load();
-	mColorChannels[2].load();
-	mColorChannels[1].load();
-	mColorChannels[3].load();
+	loadColorChan(mColorChannels[0]);
+	loadColorChan(mColorChannels[2]);
+	loadColorChan(mColorChannels[1]);
+	loadColorChan(mColorChannels[3]);
 }
 
 /**
@@ -554,10 +580,10 @@ void J3DColorBlockAmbientOn::load()
 	loadAmbColors(mAmbientColors);
 	mColorChannelOffset = GDGetCurrOffset();
 	J3DGDWriteXFCmdHdr(0x100E, 4);
-	mColorChannels[0].load();
-	mColorChannels[2].load();
-	mColorChannels[1].load();
-	mColorChannels[3].load();
+	loadColorChan(mColorChannels[0]);
+	loadColorChan(mColorChannels[2]);
+	loadColorChan(mColorChannels[1]);
+	loadColorChan(mColorChannels[3]);
 }
 
 /**
@@ -572,10 +598,10 @@ void J3DColorBlockLightOn::load()
 	loadAmbColors(mAmbientColors);
 	mColorChannelOffset = GDGetCurrOffset();
 	J3DGDWriteXFCmdHdr(0x100E, 4);
-	mColorChannels[0].load();
-	mColorChannels[2].load();
-	mColorChannels[1].load();
-	mColorChannels[3].load();
+	loadColorChan(mColorChannels[0]);
+	loadColorChan(mColorChannels[2]);
+	loadColorChan(mColorChannels[1]);
+	loadColorChan(mColorChannels[3]);
 
 	for (u32 i = 0; i < ARRAY_SIZE(mLights); i++) {
 		if (mLights[i]) {
@@ -619,10 +645,10 @@ void J3DColorBlockLightOff::patchLight()
 	u8* startPtr = GDGetCurrPointer();
 	GDOverflowCheck(SizeOfLoadColorChans);
 	J3DGDWriteXFCmdHdr(0x100E, 4);
-	mColorChannels[0].load();
-	mColorChannels[2].load();
-	mColorChannels[1].load();
-	mColorChannels[3].load();
+	loadColorChan(mColorChannels[0]);
+	loadColorChan(mColorChannels[2]);
+	loadColorChan(mColorChannels[1]);
+	loadColorChan(mColorChannels[3]);
 	DCStoreRange(startPtr, GDGetCurrPointer() - startPtr);
 }
 
@@ -659,10 +685,10 @@ void J3DColorBlockLightOn::patchLight()
 	u8* startPtr = GDGetCurrPointer();
 	GDOverflowCheck(SizeOfLoadColorChans);
 	J3DGDWriteXFCmdHdr(0x100E, 4);
-	mColorChannels[0].load();
-	mColorChannels[2].load();
-	mColorChannels[1].load();
-	mColorChannels[3].load();
+	loadColorChan(mColorChannels[0]);
+	loadColorChan(mColorChannels[2]);
+	loadColorChan(mColorChannels[1]);
+	loadColorChan(mColorChannels[3]);
 	for (u32 i = 0; i < ARRAY_SIZE(mLights); i++) {
 		if (mLights[i]) {
 			mLights[i]->load(i);
@@ -704,10 +730,10 @@ void J3DColorBlockLightOff::diffLight()
 {
 	GDOverflowCheck(SizeOfLoadColorChans);
 	J3DGDWriteXFCmdHdr(0x100E, 4);
-	mColorChannels[0].load();
-	mColorChannels[2].load();
-	mColorChannels[1].load();
-	mColorChannels[3].load();
+	loadColorChan(mColorChannels[0]);
+	loadColorChan(mColorChannels[2]);
+	loadColorChan(mColorChannels[1]);
+	loadColorChan(mColorChannels[3]);
 }
 
 /**
@@ -743,10 +769,10 @@ void J3DColorBlockLightOn::diffLight()
 {
 	GDOverflowCheck(SizeOfLoadColorChans);
 	J3DGDWriteXFCmdHdr(0x100E, 4);
-	mColorChannels[0].load();
-	mColorChannels[2].load();
-	mColorChannels[1].load();
-	mColorChannels[3].load();
+	loadColorChan(mColorChannels[0]);
+	loadColorChan(mColorChannels[2]);
+	loadColorChan(mColorChannels[1]);
+	loadColorChan(mColorChannels[3]);
 	for (u32 i = 0; i < ARRAY_SIZE(mLights); i++) {
 		if (mLights[i]) {
 			mLights[i]->load(i);
@@ -959,10 +985,10 @@ void J3DTevBlock4::load()
 		                 GXTexMapID(mOrders[i].getTevOrderInfo().mTexMapID), GXChannelID(mOrders[i].getTevOrderInfo().mChannelID),
 		                 GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID), GXTexMapID(mOrders[i + 1].getTevOrderInfo().mTexMapID),
 		                 GXChannelID(mOrders[i + 1].getTevOrderInfo().mChannelID));
-		loadTexCoordScale(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
-		loadTexCoordScale(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
 	}
 	mRegOffset = GDGetCurrOffset();
 	for (u32 i = 0; i < 3; i++) {
@@ -1003,10 +1029,10 @@ void J3DTevBlock16::load()
 		                 GXTexMapID(mOrders[i].getTevOrderInfo().mTexMapID), GXChannelID(mOrders[i].getTevOrderInfo().mChannelID),
 		                 GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID), GXTexMapID(mOrders[i + 1].getTevOrderInfo().mTexMapID),
 		                 GXChannelID(mOrders[i + 1].getTevOrderInfo().mChannelID));
-		loadTexCoordScale(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
-		loadTexCoordScale(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
 	}
 	mRegOffset = GDGetCurrOffset();
 	for (u32 i = 0; i < 3; i++) {
@@ -1087,10 +1113,10 @@ void J3DTevBlockPatched::patchTexNoAndTexCoordScale()
 		                 GXTexMapID(mOrders[i].getTevOrderInfo().mTexMapID), GXChannelID(mOrders[i].getTevOrderInfo().mChannelID),
 		                 GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID), GXTexMapID(mOrders[i + 1].getTevOrderInfo().mTexMapID),
 		                 GXChannelID(mOrders[i + 1].getTevOrderInfo().mChannelID));
-		loadTexCoordScale(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
-		loadTexCoordScale(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
 	}
 
 	DCStoreRange(start, GDGetCurrPointer() - start);
@@ -1293,10 +1319,10 @@ void J3DTevBlock4::patchTexNoAndTexCoordScale()
 		                 GXTexMapID(mOrders[i].getTevOrderInfo().mTexMapID), GXChannelID(mOrders[i].getTevOrderInfo().mChannelID),
 		                 GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID), GXTexMapID(mOrders[i + 1].getTevOrderInfo().mTexMapID),
 		                 GXChannelID(mOrders[i + 1].getTevOrderInfo().mChannelID));
-		loadTexCoordScale(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
-		loadTexCoordScale(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
 	}
 
 	DCStoreRange(start, GDGetCurrPointer() - start);
@@ -1368,10 +1394,10 @@ void J3DTevBlock16::patchTexNoAndTexCoordScale()
 		                 GXTexMapID(mOrders[i].getTevOrderInfo().mTexMapID), GXChannelID(mOrders[i].getTevOrderInfo().mChannelID),
 		                 GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID), GXTexMapID(mOrders[i + 1].getTevOrderInfo().mTexMapID),
 		                 GXChannelID(mOrders[i + 1].getTevOrderInfo().mChannelID));
-		loadTexCoordScale(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
-		loadTexCoordScale(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
-		                  *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i].getTevOrderInfo().mTexMapID & 7]);
+		loadTexCoordScaleNonConst(GXTexCoordID(mOrders[i + 1].getTevOrderInfo().mTexCoordID & 7),
+		                          *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[i + 1].getTevOrderInfo().mTexMapID & 7]);
 	}
 
 	DCStoreRange(start, GDGetCurrPointer() - start);
@@ -1807,7 +1833,7 @@ void J3DIndBlockFull::load()
 {
 	u8 indTexStageNum = mIndTexStageNum;
 	for (u32 i = 0; i < indTexStageNum; i++) {
-		mTexMtxs[i].load(i);
+		loadIndTexMtx(mTexMtxs[i], i);
 	}
 	for (u32 i = 0; i < indTexStageNum; i += 2) {
 		J3DGDSetIndTexCoordScale(GXIndTexStageID(i), GXIndTexScale(mCoordScales[i].getScaleS()), GXIndTexScale(mCoordScales[i].getScaleT()),
@@ -1832,7 +1858,7 @@ void J3DIndBlockFull::diff(u32 flag)
 		return;
 	}
 	u8 indTexStageNum = mIndTexStageNum;
-	mTexMtxs[0].load(0);
+	loadIndTexMtx(mTexMtxs[0], 0);
 	J3DGDSetIndTexCoordScale(GXIndTexStageID(0), GXIndTexScale(mCoordScales[0].getScaleS()), GXIndTexScale(mCoordScales[0].getScaleT()),
 	                         GXIndTexScale(mCoordScales[1].getScaleS()), GXIndTexScale(mCoordScales[1].getScaleT()));
 	loadTexCoordScale(GXTexCoordID(mOrders[0].mTexCoordID), *(J3DTexCoordScaleInfo*)&J3DSys::sTexCoordScaleTable[mOrders[0].mTexMapID & 7]);
