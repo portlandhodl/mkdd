@@ -18,7 +18,7 @@ public:
 
         _18.clear();
         _28.clear();
-        _38.clear();
+        _48.clear();
     }
 
     List &getShadowModelList(ShadowModel::ShadowKind);

@@ -64,7 +64,8 @@ void ShadowManager::draw(u32 viewNo, List& modelList) {
     GXSetDstAlpha(GX_DISABLE, 0);
     
     List::iterator it = modelList.begin();
-    List::const_iterator itEnd = modelList.end();
+    List::iterator itEndTmp = modelList.end();
+    List::const_iterator itEnd = itEndTmp;
     
     for (; it != itEnd; ++it) {
         (*it)->setCurrentViewNo(viewNo);
@@ -84,7 +85,7 @@ void ShadowManager::draw(u32 viewNo, List& modelList) {
             }
             
             // Set material color
-            JUTColor chanColor = JUTColor(0, 0, 0, alphaValue);
+            JUTColor chanColor(0, 0, 0, alphaValue);
             GXSetChanMatColor(GX_COLOR0A0, chanColor);
             
             // First pass
@@ -127,7 +128,8 @@ void ShadowManager::calc()
         List& modelList = getShadowModelList((ShadowModel::ShadowKind)i);
         
         List::iterator it = modelList.begin();
-        List::const_iterator itEnd = modelList.end();
+        List::iterator itEndTmp = modelList.end();
+        List::const_iterator itEnd = itEndTmp;
         
         for (; it != itEnd; ++it) {
             if (((*it)->getFlags() & 0xF) != 0) {
@@ -149,8 +151,9 @@ void ShadowManager::viewCalc(u32 viewNo)
     for (u8 i = 0; i < 4; i++) {
         List& modelList = getShadowModelList((ShadowModel::ShadowKind)i);
         
-        List::const_iterator itEnd = modelList.end();
         List::iterator it = modelList.begin();
+        List::iterator itEndTmp = modelList.end();
+        List::const_iterator itEnd = itEndTmp;
         
         for (; it != itEnd; ++it) {
             if (((*it)->getFlags() & 0xF) != 0) {
