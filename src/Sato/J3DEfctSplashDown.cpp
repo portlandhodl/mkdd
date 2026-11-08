@@ -21,9 +21,35 @@ J3DMtxCalc *J3DEfctMudSplashDown::sBckMtxCalc[1] = { nullptr };
 J3DAnmTextureSRTKey *J3DEfctMudSplashDown::sTexSRTKey = nullptr;
 J3DAnmTevRegKey *J3DEfctMudSplashDown::sTevRegKey = nullptr;
 
-
-extern __declspec(section ".sdata") J3DAnmTransform *sBckAnmTrans__20J3DEfctMudSplashDown[];
 J3DEfctSplashDown::J3DEfctSplashDown() {}
+
+static inline f32 getSplashDownUFloat(stRandom *random) {
+    u32 bits = (random->get() >> 9) | 0x3f800000;
+    return *(f32 *)&bits - 1.0f;
+}
+
+static inline void setSplashDownTexAnm(J3DAnmObjMatTexSRT *tex, J3DAnmTextureSRTKey *anm) {
+    tex->mAnmBase = anm;
+    tex->initFrameCtrl(tex->mAnmBase);
+}
+
+static inline void setSplashDownTevAnm(J3DAnmObjMatTevReg *tev, J3DAnmTevRegKey *anm) {
+    tev->mAnmBase = anm;
+    tev->initFrameCtrl(tev->mAnmBase);
+}
+
+static inline J3DAnmObjMatTexSRT *getSplashDownTexObj(AnmControlMatTexSRT *ctrl, u8 AnmNo) {
+#line 321 "AnmController.h"
+    JUT_MINMAX_ASSERT(0, AnmNo, ctrl->mMaxAnmNo);
+    return ((J3DAnmObjMatTexSRT **)((u8 *)ctrl + 0x18))[AnmNo];
+}
+
+static inline J3DAnmObjMatTevReg *getSplashDownTevObj(AnmControlMatTevReg *ctrl, u8 AnmNo) {
+#line 331 "AnmController.h"
+    JUT_MINMAX_ASSERT(0, AnmNo, ctrl->mMaxAnmNo);
+    return ((J3DAnmObjMatTevReg **)((u8 *)ctrl + 0x18))[AnmNo];
+}
+#line 38 "J3DEfctSplashDown.cpp"
 
 void J3DEfctSplashDown::loadAnmData() {
     J3DModelData *mdlData = J3DEffectMgr::sJ3DMgr->getSplashModelData();
@@ -65,14 +91,14 @@ void J3DEfctSplashDown::onlyinit() {
     info.mNumBrks = 1;
     mAnmCtrl.InitRegistrationMat(info, &mModel);
 
-    J3DAnmObjMatTexSRT *tex = mAnmCtrl.mMatData->mpCtrlSRT->getObjIce(0);
-    tex->mAnmBase = sTexSRTKey;
-    tex->initFrameCtrl(tex->mAnmBase);
+    setSplashDownTexAnm((getSplashDownTexObj(mAnmCtrl.mMatData->mpCtrlSRT, 0),
+                         *(J3DAnmObjMatTexSRT **)((u8 *)mAnmCtrl.mMatData->mpCtrlSRT + 0x18)),
+                        sTexSRTKey);
     mAnmCtrl.mMatData->mpCtrlSRT->mNowAnmNo = 0;
 
-    J3DAnmObjMatTevReg *tev = mAnmCtrl.mMatData->mpCtrlTevReg->getObjIce(0);
-    tev->mAnmBase = sTevRegKey;
-    tev->initFrameCtrl(tev->mAnmBase);
+    setSplashDownTevAnm((getSplashDownTevObj(mAnmCtrl.mMatData->mpCtrlTevReg, 0),
+                         *(J3DAnmObjMatTevReg **)((u8 *)mAnmCtrl.mMatData->mpCtrlTevReg + 0x18)),
+                        sTevRegKey);
     mAnmCtrl.mMatData->mpCtrlTevReg->mNowAnmNo = 0;
 }
 
@@ -96,9 +122,9 @@ void J3DEfctSplashDown::calc() {
         JUT_MINMAX_ASSERT(0, getKartIndex(), RaceMgr::getManager()->getKartNumber());
         TstEmitterModeNotAvailableFlg(getKartIndex(), emt);
 
-        f32 angle = 3.14f * stGetRnd(3)->get_ufloat_1();
+        f32 angle = 3.14f * getSplashDownUFloat(stGetRnd(3));
         JGeometry::TVec3f axis(0.0f, 1.0f, 0.0f);
-        ((JGeometry::TPos3f *)((u8 *)this + 0x94))->makeRotate(axis, angle);
+        getRotMtx()->makeRotate(axis, angle);
         *(f32 *)((u8 *)this + 0xa0) = pos.x;
         *(f32 *)((u8 *)this + 0xb0) = pos.y;
         *(f32 *)((u8 *)this + 0xc0) = pos.z;
@@ -113,11 +139,11 @@ void J3DEfctSplashDown::calc() {
     mAnmCtrl.FrameProc();
 
     J3DModel *model = mModel.getModel();
-    model->mModelScale.x = 0.0f;
-    model->mModelScale.y = 0.0f;
-    model->mModelScale.z = 0.0f;
+    model->mModelScale.x = 1.0f;
+    model->mModelScale.y = 1.0f;
+    model->mModelScale.z = 1.0f;
 
-    mModel.setBaseTRMtx(*(Mtx *)((u8 *)this + 0x94));
+    mModel.setBaseTRMtx(*getRotMtx()->toMtx());
 }
 
 __declspec(weak) void JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >::makeRotate(
@@ -190,14 +216,14 @@ void J3DEfctMudSplashDown::onlyinit() {
     info.mNumBrks = 1;
     mAnmCtrl.InitRegistrationMat(info, &mModel);
 
-    J3DAnmObjMatTexSRT *tex = mAnmCtrl.mMatData->mpCtrlSRT->getObjIce(0);
-    tex->mAnmBase = sTexSRTKey;
-    tex->initFrameCtrl(tex->mAnmBase);
+    setSplashDownTexAnm((getSplashDownTexObj(mAnmCtrl.mMatData->mpCtrlSRT, 0),
+                         *(J3DAnmObjMatTexSRT **)((u8 *)mAnmCtrl.mMatData->mpCtrlSRT + 0x18)),
+                        sTexSRTKey);
     mAnmCtrl.mMatData->mpCtrlSRT->mNowAnmNo = 0;
 
-    J3DAnmObjMatTevReg *tev = mAnmCtrl.mMatData->mpCtrlTevReg->getObjIce(0);
-    tev->mAnmBase = sTevRegKey;
-    tev->initFrameCtrl(tev->mAnmBase);
+    setSplashDownTevAnm((getSplashDownTevObj(mAnmCtrl.mMatData->mpCtrlTevReg, 0),
+                         *(J3DAnmObjMatTevReg **)((u8 *)mAnmCtrl.mMatData->mpCtrlTevReg + 0x18)),
+                        sTevRegKey);
     mAnmCtrl.mMatData->mpCtrlTevReg->mNowAnmNo = 0;
 }
 
