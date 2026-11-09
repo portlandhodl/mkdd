@@ -34,9 +34,15 @@ public:
     void initFunc_Decel();
     void doFunc_Decel();
 
+    static const StateObserver::StateFuncSet<TMapObjFireObj> sTable[4];
+    static s16 sDriveTime;
+
     TMapObjFireBallBase **mFire; // 0x158
     u8 mFireNum;                 // 0x15c
-    JGeometry::TQuat4f mFireRot[2];  // 0x160
-}; // Size: 0x180
+    u8 _pad15d[3];               // 0x15d
+    f32 mFireRot[8];             // 0x160
+    f32 mFireRotRate;            // 0x180
+    u8 _pad184[4];               // 0x184
+}; // Size: 0x188
 
 #endif

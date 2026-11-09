@@ -19,12 +19,14 @@ public:
     u32 _16c;         // 0x16c
     u8 _170;          // 0x170
     u8 mIndex;        // 0x171
-    u8 _pad172[6];    // 0x172
+    u8 _pad172[2];    // 0x172
+    f32 _174;         // 0x174
     f32 _178;         // 0x178
     f32 _17c;         // 0x17c
     f32 _180;         // 0x180
     JGeometry::TVec3f _184; // 0x184
-}; // Size: 0x190
+    JGeometry::TQuat4f mRot; // 0x190
+}; // Size: 0x1a0
 
 class TMapObjFireBall : public TMapObjFireBallBase
 {
@@ -33,7 +35,7 @@ public:
     virtual ~TMapObjFireBall() {}
 
 private:
-    u8 _extra[0x10]; // sizeof 0x1a0
+    u8 _extra[0]; // sizeof 0x1a0
 };
 
 class TMapObjKpFireBall : public TMapObjFireBallBase
@@ -53,7 +55,7 @@ public:
     virtual ~TMapObjKpFireBarBall() {}
 
 private:
-    u8 _extra[0x310]; // sizeof 0x4a0
+    u8 _extra[0x300]; // sizeof 0x4a0
 };
 
 #endif
