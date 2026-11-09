@@ -5,21 +5,30 @@
 #include "JSystem/JGeometry/Matrix.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "Kaneshige/RaceMgr.h"
+#include "JSystem/JSupport/JSUList.h"
 #include "Sato/GeographyObj.h"
+#include "JSystem/J3D/J3DAnmTevRegKey.h"
+#include "Sato/J3DAnmObject.h"
 #include "types.h"
 
-class J3DAnmObjMaterial;
+class TBalloonString;
 
 class TBalloonSupervisor : public GeoObjSupervisor
 {
 public:
-    ~TBalloonSupervisor();
+    TBalloonSupervisor() : mList(), mFlag(0) {}
+    virtual ~TBalloonSupervisor();
+    virtual void reset() { mFlag = 0; }
+    virtual void calc() {}
     void drawString(u32);
     void drawBalloon(u32);
 
-    // void reset() // TBalloonSupervisor.h; // 0x802c0d7c
-    // void calc() // TBalloonSupervisor.h; // 0x802c0d88
-};
+private:
+    u8 _24[4];
+    JSUList<TBalloonString> mList; // 0x28
+    u8 mFlag;         // 0x34
+    u8 _35[3];
+}; // Size: 0x38
 
 // Inherited from GeographyObj
 class TBalloon : public GeographyObj
@@ -27,7 +36,7 @@ class TBalloon : public GeographyObj
 public:
     // Global
     TBalloon();                               // 0x802bf9b8
-    virtual ~TBalloon();                      // 0x802c0d8c
+    virtual __declspec(weak) ~TBalloon();     // 0x802c0d8c
     void reset();                             // 0x802bfa54
     void update();                            // 0x802bfa80
     void loadAnimation();                     // 0x802bfae8
@@ -41,7 +50,7 @@ public:
     static f32 scScale1;                      // 0x8041539c
     static const char *scEfctBreakA;          // 0x804153a0
     static const char *scEfctBreakB;          // 0x804153a4
-    static J3DAnmObjMaterial *sBalloonBrkAnm; // 0x80417078
+    static J3DAnmTevRegKey *sBalloonBrkAnm; // 0x80417078
     // Inline/Unused
 
     // void setColor(u32);
@@ -73,8 +82,16 @@ public:
     // Inline
     virtual const char *getBmdFileName() {return "/Objects/MiniGame_Balloon.bmd"; } // 0x802c0e4c
 private:
-    u8 _pad_geographyobjmgr[56]; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
-};                                        // class Balloon
+    J3DAnmObjMaterial mMaterial; // 0x14c
+    TBalloonString *mString;     // 0x16c
+    s8 mColor;                   // 0x170
+    u8 _171[3];
+    u32 mCount;    // 0x174
+    f32 mScaleRatio; // 0x178
+    u8 mFlag;      // 0x17c
+    u8 _17d[3];
+    f32 mFrame;    // 0x180
+}; // Size: 0x184
 
 class TBalloonString : public TMapObjHioNode, JKRDisposer
 {
