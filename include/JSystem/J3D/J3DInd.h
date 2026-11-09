@@ -61,7 +61,7 @@ struct J3DIndTexMtx : public J3DIndTexMtxInfo {
     J3DIndTexMtx() { *(J3DIndTexMtxInfo*)this = j3dDefaultIndTexMtxInfo; }
 
     /** @fabricated */
-    J3DIndTexMtx(const J3DIndTexMtxInfo& info) { *(J3DIndTexMtxInfo*)this = info; }
+    J3DIndTexMtx(const J3DIndTexMtxInfo& info) { this->J3DIndTexMtxInfo::operator=(info); }
 
     // NOTE: return types below are fabricated
     f32 (*getOffsetMtx())[3] { return (f32(*)[3])&_00; }

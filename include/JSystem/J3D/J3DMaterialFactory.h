@@ -31,13 +31,13 @@ struct J3DIndInitData {
     void init();
     void write_InSaver(u8**);
 
-    bool mEnabled;                        // _00
+    u8 mEnabled;                          // _00
     u8 mIndTexStageNum;                   // _01
     u8 _02[2];                            // _02
-    J3DIndTexOrder mIndTexOrders[3];      // _04
+    J3DIndTexOrderInfo mIndTexOrders[3];  // _04
     u8 _10[4];                            // _10
     J3DIndTexMtx mIndTexMatrices[3];      // _14
-    J3DIndTexCoordScale mIndTexCoordScales[3]; // _68
+    J3DIndTexCoordScaleInfo mIndTexCoordScales[3]; // _68
     u8 _74[4];                            // _74
     J3DIndTevStageInfo mIndTevStageInfos[16]; // _78
 };
@@ -141,7 +141,7 @@ struct J3DMaterialFactory {
     J3DTevSwapModeTable newTevSwapModeTable(int, int) const;
     J3DTexCoord newTexCoord(int, int) const;
     u8 newTexGenNum(int) const;
-    J3DTexMtx newTexMtx(int, int) const;
+    J3DTexMtx* newTexMtx(int, int) const;
     u16 newTexNo(int, int) const;
     u8 newZCompLoc(int) const;
     J3DZMode newZMode(int) const;
@@ -150,6 +150,15 @@ struct J3DMaterialFactory {
     /** @fabricated */
     // inline s32 getMaterialInitDataIndex(s32 initDataIndexIndex) const { return _08[initDataIndexIndex]; }
     inline J3DMaterialInitData& getMaterialInitData(s32 index) const { return _04[_08[index]]; }
+    inline u32 countTexGens(int matID) const
+    {
+        J3DMaterialInitData& data = _04[_08[matID]];
+        u8 id = data._03;
+        if (id != 0xFF)
+            return _24[id];
+        return 0;
+    }
+
 
     /** @fabricated */
     inline J3DIndInitData& getIndInitData(s32 index) const { return _0C[index]; }

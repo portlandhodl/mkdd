@@ -56,6 +56,12 @@ struct J3DCurrentMtx : public J3DCurrentMtxInfo
 
     u32 getMtxIdxRegA() const { return mMtxIdxRegA; }
     u32 getMtxIdxRegB() const { return mMtxIdxRegB; }
+    void setCurrentTexMtx(u8 p1, u8 p2, u8 p3, u8 p4, u8 p5, u8 p6, u8 p7, u8 p8)
+    {
+        mMtxIdxRegA = ((u32)p1 << 6) | ((u32)p2 << 0xc) | ((u32)p3 << 0x12) | ((u32)p4 << 0x18);
+        mMtxIdxRegB = (p5) | p6 << 6 | p7 << 0xc | p8 << 0x12;
+    }
+
 
     inline void load() const
     {
