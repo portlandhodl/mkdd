@@ -78,12 +78,12 @@ void TMapObjFireBar::resetFire() {
         JGeometry::TVec3f zAxis(0.0f, 0.0f, 1.0f);
         JGeometry::TQuat4f q;
         q.setRotate(zAxis, mSpeed);
-        mFireRot[0] = q;
+        mFireRotQ[0] = q;
         q.setRotate(zAxis, 3.0f * mSpeed);
-        mFireRot[1] = q;
+        mFireRotQ[1] = q;
     } else {
-        mFireRot[0].set(0.0f, 0.0f, 0.0f, 1.0f);
-        mFireRot[1].set(0.0f, 0.0f, 0.0f, 1.0f);
+        mFireRotQ[0].set(0.0f, 0.0f, 0.0f, 1.0f);
+        mFireRotQ[1].set(0.0f, 0.0f, 0.0f, 1.0f);
     }
 }
 
@@ -253,12 +253,12 @@ void TMapObjFireCircle::resetFire() {
         static JGeometry::TVec3f zAxis(0.0f, 0.0f, 1.0f);
         JGeometry::TQuat4f q;
         q.setRotate(zAxis, mSpeed);
-        mFireRot[0] = q;
+        mFireRotQ[0] = q;
         q.setRotate(zAxis, 3.0f * mSpeed);
-        mFireRot[1] = q;
+        mFireRotQ[1] = q;
     } else {
-        mFireRot[0].set(0.0f, 0.0f, 0.0f, 1.0f);
-        mFireRot[1].set(0.0f, 0.0f, 0.0f, 1.0f);
+        mFireRotQ[0].set(0.0f, 0.0f, 0.0f, 1.0f);
+        mFireRotQ[1].set(0.0f, 0.0f, 0.0f, 1.0f);
     }
 }
 

@@ -40,7 +40,10 @@ public:
     TMapObjFireBallBase **mFire; // 0x158
     u8 mFireNum;                 // 0x15c
     u8 _pad15d[3];               // 0x15d
-    f32 mFireRot[8];             // 0x160
+    union {
+        f32 mFireRot[8];             // 0x160
+        JGeometry::TQuat4f mFireRotQ[2];
+    };
     f32 mFireRotRate;            // 0x180
     u8 _pad184[4];               // 0x184
 }; // Size: 0x188
