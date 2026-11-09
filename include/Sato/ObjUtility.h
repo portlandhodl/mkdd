@@ -21,8 +21,8 @@ namespace ObjUtility
     void getKartZdir(int, JGeometry::TVec3f *);                                             // 0x8025e39c
     void getKartVel(int, JGeometry::TVec3f *);                                              // 0x8025e504
     void getKartEfctVel(int, JGeometry::TVec3f *);                                          // 0x8025e5a0
-    void findNearKart(const JGeometry::TVec3f &, f32, int);                                 // 0x8025e63c
-    void findNearKartAngle(const JGeometry::TVec3f &, const JGeometry::TVec3f &, f32, f32); // 0x8025e868
+    int findNearKart(const JGeometry::TVec3f &, f32, int);                                 // 0x8025e63c
+    int findNearKartAngle(const JGeometry::TVec3f &, const JGeometry::TVec3f &, f32, f32); // 0x8025e868
     void getCamDependLightMtx(u32, const JGeometry::TVec3f &, Mtx);                         // 0x8025ec6c
     bool isPlayerDriver(const int &);                                                       // 0x8025edb0
     bool getReflectVec(JGeometry::TVec3f, JGeometry::TVec3f, JGeometry::TVec3f *, bool);    // 0x8025eeb4
@@ -67,7 +67,7 @@ public:
     bool calc(f32, f32, u8, u8);
 
     virtual ~BombEffectObj();
-    virtual void init(const JGeometry::TMtx34f &, u8, f32);
+    virtual void init(const JGeometry::TPos3f &, u8, f32);
     virtual bool execute();
 
     ObjColSphere *getBlastBound() const { return mBlastBound; }
