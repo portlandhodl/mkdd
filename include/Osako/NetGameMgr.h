@@ -8,7 +8,10 @@
 
 struct NetPkt;
 struct NetPadPkt;
-struct SOInAddr;
+struct SOInAddr
+{
+    u32 mAddr;
+};
 struct SSDPSearchInfo;
 
 class NetGameMgr
@@ -118,11 +121,57 @@ public:
     void set12ee(int val) { _12ee = val; }
 
 private:
+    struct NetPadData
+    {
+        u8 mType;        // 0x0
+        u8 _1[7];        // 0x1
+        u8 mPad[5][2];   // 0x8
+    };
+
+    struct NetPadConn
+    {
+        u8 _0[0xc];         // 0x0
+        NetPadData *mData;  // 0xc
+    };
+
+    struct GCInfo
+    {
+        u32 mAddr;   // 0x0
+        u8 mFlag;    // 0x4
+        u8 _5[3];    // 0x5
+        u16 _8;      // 0x8
+        u16 _a;      // 0xa
+        u32 _c;      // 0xc
+    };
+
     u8 _0[0x96c];              //
     int mState;                // 96C
-    u8 _970[0xC58 - 0x970];    //
+    u8 _970;                   // 970
+    u8 _971;                   // 971
+    u8 _972;                   // 972
+    u8 mSleepReq;              // 973
+    u8 _974;                   // 974
+    u8 _975[0x97c - 0x975];    //
+    u32 _97c;                  // 97C
+    u8 _980[0x984 - 0x980];    //
+    u32 mUnk984;               // 984
+    u32 mUnk988;               // 988
+    u8 _98c[0x998 - 0x98C];    //
+    GCInfo mGCInfo[16];        // 998
+    u8 mGCInfoNum;             // A98
+    u8 _a99[0xC50 - 0xA99];    //
+    u8 _c50;                   // C50
+    u8 _c51[0xC58 - 0xC51];    //
     u8 mNetworkNum;            // C58
-    u8 _C59[0x12e8 - 0xC59];   //
+    u8 _c59[0xCF8 - 0xC59];    //
+    u32 _cf8;                  // CF8
+    NetPadConn *mPadConn[8];   // CFC
+    u8 *_d1c;                  // D1C
+    u8 *_d20;                  // D20
+    u8 _d24[8 * 0x78];         // D24
+    u8 _10e4[3][0x18];         // 10E4
+    u8 _112c[2][0x94];         // 112C
+    u8 _1254[0x12e8 - 0x1254]; //
     u8 mNetworkCubes;          // 12e8
     u8 _12e9[0x12ec - 0x12e9]; //
     u16 _12ec;                 //
