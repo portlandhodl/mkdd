@@ -23,7 +23,7 @@ public:
     // Inline
     void reset() {} // 0x802c2afc
 private:
-    JSUPtrList mEntryList; // 0x24
+    JSUList<TMapObjPool> mEntryList; // 0x24
 };
 
 class TMapObjPool : public TMapObjHioNode, JKRDisposer {
@@ -50,7 +50,7 @@ public:
 private: // TODO
     friend class TPoolSupervisor;
 
-    JSUPtrLink mEntryLink;   // 0x164
+    JSULink<TMapObjPool> mEntryLink;   // 0x164
     J3DAnmObjMaterial mBtk;  // 0x174
     f32 mBlend;              // 0x194
 }; // class MapObjPool

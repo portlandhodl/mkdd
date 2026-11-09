@@ -4,42 +4,12 @@
 #include "JSystem/JMath/JMath.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Sato/ObjUtility.h"
+#include "Sato/stMath.h"
 #include "Shiraiwa/SiUtil.h"
 
 TPoolSupervisor *TMapObjPool::sSupervisor;
 J3DAnmTextureSRTKey *TMapObjPool::sPoolBtkAnm;
 u8 TMapObjPool::sUseBtk;
-
-TPoolSupervisor::TPoolSupervisor() : mEntryList() {}
-
-TPoolSupervisor::~TPoolSupervisor() {}
-
-void TPoolSupervisor::entry(TMapObjPool *pool) {
-    mEntryList.append(&pool->mEntryLink);
-}
-
-void TPoolSupervisor::calc() {}
-
-f32 TPoolSupervisor::getHeight(f32 x, f32 z) {
-    f32 height = 0.0f;
-
-    for (JSUPtrLink *link = mEntryList.getFirstLink(); link != nullptr; link = link->getNext()) {
-        TMapObjPool *pool = (TMapObjPool *)link->getObjectPtr();
-
-        JGeometry::TVec3f up;
-        up.set(pool->mRotMtx[0][1], pool->mRotMtx[1][1], pool->mRotMtx[2][1]);
-        up.normalize();
-
-        f32 dx = x - pool->mPos.x;
-        f32 dz = z - pool->mPos.z;
-
-        height = pool->mPos.y - (up.x * dx + up.z * dz) / up.y;
-        if (height > 0.0f)
-            break;
-    }
-
-    return height;
-}
 
 TMapObjPool::TMapObjPool(const CrsData::SObject &obj) : TMapObjHioNode(obj), mEntryLink(this) {
     if (sSupervisor == nullptr)
@@ -81,7 +51,8 @@ void TMapObjPool::update() {
 
 void TMapObjPool::reset() {
     GeographyObj::resetObject();
-    mGeoObjFlag &= ~3;
+    clrObjFlagCheckGeoHitting();
+    clrObjFlagCheckItemHitting();
     mCheckKartHitFlags = 0;
 
     mBlend = mObjData->mParam1 * 0.1f;
@@ -96,11 +67,83 @@ void TMapObjPool::reset() {
     }
 }
 
-void TMapObjPool::calc() {}
+void TMapObjPool::calc() {
+    JGeometry::TVec3f vec;
+    vec.x = RCMGetCourse()->mDirY.x;
+    vec.y = RCMGetCourse()->mDirY.y;
+    vec.z = RCMGetCourse()->mDirY.z;
 
-const char *TMapObjPool::getBmdFileName() {
-    static const char *cBmdName = "/Objects/Pool.bmd";
-    return cBmdName;
+    static f32 ydir[3];
+    static s8 init;
+    if (!init) {
+        ydir[0] = 0.0f;
+        ydir[1] = 1.0f;
+        ydir[2] = 0.0f;
+        init = 1;
+    }
+
+    JMAVECLerp((JGeometry::TVec3f *)ydir, &vec, &vec, mBlend);
+
+    JGeometry::TVec3f up(mRotMtx[0][1], mRotMtx[1][1], mRotMtx[2][1]);
+    JGeometry::TVec3f dir;
+    dir.cross(vec, up);
+    if (dir.length() > 0.0006f)
+        dir.normalize();
+    vec.normalize();
+
+    JGeometry::TVec3f side(mRotMtx[0][2], mRotMtx[1][2], mRotMtx[2][2]);
+    side.normalize();
+
+    JGeometry::TVec3f tmp;
+    tmp.cross(vec, side);
+    tmp.normalize();
+
+    side.cross(tmp, vec);
+    side.normalize();
+
+    mRotMtx[0][0] = tmp.x;
+    mRotMtx[1][0] = tmp.y;
+    mRotMtx[2][0] = tmp.z;
+    mRotMtx[0][1] = vec.x;
+    mRotMtx[1][1] = vec.y;
+    mRotMtx[2][1] = vec.z;
+    mRotMtx[0][2] = side.x;
+    mRotMtx[1][2] = side.y;
+    mRotMtx[2][2] = side.z;
+}
+
+TPoolSupervisor::TPoolSupervisor() : mEntryList() {}
+
+TPoolSupervisor::~TPoolSupervisor() {}
+
+void TPoolSupervisor::calc() {}
+
+void TPoolSupervisor::entry(TMapObjPool *pool) {
+    mEntryList.append(&pool->mEntryLink);
+}
+
+f32 TPoolSupervisor::getHeight(f32 x, f32 z) {
+    f32 height = 0.0f;
+
+    for (JSULink<TMapObjPool> *link = mEntryList.getFirst(); link != nullptr; link = link->getNext()) {
+        TMapObjPool *pool = link->getObject();
+
+        f32 dx = x - pool->mPos.x;
+        f32 dz = z - pool->mPos.z;
+
+        JGeometry::TVec3f up(pool->mRotMtx[0][1], pool->mRotMtx[1][1], pool->mRotMtx[2][1]);
+        up.normalize();
+
+        height = pool->mPos.y - (up.x * dx - up.z * dz) / up.y;
+        if (height > 0.0f)
+            break;
+    }
+
+    return height;
+}
+
+__declspec(weak) const char *TMapObjPool::getBmdFileName() {
+    return "/Objects/Pool.bmd";
 }
 
 #include <JSystem/JAudio/JASFakeMatch2.h>
