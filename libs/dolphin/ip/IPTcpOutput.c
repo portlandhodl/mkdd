@@ -506,16 +506,11 @@ void TCPOutput(TCPSocketOutput* so, u16 flag)
         return;
     }
 
-    if (so->state == 3) {
-        goto ackSyn;
+    if (so->state != 3) {
+        difference = so->unk54;
+    } else {
+        difference = so->unk60 + 1;
     }
-    difference = so->unk54;
-    goto ackDone;
-
-ackSyn:
-    difference = so->unk60 + 1;
-
-ackDone:
     so->rxmitNext = difference;
     tcp->ack = difference;
     tcp->src = so->localPort;
