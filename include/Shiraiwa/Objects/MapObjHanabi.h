@@ -30,8 +30,8 @@ public:
     TMapObjHanabi(const CrsData::SObject &); // 0x802cda54
     virtual ~TMapObjHanabi(); // 0x802cdc08
 
-    void reset(); // 0x802cdafc
-    void calc(); // 0x802cdb4c
+    virtual void reset(); // 0x802cdafc
+    virtual void calc(); // 0x802cdb4c
 
 
     virtual THanabiSupervisor *getSupervisor() { return sSupervisor; }
