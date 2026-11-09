@@ -31,7 +31,7 @@ public:
     const char *getBmdFileName();                                         // 0x8025bbc0
     void createModel(JKRSolidHeap *, u32, u32);                           // 0x8025bbcc
     static void loadAnmData(J3DModelData *);                              // 0x8025bc90
-    const char *getBckName(int);                                          // 0x8025bd64
+    static const char *getBckName(int);                                          // 0x8025bd64
     void update();                                                        // 0x8025bdb0
     void setAnimation(BombBck, int);                                      // 0x8025bf68
     void deleteEffect();                                                  // 0x8025bf7c
@@ -79,7 +79,7 @@ public:
     void doCommonInitRelease(f32, f32, f32);
     // Inline
     virtual ~ItemBomb() {} // 0x8025d960
-    void createColModel(J3DModelData *);
+    void createColModel(J3DModelData *model) { createBoundSphere(model); }
 
     static bool isReact(u32 frame) { return frame >= getMaxBombReactFrame(); } // come up with better name
 
