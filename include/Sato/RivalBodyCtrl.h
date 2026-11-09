@@ -28,6 +28,7 @@ public:
     static void chkPlayerKartCondition();          // 0x80280aec
     void chkBodyCondition();                       // 0x80280bec
     static int getKartIndexByRank(int);                  // 0x80280ca0
+    static f32 getKartTotalDist(int);                    // 0x80285fb0
     void calcTargetPosDrift();                     // 0x80280ea4
     void calcTargetPosNormal(float);               // 0x80280ea8
     void getFwPointPos(JGeometry::TVec3f *);       // 0x80281068
@@ -96,7 +97,6 @@ public:
     static bool isPlayerFirst() { return (sCommonFlgs & 2) != 0; }
 
 
-    u8 _20[4];                              // 20
     CLPointControllerRivalKart *mPointCtrl;  // 24
     JGeometry::TVec3f _28;                   // 28
     JGeometry::TVec3f _34;                   // 34
