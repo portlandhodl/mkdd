@@ -4,6 +4,10 @@
 
 #include <string.h>
 
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
 typedef struct TCPSackEntryOutput {
     u32 start;
     u32 end;
@@ -117,10 +121,6 @@ static inline s32 TCPOutputMin(s32 a, s32 b)
     return a < b ? a : b;
 }
 
-static inline TCPHeader* TCPHeaderAdvance(TCPHeader* tcp)
-{
-    return (TCPHeader*)((u8*)tcp + 252);
-}
 
 static TCPSackHoleOutput* TCPSackOutput(const TCPSocketOutput* so)
 {
@@ -199,46 +199,34 @@ s32 TCPMakeOption(TCPHeader* tcp, TCPSocketOutput* so, u16 flag)
 static s32 TCPCalcSendSize(TCPSocketOutput* so, s32 maxSize, u16* flag,
                            TCPSackHoleOutput* hole)
 {
+    s32 available;
     s32 sendSize;
-    s32 state;
     s32 size;
     s32 payload;
     s32 nextSeq;
-    s32 limit;
     s32 cwnd;
     u16 flagBits;
     s32 done;
     s32 copySize;
-    s32 available;
 
     flagBits = *flag;
 
 restart:
-    state = so->state;
     size = 0;
-    if (state >= 4) {
-        goto defaultDone;
+    switch (so->state) {
+    case 2:
+    case 3:
+        if (so->unk48 == so->unk34) {
+            flagBits |= 2;
+            size = 1;
+        } else if (so->unk30 == so->unk48) {
+            done = so->unk34 - so->unk30 - 1;
+            break;
+        }
+    default:
+        done = so->unk34 - so->unk30;
+        break;
     }
-    if (state >= 2) {
-        goto connecting;
-    }
-    goto defaultDone;
-
-connecting:
-    if (so->unk48 == so->unk34) {
-        flagBits |= 2;
-        size = 1;
-        goto defaultDone;
-    }
-    if (so->unk30 == so->unk48) {
-        done = so->unk34 - so->unk30 - 1;
-        goto doneSet;
-    }
-
-defaultDone:
-    done = so->unk34 - so->unk30;
-
-doneSet:
 
     size += so->ringSize;
     if (so->unk1D8 != 0 && so->dataLen > 0) {
@@ -248,34 +236,21 @@ doneSet:
     size -= done;
 
     if (hole != NULL) {
-        available = hole->start - hole->end;
-        if (size < available) {
-            available = size;
+        size = MIN(size, hole->start - hole->end);
+    }
+
+    switch (so->state) {
+    case 5:
+    case 8:
+    case 9:
+        if (size >= 0 && hole == NULL) {
+            flagBits |= 1;
+            size++;
+            nextSeq++;
         }
-        size = available;
+        break;
     }
 
-    if (state >= 8) {
-        goto finLarge;
-    }
-    if (state == 5) {
-        goto finCheck;
-    }
-    goto noFin;
-
-finLarge:
-    if (state >= 10) {
-        goto noFin;
-    }
-
-finCheck:
-    if (size >= 0 && hole == NULL) {
-        flagBits |= 1;
-        size++;
-        nextSeq++;
-    }
-
-noFin:
     if (flagBits & 2) {
         flagBits &= ~1;
         nextSeq = so->unk30 + 1;
@@ -286,10 +261,7 @@ noFin:
     if ((so->flags & 0x2000) && so->rxmitCount >= 3) {
         cwnd = so->unk38;
     } else {
-        cwnd = so->unk38;
-        if (cwnd >= so->maxCwnd) {
-            cwnd = so->maxCwnd;
-        }
+        cwnd = MIN(so->unk38, so->maxCwnd);
     }
 
     if (cwnd == 0 && nextSeq - so->unk30 > 0 && so->unk258 == 0) {
@@ -311,26 +283,14 @@ noFin:
         so->flags |= 0x200;
     }
 
+    available = so->unk30 + cwnd - so->unk34;
     so->fragmentCount = 1;
-    nextSeq = so->unk30 + cwnd;
-    available = nextSeq - so->unk34;
     if ((so->flags & 0x2000) && !(so->flags & 0x1000) && size > 0 &&
         so->unkDC - so->unk30 > 0 && so->maxCwnd <= so->unkD4) {
         size = 0;
     }
 
-    if (size < available) {
-        limit = size;
-    } else {
-        limit = available;
-    }
-    if (maxSize < limit) {
-        sendSize = maxSize;
-    } else if (size < available) {
-        sendSize = size;
-    } else {
-        sendSize = available;
-    }
+    sendSize = MIN(maxSize, MIN(size, available));
 
     if (sendSize == size && hole == NULL && sendSize > 0 && (flagBits & 7) == 0) {
         flagBits |= 8;
@@ -352,11 +312,8 @@ noFin:
     }
     if (payload > 0) {
         if (so->ringSize > 0 && done < so->ringSize) {
-            available = so->ringSize - done;
-            copySize = available;
-            if (available >= payload) {
-                copySize = payload;
-            }
+            copySize = so->ringSize - done;
+            copySize = MIN(copySize, payload);
             so->fragmentCount += IFRingGet(so->unk174, so->unk178, (void*)(so->ringBase + done),
                                            so->ringSize - done, &so->fragments[1], copySize);
             payload -= copySize;
@@ -427,11 +384,10 @@ static void TCPOutputCallback(TCPSocketOutput* so, s32 result)
     TCPOutput(so, 0);
 }
 
-void TCPOutput(TCPSocketOutput* so, u16 flag)
+void TCPOutput(TCPSocketOutput* so, u16 flags)
 {
-    u16 flags;
-    IPHeader* ip;
-    TCPHeader* tcp;
+    TCPHeader* ip;
+    IPHeader* tcp;
     s32 sendSize;
     TCPSegmentOutput* fragment;
     TCPSackHoleOutput* hole;
@@ -440,7 +396,6 @@ void TCPOutput(TCPSocketOutput* so, u16 flag)
     s32 result;
     s32 difference;
 
-    flags = flag;
     hole = NULL;
     if (so->state == 0) {
         return;
@@ -486,12 +441,12 @@ void TCPOutput(TCPSocketOutput* so, u16 flag)
         so->maxCwnd = so->mss;
     }
 
-    ip = &so->ip;
-    ip->len = (ip->verlen & 0xF) << 2;
-    tcp = (TCPHeader*)((u8*)so + ((ip->verlen & 0xF) << 2));
-    *(u16*)((u8*)tcp + 264) = 0;
-    tcp = TCPHeaderAdvance(tcp);
-    optionLen = TCPMakeOption(tcp, so, flags);
+    tcp = &so->ip;
+    tcp->len = (tcp->verlen & 0xF) << 2;
+    ip = (TCPHeader*)((u8*)so + ((tcp->verlen & 0xF) << 2));
+    *(u16*)((u8*)ip + 264) = 0;
+    ip = (TCPHeader*)((u8*)ip + 252);
+    optionLen = TCPMakeOption(ip, so, flags);
     sendSize = TCPCalcSendSize(so, so->mss - optionLen, &flags, hole);
 
     if (hole != NULL && so->unk34 != hole->end) {
@@ -508,36 +463,42 @@ void TCPOutput(TCPSocketOutput* so, u16 flag)
 
     if (so->state != 3) {
         difference = so->unk54;
+        so->rxmitNext = difference;
+        ip->ack = difference;
     } else {
         difference = so->unk60 + 1;
+        so->rxmitNext = difference;
+        ip->ack = difference;
     }
-    so->rxmitNext = difference;
-    tcp->ack = difference;
-    tcp->src = so->localPort;
-    tcp->dst = so->remotePort;
-    tcp->seq = sendSize > 0 ? so->unk34 : so->unk50;
-
-    if (so->unk3C - tcp->seq > 0) {
-        flags |= 0x20;
-        difference = so->unk3C - tcp->seq;
-        tcp->urg = 0xFFD7 >= difference ? difference : 0xFFFF;
+    ip->src = so->localPort;
+    ip->dst = so->remotePort;
+    if (sendSize > 0) {
+        ip->seq = so->unk34;
     } else {
-        tcp->urg = 0;
+        ip->seq = so->unk50;
+    }
+
+    if (so->unk3C - ip->seq > 0) {
+        flags |= 0x20;
+        difference = so->unk3C - ip->seq;
+        ip->urg = (u16)(65535 - 20 - 20 < difference ? 65535 : difference);
+    } else {
+        ip->urg = 0;
         so->unk3C = so->unk30;
     }
     if (so->state != 2) {
         flags |= 0x10;
     }
 
-    tcp->flag &= ~0x3F;
-    tcp->flag |= flags & 0x3F;
-    tcp->win = so->unk58;
-    tcp->sum = 0;
-    ip->len += (tcp->flag & 0xF000) >> 10;
+    ip->flag &= ~0x3F;
+    ip->flag |= flags & 0x3F;
+    ip->win = so->unk58;
+    ip->sum = 0;
+    tcp->len += (ip->flag & 0xF000) >> 10;
 
     fragment = &so->fragments[1];
     while (fragment < &so->fragments[so->fragmentCount]) {
-        ip->len += (u16)fragment->len;
+        tcp->len += (u16)fragment->len;
         fragment++;
     }
 
@@ -546,13 +507,13 @@ void TCPOutput(TCPSocketOutput* so, u16 flag)
         so->unk50 = so->unk34;
         if (so->rttActive == 0) {
             so->rttActive = 1;
-            so->rttSeq = tcp->seq;
+            so->rttSeq = ip->seq;
             *(s64*)&so->rttStartHi = OSGetTime();
         }
     } else if (sendSize > 0) {
         TCPStat.sentDataPackets++;
-        TCPStat.sentBytes += ip->len - (((ip->verlen << 2) & 0x3C) +
-                                        ((tcp->flag >> 10) & 0x3C));
+        TCPStat.sentBytes += tcp->len - (((tcp->verlen << 2) & 0x3C) +
+                                        ((ip->flag >> 10) & 0x3C));
     }
     if (so->unk34 != so->unk30) {
         TCPStartRxmitTimer(so);
@@ -560,8 +521,8 @@ void TCPOutput(TCPSocketOutput* so, u16 flag)
 
     so->outputPending = 1;
     so->immediate = 0;
-    so->fragments[0].data = ip;
-    so->fragments[0].len = ((ip->verlen << 2) & 0x3C) + ((tcp->flag >> 10) & 0x3C);
+    so->fragments[0].data = tcp;
+    so->fragments[0].len = ((tcp->verlen << 2) & 0x3C) + ((ip->flag >> 10) & 0x3C);
     so->outputCallback = TCPOutputCallback;
     so->callbackArg = so;
 
