@@ -86,14 +86,14 @@ public:
 
     T *getObj(u8 anm_no) // fabricated
     {
-#line 127
+#line 122
         JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
         return &mObj[anm_no];
     }
 
     J3DFrameCtrl *getFrameCtrl(u8 anm_no)
     {
-#line 127
+#line 122
         JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
         return mObj[anm_no].getFrameCtrl();
     }
@@ -108,6 +108,13 @@ public:
     T *getObjIce(u8 anm_no)
     {
 #line 321
+        JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
+        return &mObj[anm_no];
+    }
+
+    T *getObj2(u8 anm_no)
+    {
+#line 326
         JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
         return &mObj[anm_no];
     }

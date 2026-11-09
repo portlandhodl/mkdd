@@ -1,7 +1,11 @@
 #ifndef ITEMBANANA_H
 #define ITEMBANANA_H
 
+#include <JSystem/JParticle/JPAEmitter.h>
+
+#include "Sato/AnmController.h"
 #include "Sato/ItemObj.h"
+#include "Sato/Objects/GeoItemBox.h"
 
 // TODO: virtual functions
 
@@ -13,7 +17,7 @@ public:
     const char *getBmdFileName();                                         // 0x802519e8
     static void loadAnmData(J3DModelData *);                              // 0x80251a10
     void createModel(JKRSolidHeap *, u32, u32);                           // 0x80251a88
-    void getBckName(int);                                                 // 0x80251bf4
+    static const char *getBckName(int);                                                 // 0x80251bf4
     void update();                                                        // 0x80251c40
     void doUniv();                                                        // 0x80251c88
     void checkAnmState();                                                 // 0x80251d98
@@ -29,25 +33,32 @@ public:
     void moveNormal(CrsGround &);                                         // 0x80252a10
     f32 getItemBoundRatio() const;                                          // 0x80252b6c
     void setAllUseBoundsScale();                                          // 0x80252b74
-    void setAllUseInitReleaseVelMag();                                    // 0x80252ba4
+    virtual void setAllUseInitReleaseVelMag();                                    // 0x80252ba4
     const bool checkKartColDisappear(int);                                // 0x80252bbc
     void initOccur(const JGeometry::TVec3f &, const JGeometry::TVec3f &); // 0x80252bec
     void doSound(u32);                                                    // 0x80252c24
 
-    static J3DAnmObjTrans *mAnmTrans[3]; // 0x803a05d8
-    static J3DAnmTransform *mAnmCalc[3]; // 0x803a05e4
-    static Vec sHandOffsetPos;           // 0x804118ec
+    static J3DAnmTransform *mAnmTrans[3]; // 0x803a05d8
+    static J3DMtxCalc *mAnmCalc[3]; // 0x803a05e4
+    static JGeometry::TVec3f sHandOffsetPos;           // 0x804118ec
     // Inline/Unused
-    // void setInitReleaseParam();
+    void setInitReleaseParam() {}
     // void getBckName(int);
     // void getBtkName();
     // Inline
-    void calcBaseRotQt();                // 0x80252470
-    virtual ~ItemBanana();               // 0x80252cf0
-    u32 getModelDataAppendLoadFlg();     // 0x80254938
-    void createColModel(J3DModelData *); // 0x80254a60
+    virtual Quaternion *calcBaseRotQt() { return nullptr; } // 0x80252470
+    virtual ~ItemBanana() {}             // 0x80252cf0
+    u32 getModelDataAppendLoadFlg() { return 0x20; }        // 0x80254938
+    void createColModel(J3DModelData *model) { createBoundCylinder(model); } // 0x80254a60
 
-    u8 _[0x2cc - 0x2b0];
+    AnmController mController; // 2b0
+    u8 mAllUseFlg;             // 2c4
+    u8 _2c5;                   // 2c5
+    u8 mIsOnGround;            // 2c6
+    u8 mPlayedGndSound;        // 2c7
+    u8 mDoSound;               // 2c8
+    u8 mEnableGndSound;        // 2c9
+    u8 _2ca[0x2cc - 0x2ca];    //
 }; // class ItemBanana
 
 class ItemBananaBig : public ItemBanana
@@ -64,8 +75,21 @@ public:
     ItemColFlag calcColReaction(ItemObj *);
     void initDisappear();
 
-    // static J3DAnmObjTrans *mAnmTrans[3];
-    // static J3DAnmTransform *mAnmCalc[3];
+    static J3DAnmTransform *mAnmTrans[3];
+    static J3DMtxCalc *mAnmCalc[3];
+
+    static const char *getBckName(int anm)
+    {
+        switch (anm) {
+        case 0:
+            return "/Item/item_banana_sp_a.bck";
+        case 1:
+            return "/Item/item_banana_sp_b.bck";
+        case 2:
+            return "/Item/item_banana_sp_die.bck";
+        }
+        return nullptr;
+    }
 
     virtual ~ItemBananaBig() {} //  0x80254940
 };
@@ -85,7 +109,7 @@ public:
     ItemColFlag calcColReaction(ItemObj *);
     void initDisappear();
     void doDisappear();
-    void calcBaseRotQt();
+    Quaternion *calcBaseRotQt();
     const bool checkKartColDisappear(int);
     void createEfct(const JGeometry::TVec3f &);
     f32 getForceEfctOffsetScale() const;
@@ -94,10 +118,22 @@ public:
     static J3DAnmTextureSRTKey *mAnmTex;
     static J3DAnmTexPattern *sTexPattern;
 
-    virtual ~ItemFakeItemBox() {}          // 0x802547f8
-    void createColModel(J3DModelData *) {} // 0x80254918
+    const char *getBtkName() { return "/Item/niseItembox.btk"; }
 
-    u8 _2b0[0x330 - 0x2cc];
+    virtual ~ItemFakeItemBox() {}                                    // 0x802547f8
+    void createColModel(J3DModelData *data) { ItemObj::createColModel(data); } // 0x80254918
+
+    RotAnimationObj mRotAnimation; // 2cc
+    Quaternion mBaseRotQt;         // 2fc
+    JPABaseEmitter *mEqEmt[4];     // 30c
+    int mKartNo;                   // 31c
+    u8 mGndCount;                  // 320
+    u8 _321[0x324 - 0x321];        //
+    f32 mAddGndOffsetY;            // 324
+    f32 mOffsetVelY;               // 328
+    u8 mGndOffsetFixed;            // 32c
+    u8 mTexPatternFrame;           // 32d
+    u8 _32e[0x330 - 0x32e];        //
 };
 
 // Inline Functions referenced in TU:
