@@ -21,6 +21,21 @@ typedef struct IPHeader {
     u8 dst[4];
 } IPHeader;
 
+typedef struct IFFifo {
+    u8* buffer;
+    s32 size;
+    u8* head;
+    s32 used;
+} IFFifo;
+
+typedef struct ICMPHeader ICMPHeader;
+typedef struct IPIcmpInterface IPIcmpInterface;
+
+void IFFifoInit(IFFifo* fifo, void* buffer, s32 size);
+u8* IFFifoAlloc(IFFifo* fifo, s32 size);
+BOOL IFFifoFree(IFFifo* fifo, u8* ptr, s32 size);
+s32 ICMPSendError(ICMPHeader* icmp, IPIcmpInterface* interface, IPHeader* ip, u32 flags);
+
 BOOL IPIsLocalAddr(u32, const u8 *addr);
 BOOL IPGetNetmask(u32 type, u32* addr);
 BOOL IPGetAddr(u32 type, u32* addr);

@@ -1,11 +1,4 @@
-#include <dolphin/types.h>
-
-typedef struct IFFifo {
-    u8* buffer;
-    s32 size;
-    u8* head;
-    s32 used;
-} IFFifo;
+#include <dolphin/ip/ip.h>
 
 static asm u8* FifoAlloc(IFFifo* fifo, s32 size);
 

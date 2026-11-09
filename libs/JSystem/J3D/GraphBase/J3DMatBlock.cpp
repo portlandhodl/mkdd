@@ -2065,8 +2065,8 @@ void J3DTexGenBlockPatched::reset(J3DTexGenBlock* block)
 	for (u32 i = 0; i < 8; i++) {
 		if (block->getTexMtx(i)) {
 			if (mTexMatrices[i]) {
-				memcpy(mTexMatrices[i], block->getTexMtx(i), sizeof(*mTexMatrices[i]) - sizeof(Mtx));
-				DCStoreRange(mTexMatrices[i], sizeof(*mTexMatrices[i]) - sizeof(Mtx));
+				memcpy(mTexMatrices[i], block->getTexMtx(i), sizeof(*mTexMatrices[i]));
+				DCStoreRange(mTexMatrices[i], sizeof(*mTexMatrices[i]));
 			}
 		}
 	}
@@ -2084,8 +2084,8 @@ void J3DTexGenBlock4::reset(J3DTexGenBlock* block)
 	for (u32 i = 0; i < 4; i++) {
 		if (block->getTexMtx(i)) {
 			if (mTexMatrices[i]) {
-				memcpy(mTexMatrices[i], block->getTexMtx(i), sizeof(*mTexMatrices[i]) - sizeof(Mtx));
-				DCStoreRange(mTexMatrices[i], sizeof(*mTexMatrices[i]) - sizeof(Mtx));
+				memcpy(mTexMatrices[i], block->getTexMtx(i), sizeof(*mTexMatrices[i]));
+				DCStoreRange(mTexMatrices[i], sizeof(*mTexMatrices[i]));
 			}
 		}
 	}
@@ -2105,8 +2105,8 @@ void J3DTexGenBlockBasic::reset(J3DTexGenBlock* block)
 	for (u32 i = 0; i < 8; i++) {
 		if (block->getTexMtx(i)) {
 			if (mTexMatrices[i]) {
-				memcpy(mTexMatrices[i], block->getTexMtx(i), sizeof(*mTexMatrices[i]) - sizeof(Mtx));
-				DCStoreRange(mTexMatrices[i], sizeof(*mTexMatrices[i]) - sizeof(Mtx));
+				memcpy(mTexMatrices[i], block->getTexMtx(i), sizeof(*mTexMatrices[i]));
+				DCStoreRange(mTexMatrices[i], sizeof(*mTexMatrices[i]));
 			}
 		}
 	}

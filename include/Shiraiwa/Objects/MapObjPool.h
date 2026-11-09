@@ -3,9 +3,12 @@
 
 #include "JSystem/JKernel/JKRDisposer.h"
 #include "JSystem/JKernel/JKRHeap.h"
+#include "JSystem/JSupport/JSUList.h"
 #include "Kaneshige/Course/CrsData.h"
 
 #include "Sato/GeographyObj.h"
+#include "Sato/J3DAnmObject.h"
+#include "Shiraiwa/Objects/MapObjHioNode.h"
 #include "types.h"
 
 class TMapObjPool;
@@ -20,7 +23,7 @@ public:
     // Inline
     void reset() {} // 0x802c2afc
 private:
-    u8 _pad_geographyobjmgr[52]; // size-match pad for GeographyObjMgr New<> emission until unit owner fills layout
+    JSUPtrList mEntryList; // 0x24
 };
 
 class TMapObjPool : public TMapObjHioNode, JKRDisposer {
@@ -34,7 +37,7 @@ public:
 
     static TPoolSupervisor*sSupervisor; // 0x80417088
     static J3DAnmTextureSRTKey *sPoolBtkAnm; // 0x8041708c
-    static void *sUseBtk; // 0x80417090, TODO: determine type
+    static u8 sUseBtk; // 0x80417090
     // Inline/Unused
     void getUpDir(JGeometry::TVec3f *);
     f32 getHeight(f32, f32);
@@ -46,6 +49,10 @@ public:
     static TPoolSupervisor *getSupervisor() { return sSupervisor; }
 private: // TODO
     friend class TPoolSupervisor;
+
+    JSUPtrLink mEntryLink;   // 0x164
+    J3DAnmObjMaterial mBtk;  // 0x174
+    f32 mBlend;              // 0x194
 }; // class MapObjPool
 
 #endif // MAPOBJPOOL_H

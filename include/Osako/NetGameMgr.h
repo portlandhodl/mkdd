@@ -43,8 +43,8 @@ public:
     void framework();                                                            // 0x802073a4
     void syncwork();                                                             // 0x802079c4
     static void retraceCallback(u32);                                            // 0x80207c58
-    void callbackNotify(const char *, const SOInAddr *);                         // 0x80207c84
-    void callbackSearch(const char *, const SOInAddr *, const SSDPSearchInfo *); // 0x80207e2c
+    static void callbackNotify(const char *, const SOInAddr *);                         // 0x80207c84
+    static void callbackSearch(const char *, const SOInAddr *, const SSDPSearchInfo *); // 0x80207e2c
     void appendGCInfo(const SOInAddr *);                                         // 0x80207fc0
     void removeGCInfo(const SOInAddr *);                                         // 0x80208078
     void getKartPad(unsigned char, KartPadData *);                               // 0x802080e8

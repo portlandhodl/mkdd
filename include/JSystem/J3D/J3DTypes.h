@@ -670,12 +670,7 @@ struct J3DTevStage {
 };
 
 struct J3DTexCoordInfo {
-    void operator=(J3DTexCoordInfo const& other)
-    {
-        mTexGenType = other.mTexGenType;
-        mTexGenSrc  = other.mTexGenSrc;
-        mTexGenMtx  = other.mTexGenMtx;
-    }
+    void operator=(J3DTexCoordInfo const& other) { *(u32*)this = *(u32*)&other; }
 
     u8 mTexGenType; // _00
     u8 mTexGenSrc;  // _01
@@ -742,7 +737,11 @@ struct J3DTransformInfo {
 extern const J3DTransformInfo j3dDefaultTransformInfo;
 
 struct J3DNBTScaleInfo {
-    void operator=(const J3DNBTScaleInfo& other);
+    void operator=(const J3DNBTScaleInfo& other)
+    {
+        mHasScale = other.mHasScale;
+        mScale    = other.mScale;
+    }
 
     u8 mHasScale; // _00
     Vec mScale;   // _04

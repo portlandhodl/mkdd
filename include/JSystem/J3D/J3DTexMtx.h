@@ -9,20 +9,7 @@
 
 struct J3DTexMtxInfo
 {
-    void operator=(J3DTexMtxInfo const &other)
-    {
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                mEffectMtx[i][j] = other.mEffectMtx[i][j];
-            }
-        }
-        mCenter = other.mCenter;
-        mProjection = other.mProjection;
-        mInfo = other.mInfo;
-        mSRT = other.mSRT;
-    }
+    void operator=(J3DTexMtxInfo const &other);
     void setEffectMtx(Mtx m)
     {
         mEffectMtx[0][0] = m[0][0];
@@ -68,7 +55,6 @@ public:
         GDOverflowCheck(53);
         J3DGDLoadTexMtxImm((Mtx &)mMtx, i * 3 + 30, (GXTexMtxType)mTexMtxInfo.mProjection);
     }*/
-    void calc();
     void calc(const Mtx m);
     void calcTexMtx(f32 const (*)[4]);
     void calcPostTexMtx(f32 const (*)[4]);
@@ -78,14 +64,11 @@ public:
     J3DTexMtxInfo &getTexMtxInfo() { return mTexMtxInfo; }
     Mtx &getMtx() { return mMtx; }
     void setEffectMtx(Mtx effectMtx) { mTexMtxInfo.setEffectMtx(effectMtx); }
-    Mtx &getViewMtx() { return mViewMtx; }
-    //void setViewMtx(const Mtx viewMtx) { MTXCopy(viewMtx, mViewMtx); }
 
 private:
     /* 0x00 */ J3DTexMtxInfo mTexMtxInfo;
     /* 0x64 */ Mtx mMtx;
-    /* 0x94 */ Mtx mViewMtx;
-}; // Size: 0xc4
+}; // Size: 0x94
 
 namespace J3DDifferedTexMtx {
 void loadExecute(const f32 (*)[4]);

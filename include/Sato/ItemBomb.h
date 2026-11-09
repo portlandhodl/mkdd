@@ -1,8 +1,8 @@
 #ifndef ITEMBOMB_H
 #define ITEMBOMB_H
 #include "Sato/ItemSuccession.h"
-
-// TODO: virtual and static functions
+#include "Sato/J3DAnmObject.h"
+#include "Sato/ObjUtility.h"
 
 class ItemBombBase // probably inherits ItemObj, and other classes inherit this
 {
@@ -20,7 +20,10 @@ class ItemBomb : public ItemObj
 public:
     enum BombBck
     {
-
+        BombBck0,
+        BombBck1,
+        BombBck2,
+        BombBck3,
     };
 
     ItemBomb(u32);                                                        // 0x8025b7b4
@@ -28,7 +31,7 @@ public:
     const char *getBmdFileName();                                         // 0x8025bbc0
     void createModel(JKRSolidHeap *, u32, u32);                           // 0x8025bbcc
     static void loadAnmData(J3DModelData *);                              // 0x8025bc90
-    void getBckName(int);                                                 // 0x8025bd64
+    const char *getBckName(int);                                          // 0x8025bd64
     void update();                                                        // 0x8025bdb0
     void setAnimation(BombBck, int);                                      // 0x8025bf68
     void deleteEffect();                                                  // 0x8025bf7c
@@ -56,15 +59,15 @@ public:
     const bool checkKartColDisappear(int);                                // 0x8025d670
     void setCurrentViewNo(u32);                                           // 0x8025d690
     void createEffect();                                                  // 0x8025d6f0
-    void findAnyKart();                                                   // 0x8025d760
+    bool findAnyKart();                                                   // 0x8025d760
     static u8 getMaxBombReactFrame();                                     // 0x8025d7b8
 
-    static J3DAnmObjTrans *mAnmTrans[3]; // 0x803a0dfc
-    static J3DAnmTransform *mAnmCalc[3]; // 0x803a0e08
-    static J3DAnmColor *sColorAnm;       // 0x803a0e14
-    static Vec sHandOffsetPos;           // 0x80411984
-    static J3DAnmColor *sNowColorAnm;    // 0x80416c18
-    static int sLocatorJointNo;          // 0x80416c1c
+    static J3DAnmTransform *mAnmTrans[3]; // 0x803a0dfc
+    static J3DMtxCalc *mAnmCalc[3];       // 0x803a0e08
+    static J3DAnmColor *sColorAnm[7];     // 0x803a0e14
+    static Vec sHandOffsetPos;            // 0x80411984
+    static J3DAnmColor *sNowColorAnm;     // 0x80416c18
+    static int sLocatorJointNo;           // 0x80416c1c
     // Inline/Unused
 
     void doAnimation();
@@ -75,13 +78,38 @@ public:
     void setInitReleaseParam(u8);
     void doCommonInitRelease(f32, f32, f32);
     // Inline
-    virtual ~ItemBomb() {}                 // 0x8025d960
-    void createColModel(J3DModelData *) {} // 0x8025daac
+    virtual ~ItemBomb() {} // 0x8025d960
+    void createColModel(J3DModelData *);
 
     static bool isReact(u32 frame) { return frame >= getMaxBombReactFrame(); } // come up with better name
 
 private:
-    u8 _[0x318 - 0x2b0];
+    BombEffectObj *mBombEfct;    // 2b0
+    f32 mBombEfctScale;          // 2b4
+    u8 mIsColKart;               // 2b8
+    u8 _2b9[3];                  // 2b9
+    u32 mAnmFrame;               // 2bc
+    u32 mAnmRepeat;              // 2c0
+    u32 mAnmType;                // 2c4
+    s16 mBlastWaitFrame;         // 2c8
+    u16 _2ca;                    // 2ca
+    f32 _2cc;                    // 2cc
+    JGeometry::TVec3f _2d0;      // 2d0
+    J3DAnmObjMatColor mColorAnm; // 2dc
+    u32 mBlastFrame;             // 2fc
+    u8 mDisappearing;            // 300
+    u8 _301[3];                  // 301
+    u16 mColFlags;               // 304
+    u16 _306;                    // 306
+    JPABaseEmitter *mBlastEmt;   // 308
+    u8 mGndBoundCnt;             // 30c
+    u8 mIsOnGnd;                 // 30d
+    u8 _30e[2];                  // 30e
+    f32 mGravity;                // 310
+    u8 mFoundKart;               // 314
+    u8 mKartGone;                // 315
+    u8 mColorFlg;                // 316
+    u8 _317;                     // 317
 
 }; // class ItemBomb
 

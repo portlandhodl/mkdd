@@ -12,13 +12,6 @@
 #include "JSystem/ResTIMG.h"
 #include "types.h"
 
-struct J3DIndTexCoordScaleInfo {
-	u8 _00;
-	u8 _01;
-	u8 _02;
-	u8 _03;
-};
-
 void J3DLightObj::load(u32 lightIdx) const
 {
 	GDOverflowCheck(0x48);

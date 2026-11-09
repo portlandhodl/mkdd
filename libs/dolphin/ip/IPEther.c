@@ -1,6 +1,7 @@
 #include <dolphin/types.h>
 #include <dolphin/os.h>
 #include <dolphin/eth/eth.h>
+#include <dolphin/ip/ip.h>
 #include <string.h>
 
 typedef int (*ETHRecvCallback0)(u16 type, s32 length, u8 flags);
@@ -29,9 +30,6 @@ extern void UDPOnReset(BOOL);
 extern void TCPOnReset(BOOL);
 extern void ARPInit(void);
 extern void IPInitRoute(u8*, u8*, u8*);
-extern void IFFifoInit(void*, void*, u32);
-extern void IFFifoFree(void*, void*, u32);
-extern void* IFFifoAlloc(void*);
 extern void DHCPReboot(void);
 extern void IPAutoConfig(void);
 extern void IPSetConfigError(void*, s32);

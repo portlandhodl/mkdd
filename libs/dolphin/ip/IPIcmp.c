@@ -3,11 +3,11 @@
 
 #include <string.h>
 
-typedef struct ICMPHeader {
+struct ICMPHeader {
     u8 type;
     u8 code;
     u16 sum;
-} ICMPHeader;
+};
 
 typedef struct ICMPErrorHeader {
     u8 type;
@@ -44,7 +44,7 @@ typedef struct IPIcmpPacket {
     u8 buf[];
 } IPIcmpPacket;
 
-typedef struct IPIcmpInterface {
+struct IPIcmpInterface {
     u8 unk00[64];
     s32 mtu;
     u32 addr;
@@ -53,7 +53,7 @@ typedef struct IPIcmpInterface {
     u8 unk58[16];
     IPIcmpPacket* (*alloc)(struct IPIcmpInterface* interface, u32 len);
     void (*free)(struct IPIcmpInterface* interface, IPIcmpPacket* packet, u32 len);
-} IPIcmpInterface;
+};
 
 extern BOOL IPIsBroadcastAddr(IPIcmpInterface* interface, const u8* addr);
 extern void IPUpdateRecordRoute(IPHeader* ip, u8* src);

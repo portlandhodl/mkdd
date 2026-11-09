@@ -5,8 +5,24 @@
 #include "JSystem/J3D/J3DTypes.h"
 #include "types.h"
 
-struct J3DIndTexCoordScale {
-    J3DIndTexCoordScale();
+struct J3DIndTexCoordScaleInfo {
+    J3DIndTexCoordScaleInfo& operator=(const J3DIndTexCoordScaleInfo& other)
+    {
+        *(u32*)this = *(u32*)&other;
+        return *this;
+    }
+
+    u8 mScaleS; // _00
+    u8 mScaleT; // _01
+    u8 _02;     // _02
+    u8 _03;     // _03
+};
+
+extern const J3DIndTexCoordScaleInfo j3dDefaultIndTexCoordScaleInfo;
+
+struct J3DIndTexCoordScale : public J3DIndTexCoordScaleInfo {
+    J3DIndTexCoordScale() { *(u32*)this = *(u32*)&j3dDefaultIndTexCoordScaleInfo; }
+    J3DIndTexCoordScale(const J3DIndTexCoordScaleInfo& info) { *(u32*)this = *(u32*)&info; }
     ~J3DIndTexCoordScale() { }
 
     inline J3DIndTexCoordScale& operator=(const J3DIndTexCoordScale& other)
@@ -42,28 +58,10 @@ extern const J3DIndTexMtxInfo j3dDefaultIndTexMtxInfo;
  * @size{0x1C}
  */
 struct J3DIndTexMtx : public J3DIndTexMtxInfo {
-    J3DIndTexMtx()
-    {
-        _00 = j3dDefaultIndTexMtxInfo._00;
-        _04 = j3dDefaultIndTexMtxInfo._04;
-        _08 = j3dDefaultIndTexMtxInfo._08;
-        _0C = j3dDefaultIndTexMtxInfo._0C;
-        _10 = j3dDefaultIndTexMtxInfo._10;
-        _14 = j3dDefaultIndTexMtxInfo._14;
-        _18 = j3dDefaultIndTexMtxInfo._18;
-    }
+    J3DIndTexMtx() { *(J3DIndTexMtxInfo*)this = j3dDefaultIndTexMtxInfo; }
 
     /** @fabricated */
-    J3DIndTexMtx(const J3DIndTexMtxInfo& info)
-    {
-        _00 = info._00;
-        _04 = info._04;
-        _08 = info._08;
-        _0C = info._0C;
-        _10 = info._10;
-        _14 = info._14;
-        _18 = info._18;
-    }
+    J3DIndTexMtx(const J3DIndTexMtxInfo& info) { *(J3DIndTexMtxInfo*)this = info; }
 
     // NOTE: return types below are fabricated
     f32 (*getOffsetMtx())[3] { return (f32(*)[3])&_00; }
@@ -94,20 +92,10 @@ extern const J3DIndTexOrderInfo j3dDefaultIndTexOrderNull;
  * @size{0x4}
  */
 struct J3DIndTexOrder {
-    J3DIndTexOrder()
-        : mTexCoordID(j3dDefaultIndTexOrderNull.mTexCoordID)
-        , mTexMapID(j3dDefaultIndTexOrderNull.mTexMapID)
-    {
-    }
+    J3DIndTexOrder() { *(u32*)this = *(u32*)&j3dDefaultIndTexOrderNull; }
 
     /** @fabricated */
-    inline J3DIndTexOrder(const J3DIndTexOrderInfo& info)
-        : mTexCoordID(info.mTexCoordID)
-        , mTexMapID(info.mTexMapID)
-        , _02(info._02)
-        , _03(info._03)
-    {
-    }
+    J3DIndTexOrder(const J3DIndTexOrderInfo& info) { *(u32*)this = *(u32*)&info; }
 
     // /** @fabricated */
     // inline J3DIndTexOrder(_GXTexCoordID coordID, GXTexMapID mapID)

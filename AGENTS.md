@@ -66,10 +66,19 @@ assets are not committed.
   validation, and raw-preserving nonstructural export. Structural export is
   canonical; unmodified export is byte-identical.
 - BCO `0003`: collision rendering and inspection, not collision writing.
-- BMD: static course geometry, hierarchy transforms, basic material colors and
-  single-texture previews loaded automatically from course ARCs or Add Related.
-  Multi-TEV equations, additional UV modulation, animation, and BMD writing are
-  not implemented.
+- BMD: course, sky, and object geometry with full GX materials: color
+  channels/lighting, all texgens and texture-matrix modes, multi-stage TEV
+  (generated GLSL in `src/gx_shader.rs`), alpha test, blend and depth modes.
+  Not implemented: indirect texturing, BTK/BRK/BCK animation, billboards,
+  BMD writing.
+- Objects draw their real models, resolved by ID through `catalog::model_names`
+  (from `getBmdFileName()` in the decomp) against the course ARC and any model
+  library ARCs (e.g. `MRAM.arc`, persisted in the browser's IndexedDB).
+- Viewport: Unreal-style fly camera (RMB + WASD), translate/rotate/scale gizmo
+  with snapping and single-step undo, raycast placement, drop-to-floor,
+  logarithmic depth. Press `?` in the editor for all controls.
+- `cargo run --example inspect_arc -- [--survey|--objects|--dump] ...` reports
+  model decode coverage, unresolved object models, and per-mesh GX state.
 - RARC/Yaz0/Yay0: archive browsing, extraction, file replacement, and raw RARC
   export with the current BOL injected. Modified exports decompress entries.
 - BTI: RGBA preview for direct/indexed/CMPR formats.

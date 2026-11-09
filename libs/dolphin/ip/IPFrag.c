@@ -1,8 +1,6 @@
-#include <dolphin/types.h>
+#include <dolphin/ip/ip.h>
 
 #include <string.h>
-
-extern void ICMPSendError(u8*, u32, u32, u32);
 extern void OSCancelAlarm(void*);
 extern BOOL OSDisableInterrupts(void);
 extern void OSRestoreInterrupts(BOOL);

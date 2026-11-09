@@ -3,17 +3,6 @@
 #include "macros.h"
 
 extern "C" void* __vt__11J3DTexNoAnm[];
-extern "C" void __as__13J3DTexMtxInfoFRC13J3DTexMtxInfo(J3DTexMtxInfo*, const J3DTexMtxInfo&);
-
-struct J3DTexMtxAnimatorAlloc {
-    J3DTexMtxAnimatorAlloc()
-    {
-        __as__13J3DTexMtxInfoFRC13J3DTexMtxInfo((J3DTexMtxInfo*)this, j3dDefaultTexMtxInfo);
-    }
-
-    J3DTexMtxInfo mInfo;
-    Mtx mMtx;
-};
 
 void J3DMaterialTable::clear()
 {
@@ -263,7 +252,7 @@ inline int J3DMaterialTable::createTexMtxForAnimator(J3DAnmTextureSRTKey* anm)
 			if (materialAnm == NULL) {
 				result = 1;
 			} else if (texMtxID != 0xFF && material->getTexMtx(texMtxID) == NULL) {
-				mtx = (J3DTexMtx*)new J3DTexMtxAnimatorAlloc();
+				mtx = new J3DTexMtx();
 				result = 4;
 				material->mTexGenBlock->setTexMtx(texMtxID, mtx);
 			}
