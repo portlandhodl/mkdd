@@ -14,6 +14,7 @@ class ExStringNodeManager;
 class StringNodeManager;
 
 class StringObj {
+public:
     StringObj(u8, bool);
     virtual ~StringObj() { return; };
     void createModel(JKRSolidHeap *, u32);

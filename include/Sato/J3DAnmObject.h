@@ -71,6 +71,8 @@ public:
         anmFrameProc();
     }
 
+    J3DDeformData *getDeformData() { return mDeformData; }
+
 private:
     J3DDeformData *mDeformData;
 };
