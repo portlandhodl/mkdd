@@ -88,9 +88,8 @@ bool TMapObjFireObj::checkDrive()
 
 void TMapObjFireObj::initFunc_Normal()
 {
-    for (int ofs = 0, i = ofs; i < mFireNum; i++, ofs += 4) {
-        TMapObjFireBallBase **p = (TMapObjFireBallBase **)((u8 *)mFire + ofs);
-        TMapObjFireBallBase *fire = *p;
+    for (int i = 0; i < mFireNum; i++) {
+        TMapObjFireBallBase *fire = mFire[i];
         fire->mRot.x = mFireRot[0];
         fire->mRot.y = mFireRot[1];
         fire->mRot.z = mFireRot[2];
