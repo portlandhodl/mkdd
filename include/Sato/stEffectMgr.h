@@ -49,7 +49,7 @@ struct stEffectMgr {
     void getWaterTrack(int);                                                      // 0x8023a93c
     void getKartExhaustMtxL(int);                                                 // 0x8023a9d4
     void getKartExhaustMtxR(int);                                                 // 0x8023aa6c
-    void getEfctCarSpeed(int) const;                                              // 0x8023ab04
+    f32 getEfctCarSpeed(int) const;                                              // 0x8023ab04
     void getExhaustAccelCounter(int);                                             // 0x8023abb4
     void getExhaustPosDir(JGeometry::TVec3f *, JGeometry::TVec3f *, int, u8);     // 0x8023ac64
     void createEmitter(stEmitterCallBack *, u16);                                 // 0x8023adb8

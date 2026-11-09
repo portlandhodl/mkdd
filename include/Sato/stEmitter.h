@@ -8,7 +8,30 @@
 struct stEmitter
 {
     stEmitter(); // 0x802359b4
-    u8 _0[0xd8];
+
+    u8 _00[0x18];
+    u8 mCreateRate; // 0x18
+    u8 _19[3];
+    f32 _1c;
+    u8 mRateStep; // 0x20
+    u8 _21;
+    s16 mLife; // 0x22
+    f32 mLifeRndRate; // 0x24
+    u8 _28[0xc];
+    f32 mFirstVelRndAngle; // 0x34
+    f32 mFirstVel; // 0x38
+    u8 _3c[4];
+    f32 mGravity; // 0x40
+    f32 mAirFric; // 0x44
+    u8 _48[0x18];
+    f32 mSizeX; // 0x60
+    f32 mSizeY; // 0x64
+    u8 _68[4];
+    f32 mSizeFirst; // 0x6c
+    f32 mSizeLast; // 0x70
+    u8 _74[8];
+    f32 mAlphaStdRate; // 0x7c
+    u8 _80[0x58];
 }; // Size: 0xd8
 
 struct stEmitterParamLineIP
