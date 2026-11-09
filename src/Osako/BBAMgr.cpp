@@ -8,6 +8,7 @@
 #include "JSystem/JAudio/System/JASTrack.h"
 #include "JSystem/JAudio/System/JASChannel.h"
 #include "JSystem/JAudio/Interface/JAISe.h"
+#include "JSystem/JAudio/JASFakeMatch2.h"
 #include "dolphin/dvd.h"
 #include "dolphin/os.h"
 
@@ -71,6 +72,8 @@ static HTTPServiceConfig sHTTPServiceConfig = {
     &sHTTPThread, sHttpThreadName, 0x4000, 0x14, &sHttpFile, 1,
 };
 
+static const u32 sUuidSeed[4] = {0, 0, 0, 0x3F800000};
+
 static SSDPSearchInfo sSearchInfo = {
     "upnp:rootdevice", (void (*)(const char *, const void *, const void *))NetGameMgr::callbackSearch,
 };
@@ -109,18 +112,13 @@ BBAMgr *BBAMgr::create(JKRHeap *heap)
 
 BBAMgr::BBAMgr(JKRHeap *heap)
 {
-    mUnk00 = 0;
+    mStartTime = 0;
+    mUnk24 = 0;
+    mFlag = 0;
     mState = 0;
     mUnk10 = 0;
     mTimer0 = 0.0f;
     mTimer1 = 0.0f;
-    mUnk24 = 0;
-    mUnk00 = 0;
-    mFlag = 0;
-    mUnk00 = 0;
-    mUnk24 = 0;
-    mStartTime = 0;
-    mUnk24 = 0;
 
     u32 type;
     if (EXIGetType(0, 2, &type) != 0)
@@ -163,14 +161,15 @@ int BBAMgr::processDHCP()
             {
                 mSocket = SOSocket(2, 2, 0);
                 memset(mAddr, 0, 8);
-                mAddr[0] = 8;
                 mAddr[1] = 2;
-                *(u16 *)(mAddr + 2) = 0x6790;
+                mAddr[0] = 8;
                 *(u32 *)(mAddr + 4) = 0;
+                *(u16 *)(mAddr + 2) = 0x6790;
                 SOBind(mSocket, mAddr);
             }
         }
         mState = 3;
+        ret = 1;
         IPClearConfigError(0);
         mFlag = 0;
         mUnk24 = 0;
@@ -184,6 +183,12 @@ int BBAMgr::processDHCP()
     case 3:
         switch (IPGetConfigError(0))
         {
+        case -100:
+            SOCleanup();
+            mState = 2;
+            mUnk10 |= 1;
+            ret = 2;
+            break;
         case 0:
             UPnPGetHostAddr(&mHostAddr);
             UPnPGetNetmask(&mNetmask);
@@ -198,28 +203,24 @@ int BBAMgr::processDHCP()
                 ret = 1;
             }
             break;
-        case -100:
-            SOCleanup();
-            mState = 2;
-            mUnk10 |= 1;
-            ret = 2;
-            break;
         default:
             ret = 4;
             break;
         }
-        if (mFlag == 1)
+        f32 timer;
+        switch (mFlag)
         {
-            mTimer0 = Clock::calcFrameTime(mStartTime);
+        case 1:
+            timer = Clock::calcFrameTime(mStartTime);
+            break;
+        case 2:
+            timer = mTimeout;
+            break;
+        default:
+            timer = 0.0f;
+            break;
         }
-        else if (mFlag == 2)
-        {
-            mTimer0 = mTimeout;
-        }
-        else
-        {
-            mTimer0 = 0.0f;
-        }
+        mTimer0 = timer;
         break;
     }
 
@@ -231,30 +232,31 @@ int BBAMgr::processAutoIP()
     switch (mState)
     {
     case 2:
-        sConfig.mType = 0x18000;
+        sConfig.mType = 0x8000;
         if (getState() == 2)
         {
             if (SOStartup(&sConfig) >= 0)
             {
                 mSocket = SOSocket(2, 2, 0);
                 memset(mAddr, 0, 8);
-                mAddr[0] = 8;
                 mAddr[1] = 2;
-                *(u16 *)(mAddr + 2) = 0x6790;
+                mAddr[0] = 8;
                 *(u32 *)(mAddr + 4) = 0;
+                *(u16 *)(mAddr + 2) = 0x6790;
                 SOBind(mSocket, mAddr);
             }
         }
         mState = 4;
         mFlag = 0;
         mUnk24 = 0;
+        int ret = 1;
         if (mFlag != 1)
         {
             mStartTime = Clock::getTime() - mUnk24;
             mFlag = 1;
         }
         mTimer1 = 0.0f;
-        return;
+        return ret;
     case 4:
     {
         int ret;
@@ -269,12 +271,18 @@ int BBAMgr::processAutoIP()
         else
         {
             f32 t;
-            if (mFlag == 1)
+            switch (mFlag)
+            {
+            case 1:
                 t = Clock::calcFrameTime(mStartTime);
-            else if (mFlag == 2)
+                break;
+            case 2:
                 t = mTimeout;
-            else
+                break;
+            default:
                 t = 0.0f;
+                break;
+            }
 
             if (t > 80.0f)
             {
@@ -289,12 +297,20 @@ int BBAMgr::processAutoIP()
             }
         }
 
-        if (mFlag == 1)
-            mTimer1 = Clock::calcFrameTime(mStartTime);
-        else if (mFlag == 2)
-            mTimer1 = mTimeout;
-        else
-            mTimer1 = 0.0f;
+        f32 timer;
+        switch (mFlag)
+        {
+        case 1:
+            timer = Clock::calcFrameTime(mStartTime);
+            break;
+        case 2:
+            timer = mTimeout;
+            break;
+        default:
+            timer = 0.0f;
+            break;
+        }
+        mTimer1 = timer;
         return ret;
     }
     }
@@ -396,9 +412,9 @@ int BBAMgr::getState()
 
 void BBAMgr::createBasicDevice()
 {
-    char name[12];
-    char udn[12] = "<UDN>uuid:";
     u8 uuid[16];
+    char udn[] = "<UDN>uuid:";
+    char name[12];
     char uuidString[40];
 
     DVDDiskID *diskId = DVDGetCurrentDiskID();
@@ -407,30 +423,27 @@ void BBAMgr::createBasicDevice()
     memmove(name + 10, diskId->company, 2);
 
     UPnPCreateUuidFromName(uuid, UPnPUdnNameSpace, name, 12);
+    if (sUuidSeed[0] == mState)
+        ;
 
     sprintf(mRootDevice, "upnp:rootdevice");
-    UPnPGetUuidString(uuid, uuidString);
-    sprintf(mDeviceUuid, "uuid:%s", uuidString);
+    sprintf(mDeviceUuid, "uuid:%s", UPnPGetUuidString(uuid, uuidString));
     sprintf(mDeviceType, "urn:schemas-upnp-org:device:Basic:1");
-    UPnPGetUuidString(uuid, uuidString);
-    sprintf(mRootUuid, "uuid:%s::%s", uuidString, mRootDevice);
-    UPnPGetUuidString(uuid, uuidString);
-    sprintf(mUuid, "uuid:%s", uuidString);
-    UPnPGetUuidString(uuid, uuidString);
-    sprintf(mTypeUuid, "uuid:%s::%s", uuidString, mDeviceType);
+    sprintf(mRootUuid, "uuid:%s::%s", UPnPGetUuidString(uuid, uuidString), mRootDevice);
+    sprintf(mUuid, "uuid:%s", UPnPGetUuidString(uuid, uuidString));
+    sprintf(mTypeUuid, "uuid:%s::%s", UPnPGetUuidString(uuid, uuidString), mDeviceType);
 
     char *pUuid = strstr((char *)sHttpFile.mData, udn);
 #line 503
     JUT_ASSERT_F(pUuid, "%s", "pUUid");
 
-    UPnPGetUuidString(uuid, uuidString);
-    memcpy(pUuid + 10, uuidString, 36);
+    memcpy(pUuid + 10, UPnPGetUuidString(uuid, uuidString), 36);
 
     mInfo[0].mName = mRootDevice;
-    mInfo[0].mUuidName = mRootUuid;
     mInfo[1].mName = mDeviceUuid;
-    mInfo[1].mUuidName = mUuid;
     mInfo[2].mName = mDeviceType;
+    mInfo[0].mUuidName = mRootUuid;
+    mInfo[1].mUuidName = mUuid;
     mInfo[2].mUuidName = mTypeUuid;
 }
 
