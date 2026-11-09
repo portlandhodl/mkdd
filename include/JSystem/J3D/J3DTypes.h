@@ -512,6 +512,8 @@ struct J3DTevOrder : public J3DTevOrderInfo {
 struct J3DTevSwapModeInfo {
     u8 mRasSel; // _00
     u8 mTexSel; // _01
+    u8 _02;     // _02
+    u8 _03;     // _03
 };
 
 struct J3DTevSwapModeTableInfo {

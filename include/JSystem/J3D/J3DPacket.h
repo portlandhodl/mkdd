@@ -14,14 +14,20 @@
 #pragma optimize_for_size off
 
 struct J3DDrawBuffer;
+struct J3DMatPacket;
 struct J3DTexMtxObj;
 struct J3DTexture;
 struct J3DMaterialAnm;
 struct J3DShapePacket;
 struct J3DMtxBuffer;
 struct J3DModel;
+struct J3DSys;
+extern J3DSys j3dSys;
 
 struct J3DTexMtxObj {
+    J3DTexMtxObj(u16);
+    ~J3DTexMtxObj();
+
     Mtx& getMtx(u16 idx) { return mTexMtx[idx]; }
 
     void setEffectMtx(u16 idx, Mtx &m) {
@@ -46,11 +52,12 @@ struct J3DPacket {
     {
     }
 
-    virtual bool entry(J3DDrawBuffer*); // _08
+    virtual int entry(J3DDrawBuffer*); // _08
     virtual void draw();                // _0C (weak)
     virtual ~J3DPacket();               // _10 (weak)
 
     void addChildPacket(J3DPacket*);
+    bool isSame(J3DMatPacket*) const;
 
     J3DPacket* getNextPacket() const { return mNextPacket; }
     void setNextPacket(J3DPacket* i_packet) { mNextPacket = i_packet; }
@@ -70,23 +77,38 @@ struct J3DPacket {
     u32 mUserArea;           // _0C
 };
 
+struct J3DCallBackPacket : public J3DPacket {
+    typedef void (*CallBack)(J3DCallBackPacket *, u32);
+
+    J3DCallBackPacket()
+        : mCallBack(nullptr)
+    {
+    }
+
+    virtual void draw();             // _0C
+    virtual ~J3DCallBackPacket(); // _10 (weak)
+
+    // _00 = VTBL
+    // _00-_10 = J3DPacket
+    CallBack mCallBack; // _10
+};
+
 struct J3DDrawPacket : public J3DPacket {
     enum DrawPacketFlags {
         J3DDP_IsLocked = 0x1,
     };
 
-    inline J3DDrawPacket()
-        : mFlags(0)
-        , mDisplayList(nullptr)
-        , mTexMtxObj(nullptr)
-    {
-    }
+    J3DDrawPacket();
 
     virtual void draw();      // _0C
     virtual ~J3DDrawPacket(); // _10
 
     J3DErrType newDisplayList(u32);
     J3DErrType newSingleDisplayList(u32);
+
+    void beginDL() { mDisplayList->beginDL(); }
+    u32 endDL() { return mDisplayList->endDL(); }
+    void callDL() const { mDisplayList->callDL(); }
 
     bool checkFlag(u32 flag) const { return mFlags & flag; }
     void onFlag(u32 flag) { mFlags |= flag; }
@@ -113,7 +135,7 @@ struct J3DMatPacket : public J3DDrawPacket {
 
     J3DMatPacket();
 
-    virtual bool entry(J3DDrawBuffer*); // _08 (weak)
+    virtual int entry(J3DDrawBuffer*); // _08 (weak)
     virtual void draw();                // _0C
     virtual ~J3DMatPacket();            // _10
 
@@ -162,6 +184,7 @@ struct J3DShapePacket : public J3DDrawPacket {
     J3DErrType newDifferedDisplayList(u32 displayListFlag);
     J3DErrType newDifferedTexMtx(J3DTexDiffFlag);
     int calcDifferedBufferSize(u32);
+    void prepareDraw() const;
     void drawFast();
 
     void show() { offFlag(0x10); }
@@ -184,6 +207,11 @@ struct J3DShapePacket : public J3DDrawPacket {
     u32 mDiffFlag;            // _34
     J3DModel* mModel;         // _38
 };
+
+#include "JSystem/J3D/J3DModel.h"
+#include "JSystem/J3D/J3DSys.h"
+
+
 
 #pragma pop
 

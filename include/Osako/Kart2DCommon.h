@@ -40,6 +40,7 @@ public:
     ResTIMG *getNumberTexture(NumberTextureID id) { return mNumberTex[id]; }
     ResTIMG *getCupIconTexture(ERaceGpCup cup) { return mCupIconTex[cup]; }
     ResTIMG *getCupNameTexture(ERaceGpCup cup) { return mCupNameTex[cup]; }
+    ResTIMG *getBattleIconTexture(int idx) { return mBattleIconTex[idx]; }
 
     static Kart2DCommon *ptr() { return mspKart2DCommon; }
 private:

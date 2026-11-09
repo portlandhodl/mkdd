@@ -748,7 +748,7 @@ void Course::loadModelData()
         }
 
         modelData->newSharedDisplayList(0x40000);
-        smpCalcMaterial(modelData, modelData->getJointNodePointer(0), j3dDefaultMtx);
+        smpCalcMaterial(modelData, modelData->getJointNodePointer(0), *(Mtx*)&j3dDefaultMtx);
         modelData->makeSharedDL();
 
         mMatFlags = new u16[modelData->getMaterialNum() & 0xffff];
@@ -866,7 +866,7 @@ void Course::loadModelData()
         }
 
         modelData->newSharedDisplayList(0x40000);
-        modelData->simpleCalcMaterial(j3dDefaultMtx);
+        modelData->simpleCalcMaterial(*(Mtx*)&j3dDefaultMtx);
         modelData->makeSharedDL();
     }
 

@@ -24,7 +24,13 @@ struct J3DDisplayListInit {
 
 
 
+struct J3DMaterial_SaveBlock;
+
 struct J3DIndInitData {
+    J3DIndInitData(J3DMaterial*, J3DMaterial_SaveBlock*);
+    void init();
+    void write_InSaver(u8**);
+
     u8 _00;             // _00
     u8 mIndTexStageNum; // _01
     u32 : 0;
@@ -35,6 +41,7 @@ struct J3DIndInitData {
 };
 
 struct J3DLightInfo {
+    u8 _00[0x30];
 };
 
 struct J3DPatchingInfo {
@@ -58,6 +65,13 @@ struct J3DTexCoord2Info {
  * @size{0x14C}
  */
 struct J3DMaterialInitData {
+    J3DMaterialInitData();
+    J3DMaterialInitData(J3DMaterial*, J3DMaterial_SaveBlock*);
+    void init();
+    void write_InSaver(u8**);
+    J3DMaterialInitData& operator=(const J3DMaterialInitData&);
+    bool operator==(const J3DMaterialInitData&);
+
     u8 _00;                           // _00
     u8 _01;                           // _01
     u8 _02;                           // _02

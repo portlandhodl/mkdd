@@ -54,6 +54,11 @@ struct J3DAnmBase
     {
     }
 
+    inline J3DAnmBase(s16 frameMax)
+        : mAttribute(0), _05(0), mMaxFrame(frameMax), mCurrentFrame(0.0f)
+    {
+    }
+
     virtual ~J3DAnmBase() {}                // _08 (weak)
     virtual J3DAnmKind getKind() const = 0; // _0C
 

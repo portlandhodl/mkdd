@@ -125,17 +125,17 @@ public:
     virtual void reflect(const JGeometry::TVec3f &);
     virtual void roll();
 
-    JGeometry::TVec3f *mPos;    // 04
-    JGeometry::TVec3f *mVel;    // 08
-    JGeometry::TPos3f *mMtx;    // 0C
-    void *_10;                  // 10
+    f32 _04;                    // 04
+    f32 _08;                    // 08
+    f32 _0C;                    // 0C
+    f32 _10;                    // 10
     f32 _14;                    // 14
     f32 _18;                    // 18
     u8 _1C;                     // 1C
     u8 _1D[3];                  // 1D
-    f32 _20;                    // 20
-    f32 _24;                    // 24
-    f32 _28;                    // 28
+    JGeometry::TVec3f *mPos;    // 20
+    JGeometry::TVec3f *mVel;    // 24
+    JGeometry::TPos3f *mMtx;    // 28
     stRandom *_2C;              // 2C
 };
 
@@ -156,7 +156,10 @@ public:
     virtual void reflect(const JGeometry::TVec3f &);
     virtual void roll();
 
-    u8 _30[12];
+    u8 _30[4];
+    f32 _34;
+    u8 _38;
+    u8 _39[3];
 }; // Size: 0x3C
 
 #endif // COORD3D_H

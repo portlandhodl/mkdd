@@ -371,7 +371,10 @@ public:
         _28 = 0;
     }
     u8 _0;
-    u8 _1[0x28 - 0x1];
+    u8 _1[3];
+    JGeometry::TVec3f _4;
+    JGeometry::TVec3f _10;
+    JGeometry::TVec3f _1c;
     u32 _28;
 };
 
@@ -435,6 +438,7 @@ public:
     void setStatus(bool, f32);                                  // 0x8012d814
 
     static CustomAudience<4> *getAudience() { return smAudience; }
+    JGeometry::TVec3f &getPlayPos(s32 index) { return _64[index]; }
 public:
     static CustomAudience<4> *smAudience; // 0x80416278
 

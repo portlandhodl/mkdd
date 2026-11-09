@@ -21,6 +21,11 @@ public:
 private:
     static BattleName2D *mBattleName2D; // 0x80416380
 
+public:
+    static BattleName2D *ptr() { return mBattleName2D; }
+
+private:
+
     const ResTIMG *mTextures[3];
 };
 #endif // BATTLENAME2D_H

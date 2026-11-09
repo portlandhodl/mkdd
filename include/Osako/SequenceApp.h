@@ -33,6 +33,7 @@ public:
     }
 
     static SequenceApp *ptr() { return mspSequenceApp; }
+    Scene::SceneType getPrevScene() const { return mPrevScene; }
     void setNextScene(Scene::SceneType next) {
 #line 55
         JUT_ASSERT(next < Scene::SCENE_MAX);

@@ -119,8 +119,8 @@ void GXDrawCylinder(u8 numEdges)
     f32 y[100];
     volatile f32 pad[12];
     f32 angle;
-    f32 xv;
     f32 yv;
+    f32 xv;
 
     top = 1.0f;
     bottom = -top;

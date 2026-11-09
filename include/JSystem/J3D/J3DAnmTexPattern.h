@@ -13,15 +13,7 @@ struct J3DAnmTexPatternFullTable {
 };
 
 struct J3DAnmTexPattern : public J3DAnmBase {
-    inline J3DAnmTexPattern()
-        : _0C(nullptr)
-        , mAnmTable(nullptr)
-        , _14(0)
-        , mUpdateMaterialNum(0)
-        , mUpdateMaterialID(nullptr)
-        , mNameTab()
-    {
-    }
+        J3DAnmTexPattern();
 
     virtual ~J3DAnmTexPattern() { }    // _08 (weak)
     virtual J3DAnmKind getKind() const // _0C (weak)

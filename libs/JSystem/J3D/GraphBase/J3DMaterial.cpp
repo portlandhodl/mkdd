@@ -43,3 +43,33 @@ void J3DLockedMaterial::diff(u32) { }
 void J3DLockedMaterial::calc(const Mtx) { }
 
 void J3DLockedMaterial::reset() { }
+
+void J3DLockedMaterial::change() { }
+
+DECL_WEAK void J3DPEBlock::patch() { }
+
+DECL_WEAK void J3DPEBlock::diffFog() { }
+
+DECL_WEAK void J3DPEBlock::diffBlend() { }
+
+DECL_WEAK void J3DPEBlock::setFog(J3DFog*) { }
+
+DECL_WEAK void J3DPEBlock::setFog(J3DFog) { }
+
+DECL_WEAK void J3DPEBlock::setAlphaComp(const J3DAlphaComp&) { }
+
+DECL_WEAK void J3DPEBlock::setAlphaComp(const J3DAlphaComp*) { }
+
+DECL_WEAK void J3DPEBlock::setBlend(const J3DBlend&) { }
+
+DECL_WEAK void J3DPEBlock::setBlend(const J3DBlend*) { }
+
+DECL_WEAK void J3DPEBlock::setZMode(J3DZMode) { }
+
+DECL_WEAK void J3DPEBlock::setZMode(const J3DZMode*) { }
+
+DECL_WEAK void J3DPEBlock::setZCompLoc(u8) { }
+
+DECL_WEAK void J3DPEBlock::setZCompLoc(const u8*) { }
+
+DECL_WEAK void J3DPEBlock::setDither(u8) { }

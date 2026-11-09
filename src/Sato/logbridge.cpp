@@ -334,7 +334,7 @@ void StringBridge::makeSharedDL() {
     J3DModelData *modelData = _290->getModelData();
     if (_27e != 0) {
         modelData->newSharedDisplayList(0x40000);
-        modelData->simpleCalcMaterial(0, j3dDefaultMtx);
+        modelData->simpleCalcMaterial(0, *(Mtx*)&j3dDefaultMtx);
         modelData->makeSharedDL();
     }
 }

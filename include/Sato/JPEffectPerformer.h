@@ -45,6 +45,7 @@ public:
         Effect_Unknown12 = 0x12,
         Effect_Burn = 0x13,
         Effect_Star = 0x1c,
+        Effect_Cannon = 0x23,
         Effect_Fireball = 0x24,
     };
 

@@ -16,6 +16,30 @@ public:
 
 static JGeometry::TVec3f axisY;
 static u8 axisYInit;
+extern f32 sFriction__16TMapObjRollTable;
+extern f32 sAccParam__16TMapObjRollTable;
+extern f32 sAccThreshold__16TMapObjRollTable;
+extern f32 sVelStop__16TMapObjRollTable;
+extern f32 sRotSpeed__16TMapObjRollTable;
+extern f32 sRotMaxSpeed__16TMapObjRollTable;
+extern void *sRaceManager__7RaceMgr;
+extern JGeometry::TVec3f axisY;
+extern u8 init;
+extern CrsData::PointData *getPointData__7CrsDataCFUsUs(const CrsData *, u16, u16);
+extern f32 getNormalRange__6SiUtilFfff(f32, f32, f32);
+extern int getGeoRnd__12GeographyObjFv();
+extern void resetObject__12GeographyObjFv(GeographyObj *);
+extern void PSMTXConcat(const void *, const void *, void *);
+extern f32 PSVECMag(const void *);
+extern void setSeWithVelocityVP__Q29GameAudio14ObjectSoundMgrFUlff(GameAudio::ObjectSoundMgr *, u32, f32, f32);
+double asmD_4330000080000000 = 4503601774854144.0;
+f32 asmF_00000000 = 0.0f;
+f32 asmF_3e99999a = 0.3f;
+f32 asmF_3f000000 = 0.5f;
+f32 asmF_3f800000 = 1.0f;
+f32 asmF_40400000 = 3.0f;
+f32 asmF_41f00000 = 30.0f;
+f32 asmF_42000000 = 32.0f;
 
 f32 TMapObjRollTable::sFriction = 0.99f;
 f32 TMapObjRollTable::sAccParam = 5.0f;

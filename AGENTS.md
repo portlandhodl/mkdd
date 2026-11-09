@@ -53,3 +53,35 @@ after each function.
 - `decomp diff` exits 1 on a mismatch; `decomp regress` exits 1 on regressions.
 - Data matching counts too: prefer declaring real types/initializers over
   casts to opaque bytes.
+
+## Track Studio (`tools/track-editor`)
+
+Standalone offline Rust/WASM/WebGL2 course and asset editor. It is independent of
+Ninja and the matching build; `tools/track-editor/serve.sh` tests, builds into
+`www/pkg`, and serves on `127.0.0.1:8000` (`PORT`/`HOST` can override). Cargo
+artifacts default to `build/track-editor/target`; generated WASM and proprietary
+assets are not committed.
+
+- BOL `0015`: all sections, field edits, object add/duplicate/delete, undo/redo,
+  validation, and raw-preserving nonstructural export. Structural export is
+  canonical; unmodified export is byte-identical.
+- BCO `0003`: collision rendering and inspection, not collision writing.
+- BMD: static course geometry, hierarchy transforms, basic material colors and
+  single-texture previews loaded automatically from course ARCs or Add Related.
+  Multi-TEV equations, additional UV modulation, animation, and BMD writing are
+  not implemented.
+- RARC/Yaz0/Yay0: archive browsing, extraction, file replacement, and raw RARC
+  export with the current BOL injected. Modified exports decompress entries.
+- BTI: RGBA preview for direct/indexed/CMPR formats.
+
+Run native tests and optional user-owned corpus tests with:
+
+```sh
+cargo test --manifest-path tools/track-editor/Cargo.toml
+MKDD_TEST_COURSE_DIR=/absolute/extracted/course/dir \
+  cargo test --manifest-path tools/track-editor/Cargo.toml --test real_files
+```
+
+For the real Chrome CDP smoke test, set `MKDD_TEST_ARC`, optionally
+`MKDD_TEST_BOL`, and `MKDD_EDITOR_TEST_OUT` to ignored output directories, then
+run `node tools/track-editor/tests/browser_smoke.mjs`.

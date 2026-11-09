@@ -4,8 +4,14 @@
 #include <dolphin/mtx.h>
 #include "JSystem/J3D/J3DTypes.h"
 
-extern Mtx j3dDefaultMtx;
+extern const Mtx j3dDefaultMtx;
+extern const Vec j3dDefaultScale;
+extern const J3DTransformInfo j3dDefaultTransformInfo;
 
+void __MTGQR7(u32);
+void J3DGQRSetup7(u32, u32, u32, u32);
+void __MTGQR6(u32);
+void J3DGQRSetup6(u32, u32, u32, u32);
 void J3DCalcBBoardMtx(f32 (*)[4]);
 void J3DCalcYBBoardMtx(f32 (*)[4]);
 void J3DPSCalcInverseTranspose(f32 (*)[4], f32 (*)[3]);
@@ -18,6 +24,8 @@ void J3DGetTextureMtxMayaOld(const J3DTextureSRTInfo&, f32 (*)[4]);
 void J3DScaleNrmMtx(f32 (*)[4], const Vec&);
 void J3DScaleNrmMtx33(f32 (*)[3], const Vec&);
 void J3DMtxProjConcat(f32 (*)[4], f32 (*)[4], f32 (*)[4]);
+void J3DCalcHalfAngleVec(Vec*, Vec*, Vec*);
+void J3DCalcHalfAngleMtx(Vec*, Vec*, f32 (*)[4]);
 void J3DPSMtxArrayConcat(f32 (*)[4], f32 (*)[4], f32 (*)[4], unsigned long);
 
 // clang-format off

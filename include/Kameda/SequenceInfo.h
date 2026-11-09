@@ -148,6 +148,8 @@ public:
     }
 
     friend class SceneMap;
+    friend class Award2D;
+    friend class SceneMapSelect;
 
 private:
     JMARandFast mRnd;          // 00
@@ -157,7 +159,8 @@ private:
     int _2c;                   // 02C
     int _30;                   // 030
     u8 mGhostFlags;            // 034
-    u8 _35[0x3C - 0x35];       // 035
+    u8 _35[3];                 // 035
+    int mBattleType;           // 038
     int mMapIndex;             // 03C
     int _40[4][4];             // 040
     int _80[4];                // 080

@@ -11,6 +11,14 @@ struct J3DVertexBuffer {
     }
     ~J3DVertexBuffer();
     void copyVtxColorArray(J3DDeformAttachFlag);
+    void copyLocalVtxPosArray(u32);
+    void copyLocalVtxNrmArray(u32);
+    void copyLocalVtxArray(u32);
+    s32 allocTransformedVtxPosArray();
+    s32 allocTransformedVtxNrmArray();
+    s32 allocTransformedVtxArray(u32);
+    s32 copyTransformedVtxArray();
+    void resetVtxColorArray();
     void init();
     void setArray() const;
     void setVertexData(J3DVertexData*);

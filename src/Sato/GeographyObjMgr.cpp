@@ -1714,7 +1714,7 @@ void GeographyObjManager::setModelData(GeographyObj *obj)
 
     if (obj->mObjFlag & 1)
     {
-        mModelData[seqID]->simpleCalcMaterial(0, j3dDefaultMtx);
+        mModelData[seqID]->simpleCalcMaterial(0, *(Mtx*)&j3dDefaultMtx);
         mModelData[seqID]->makeSharedDL();
         mSimpleModelFlags[seqID] = 1;
     }
