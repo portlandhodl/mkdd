@@ -99,6 +99,7 @@ public:
 
     void lodOff() { mEnableLOD = false; }
     u8 getGhostAlpha() const { return mGhostAlpha; }
+    u16 getHiddenDrivers() const { return mHiddenDrivers; }
 
     void flashOff() { mFlashState = 0; }
     void flashOn() {
