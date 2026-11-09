@@ -15,11 +15,12 @@ class DriverDataChild
     static int mInitCounter;
     static f32 mDriverDataDefault[91][14];
 
-    f32 data[91][14];
+    f32 data[95];
 
 public:
     DriverDataChild();
     virtual ~DriverDataChild();
+    f32 getData(int idx) const { return ((const f32 *)this)[idx]; }
 
 }; // Size: 0x180
 
