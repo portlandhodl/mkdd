@@ -56,7 +56,9 @@ public:
     f32 mMaxSpeed; // 34
     u8 _38[0x3c - 0x38];
     f32 mOffsetMaxSpeed;
-    u8 _40[0x4c - 0x40];
+    u8 _40[4];       // 40
+    s32 mRank;       // 44
+    u8 _48[4];       // 48
 }; // Size: 0x4c
 
 class RivalAwardDemoSpeedCtrl : public RivalSpeedCtrl
