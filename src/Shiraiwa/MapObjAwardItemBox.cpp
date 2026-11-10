@@ -126,6 +126,7 @@ void TMapObjAwardItemBox::reset() {
     mCup->setOrgMtx(mRotMtx);
 }
 
+#pragma auto_inline off
 void TMapObjAwardItemBox::skip() {
     int no = RaceMgr::getManager()->mRaceInfo->mAwardKartNo;
     int rank = -1;
@@ -137,6 +138,7 @@ void TMapObjAwardItemBox::skip() {
     }
     setState(3);
 }
+#pragma auto_inline reset
 
 void TMapObjAwardItemBox::doKartColCallBack(int kart) {
     KartChecker *kc = RaceMgr::getManager()->getKartChecker(kart);
@@ -338,7 +340,6 @@ void TAwardItemBoxSupervisor::skip() {
         link = link->getNext();
     }
 }
-
 bool TAwardItemBoxSupervisor::isRollState() {
     bool ret = false;
     for (JSULink<TMapObjAwardItemBox> *link = mList.getFirst(); link != nullptr;
