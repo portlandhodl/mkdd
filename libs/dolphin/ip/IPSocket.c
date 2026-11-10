@@ -1013,7 +1013,7 @@ s32 SOAccept(s32 s, u8* addr)
                 result = SO_EWOULDBLOCK;
                 goto done;
             }
-            OSSleepThread((OSThreadQueue*)&so->unk14[0xC]);
+            OSSleepThread((OSThreadQueue*)&so->unk20[0]);
         }
         so2->count--;
         if (TCPGetStatus(so) != 1) {
@@ -1867,7 +1867,7 @@ static s32 __SOClose(s32 s)
     if (TCPGetStatus(so) == 1) {
         result = TCPCancel(so);
         if (tcp->count > 0) {
-            OSWakeupThread((OSThreadQueue*)&so->unk14[0xC]);
+            OSWakeupThread((OSThreadQueue*)&so->unk20[0]);
         }
         node->ref--;
     } else if (node->flag & SO_FNONBLOCK) {
@@ -1958,7 +1958,7 @@ static void AcceptCallback(TCPSocket* so, s32 result)
         sock->prev = ptr;
         sock->next = NULL;
         listener->pendingHead = sock;
-        OSWakeupThread((OSThreadQueue*)&listener->tcp.unk14[0xC]);
+        OSWakeupThread((OSThreadQueue*)&listener->tcp.unk20[0]);
         if (((s16*)((u8*)listener + 4))[0] > 0) {
             __IPWakeupPollingThreads();
         }
