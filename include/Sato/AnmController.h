@@ -86,7 +86,7 @@ public:
 
     T *getObj(u8 anm_no) // fabricated
     {
-#line 122
+#line 127
         JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
         return &mObj[anm_no];
     }
@@ -95,7 +95,7 @@ public:
 
     J3DFrameCtrl *getFrameCtrl(u8 anm_no)
     {
-#line 122
+#line 127
         JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
         return mObj[anm_no].getFrameCtrl();
     }

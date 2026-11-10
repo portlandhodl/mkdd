@@ -115,8 +115,8 @@ void TMapObjPoihana::createModel(JKRSolidHeap *heap, u32 viewNo) {
 void TMapObjPoihana::createColModel(J3DModelData *modelData) {
     static f32 cBoundHeight = (270.0f * mScale.y) / mScale.x;
     createBoundsCylinder(modelData, 200.0f, cBoundHeight);
-    f32 y = -230.0f;
-    JGeometry::TVec3f pos(0.0f, y, 0.0f);
+    f32 y = 230.0f;
+    JGeometry::TVec3f pos(0.0f, -y, 0.0f);
     setColObjPos(pos, 0);
 }
 
@@ -163,10 +163,10 @@ void TMapObjPoihana::reset() {
         downRotFrame = 90;
     }
     f32 rot = (f32)(u8)downRotFrame;
-    mDownRotFrame = (s16)(rot * 182.09f);
+    f32 rotFrame = rot * 182.09f;
+    mDownRotFrame = (s16)rotFrame;
     mSearchRadius = sDefaultSearchRadius;
-    f32 radius = mSearchRadius;
-    if (radius < (f32)mPathParam) {
+    if (mSearchRadius < (f32)mPathParam) {
         mSearchRadius = (f32)mPathParam;
     }
     clearAllIgnore();
@@ -210,8 +210,9 @@ void TMapObjPoihana::doKartColCallBack(int kartNo) {
     case 4:
     case 5:
     case 6: {
-        u64 status = GetKartCtrl()->GetCarStatus(kartNo);
         _58 = 14;
+        KartCtrl *ctrl = GetKartCtrl();
+        u64 status = ctrl->GetKartStatus(kartNo);
         if ((status & 0x40000) != 0) {
             ObjUtility::getKartPos(kartNo, &mKartPos);
             mDownVel = sFirstDownVel;
@@ -284,16 +285,14 @@ void TMapObjPoihana::doFunc_Walk() {
         case 0:
         case 1:
         case 2:
-        case 3:
-        case 4:
             mKartPos = mColItemObj->mPos;
             mDownVel = sFirstDownVel;
             setState(1);
             u32 anm = sAnmTable[1];
             mAnmPlayer.setAnm(anm);
             break;
-        case 5:
-        case 6:
+        case 3:
+        case 4:
             if (mColItemObj->mTransferFlags & 2) {
                 mKartPos = mColItemObj->mPos;
                 mDownVel = sFirstDownVelBanana;
@@ -305,8 +304,9 @@ void TMapObjPoihana::doFunc_Walk() {
         }
     }
     for (int i = 0; i < 8; i++) {
-        if (mIgnoreKart[i] != 0) {
-            mIgnoreKart[i]--;
+        u8 *p = &mIgnoreKart[i];
+        if (*p != 0) {
+            (*p)--;
         }
     }
     changeSpeedForWater(1.0f, 1.0f);
@@ -321,14 +321,18 @@ void TMapObjPoihana::doFunc_Walk() {
 void TMapObjPoihana::updatePosition() {
     JGeometry::TVec3f diff;
     diff.sub(mPathPos, mObjData->position);
+    f32 sq = diff.squared();
     f32 range = (f32)mPathParam - 500.0f;
-    if (diff.squared() > range * range) {
+    if (sq > range * range) {
         setState(6);
         mAnmPlayer.setAnm(sAnmTable[6]);
     }
-    mPos.x = mPathPos.x;
-    mPos.y = mPathPos.y + mHeightOffset;
-    mPos.z = mPathPos.z;
+    f32 x = mPathPos.x;
+    f32 y = mPathPos.y + mHeightOffset;
+    f32 z = mPathPos.z;
+    mPos.x = x;
+    mPos.y = y;
+    mPos.z = z;
 }
 
 void TMapObjPoihana::changeSpeedForWater(f32 speedScale, f32 rotScale) {
@@ -342,16 +346,19 @@ void TMapObjPoihana::changeSpeedForWater(f32 speedScale, f32 rotScale) {
     }
     else {
         f32 ratio = SiUtil::getNormalRange(waterDiff, 0.0f, (f32)sWaterDecelBand);
-        ratio = sWalkWaterRatio + (1.0f - sWalkWaterRatio) * (1.0f - ratio);
+        ratio = 1.0f - ratio;
+        ratio = (1.0f - sWalkWaterRatio) * ratio + sWalkWaterRatio;
         changeWalkSpeed(speedScale * ratio, rotScale * ratio);
         mInWater = 1;
     }
 }
 
 int TMapObjPoihana::searchKart() {
+    int result = -1;
     for (int i = 0; i < 8; i++) {
-        if (mIgnoreKart[i] != 0) {
-            mIgnoreKart[i]--;
+        u8 *p = &mIgnoreKart[i];
+        if (*p != 0) {
+            (*p)--;
         }
     }
     if (mSearchTimer < sReSearchFrame) {
@@ -360,7 +367,6 @@ int TMapObjPoihana::searchKart() {
     }
     mSearchTimer = 0;
     f32 best = mSearchRadius * mSearchRadius;
-    int result = -1;
     for (int i = 0; i < RaceMgr::sRaceManager->mRaceInfo->mKartNum; i++) {
         if (mIgnoreKart[i] != 0) {
             continue;
@@ -387,16 +393,16 @@ static s8 yAxisInit;
 
 void TMapObjPoihana::initFunc_Down() {
     mCheckKartHitFlags = 0;
-    mGeoObjFlag &= 7;
+    mGeoObjFlag = mGeoObjFlag & 7;
     if (!yAxisInit) {
         yAxis.set(0.0f, 1.0f, 0.0f);
         yAxisInit = 1;
     }
+    JGeometry::TVec3f axis;
     JGeometry::TVec3f dir;
     dir.sub(mKartPos, mPos);
     dir.y = 0.0f;
     dir.normalize();
-    JGeometry::TVec3f axis;
     axis.cross(dir, yAxis);
     axis.normalize();
     mDownMtx.setRotate(axis, 3.1415927f / (f32)sDownRotFrame);
@@ -406,14 +412,16 @@ void TMapObjPoihana::initFunc_Down() {
     dir.y = 0.0f;
     dir.normalize();
     dir.scale(mDownVel);
-    mVel = dir;
+    mVel.x = dir.x;
+    mVel.y = dir.y;
+    mVel.z = dir.z;
 }
 
 void TMapObjPoihana::doFunc_Down() {
     bool rot = true;
     if (getStateCount() < (u32)sDownRotFrame) {
-        PSMTXConcat((Mtx &)mDownMtx, (Mtx &)mRotMtx, (Mtx &)mRotMtx);
         rot = false;
+        PSMTXConcat((Mtx &)mDownMtx, (Mtx &)mRotMtx, (Mtx &)mRotMtx);
     }
     JGeometry::TVec3f oldPos = mPos;
     mPos += mVel;
@@ -459,7 +467,8 @@ void TMapObjPoihana::initFunc_Buried() {
 void TMapObjPoihana::doFunc_Buried() {
     if (getStateCount() > (u32)sDownFrame) {
         setState(3);
-        mAnmPlayer.setAnm(sAnmTable[3]);
+        u8 anm = sAnmTable[3];
+        mAnmPlayer.setAnm(anm);
     }
 }
 
@@ -470,8 +479,8 @@ void TMapObjPoihana::initFunc_Wake() {
 void TMapObjPoihana::doFunc_Wake() {
     bool rot = true;
     if (getStateCount() < (u32)sWakeRotFrame) {
-        PSMTXConcat((Mtx &)mWakeMtx, (Mtx &)mRotMtx, (Mtx &)mRotMtx);
         rot = false;
+        PSMTXConcat((Mtx &)mWakeMtx, (Mtx &)mRotMtx, (Mtx &)mRotMtx);
     }
     mPos += mVel;
     mVel.y -= sWakeGravity;
@@ -500,8 +509,8 @@ void TMapObjPoihana::initFunc_Throw() {
 void TMapObjPoihana::doFunc_Throw() {
     if (!mAnmPlayer._10) {
         setState(0);
-        s8 anm = (s8)sAnmTable[0];
-        if (anm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
+        u8 anm = sAnmTable[0];
+        if ((s8)anm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
             mAnmPlayer._11 = anm;
             mAnmPlayer._10 = 1;
             mAnmPlayer._e |= 1;

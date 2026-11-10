@@ -52,7 +52,7 @@ public:
     u8 _d;
     u16 _e;
     u8 _10;
-    s8 _11;
+    u8 _11;
     f32 _14;
 }; // Size: 0x18
 #endif // ANMPLAYER_H
