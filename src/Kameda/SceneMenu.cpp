@@ -17,6 +17,7 @@
 #include "Kaneshige/KartChecker.h"
 #include "Inagaki/GameAudioMain.h"
 #include "Sato/JPEffectMgr.h"
+#include "Osako/Kart2DCommon.h"
 #include "Osako/MenuBackground.h"
 #include "Osako/MenuTitleLine.h"
 #include "Osako/NameEntryHelper.h"
@@ -332,16 +333,28 @@ const u64 SceneMenu::mChar4BckTag[] = {
 };
 
 SceneMenu::SceneMenu(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap) {
-    /*
-    J2DGrafContext::scissor(float, float, float, float) {}
-    J2DTextBox::setFontColor(JUtility::TColor, JUtility::TColor) {}
-    J2DTextBox::getFontSize(J2DTextBox::TFontSize &) const {}
-    Kart2DCommon::getCharIconTexture(ECharID) {}
-    MenuTitleLine::create(JKRArchive *, JKRHeap *) {}
-    MenuBackground::create(JKRArchive *) {}
-    CreateJPAMgr(JKRHeap *, bool) {}
-    CharacterSelect3D::create(JKRHeap *) {}
-    */
+    void (J2DGrafContext::*scissorFn)(f32, f32, f32, f32) = &J2DGrafContext::scissor;
+    (mOrtho->*scissorFn)(0.0f, 0.0f, 0.0f, 0.0f);
+
+    void (J2DTextBox::*fontColorFn)(JUtility::TColor, JUtility::TColor) = &J2DTextBox::setFontColor;
+    (mTextBox->*fontColorFn)(JUtility::TColor(0xFFFFFFFF), JUtility::TColor(0xFFFFFFFF));
+
+    void (J2DTextBox::*fontSizeFn)(J2DTextBox::TFontSize &) const = &J2DTextBox::getFontSize;
+    (mTextBox->*fontSizeFn)(mFontSize);
+
+    ResTIMG *(Kart2DCommon::*charIconFn)(ECharID) = &Kart2DCommon::getCharIconTexture;
+    (Kart2DCommon::ptr()->*charIconFn)((ECharID)0);
+
+    MenuTitleLine *(*createTitleFn)(JKRArchive *, JKRHeap *) = &MenuTitleLine::create;
+    createTitleFn(archive, heap);
+    MenuBackground *(*createBgFn)(JKRArchive *) = &MenuBackground::create;
+    createBgFn(archive);
+
+    void (*createJpaFn)(JKRHeap *, bool) = &CreateJPAMgr;
+    createJpaFn(heap, true);
+
+    CharacterSelect3D *(*createCharFn)(JKRHeap *) = &CharacterSelect3D::create;
+    createCharFn(heap);
 }
 
 void SceneMenu::reset() {}
@@ -379,11 +392,16 @@ void SceneMenu::draw()
     case 11:
         mScreenSelectBattle->draw(0.0f, 0.0f, mOrtho);
         break;
+    case 12:
+    case 13:
+    case 14:
     default:
         break;
     }
 
-    if (mInfo.mode >= 12 && mInfo.mode < 15)
+    if (mInfo.mode < 15)
+    {
+    if (mInfo.mode >= 12)
     {
         for (int i = 0; i < 10; i++)
         {
@@ -395,24 +413,30 @@ void SceneMenu::draw()
             mScreenChar1->draw(0.0f, 0.0f, mOrtho);
             break;
         case 1:
-            mScreenChar1Plus->draw(0.0f, 0.0f, mOrtho);
-            break;
-        case 2:
             mScreenChar2->draw(0.0f, 0.0f, mOrtho);
             break;
-        case 3:
+        case 2:
             mScreenChar3->draw(0.0f, 0.0f, mOrtho);
+            break;
+        case 3:
+            mScreenChar4->draw(0.0f, 0.0f, mOrtho);
             break;
         default:
 #line 1938
             JUT_ASSERT(0);
         }
     }
+    else
+    {
+    }
+    }
 
     mScreenPlayerIcon->draw(0.0f, 0.0f, mOrtho);
     MenuTitleLine::ptr()->draw(mOrtho);
 
-    if (mInfo.mode >= 12 && mInfo.mode < 15)
+    if (mInfo.mode < 15)
+    {
+    if (mInfo.mode >= 12)
     {
         for (int i = 0; i <= mInfo.entryNum; i++)
         {
@@ -459,22 +483,29 @@ void SceneMenu::draw()
         }
         mOrtho->setPort();
     }
+    }
 
     j3dSys.reinitGX();
     JPEffectMgr::mThis->draw_for2D();
     mOrtho->setPort();
 
-    if (mInfo.mode == 13)
+    switch (mInfo.mode)
     {
-        if (mInfo.entryNum == 0)
+    case 13:
+        switch (mInfo.entryNum)
         {
-            mScreenChar1Plus->draw(0.0f, 0.0f, mOrtho);  // hmm wait: 0x2004
-        }
-        else if (mInfo.entryNum < 0 || mInfo.entryNum >= 4)
-        {
+        case 0:
+            mScreenChar1Plus->draw(0.0f, 0.0f, mOrtho);
+            break;
+        case 1:
+        case 2:
+        case 3:
+            break;
+        default:
 #line 2038
             JUT_ASSERT(0);
         }
+        break;
     }
 }
 
@@ -673,9 +704,11 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *a = panes[i];
-            J2DPane *b = panes[j];
-            if (panes[i]->mScale.x > panes[j]->mScale.x)
+            J2DPane *a;
+            J2DPane *b;
+            b = panes[j];
+            a = panes[i];
+            if (a->mScale.x > b->mScale.x)
             {
                 panes[i] = b;
                 panes[j] = a;
@@ -693,9 +726,11 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *a = panes[i];
-            J2DPane *b = panes[j];
-            if (panes[i]->mScale.x > panes[j]->mScale.x)
+            J2DPane *a;
+            J2DPane *b;
+            b = panes[j];
+            a = panes[i];
+            if (a->mScale.x > b->mScale.x)
             {
                 panes[i] = b;
                 panes[j] = a;
@@ -1036,7 +1071,8 @@ void SceneMenu::battle()
 {
     if (mBattleBck[13].mFrame == 24.0f)
     {
-        u32 trigger = ((JUTGamePad *)gpaGamePad[0])->mButtons.mTrigger;
+        JUTGamePad *pad = gpaGamePad[0];
+        u32 trigger = pad->getTrigger();
         if (trigger & JUTGamePad::A)
         {
             GameAudio::Main::getAudio()->startSystemSe(0x20003);
@@ -1055,7 +1091,7 @@ void SceneMenu::battle()
         }
         else
         {
-            u32 repeat = ((JUTGamePad *)gpaGamePad[0])->mButtons.mRepeat;
+            u32 repeat = pad->getRepeat();
             if (repeat & JUTGamePad::MAINSTICK_UP)
             {
                 GameAudio::Main::getAudio()->startSystemSe(0x20000);
@@ -1146,7 +1182,7 @@ void SceneMenu::battle()
     }
 
     f32 frame = mBattleBck[13].mFrame;
-    if (frame != 24.0f)
+    if (24.0f != frame)
     {
         mBattleBck[13].mFrame = frame + -1.0f;
         if (frame == 29.0f)
@@ -1227,9 +1263,9 @@ void SceneMenu::character()
     }
     else
     {
-        KartGamePad **pads = gpaGamePad;
         for (int i = 0; i <= mInfo.playerNum; i++)
         {
+            KartGamePad **pads = &gpaGamePad[0];
             if (mInfo.mode == 14)
                 break;
 
@@ -1242,8 +1278,8 @@ void SceneMenu::character()
             if (mInfo.entryNum + 1 == done)
                 continue;
 
-            JUTGamePad *pad = pads[i];
-            u32 trigger = pad->mButtons.mTrigger;
+            KartGamePad *pad = pads[i];
+            u32 trigger = pad->getTrigger();
 
             if (trigger & JUTGamePad::A)
             {
@@ -1255,7 +1291,7 @@ void SceneMenu::character()
             }
             else
             {
-                u32 repeat = ((JUTGamePad *)gpaGamePad[0])->mButtons.mRepeat;
+                u32 repeat = pad->getRepeat();
                 if (repeat & JUTGamePad::MAINSTICK_UP)
                     selectUp(i);
                 else if (repeat & JUTGamePad::MAINSTICK_DOWN)
@@ -1289,7 +1325,7 @@ void SceneMenu::character()
                     continue;
                 mSelectAnm[i][j].mEnable = 0;
                 int no = mSelectAnm[i][j].mNo;
-                int padNo = mPlayerPadNo[no];
+                const int padNo = mPlayerPadNo[no];
                 int cursor = mPlayerData[no].mCursor;
 
                 if (mPlayerData[padNo].mCharNoF == no && mPlayerData[padNo].mCharF == -1)
@@ -1340,7 +1376,7 @@ void SceneMenu::character()
             mCharacterSelect3D->setCharacterStatus(i, 1, CharacterSelect3D::STATUS_1);
         }
 
-        if (mPlayerData[i].mState == 2 && mCharacterSelect3D->isNext(i))
+        if (mPlayerData[i].mState == 2 && (u8)mCharacterSelect3D->isNext(i))
             ready++;
     }
 
@@ -1447,7 +1483,7 @@ void SceneMenu::selectA(int no)
     if (isSelectAnm(no))
         return;
 
-    int padNo = mPlayerPadNo[no];
+    const int padNo = mPlayerPadNo[no];
     switch (mPlayerData[padNo].mState)
     {
     case 0:
@@ -1459,16 +1495,20 @@ void SceneMenu::selectA(int no)
         if (mPlayerData[padNo].mCharNoF == no && mPlayerData[padNo].mCharF == -1)
         {
             mPlayerData[padNo].mCharF = cursor;
-            mCharPane[cursor / 2][cursor % 2].mFrame = 19.0f;
-            mSelectAnm[cursor / 2][cursor % 2].mEnable = 1;
-            mSelectAnm[cursor / 2][cursor % 2].mNo = no;
+            int row = cursor / 2;
+            int col = cursor % 2;
+            mCharPane[row][col].mFrame = 19.0f;
+            mSelectAnm[row][col].mEnable = 1;
+            mSelectAnm[row][col].mNo = no;
         }
         else if (mPlayerData[padNo].mCharNoB == no && mPlayerData[padNo].mCharB == -1)
         {
             mPlayerData[padNo].mCharB = cursor;
-            mCharPane[cursor / 2][cursor % 2].mFrame = 19.0f;
-            mSelectAnm[cursor / 2][cursor % 2].mEnable = 1;
-            mSelectAnm[cursor / 2][cursor % 2].mNo = no;
+            int row = cursor / 2;
+            int col = cursor % 2;
+            mCharPane[row][col].mFrame = 19.0f;
+            mSelectAnm[row][col].mEnable = 1;
+            mSelectAnm[row][col].mNo = no;
         }
         break;
     }
@@ -1500,7 +1540,7 @@ void SceneMenu::selectB(int no)
     if (isSelectAnm(no))
         return;
 
-    int padNo = mPlayerPadNo[no];
+    const int padNo = mPlayerPadNo[no];
     switch (mPlayerData[padNo].mState)
     {
     case 0:
@@ -1562,9 +1602,11 @@ void SceneMenu::selectB(int no)
         }
         break;
     case 2:
-        // NOTE: CharacterSelect3D::isCancel is (currently) stubbed as void in its
-        // shared header; original code branched on its boolean result here.
-        CharacterSelect3D::ptr()->isCancel(padNo);
+        if ((u8)mCharacterSelect3D->isCancel(padNo))
+        {
+            GameAudio::Main::getAudio()->startSystemSe(0x20005);
+            mPlayerData[padNo].mState = 1;
+        }
         break;
     default:
 #line 6352
@@ -1629,7 +1671,7 @@ void SceneMenu::selectLeft(int no)
     if (isSelectAnm(no))
         return;
 
-    int padNo = mPlayerPadNo[no];
+    const int padNo = mPlayerPadNo[no];
     switch (mPlayerData[padNo].mState)
     {
     case 0:
@@ -1655,7 +1697,7 @@ void SceneMenu::selectRight(int no)
     if (isSelectAnm(no))
         return;
 
-    int padNo = mPlayerPadNo[no];
+    const int padNo = mPlayerPadNo[no];
     switch (mPlayerData[padNo].mState)
     {
     case 0:
@@ -1681,8 +1723,8 @@ void SceneMenu::selectZ(int no)
     if (isSelectAnm(no))
         return;
 
-    int padNo = mPlayerPadNo[no];
     int i;
+    const int padNo = mPlayerPadNo[no];
     for (i = 0; i <= mInfo.playerNum; i++)
     {
         if (no != i && mPlayerPadNo[i] == padNo)
@@ -1911,13 +1953,17 @@ void SceneMenu::rndSelect()
         int charF, charB;
         getRndCharSel(charF, charB);
         mPlayerData[i].mCharF = charF;
-        mCharPane[charF / 2][charF % 2].mFrame = 19.0f;
-        mSelectAnm[charF / 2][charF % 2].mEnable = 1;
-        mSelectAnm[charF / 2][charF % 2].mNo = mPlayerData[i].mCharNoF;
+        int fRow = charF / 2;
+        int fCol = charF % 2;
+        mCharPane[fRow][fCol].mFrame = 19.0f;
+        mSelectAnm[fRow][fCol].mEnable = 1;
+        mSelectAnm[fRow][fCol].mNo = mPlayerData[i].mCharNoF;
         mPlayerData[i].mCharB = charB;
-        mCharPane[charB / 2][charB % 2].mFrame = 19.0f;
-        mSelectAnm[charB / 2][charB % 2].mEnable = 1;
-        mSelectAnm[charB / 2][charB % 2].mNo = mPlayerData[i].mCharNoB;
+        int bRow = charB / 2;
+        int bCol = charB % 2;
+        mCharPane[bRow][bCol].mFrame = 19.0f;
+        mSelectAnm[bRow][bCol].mEnable = 1;
+        mSelectAnm[bRow][bCol].mNo = mPlayerData[i].mCharNoB;
     }
 }
 
@@ -2162,17 +2208,16 @@ void SceneMenu::characterOkWaitAnm()
         JUT_ASSERT(0);
     }
 
-    if (mInfo.mode != 14)
+    switch (mInfo.mode)
     {
-    }
-    else
-    {
+    case 14:
         for (int i = 0; i < 2; i++)
             mChar2Bck[17 + i].mPane->hide();
         for (int i = 0; i < 3; i++)
             mChar3Bck[23 + i].mPane->hide();
         for (int i = 0; i < 4; i++)
             mChar4Bck[21 + i].mPane->hide();
+        break;
     }
 }
 
@@ -2182,25 +2227,20 @@ void SceneMenu::setChar1Plus()
     int charB = mPlayerData[0].mCharB;
     int kart = mPlayerData[0].mKart;
     bool busy = mPlayerData[0].mState == 2;
+    f32 dec = -1.0f;
 
     if (charF >= 0 && charF < 20 && !busy)
     {
         mChar1PlusBck[0].mPane->show();
         
-        f32 f1 = mChar1PlusBck[0].mFrame;
-
-        f1 = -1.0f + f1;
-
+        f32 f1 = dec + mChar1PlusBck[0].mFrame;
         mChar1PlusBck[0].mFrame = f1;
 
         if (f1 > 9.0f)
 
             mChar1PlusBck[0].mFrame = 9.0f;
         
-        f32 f2 = mChar1PlusBrk[0].mFrame;
-
-        f2 = -1.0f + f2;
-
+        f32 f2 = dec + mChar1PlusBrk[0].mFrame;
         mChar1PlusBrk[0].mFrame = f2;
 
         if (f2 > 9.0f)
@@ -2214,20 +2254,14 @@ void SceneMenu::setChar1Plus()
 
         mChar1PlusBck[1].mPane->show();
         
-        f32 f3 = mChar1PlusBck[1].mFrame;
-
-        f3 = -1.0f + f3;
-
+        f32 f3 = dec + mChar1PlusBck[1].mFrame;
         mChar1PlusBck[1].mFrame = f3;
 
         if (f3 > 9.0f)
 
             mChar1PlusBck[1].mFrame = 9.0f;
         
-        f32 f4 = mChar1PlusBpk.mFrame;
-
-        f4 = -1.0f + f4;
-
+        f32 f4 = dec + mChar1PlusBpk.mFrame;
         mChar1PlusBpk.mFrame = f4;
 
         if (f4 > 9.0f)
@@ -2248,20 +2282,14 @@ void SceneMenu::setChar1Plus()
     {
         mChar1PlusBck[2].mPane->show();
         
-        f32 f5 = mChar1PlusBck[2].mFrame;
-
-        f5 = -1.0f + f5;
-
+        f32 f5 = dec + mChar1PlusBck[2].mFrame;
         mChar1PlusBck[2].mFrame = f5;
 
         if (f5 > 9.0f)
 
             mChar1PlusBck[2].mFrame = 9.0f;
         
-        f32 f6 = mChar1PlusBrk[1].mFrame;
-
-        f6 = -1.0f + f6;
-
+        f32 f6 = dec + mChar1PlusBrk[1].mFrame;
         mChar1PlusBrk[1].mFrame = f6;
 
         if (f6 > 9.0f)
@@ -2377,7 +2405,7 @@ void SceneMenu::getCharSel(int &charF, int &charB)
             mCharSelFlag[pair] = 0;
             break;
         }
-        num = 0;
+        int num = 0;
         for (int no = 0; no < 10; no++)
         {
             if ((mCharSelFlag[no * 2] != 0 && mCharSelFlag[no * 2 + 1] == 0) || (mCharSelFlag[no * 2] == 0 && mCharSelFlag[no * 2 + 1] != 0))

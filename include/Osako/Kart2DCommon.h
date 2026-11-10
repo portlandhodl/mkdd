@@ -5,6 +5,7 @@
 #include <JSystem/JKernel/JKRHeap.h>
 
 #include "kartEnums.h"
+#include <JSystem/JUtility/JUTAssert.h>
 
 // TODO: rename stuff, all textures are probably const, inlines
 
@@ -42,11 +43,18 @@ public:
     ResTIMG *getCupNameTexture(ERaceGpCup cup) { return mCupNameTex[cup]; }
     ResTIMG *getBattleIconTexture(int idx) { return mBattleIconTex[idx]; }
     ResTIMG *getPartsLocName(int idx) { return mPartsLocName[idx]; }
+#line 152
+    ResTIMG *getCharIconTexture(ECharID id)
+    {
+        JUT_MINMAX_ASSERT(1, id, cCharIDMax);
+        return mCharIconTex[id];
+    }
+    ResTIMG *getKartIconTexture(int id) { return mKartIconTex[id]; }
 
     static Kart2DCommon *ptr() { return mspKart2DCommon; }
 private:
     static Kart2DCommon *mspKart2DCommon; // 0x80416a70
-    ResTIMG *mNumberTex[11];              // 0 to 9, also why are there 11?
+    ResTIMG *mNumberTex[10];              // 0 to 9
     ResTIMG *mFontData[26];               // chars A to Z
     ResTIMG *mCharIconTex[cCharIDMax - 1]; 
     ResTIMG *mKartIconTex[cKartIDMax];

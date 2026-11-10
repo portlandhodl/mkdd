@@ -471,7 +471,7 @@ struct J2DTextBox : public J2DPane
         f32 x, y;
     };
 
-    void getFontSize(TFontSize &fontSize) {
+    void getFontSize(TFontSize &fontSize) const {
         fontSize.x = mFontSize.x;
         fontSize.y = mFontSize.y;
     }
