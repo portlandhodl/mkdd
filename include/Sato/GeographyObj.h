@@ -300,8 +300,8 @@ public:
 
     ~ExGeographyObj() {}
     // TODO: check return types
-    virtual bool Search_Bound(const JGeometry::TVec3f &) { return false; }
-    virtual bool Search_BoundRadius(const JGeometry::TVec3f &, f32) { return false; }
+    virtual u8 Search_Bound(const JGeometry::TVec3f &) { return false; }
+    virtual u8 Search_BoundRadius(const JGeometry::TVec3f &, f32) { return false; }
     virtual void Search(const JGeometry::TVec3f &, const JGeometry::TVec3f &) {}
     virtual void AddVel(const JGeometry::TVec3f &, const JGeometry::TVec3f &) {}
     virtual void Search_Wall(const JGeometry::TVec3f &, f32) { }

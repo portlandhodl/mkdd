@@ -276,9 +276,9 @@ public:
     BridgeNodeManager() : JSUPtrList(), mNodes(0), mNodePos(0) {}
     ~BridgeNodeManager() {}
 
-    void setPosition(const JGeometry::TVec3f &, const JGeometry::TVec3f &, u32);
+    void setPosition(JGeometry::TVec3f &, JGeometry::TVec3f &, u32);
 
-    BridgeNode **mNodes;      // 0x0C
+    BridgeNode *mNodes;       // 0x0C
     JGeometry::TVec3f *mNodePos; // 0x10
     u32 _14;                  // 0x14
     f32 _18;                  // 0x18
@@ -312,16 +312,16 @@ public:
     void calcVertiMtx(Mtx, JGeometry::TVec3f &, BridgeNode *, BridgeNode *);
     void calcparallel(BridgeNode *, BridgeNode *);
     u32 findNthCenter(const JGeometry::TVec3f &);
-    void getcollideNormalandDir(u32, JGeometry::TVec3f &, JGeometry::TVec3f &);
+    JGeometry::TVec3f getcollideNormalandDir(u32, JGeometry::TVec3f &, JGeometry::TVec3f &);
     virtual void AddVel(const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void addVelNode();
     u32 getWaveNodeNum(u8);
-    virtual bool Search_Bound(const JGeometry::TVec3f &);
-    virtual bool Search_BoundRadius(const JGeometry::TVec3f &, f32);
+    virtual u8 Search_Bound(const JGeometry::TVec3f &);
+    virtual u8 Search_BoundRadius(const JGeometry::TVec3f &, f32);
     virtual void Search(const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     virtual void Search_Wall(const JGeometry::TVec3f &, f32);
     f32 calcXZLength(JGeometry::TVec3f &, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
-    void getSidePlaneParam(const JGeometry::TVec3f &, u32);
+    stPlaneParam getSidePlaneParam(const JGeometry::TVec3f &, u32);
     f32 getplaneHeight(stPlaneParam &, const JGeometry::TVec3f &);
     f32 getplaneHeight(stPlaneParam &, JGeometry::TVec3f, u32, const JGeometry::TVec3f &, f32 &);
     f32 getRightnodeVelRatio(const JGeometry::TVec3f &);

@@ -207,7 +207,7 @@ void StringBridge::init() {
 
     _2d0 = mBridgeNodeMgr[0]._18 * _30c;
 
-    BridgeNode **nodes0 = mBridgeNodeMgr[0].mNodes;
+    BridgeNode *nodes0 = mBridgeNodeMgr[0].mNodes;
     for (JSUPtrLink *link = mBridgeNodeMgr[0].getFirstLink(); link != mBridgeNodeMgr[0].mTail; link = link->getNext()) {
         BridgeNode *nodeA = (BridgeNode *)link->mData;
         BridgeNode *nodeB = (BridgeNode *)mBridgeNodeMgr[0].getNthLink(0)->mData;
@@ -300,16 +300,18 @@ void StringBridge::createColModel(J3DModelData *modelData) {
 
 void StringBridge::createModel(JKRSolidHeap *heap, u32 p2) {
     ExModel *model = _28c;
+    u32 num = _280 - 1;
 
-    for (u32 i = 0; i < _280 - 1; i++, model++) {
+    for (u32 i = 0; i < num; i++, model++) {
         model->createModel(heap, p2, 0);
     }
 
     if (_290 != 0 && _294 != 0) {
         ExModel *model2 = _290;
         ExModel *model3 = _294;
+        u32 innerNum = _280 - 2;
 
-        for (u32 i = 0; i < _280 - 2; i++, model2++, model3++) {
+        for (u32 i = 0; i < innerNum; i++, model2++, model3++) {
             model2->createModel(heap, p2, 0);
             model3->createModel(heap, p2, 0);
         }
@@ -319,8 +321,9 @@ void StringBridge::createModel(JKRSolidHeap *heap, u32 p2) {
         if (_298 != 0 && _29c != 0) {
             ExModel *model4 = _298;
             ExModel *model5 = _29c;
+            u32 strNum = _288;
 
-            for (u32 i = 0; i < _288; i++, model4++, model5++) {
+            for (u32 i = 0; i < strNum; i++, model4++, model5++) {
                 model4->createModel(heap, p2, 0);
                 model5->createModel(heap, p2, 0);
             }
@@ -422,11 +425,11 @@ void StringBridge::calc() {
 
     addVelNode();
 
-    BridgeNode **nodes0 = mBridgeNodeMgr[0].mNodes;
-    BridgeNode **nodes1 = mBridgeNodeMgr[1].mNodes;
+    BridgeNode *nodes0 = mBridgeNodeMgr[0].mNodes;
+    BridgeNode *nodes1 = mBridgeNodeMgr[1].mNodes;
     for (u32 k = 0; k < mBridgeNodeMgr[0].mLinkCount; k++) {
-        BridgeNode *nodeA = nodes0[k];
-        BridgeNode *nodeB = nodes1[k];
+        BridgeNode *nodeA = &nodes0[k];
+        BridgeNode *nodeB = &nodes1[k];
         PSVECAdd(&nodeA->mPos, &nodeB->mPos, mBridgeNodeMgr[0].mNodePos + k);
         PSVECScale(mBridgeNodeMgr[0].mNodePos + k, mBridgeNodeMgr[0].mNodePos + k, 0.5f);
     }
@@ -487,6 +490,77 @@ void StringBridge::calcBridgeModelMtx(Mtx m, JGeometry::TVec3f pos, const JGeome
     m[0][2] = dir.x;
 }
 
+void StringBridge::calcStringMtx(Mtx m, JGeometry::TVec3f &pos, const JGeometry::TVec3f &vec1, const JGeometry::TVec3f &vec2) {
+    JGeometry::TVec3f sum;
+    JGeometry::TVec3f vec;
+    JGeometry::TVec3f forward;
+    JGeometry::TVec3f right;
+
+    forward.set(1.0f, 0.0f, 0.0f);
+    right.set(0.0f, 1.0f, 0.0f);
+    sum = vec1;
+    sum += vec2;
+    vec = sum;
+
+    f32 mag = PSVECMag(&vec);
+    vec.normalize();
+    f32 scale = 0.5f * mag / _2b4;
+
+    PSVECCrossProduct(&right, &vec, &forward);
+    PSVECCrossProduct(&vec, &forward, &right);
+
+    m[0][0] = forward.x;
+    m[0][1] = right.x;
+    m[0][2] = vec.x;
+    m[0][3] = sum.x;
+    m[1][0] = forward.y;
+    m[1][1] = right.y;
+    m[1][2] = vec.y;
+    m[1][3] = sum.y;
+    m[2][0] = forward.z;
+    m[2][1] = right.z;
+    m[2][2] = vec.z;
+    m[2][3] = sum.z;
+
+    pos.set(0.0f, 0.0f, scale);
+}
+
+void StringBridge::calcVertiMtx(Mtx m, JGeometry::TVec3f &pos, BridgeNode *nodeA, BridgeNode *nodeB) {
+    JGeometry::TVec3f trans;
+    JGeometry::TVec3f normal;
+    JGeometry::TVec3f forward;
+    JGeometry::TVec3f right;
+
+    trans = nodeA->mPos;
+    trans += nodeB->mPos;
+    trans *= 0.5f;
+
+    normal = nodeB->mPos;
+    normal -= nodeA->mPos;
+    normal.normalize();
+
+    forward.set(1.0f, 0.0f, 0.0f);
+    f32 scale = 1000.0f / _2b4;
+
+    PSVECCrossProduct(&normal, &forward, &right);
+    PSVECCrossProduct(&right, &normal, &forward);
+
+    m[0][0] = forward.x;
+    m[0][1] = right.x;
+    m[0][2] = normal.x;
+    m[0][3] = trans.x;
+    m[1][0] = forward.y;
+    m[1][1] = right.y;
+    m[1][2] = normal.y;
+    m[1][3] = trans.y;
+    m[2][0] = forward.z;
+    m[2][1] = right.z;
+    m[2][2] = normal.z;
+    m[2][3] = trans.z;
+
+    pos.set(0.0f, 0.0f, scale);
+}
+
 void StringBridge::calcparallel(BridgeNode *nodeA, BridgeNode *nodeB) {
     JGeometry::TVec3f v44;
     JGeometry::TVec3f v38;
@@ -508,6 +582,123 @@ void StringBridge::calcparallel(BridgeNode *nodeA, BridgeNode *nodeB) {
     PSVECAdd(&v44, &v20, &v8);
     nodeA->mPos = v14;
     nodeB->mPos = v8;
+}
+
+void BridgeNodeManager::setPosition(JGeometry::TVec3f &pos, JGeometry::TVec3f &dir, u32 num) {
+    u32 count = num;
+    if (mNodes == 0) {
+        mNodes = new BridgeNode[count];
+    }
+    if (mNodePos == 0) {
+        mNodePos = new JGeometry::TVec3f[count - 1];
+    }
+
+    u32 i;
+    BridgeNode *node = mNodes;
+    for (i = 0; i < num; i++, node++) {
+        append(&node->mLink);
+    }
+
+    _14 = 0;
+    JGeometry::TVec3f n;
+    JGeometry::TVec3f v;
+    PSVECSubtract(&dir, &pos, &v);
+    if (0.0f < PSVECMag(&v)) {
+        PSVECScale(&v, &v, 1.0f / (num - 1));
+        PSVECNormalize(&v, &n);
+    }
+    _18 = PSVECMag(&v);
+
+    BridgeNode *first = (BridgeNode *)getFirstLink()->mData;
+    first->mPos = pos;
+    JSUPtrLink *prev = getFirstLink();
+
+    for (JSUPtrLink *link = getFirstLink()->getNext(); link != 0; link = link->getNext(), prev = prev->getNext()) {
+        BridgeNode *n = (BridgeNode *)link->mData;
+        BridgeNode *p = (BridgeNode *)prev->mData;
+        n->mVel.zero();
+        PSVECAdd(&p->mPos, &v, &n->mPos);
+        n->_18 = n->mPos;
+    }
+}
+
+u8 StringBridge::Search_Bound(const JGeometry::TVec3f &pos) {
+    u32 ret = 0;
+    u8 hit = 0;
+
+    if (_260) {
+        if (pos.y > _1e8[0].y + _25c) {
+            return false;
+        }
+    }
+    if (pos.y < _1e8[0].y - _258) {
+        return false;
+    }
+
+    for (u8 i = 0; i < 4; i++) {
+        hit += stSearchInSurface(pos, _1b8[i], _1e8[i]);
+    }
+
+    if (hit == 4) {
+        ret = 1;
+    }
+    return (u8)ret;
+}
+
+u8 StringBridge::Search_BoundRadius(const JGeometry::TVec3f &pos, f32 radius) {
+    u32 ret = 0;
+    u8 hit = 0;
+
+    if (_260) {
+        if (pos.y > _1e8[0].y + _25c) {
+            return false;
+        }
+    }
+    if (pos.y < _1e8[0].y - _258) {
+        return false;
+    }
+
+    f32 depth = 0.0f;
+    for (u8 i = 0; i < 4; i++) {
+        hit += stCollideSurfaceAndSphere(pos, radius, _218[i], depth);
+    }
+
+    if (hit == 4) {
+        ret = 1;
+    }
+    return (u8)ret;
+}
+
+u32 StringBridge::findNthCenter(const JGeometry::TVec3f &pos) {
+    JGeometry::TVec3f posCopy = pos;
+    u32 high = mBridgeNodeMgr[0].mLinkCount - 2;
+    u32 low = 0;
+    JGeometry::TVec3f lo[2] = { mBridgeNodeMgr[0].mNodePos[0], mBridgeNodeMgr[1].mNodePos[0] };
+    JGeometry::TVec3f hi[2] = { mBridgeNodeMgr[0].mNodePos[high], mBridgeNodeMgr[1].mNodePos[high] };
+
+    while (high - low > 1) {
+        f32 d0 = calcXZLength(posCopy, lo[0], lo[1]);
+        f32 d1 = calcXZLength(posCopy, hi[0], hi[1]);
+        u32 delta = (u32)(0.5f * (f64)(high - low));
+        if (delta == 0) {
+            delta = 1;
+        }
+        if (d0 < d1) {
+            high -= delta;
+            for (u32 i = 0; i < 2; i++) {
+                hi[i] = mBridgeNodeMgr[i].mNodePos[high];
+            }
+        } else {
+            low += delta;
+            for (u32 i = 0; i < 2; i++) {
+                lo[i] = mBridgeNodeMgr[i].mNodePos[low];
+            }
+        }
+    }
+
+    f32 d0 = calcXZLength(posCopy, lo[0], lo[1]);
+    f32 d1 = calcXZLength(posCopy, hi[0], hi[1]);
+    return (d0 < d1) ? low : high;
 }
 
 u32 StringBridge::getWaveNodeNum(u8 param) {
@@ -589,7 +780,7 @@ f32 StringBridge::calcXZLength(JGeometry::TVec3f &pos, const JGeometry::TVec3f &
 }
 
 f32 StringBridge::getplaneHeight(stPlaneParam &plane, const JGeometry::TVec3f &pos) {
-    return -((plane.d + plane.x * pos.x + plane.y * pos.y + plane.z * pos.z) / plane.y) + _2b0 * _2e0;
+    return -((plane.z * pos.z + plane.x * pos.x + plane.d) / plane.y) + _2b0 * _2e0;
 }
 
 f32 StringBridge::getplaneHeight(stPlaneParam &plane, JGeometry::TVec3f vec, u32 num, const JGeometry::TVec3f &pos, f32 &depth) {
@@ -597,7 +788,7 @@ f32 StringBridge::getplaneHeight(stPlaneParam &plane, JGeometry::TVec3f vec, u32
     JGeometry::TVec3f v18;
     f32 f2;
 
-    f2 = -((plane.d + plane.x * pos.x + plane.y * pos.y + plane.z * pos.z) / plane.y) + _2b0 * _2e0;
+    f2 = -((plane.z * pos.z + plane.x * pos.x + plane.d) / plane.y) + _2b0 * _2e0;
 
     v18 = vec;
     v18.sub(*mBridgeNodeMgr[0].mNodePos, v18);
@@ -633,6 +824,129 @@ f32 StringBridge::getRightnodeVelRatio(const JGeometry::TVec3f &pos) {
     }
 
     return 0.0f;
+}
+
+JGeometry::TVec3f StringBridge::getcollideNormalandDir(u32 idx, JGeometry::TVec3f &out1, JGeometry::TVec3f &out2) {
+    out2 = mBridgeNodeMgr[0].mNodePos[idx];
+    out2 -= mBridgeNodeMgr[1].mNodePos[idx];
+    if (0.0f < out2.length()) {
+        out2.normalize();
+    }
+
+    BridgeNode *a0 = (BridgeNode *)mBridgeNodeMgr[0].getNthLink(idx)->mData;
+    BridgeNode *b0 = (BridgeNode *)mBridgeNodeMgr[1].getNthLink(idx)->mData;
+    BridgeNode *a1 = (BridgeNode *)mBridgeNodeMgr[0].getNthLink(idx + 1)->mData;
+    BridgeNode *b1 = (BridgeNode *)mBridgeNodeMgr[1].getNthLink(idx + 1)->mData;
+
+    JGeometry::TVec3f v0 = a0->mPos;
+    v0 -= b0->mPos;
+    JGeometry::TVec3f v1 = a1->mPos;
+    v1 -= b1->mPos;
+    out1 = v0;
+    out1 += v1;
+    if (0.0f < out1.length()) {
+        out1.normalize();
+    }
+
+    JGeometry::TVec3f tmp;
+    PSVECCrossProduct(&out2, &out1, &tmp);
+    PSVECCrossProduct(&tmp, &out2, &out1);
+    return tmp;
+}
+
+stPlaneParam StringBridge::getSidePlaneParam(const JGeometry::TVec3f &pos, u32 idx) {
+    JGeometry::TVec3f p0 = mBridgeNodeMgr[0].mNodePos[idx];
+    JGeometry::TVec3f p1 = mBridgeNodeMgr[1].mNodePos[idx];
+    JGeometry::TVec3f center = p0;
+    center += p1;
+    center *= 0.5f;
+    center.normalize();
+
+    f32 d = PSVECDotProduct(&center, &pos);
+    JGeometry::TVec3f normal;
+    f32 width;
+    if (d > 0.0f) {
+        normal = _1b8[2];
+        width = _1b0;
+    } else {
+        normal = _1b8[0];
+        width = -_1b0;
+    }
+
+    JGeometry::TVec3f point;
+    point = center;
+    point.scale(width);
+    point += pos;
+
+    stPlaneParam plane;
+    stMakePlaneParam(plane, point, normal);
+    return plane;
+}
+
+void StringBridge::Search_Wall(const JGeometry::TVec3f &pos, f32 radius) {
+    _268 = findNthCenter(pos);
+    JGeometry::TVec3f out1;
+    JGeometry::TVec3f out2;
+    JGeometry::TVec3f normal = getcollideNormalandDir(_268, out1, out2);
+
+    JGeometry::TVec3f point;
+    point = mBridgeNodeMgr[0].mNodePos[_268];
+    point += normal;
+
+    stPlaneParam plane;
+    stMakePlaneParam(plane, point, out1);
+
+    f32 height = getplaneHeight(plane, pos) - pos.y;
+    if (height <= -sHeightCheckYMin || height > sHeightCheckYMax) {
+        return;
+    }
+
+    f32 depth = 0.0f;
+    if (stCollideSurfaceAndSphere(pos, radius, plane, depth) && depth < 0.25f * radius) {
+        CrsGround ground(RCMGetCourse());
+        ground.search(this, pos, pos);
+        _258 = ground.getHeight();
+        _25c = depth;
+    } else {
+        _25c = 0.0f;
+    }
+}
+
+void StringBridge::Search(const JGeometry::TVec3f &dir, const JGeometry::TVec3f &pos) {
+    _268 = findNthCenter(dir);
+    _26c = dir;
+
+    JGeometry::TVec3f out1;
+    JGeometry::TVec3f out2;
+    JGeometry::TVec3f normal = getcollideNormalandDir(_268, out1, out2);
+
+    JGeometry::TVec3f point = mBridgeNodeMgr[0].mNodePos[_268];
+    point += normal;
+    stPlaneParam plane;
+    stMakePlaneParam(plane, point, out1);
+
+    f32 height = getplaneHeight(plane, pos) - pos.y;
+    f32 depth = 0.0f;
+    if (height > 0.0f) {
+        CrsGround ground(RCMGetCourse());
+        ground.search(this, dir, pos);
+        _258 = 0.0f;
+        _25c = 0.0f;
+        _260 = 0.0f;
+        ground.getNormal(&normal);
+        _2b0 = ground.getHeight();
+        _2d4 = 0.0f;
+        _2d8 = (f32)_25c;
+        _2dc = (f32)_25c;
+        _2e0 = (f32)_25c;
+    } else {
+        depth = stCollideLineToPlaneIn(pos, dir, plane);
+        if (0.0f > depth && depth > -1.0f) {
+            depth = stGetCollideDepthFromT(pos, dir, depth);
+        }
+        f32 maxDepth = _2b0 * _2e0;
+        _258 = depth;
+    }
 }
 
 const char *StringBridge::getBmdFileName() {
