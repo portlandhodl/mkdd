@@ -222,12 +222,12 @@ int KartCtrl::GetPortPtr(int portNumber) {
     return (int)&viewdata[offset];
 }
 
-void KartCtrl::GetCamFovy(int camIndex) {
-    getKartCam(camIndex)->GetFovy();
+f32 KartCtrl::GetCamFovy(int camIndex) {
+    return getKartCam(camIndex)->GetFovy();
 }
 
-void KartCtrl::GetCamAspect(int camIndex) {
-    getKartCam(camIndex)->GetAspect();
+f32 KartCtrl::GetCamAspect(int camIndex) {
+    return getKartCam(camIndex)->GetAspect();
 }
 
 CrsGround *KartCtrl::GetBodyGround(int kartIndex) {

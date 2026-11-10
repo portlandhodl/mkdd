@@ -108,7 +108,7 @@ void J3DEfctIceRock::onlyinit() {
 }
 
 void J3DEfctIceRock::init() {
-    *(u32 *)_90 = 0;
+    mState = 0;
     mAnmCtrl.Reset();
     _f2 = 0;
     _f0 = 0;
@@ -120,7 +120,7 @@ void J3DEfctIceRock::calc() {
 }
 
 void J3DEfctIceRock::setTrigger() {
-    *(u32 *)_90 = 1;
+    mState = 1;
     JGeometry::TVec3f pos;
     ObjUtility::getKartPos(mKartNo, &pos);
 

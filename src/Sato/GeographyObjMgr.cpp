@@ -454,17 +454,6 @@ private:
     u8 _stub[0xd4]; // 0x220
 };
 
-class TMapObjNossie : public GeographyObj
-{
-public:
-    TMapObjNossie(const CrsData::SObject &);
-    virtual ~TMapObjNossie() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x60]; // 0x1ac
-};
-
 class TMapObjMeteor : public GeographyObj
 {
 public:
@@ -536,27 +525,7 @@ private:
     u8 _stub[0x48]; // 0x194
 };
 
-class TMapObjSwimNossie : public GeographyObj
-{
-public:
-    TMapObjSwimNossie(const CrsData::SObject &);
-    virtual ~TMapObjSwimNossie() {}
-    void calc() {}
 
-private:
-    u8 _stub[0x24]; // 0x170
-};
-
-class TMapObjPtera : public GeographyObj
-{
-public:
-    TMapObjPtera(const CrsData::SObject &);
-    virtual ~TMapObjPtera() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x3c]; // 0x188
-};
 
 class TMapObjPeachTree2 : public GeographyObj
 {

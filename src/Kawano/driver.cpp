@@ -9,6 +9,7 @@
 #include "Kaneshige/KartLoader.h"
 #include "Kaneshige/KartMotion.h"
 #include "Kawano/driverMgr.h"
+#include "Sato/NeckCtrl.h"
 #include "Kawano/feeling.h"
 #include "Kawano/osage.h"
 #include "Kawano/accessory.h"
@@ -20,13 +21,6 @@
 // Local minimal declarations for classes owned by sibling units
 // ---------------------------------------------------------------------------
 
-class NeckCtrl // 0x118
-{
-public:
-    NeckCtrl(int, u8, bool);
-    void reset();
-    u8 _0[0x118];
-};
 
 class LumbarCtrl // 0xF0
 {
@@ -59,9 +53,6 @@ public:
     virtual void reset();
 };
 
-class PeachHairCtrl : public HairCtrlBase { public: PeachHairCtrl(int, u8); u8 _4[0x48 - 4]; };
-class DaisyHairCtrl : public HairCtrlBase { public: DaisyHairCtrl(int, u8); u8 _4[0x48 - 4]; };
-class DonkeyTieCtrl : public HairCtrlBase { public: DonkeyTieCtrl(int, u8); u8 _4[0x48 - 4]; };
 
 class DriverTPAnim // size 0x220
 {
