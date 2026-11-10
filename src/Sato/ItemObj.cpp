@@ -1010,7 +1010,8 @@ void ItemObj::setModelMatrixAndScale(Quaternion quat)
     m[1][3] = mPos.y;
     m[2][3] = mPos.z;
 
-    JGeometry::TVec3f sc = mDisScaleAnm;
+    JGeometry::TVec3f sc;
+    JGeometry::setTVec3f(&mDisScaleAnm.x, &sc.x);
     sc.scale(mDarkScale);
     mModel.setBaseScale(sc);
     mModel.setBaseTRMtx(m);
@@ -1025,7 +1026,8 @@ void ItemObj::setModelMatrixAndScale(Mtx srcMtx)
     m[1][3] = mPos.y;
     m[2][3] = mPos.z;
 
-    JGeometry::TVec3f sc = mDisScaleAnm;
+    JGeometry::TVec3f sc;
+    JGeometry::setTVec3f(&mDisScaleAnm.x, &sc.x);
     sc.scale(mDarkScale);
     mModel.setBaseScale(sc);
     mModel.setBaseTRMtx(m);
@@ -1338,7 +1340,8 @@ void ItemObj::doHandOneEquip(bool flag, f32 lerp)
     finalMtx[1][3] = mPos.y;
     finalMtx[2][3] = mPos.z;
 
-    JGeometry::TVec3f sc = mDisScaleAnm;
+    JGeometry::TVec3f sc;
+    JGeometry::setTVec3f(&mDisScaleAnm.x, &sc.x);
     sc.scale(mDarkScale);
     mModel.setBaseScale(sc);
     mModel.setBaseTRMtx(finalMtx);
@@ -1715,7 +1718,7 @@ void ItemObj::initCommonMoveFallMtx()
     JGeometry::TVec3f vel = mVel;
     stVecNormalize(&vel);
     _240 = vel;
-    calcBananaFirstQuat(_240);
+    calcBananaFirstQuat(vel);
     _34 = _44;
     initMoveColGround();
 }
@@ -1748,7 +1751,7 @@ void ItemObj::moveFall()
         }
     }
 
-    _240.set(mVel);
+    _240 = mVel;
     stVecNormalize(&_240);
 }
 
