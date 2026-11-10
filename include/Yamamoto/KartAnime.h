@@ -101,7 +101,8 @@ public:
     // Inline
     bool IsChangeStart(); // 0x802f9bc4
 
-    u8 _0[0x10];         //
+    class ItemObj *_0;   //
+    u8 _04[0xc];         //
     u64 mFlags;          // 0x10, 0x14
     u8 mType;            // 0x18
     u8 _19[0x1c - 0x19]; //

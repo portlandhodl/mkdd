@@ -1065,18 +1065,18 @@ void KartCtrl::HaveRabbit() {
     bool haveRabbit = false;
     for (int i = 0; i < kartNumber; i++) {
         kartBody = getKartBody(i);
-        if (kartBody->getItem()->_0[8] != 0) {
+        if (kartBody->getItem()->_8 != 0) {
             haveRabbit = true;
         }
     }
 
     // MJB - Shine thief's music controls, maybe...?
     //       Rabbit might refer to the person with the shine...
-    if (haveRabbit && (kartBody->getItem()->_0[9] == 0)) {
+    if (haveRabbit && (kartBody->getItem()->_9 == 0)) {
         getKartSound(kartBody->mMynum)->DoShineStartBGM();
-        kartBody->getItem()->_0[9] = 1;
-    } else if (!haveRabbit && (kartBody->getItem()->_0[9] != 0)) {
+        kartBody->getItem()->_9 = 1;
+    } else if (!haveRabbit && (kartBody->getItem()->_9 != 0)) {
         getKartSound(kartBody->mMynum)->DoShineStopBGM();
-        kartBody->getItem()->_0[9] = 0;
+        kartBody->getItem()->_9 = 0;
     }
 }

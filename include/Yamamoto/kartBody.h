@@ -76,6 +76,7 @@ public:
     KartCrash *getCrash() { return mKartCrash; }
     KartDossin *getDossin() { return mKartDossin; }
     KartScene *getScene() { return mKartScene; }
+    KartStar *getStar() { return mKartStar; }
     KartCheck *getChecker() { return mKartCheck; }
     KartCannon *getCannon() { return mKartCannon; }
     KartStrat *getStrat() { return mKartStrat; }

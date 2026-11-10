@@ -48,6 +48,8 @@ public:
     void getFirstNodePos(JGeometry::TVec3f *);
     const bool checkKartColDisappear(int);
     void separate();
+    u8 tstReverseThrow() const;
+    u8 IsEndPull();
     void getChainLocatorPos(JGeometry::TVec3f *, Mtx);
     f32 getForceEfctOffsetScale() const;
     void executeGeoObjHitCallBack(GeographyObj *);

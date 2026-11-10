@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+class ItemObj;
+
 // useless, don't take this serious
 class KartPad
 {
@@ -53,7 +55,7 @@ public:
     u8 _50;
     u8 _51;
     u8 _52;
-    u32 _54;
+    ItemObj *_54;
 };
 
 // TODO: this is incorrect, this is a global symbol, yet it has unreferenced duplicates... weird
