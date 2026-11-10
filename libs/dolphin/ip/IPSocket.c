@@ -78,7 +78,6 @@ struct SOUdpSocket {
 struct SOTcpSocket {
     TCPSocket tcp;
 
-    u8 unk2B8[0x2E0 - 0x2B8];
     OSAlarm alarm;
     TCPSocket* listener;
     void* head;
@@ -182,7 +181,7 @@ extern void TCPSetTimeWaitBuffer(u8* buffer, u32 size);
 extern s32 TCPCancel(TCPSocket* so);
 
 extern s32 TCPOpen(TCPSocket* so, u8* recv, u32 recvSize, u8* send, u32 sendSize);
-extern void TCPSetTimeout(TCPSocket* so, s64 rxt, s64 idle);
+extern void TCPSetTimeout(TCPSocket* so, s64 rxt);
 extern s32 TCPListen(TCPSocket* so, u8* addr, u16 localPort, s32 backlog, u32 flag);
 extern s32 TCPGetStatus(TCPSocket* so);
 extern s32 TCPGetRemoteSocket(TCPSocket* so, u8* addr);
@@ -224,20 +223,6 @@ s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr);
 u32 SOGetHostID(void);
 void __IPWakeupPollingThreads(void);
 s32 SOGetResolver(u8* dns1, u8* dns2);
-static BOOL OnReset(BOOL final);
-static void PutNode(SOsock* node);
-static void* SOAlloc(s32 type, u32 size);
-static void SOFree(s32 type, void* ptr, u32 size);
-static s32 __SOClose(s32 s);
-static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, s32 len);
-static void LcpHandler(void* conf);
-static void DhcpHandler(s32 event);
-static void LingerCallback(OSAlarm* alarm, OSContext* context);
-static void LingerTimeout(OSAlarm* alarm, OSContext* context);
-static void AcceptCallback(TCPSocket* so, s32 result);
-static SOTcpSocket* AddBackLog(TCPSocket* so);
-static void PollTimeout(OSAlarm* alarm, OSContext* context);
-
 static SOAllocFn Alloc;
 static SOFreeFn Free;
 static s32 Allocated;
@@ -259,6 +244,42 @@ static s32 Initialized;
 static SOsock SocketTable[256] __attribute__((aligned(16)));
 static SOResolver Resolver __attribute__((aligned(16)));
 
+static void PutNode(SOsock* node);
+static s32 __SOClose(s32 s);
+static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len);
+static void LcpHandler(void* conf);
+static void DhcpHandler(s32 event);
+static void LingerCallback(OSAlarm* alarm, OSContext* context);
+static void LingerTimeout(OSAlarm* alarm, OSContext* context);
+static void AcceptCallback(TCPSocket* so, s32 result);
+static SOTcpSocket* AddBackLog(TCPSocket* so);
+static void PollTimeout(OSAlarm* alarm, OSContext* context);
+
+static inline void* SOAlloc(s32 type, u32 size)
+{
+    void* ptr = Alloc(type, size);
+    BOOL enabled;
+
+    if (ptr != NULL) {
+        enabled = OSDisableInterrupts();
+        Allocated += size;
+        OSRestoreInterrupts(enabled);
+    }
+    return ptr;
+}
+
+static inline void SOFree(s32 type, void* ptr, u32 size)
+{
+    BOOL enabled;
+
+    Free(type, ptr, size);
+    enabled = OSDisableInterrupts();
+    Allocated -= size;
+    if (Allocated == 0 && State == 2) {
+        OSWakeupThread(&CleaningQueue);
+    }
+    OSRestoreInterrupts(enabled);
+}
 
 char* SOInetNtoA(const u8* addr)
 {
@@ -272,32 +293,6 @@ char* SOInetNtoP(s32 af, const u8* addr, char* buf, u32 len)
         return buf;
     }
     return NULL;
-}
-
-static void* SOAlloc(s32 type, u32 size)
-{
-    void* ptr = Alloc(type, size);
-    BOOL enabled;
-
-    if (ptr != NULL) {
-        enabled = OSDisableInterrupts();
-        Allocated += size;
-        OSRestoreInterrupts(enabled);
-    }
-    return ptr;
-}
-
-static void SOFree(s32 type, void* ptr, u32 size)
-{
-    BOOL enabled;
-
-    Free(type, ptr, size);
-    enabled = OSDisableInterrupts();
-    Allocated -= size;
-    if (Allocated == 0 && State == 2) {
-        OSWakeupThread(&CleaningQueue);
-    }
-    OSRestoreInterrupts(enabled);
 }
 
 static SOsock* GetNode(s32 s, void** socket)
@@ -318,11 +313,7 @@ static SOsock* GetNode(s32 s, void** socket)
 
     enabled = OSDisableInterrupts();
     node = (SOsock*)LingerQueue.head;
-    if (node != NULL) {
-        next = (SOsock*)node->recvMutex.link.next;
-    } else {
-        next = NULL;
-    }
+    next = node != NULL ? (SOsock*)node->recvMutex.link.next : NULL;
     while (node != NULL) {
         so = (SOTcpSocket*)node;
         if (so->handle != NULL && so->handle->ref != 0) {
@@ -352,11 +343,7 @@ static SOsock* GetNode(s32 s, void** socket)
         node->recvMutex.link.next = NULL;
     next:
         node = next;
-        if (next != NULL) {
-            next = (SOsock*)next->recvMutex.link.next;
-        } else {
-            next = NULL;
-        }
+        next = next != NULL ? (SOsock*)next->recvMutex.link.next : NULL;
     }
     OSRestoreInterrupts(enabled);
 
@@ -390,17 +377,17 @@ static SOsock* GetNode(s32 s, void** socket)
 }
 
 
-static void PutNode(SOsock* node)
+static void PutNode(SOsock* sock)
 {
-    void* so;
-    void* ptr;
-    SOsock* entry;
+    SOsock* node;
     u8 proto;
+    void* so;
     s16 ref;
     BOOL enabled;
 
-    so = NULL;
+    node = sock;
     proto = 0;
+    so = NULL;
     enabled = OSDisableInterrupts();
     ref = node->ref - 1;
     node->ref = ref;
@@ -482,15 +469,16 @@ static void LcpHandler(void* conf)
 
 static void DhcpHandler(s32 event)
 {
-    u8 status[24];
+    u8 status[296];
     u8 dns1[4];
     u8 dns2[4];
+    volatile BOOL enabled;
     s32 result;
 
     switch (event) {
     case 3:
         DHCPGetStatus(status);
-        OSDisableInterrupts();
+        enabled = OSDisableInterrupts();
         if (State != 1) {
             result = SO_ENOTINIT;
         } else {
@@ -498,7 +486,7 @@ static void DhcpHandler(s32 event)
             memcpy(dns2, &Resolver.dns2, 4);
             result = 0;
         }
-        OSRestoreInterrupts(OSDisableInterrupts());
+        OSRestoreInterrupts(enabled);
         break;
     case 0:
         IPSetMtu(0, Mtu);
@@ -513,15 +501,18 @@ static void DhcpHandler(s32 event)
     if (result != 0) {
         return;
     }
-    if (State != 1) {
-        return;
-    }
     if (*(u32*)dns1 == IPAddrAny && *(u32*)dns2 == IPAddrAny) {
-        memmove(&Resolver.dns1, status + 12, 4);
-        memmove(&Resolver.dns2, status + 16, 4);
+        if (State != 1) {
+            return;
+        }
+        memmove(&Resolver.dns1, status + 12 != NULL ? status + 12 : (u8*)&IPAddrAny, 4);
+        memmove(&Resolver.dns2, status + 16 != NULL ? status + 16 : (u8*)&IPAddrAny, 4);
     } else {
-        memmove(&Resolver.dns1, dns1, 4);
-        memmove(&Resolver.dns2, dns2, 4);
+        if (State != 1) {
+            return;
+        }
+        memmove(&Resolver.dns1, dns1 != NULL ? dns1 : (u8*)&IPAddrAny, 4);
+        memmove(&Resolver.dns2, dns2 != NULL ? dns2 : (u8*)&IPAddrAny, 4);
     }
     DNSClose(&Resolver);
     if (*(u32*)&Resolver.dns1 != IPAddrAny) {
@@ -840,7 +831,7 @@ s32 SOSocket(s32 domain, s32 type, s32 flags)
         buf2 = SOAlloc(2, rwin);
         result = TCPOpen(&tcp->tcp, buf1, rwin, buf2, rwin);
         if (result >= 0) {
-            TCPSetTimeout(&tcp->tcp, R2, (s64)R2 >> 32);
+            TCPSetTimeout(&tcp->tcp, R2);
         }
         break;
     case SO_DGRAM:
@@ -904,851 +895,6 @@ s32 SOSocket(s32 domain, s32 type, s32 flags)
     }
     PutNode(node);
     return index;
-}
-
-s32 SOClose(s32 s)
-{
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    return __SOClose(s);
-}
-
-s32 SOListen(s32 s, s32 backlog)
-{
-    SOsock* node;
-    s32 result;
-    TCPSocket* so;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    if (backlog < 1) {
-        backlog = 1;
-    }
-
-    node = GetNode(s, (void**)&so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    switch (so->unk00[0]) {
-    case IP_PROTO_UDP:
-        result = SO_EBADR;
-        break;
-    case IP_PROTO_TCP:
-        result = TCPListen(so, NULL, 0, 0, 0);
-        switch (result) {
-        case -7:
-            result = -42;
-            break;
-        case -5:
-            result = SO_EINVAL;
-            break;
-        case 0:
-            while (backlog-- > 0) {
-                if (AddBackLog(so) == NULL) {
-                    break;
-                }
-            }
-            break;
-        default:
-            result = SO_EINVAL;
-            break;
-        }
-        break;
-    default:
-        PutNode(node);
-        return SO_EBADF;
-    }
-
-    PutNode(node);
-    return result;
-}
-
-s32 SOAccept(s32 s, u8* addr)
-{
-    SOsock* node;
-    SOsock* entry;
-    TCPSocket* so;
-    SOTcpSocket* so2;
-    SOTcpSocket* next;
-    BOOL enabled;
-    s32 result;
-    s32 count;
-    s32 index;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    if (addr != NULL && addr[0] < 8) {
-        return SO_EINVAL;
-    }
-
-    node = GetNode(s, (void**)&so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    enabled = OSDisableInterrupts();
-    if (so->unk00[0] == IP_PROTO_UDP) {
-        result = SO_EBADR;
-        goto done;
-    }
-    if (so->unk00[0] != IP_PROTO_TCP) {
-        result = SO_EBADF;
-        goto done;
-    }
-
-    so2 = (SOTcpSocket*)so;
-    for (;;) {
-        if (TCPGetStatus(so) != 1) {
-            result = SO_EINVAL;
-            goto done;
-        }
-        so2->count++;
-        while (TCPGetStatus(so) == 1 && so2->pendingTail != NULL) {
-            if (node->flag & SO_FNONBLOCK) {
-                so2->count--;
-                result = SO_EWOULDBLOCK;
-                goto done;
-            }
-            OSSleepThread((OSThreadQueue*)&so->unk20[0]);
-        }
-        so2->count--;
-        if (TCPGetStatus(so) != 1) {
-            result = SO_EACCES;
-            goto done;
-        }
-
-        for (index = 0; index < 256; index++) {
-            if (SocketTable[index].ref == 0) {
-                break;
-            }
-        }
-        if (index >= 256) {
-            result = SO_ENOBUFS;
-            goto done;
-        }
-
-        so2 = (SOTcpSocket*)so2->pendingTail;
-        next = (SOTcpSocket*)so2->next;
-        if (next == NULL) {
-            ((SOTcpSocket*)so)->pendingHead = NULL;
-        } else {
-            next->prev = NULL;
-        }
-        ((SOTcpSocket*)so)->pendingTail = next;
-
-        result = 0;
-        if (addr != NULL) {
-            result = TCPGetRemoteSocket(&so2->tcp, addr);
-        }
-
-        if ((TCPGetStatus(&so2->tcp) == 4 || TCPGetStatus(&so2->tcp) == 7) &&
-            result >= 0) {
-            entry = &SocketTable[index];
-            entry->flag = node->flag;
-            entry->ref = 1;
-            OSInitMutex(&entry->recvMutex);
-            OSInitMutex(&entry->sendMutex);
-            entry->proto = IP_PROTO_TCP;
-            entry->socket = so2;
-            result = index;
-            goto restore_restore;
-        }
-
-        TCPCancel(&so2->tcp);
-        TCPOpen(&so2->tcp, (u8*)so2->tcp.unk174, so2->tcp.unk178,
-                (u8*)so2->tcp.unk1F8, so2->tcp.unk1FC);
-        TCPSetTimeout(&so2->tcp, R2, (s64)R2 >> 32);
-        so2->handle = node;
-        if (node->socket == NULL) {
-            next = NULL;
-        } else {
-            next = NULL;
-        }
-        {
-            SOTcpSocket* listener = (SOTcpSocket*)so;
-            so2->listener = &listener->tcp;
-            if (listener->head == NULL) {
-                listener->tail = so2;
-            } else {
-                ((SOTcpSocket*)listener->head)->next = so2;
-            }
-            so2->prev = listener->head;
-            so2->next = NULL;
-            listener->head = so2;
-        }
-    restore_restore:
-        OSRestoreInterrupts(enabled);
-        TCPAcceptAsync(&so2->tcp, so, AcceptCallback, 0);
-        OSRestoreInterrupts(enabled);
-    }
-
-done:
-    OSRestoreInterrupts(enabled);
-    PutNode(node);
-    return result;
-}
-
-s32 SOBind(s32 s, u8* addr)
-{
-    SOsock* node;
-    void* so;
-    s32 result;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    if (addr == NULL || addr[0] < 8) {
-        return SO_EINVAL;
-    }
-
-    node = GetNode(s, &so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    switch (((u8*)so)[0]) {
-    case IP_PROTO_UDP:
-        result = UDPBind(so, addr);
-        break;
-    case IP_PROTO_TCP:
-        result = TCPBind(so, addr);
-        break;
-    default:
-        PutNode(node);
-        return SO_EBADF;
-    }
-
-    PutNode(node);
-    switch (result) {
-    case 0:
-        return 0;
-    case -13:
-        return SO_EAFNOSUPPORT;
-    case -5:
-        return SO_ESRCH;
-    case -12:
-    default:
-        return SO_EINVAL;
-    }
-}
-
-s32 SOShutdown(s32 s, s32 how)
-{
-    SOsock* node;
-    TCPSocket* so;
-    s32 result;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    if (how >= 3 || how < 0) {
-        return SO_EINVAL;
-    }
-
-    node = GetNode(s, (void**)&so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    switch (((u8*)so)[0]) {
-    case IP_PROTO_UDP:
-        result = 0;
-        break;
-    case IP_PROTO_TCP:
-        result = TCPShutdown(so, how);
-        break;
-    default:
-        PutNode(node);
-        return SO_EBADF;
-    }
-
-    PutNode(node);
-    switch (result + 12) {
-    case 4:
-    case 12:
-        return 0;
-    case 8:
-        return SO_EMFILE;
-    case 0:
-    default:
-        return SO_EINVAL;
-    }
-}
-
-s32 SORead(s32 s, void* buf, s32 len)
-{
-    return SORecvFrom(s, buf, len, 0, NULL);
-}
-
-s32 SORecvFrom(s32 s, void* buf, s32 len, u32 flags, u8* addr)
-{
-    SOsock* node;
-    TCPSocket* so;
-    s32 result;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    if (addr != NULL && addr[0] < 8) {
-        return SO_EINVAL;
-    }
-
-    node = GetNode(s, (void**)&so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    switch (so->unk00[0]) {
-    case IP_PROTO_UDP:
-        if (flags % 16) {
-            PutNode(node);
-            return SO_EBADR;
-        }
-        OSLockMutex(&node->recvMutex);
-        if (node->socket == NULL) {
-            result = SO_EBADF;
-        } else {
-            if (node->flag & SO_FNONBLOCK) {
-                flags |= SO_FNONBLOCK;
-            }
-            result = UDPReceiveEx((SOUdpSocket*)so, buf, len, 0, addr, flags);
-        }
-        OSUnlockMutex(&node->recvMutex);
-        break;
-    case IP_PROTO_TCP:
-        if (flags & ~0x7) {
-            PutNode(node);
-            return SO_EBADR;
-        }
-        if (addr != NULL) {
-            result = TCPGetRemoteSocket(so, addr);
-            if (result < 0) {
-                PutNode(node);
-                return SO_EBADF;
-            }
-        }
-        OSLockMutex(&node->recvMutex);
-        if (node->socket == NULL) {
-            result = SO_EBADF;
-        } else {
-            if (node->flag & SO_FNONBLOCK) {
-                flags |= SO_FNONBLOCK;
-            }
-            {
-                TCPSocket* sock = so;
-                if (!(flags & 1)) {
-                    result = TCPReceiveEx(sock, buf, len, flags);
-                } else {
-                    result = TCPReceiveUrgEx(sock, buf, len, flags);
-                }
-            }
-        }
-        OSUnlockMutex(&node->recvMutex);
-        break;
-    default:
-        PutNode(node);
-        return SO_EBADF;
-    }
-
-    PutNode(node);
-    if (result < 0) {
-        switch (result) {
-        case -9:
-        case -1:
-            result = SO_EWOULDBLOCK;
-            break;
-        case -8:
-        case -4:
-            result = SO_EMFILE;
-            break;
-        case -16:
-            result = SO_EFBIG;
-            break;
-        case -19:
-        case -10:
-            result = SO_EOVERFLOW;
-            break;
-        case -18:
-        case -11:
-        case -3:
-            result = SO_EFAULT;
-            break;
-        default:
-            result = SO_EINVAL;
-            break;
-        }
-    }
-    return result;
-}
-
-s32 SOWrite(s32 s, const void* buf, s32 len)
-{
-    return SOSendTo(s, buf, len, 0, NULL);
-}
-
-s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr)
-{
-    s32 result;
-    s32 s2;
-    SOsock* node;
-    TCPSocket* so;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    s2 = s;
-    if (addr != NULL && addr[0] < 8) {
-        return SO_EINVAL;
-    }
-
-    node = GetNode(s2, (void**)&so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    switch (so->unk00[0]) {
-    case IP_PROTO_UDP:
-        if (flags) {
-            PutNode(node);
-            return SO_EBADR;
-        }
-        OSLockMutex(&node->sendMutex);
-        if (node->socket == NULL) {
-            result = SO_EBADF;
-        } else {
-            result = UDPSend((SOUdpSocket*)so, buf, len, addr);
-        }
-        OSUnlockMutex(&node->sendMutex);
-        break;
-    case IP_PROTO_TCP:
-        if (flags & -6) {
-            PutNode(node);
-            return SO_EBADR;
-        }
-        OSLockMutex(&node->sendMutex);
-        if (node->socket == NULL) {
-            result = SO_EBADF;
-        } else {
-            if (node->flag & SO_FNONBLOCK) {
-                flags |= SO_FNONBLOCK;
-            }
-            {
-                TCPSocket* sock = so;
-                switch (flags) {
-                case 0:
-                    result = TCPSend(sock, buf, len);
-                    break;
-                case 1:
-                    result = TCPSendUrg(sock, buf, len);
-                    break;
-                case 4:
-                    result = TCPSendNonblock(sock, buf, len);
-                    break;
-                case 6:
-                    result = TCPSendUrgNonblock(sock, buf, len);
-                    break;
-                default:
-                    result = SO_EINVAL;
-                    break;
-                }
-            }
-        }
-        OSUnlockMutex(&node->sendMutex);
-        break;
-    default:
-        PutNode(node);
-        return SO_EBADF;
-    }
-
-    PutNode(node);
-    if (result < 0) {
-        switch (result + 19) {
-        case 6:
-            result = SO_EAFNOSUPPORT;
-            break;
-        case 13:
-            result = SO_EEXIST;
-            break;
-        case 2:
-            result = SO_EAGAIN;
-            break;
-        case 17:
-            result = SO_ELOOP;
-            break;
-        case 12:
-            result = SO_ENOMSG;
-            break;
-        case 10:
-        case 18:
-            result = SO_EWOULDBLOCK;
-            break;
-        case 11:
-        case 15:
-            result = SO_EMFILE;
-            break;
-        case 3:
-            result = SO_EFBIG;
-            break;
-        case 9:
-            result = SO_EOVERFLOW;
-            break;
-        case 1:
-        case 8:
-        case 16:
-            result = SO_EFAULT;
-            break;
-        case 7:
-            result = SO_EINVAL;
-            break;
-        case 0:
-            result = SO_ENAMETOOLONG;
-            break;
-        case 5:
-        case 4:
-        case 14:
-            result = SO_EBADF;
-            break;
-        default:
-            result = SO_EBADF;
-            break;
-        }
-    }
-    return result;
-}
-
-static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, s32 len)
-{
-    SOsock* node;
-    SOsock* entry;
-    void* so;
-    u8* buf;
-    u8* old;
-    u32 oldSize;
-    u32 size;
-    s32 result;
-
-    node = GetNode(s, &so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    switch (node->proto) {
-    case IP_PROTO_UDP:
-        if ((level >> 16) == 0xFFFF) {
-            if (opt == SO_SO_SNDBUF) {
-                if (len < 4 || val == NULL) {
-                    result = SO_ENOMEM;
-                    goto done;
-                }
-                size = *(u32*)val;
-                if (size < 536) {
-                    size = 536;
-                }
-                buf = SOAlloc(4, size + 88);
-                if (buf == NULL) {
-                    result = -7;
-                    goto done;
-                }
-                UDPGetSendBuff(so, &old, &oldSize);
-                result = UDPSetSendBuff(so, buf, size + 88);
-                if (result == 0) {
-                    if (old != NULL) {
-                        SOFree(4, old, oldSize);
-                    }
-                } else {
-                    SOFree(4, buf, size + 88);
-                }
-                goto done;
-            }
-            if (opt == SO_SO_RCVBUF) {
-                if (len < 4 || val == NULL) {
-                    result = SO_ENOMEM;
-                    goto done;
-                }
-                size = *(u32*)val;
-                if (size < 536) {
-                    size = 536;
-                }
-                buf = SOAlloc(5, size);
-                if (buf == NULL) {
-                    result = -7;
-                    goto done;
-                }
-                UDPGetRecvBuff(so, &old, &oldSize);
-                result = UDPSetRecvBuff(so, buf, size);
-                if (result == 0) {
-                    if (old != NULL) {
-                        SOFree(5, old, oldSize);
-                    }
-                } else {
-                    SOFree(5, buf, size);
-                }
-                goto done;
-            }
-        }
-        result = UDPSetSockOpt(so, level, opt, val, len);
-        goto done;
-    case IP_PROTO_TCP:
-        if ((level >> 16) == 0xFFFF) {
-            if (opt == SO_SO_SNDBUF) {
-                if (len < 4 || val == NULL) {
-                    result = SO_ENOMEM;
-                    goto done;
-                }
-                size = *(u32*)val;
-                if (size < 536) {
-                    size = 536;
-                }
-                buf = SOAlloc(1, size);
-                if (buf == NULL) {
-                    result = -7;
-                    goto done;
-                }
-                TCPGetSendBuff(so, &old, &oldSize);
-                result = TCPSetSendBuff(so, buf, size);
-                if (result == 0) {
-                    if (old != NULL) {
-                        SOFree(1, old, oldSize);
-                    }
-                } else {
-                    SOFree(1, buf, size);
-                }
-                goto done;
-            }
-            if (opt == SO_SO_RCVBUF) {
-                if (len < 4 || val == NULL) {
-                    result = SO_ENOMEM;
-                    goto done;
-                }
-                size = *(u32*)val;
-                if (size < 536) {
-                    size = 536;
-                }
-                buf = SOAlloc(2, size);
-                if (buf == NULL) {
-                    result = -7;
-                    goto done;
-                }
-                TCPGetRecvBuff(so, &old, &oldSize);
-                result = TCPSetRecvBuff(so, buf, size);
-                if (result == 0) {
-                    if (old != NULL) {
-                        SOFree(2, old, oldSize);
-                    }
-                } else {
-                    SOFree(2, buf, size);
-                }
-                goto done;
-            }
-        }
-        result = TCPSetSockOpt(so, level, opt, val, len);
-        goto done;
-    default:
-        PutNode(node);
-        return SO_EBADF;
-    }
-
-done:
-    PutNode(node);
-    switch (result) {
-    case -7:
-        result = SO_EPROTOTYPE;
-        break;
-    case -14:
-        result = SO_EBADMSG;
-        break;
-    case 0:
-        result = 0;
-        break;
-    default:
-        result = SO_EINVAL;
-        break;
-    }
-    return result;
-}
-
-s32 SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, s32 len)
-{
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    return __SOSetSockOpt(s, level, opt, val, len);
-}
-
-s32 SOFcntl(s32 s, s32 cmd, ...)
-{
-    va_list ap;
-    SOsock* node;
-    s32 result;
-    void* so;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-
-    node = GetNode(s, &so);
-    if (node == NULL || so == NULL) {
-        return SO_EBADF;
-    }
-
-    switch (((u8*)so)[0]) {
-    case IP_PROTO_UDP:
-    case IP_PROTO_TCP:
-        switch (cmd) {
-        case SO_F_GETFL:
-            result = node->flag;
-            break;
-        case SO_F_SETFL:
-            va_start(ap, cmd);
-            result = 0;
-            node->flag = *(u32*)__va_arg(ap, 1);
-            break;
-        default:
-            result = SO_ENOMEM;
-            break;
-        }
-        break;
-    default:
-        result = SO_ENOMEM;
-        break;
-    }
-
-    PutNode(node);
-    if (result >= 0) {
-        return result;
-    }
-    return SO_EINVAL;
-}
-u32 SOGetHostID(void)
-{
-    u32 addr;
-
-    IPGetAddr(0, &addr);
-    return addr;
-}
-
-static void PollTimeout(OSAlarm* alarm, OSContext* context)
-{
-    OSWakeupThread(&PollingQueue);
-}
-
-void __IPWakeupPollingThreads(void)
-{
-    OSWakeupThread(&PollingQueue);
-}
-
-s32 SOPoll(SOPollFd* fds, s32 nfds, s64 timeout)
-{
-    OSAlarm alarm;
-    SOsock* node;
-    TCPSocket* so;
-    s32 result;
-    s32 count;
-    s32 i;
-    s16 events;
-    BOOL enabled;
-
-    if (State != 1) {
-        return SO_ENOTINIT;
-    }
-    if (nfds > 256) {
-        return SO_EINVAL;
-    }
-
-    enabled = OSDisableInterrupts();
-    for (i = 0; i < nfds; i++) {
-        fds[i].revents = 0;
-        node = GetNode(fds[i].fd, (void**)&so);
-        if (node != NULL) {
-            ((s16*)((u8*)so + 4))[0]++;
-        }
-    }
-    OSRestoreInterrupts(enabled);
-
-    if (timeout != 0) {
-        OSCreateAlarm(&alarm);
-        OSSetAlarm(&alarm, timeout, PollTimeout);
-    }
-
-    enabled = OSDisableInterrupts();
-    result = 0;
-    for (;;) {
-        for (i = 0; i < nfds; i++) {
-            fds[i].revents = 0;
-            node = GetNode(fds[i].fd, (void**)&so);
-            if (node == NULL || so == NULL) {
-                continue;
-            }
-            events = fds[i].events | 0xE0;
-            switch (so->unk00[0]) {
-            case IP_PROTO_UDP:
-                events &= __UDPPoll((SOUdpSocket*)so);
-                break;
-            case IP_PROTO_TCP:
-                events &= __TCPPoll(so);
-                break;
-            default:
-                events = 0;
-                break;
-            }
-            if (events != 0) {
-                fds[i].revents = events;
-                result++;
-            }
-        }
-
-        if (result > 0) {
-            break;
-        }
-        if (timeout != 0) {
-            if ((timeout >> 32) != 0) {
-                OSSleepThread(&PollingQueue);
-            } else if (alarm.fire != 0) {
-                OSSleepThread(&PollingQueue);
-            } else {
-                break;
-            }
-        } else {
-            break;
-        }
-        if (State != 1) {
-            break;
-        }
-    }
-    OSRestoreInterrupts(enabled);
-
-    if (timeout != 0) {
-        OSCancelAlarm(&alarm);
-    }
-
-    count = 0;
-    for (i = 0; i < nfds; i++) {
-        s32 fd = fds[i].fd;
-        if (fd < 0 || fd >= 256) {
-            continue;
-        }
-        node = &SocketTable[fd];
-        if (node->ref <= 0 || node->socket == NULL) {
-            continue;
-        }
-        enabled = OSDisableInterrupts();
-        so = node->socket;
-        ((s16*)((u8*)so + 4))[0]--;
-        OSRestoreInterrupts(enabled);
-        PutNode(node);
-        count++;
-    }
-    return result;
-}
-
-static BOOL OnReset(BOOL final)
-{
-    State = 3;
-    return TRUE;
 }
 
 static void LingerCallback(OSAlarm* alarm, OSContext* context)
@@ -1918,56 +1064,32 @@ done:
     return 0;
 }
 
+s32 SOClose(s32 s)
+{
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    return __SOClose(s);
+}
+
 static void AcceptCallback(TCPSocket* so, s32 result)
 {
-    SOTcpSocket* sock = (SOTcpSocket*)so;
-    SOTcpSocket* listener = (SOTcpSocket*)sock->listener;
+    SOTcpSocket* listener;
+    SOTcpSocket* sock;
+    SOTcpSocket* next;
+    SOTcpSocket* prev;
     SOTcpSocket* ptr;
+
+    sock = (SOTcpSocket*)so;
+    listener = (SOTcpSocket*)sock->listener;
 
     if (listener == NULL) {
         return;
     }
 
     if (result >= 0) {
-        ptr = (SOTcpSocket*)sock->next;
-        sock->prev = (void*)listener;
-        if (ptr == NULL) {
-            ((SOTcpSocket*)listener)->tail = sock->prev;
-        }
-        (void)ptr;
-        ptr = (SOTcpSocket*)sock->next;
-        {
-            SOTcpSocket* prev = (SOTcpSocket*)sock->prev;
-            if (ptr == NULL) {
-                listener->tail = prev;
-            } else {
-                ptr->prev = prev;
-            }
-            if (prev == NULL) {
-                listener->head = ptr;
-            } else {
-                prev->next = ptr;
-            }
-        }
-        ptr = (SOTcpSocket*)listener->pendingHead;
-        if (ptr == NULL) {
-            listener->pendingTail = sock;
-        } else {
-            ptr->next = sock;
-        }
-        sock->prev = ptr;
-        sock->next = NULL;
-        listener->pendingHead = sock;
-        OSWakeupThread((OSThreadQueue*)&listener->tcp.unk20[0]);
-        if (((s16*)((u8*)listener + 4))[0] > 0) {
-            __IPWakeupPollingThreads();
-        }
-        return;
-    }
-
-    {
-        SOTcpSocket* next = (SOTcpSocket*)sock->next;
-        SOTcpSocket* prev = (SOTcpSocket*)sock->prev;
+        next = sock->next;
+        prev = sock->prev;
         if (next == NULL) {
             listener->tail = prev;
         } else {
@@ -1978,24 +1100,49 @@ static void AcceptCallback(TCPSocket* so, s32 result)
         } else {
             prev->next = next;
         }
+        ptr = listener->pendingHead;
+        if (ptr == NULL) {
+            listener->pendingTail = sock;
+        } else {
+            ptr->next = sock;
+        }
+        sock->prev = ptr;
+        sock->next = NULL;
+        listener->pendingHead = sock;
+        OSWakeupThread((OSThreadQueue*)&listener->tcp.unk20[0]);
+        if (listener->tcp.unk04 > 0) {
+            __IPWakeupPollingThreads();
+        }
+        return;
+    }
+
+    next = sock->next;
+    prev = sock->prev;
+    if (next == NULL) {
+        listener->tail = prev;
+    } else {
+        next->prev = prev;
+    }
+    if (prev == NULL) {
+        listener->head = next;
+    } else {
+        prev->next = next;
     }
 
     TCPCancel(&sock->tcp);
     TCPOpen(&sock->tcp, (u8*)sock->tcp.unk174, sock->tcp.unk178,
             (u8*)sock->tcp.unk1F8, sock->tcp.unk1FC);
-    TCPSetTimeout(&sock->tcp, R2, (s64)R2 >> 32);
+    TCPSetTimeout(&sock->tcp, R2);
     sock->listener = &listener->tcp;
-    {
-        SOTcpSocket* prev = (SOTcpSocket*)listener->head;
-        if (prev == NULL) {
-            listener->tail = sock;
-        } else {
-            prev->next = sock;
-        }
-        sock->prev = prev;
-        sock->next = NULL;
+    prev = listener->tail;
+    if (prev == NULL) {
         listener->head = sock;
+    } else {
+        prev->next = sock;
     }
+    sock->prev = prev;
+    sock->next = NULL;
+    listener->tail = sock;
     TCPAcceptAsync(&sock->tcp, &listener->tcp, AcceptCallback, 0);
 }
 
@@ -2013,47 +1160,899 @@ static SOTcpSocket* AddBackLog(TCPSocket* so)
     listener = (SOTcpSocket*)so;
     tcp = SOAlloc(0, 0x330);
     size1 = listener->tcp.unk178;
-    buf1 = SOAlloc(1, size1);
     size2 = listener->tcp.unk1FC;
+    buf1 = SOAlloc(1, size1);
     buf2 = SOAlloc(2, size2);
     result = TCPOpen(&tcp->tcp, buf1, size1, buf2, size2);
     if (result < 0) {
         goto fail;
     }
-    TCPSetTimeout(&tcp->tcp, R2, (s64)R2 >> 32);
+    TCPSetTimeout(&tcp->tcp, R2);
 
     enabled = OSDisableInterrupts();
-    if (TCPGetStatus(so) != 1) {
-        OSRestoreInterrupts(enabled);
-        goto fail;
-    }
-    tcp->listener = so;
-    {
-        SOTcpSocket* prev = (SOTcpSocket*)listener->head;
-        if (prev == NULL) {
+    if (TCPGetStatus(so) == 1) {
+        tcp->listener = so;
+        {
+            SOTcpSocket* prev = (SOTcpSocket*)listener->tail;
+            if (prev == NULL) {
+                listener->head = tcp;
+            } else {
+                prev->next = tcp;
+            }
+            tcp->prev = prev;
+            tcp->next = NULL;
             listener->tail = tcp;
-        } else {
-            prev->next = tcp;
         }
-        tcp->prev = prev;
-        tcp->next = NULL;
-        listener->head = tcp;
+        OSRestoreInterrupts(enabled);
+
+        TCPAcceptAsync(&tcp->tcp, so, AcceptCallback, 0);
+        OSRestoreInterrupts(enabled);
+        return tcp;
     }
     OSRestoreInterrupts(enabled);
-
-    TCPAcceptAsync(&tcp->tcp, so, AcceptCallback, 0);
-    OSRestoreInterrupts(enabled);
-    return tcp;
 
 fail:
-    if (buf2 != NULL) {
+    if (buf2 != 0) {
         SOFree(2, buf2, size2);
     }
-    if (buf1 != NULL) {
+    if (buf1 != 0) {
         SOFree(1, buf1, size1);
     }
-    if (tcp != NULL) {
+    if (tcp != 0) {
         SOFree(0, tcp, 0x330);
     }
     return NULL;
+}
+
+s32 SOListen(s32 s, s32 arg)
+{
+    SOsock* node;
+    TCPSocket* so;
+    s32 result;
+    s32 backlog;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    backlog = arg;
+    if (backlog < 1) {
+        backlog = 1;
+    }
+
+    node = GetNode(s, (void**)&so);
+    if (node == NULL || so == NULL) {
+        return SO_EBADF;
+    }
+
+    switch (so->unk00[0]) {
+    case IP_PROTO_UDP:
+        result = SO_EBADR;
+        break;
+    case IP_PROTO_TCP:
+        result = TCPListen(so, NULL, 0, 0, 0);
+        switch (result) {
+        case -7:
+            result = -42;
+            break;
+        case -5:
+            result = SO_EINVAL;
+            break;
+        case 0:
+            while (backlog-- > 0) {
+                if (AddBackLog(so) == NULL) {
+                    break;
+                }
+            }
+            break;
+        default:
+            result = SO_EINVAL;
+            break;
+        }
+        break;
+    default:
+        PutNode(node);
+        return SO_EBADF;
+    }
+
+    PutNode(node);
+    return result;
+}
+
+s32 SOAccept(s32 s, u8* addr)
+{
+    BOOL enabled;
+    SOsock* node;
+    void* socket;
+    SOTcpSocket* so;
+    SOTcpSocket* so2;
+    s32 index;
+    s32 result;
+    s32 status;
+    SOsock* entry;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    if (addr != NULL && addr[0] < 8) {
+        return SO_EINVAL;
+    }
+
+    node = GetNode(s, &socket);
+    if (node == NULL || socket == NULL) {
+        return SO_EBADF;
+    }
+
+    enabled = OSDisableInterrupts();
+    switch (((u8*)socket)[0]) {
+    case IP_PROTO_UDP:
+        result = SO_EBADR;
+        goto done;
+    case IP_PROTO_TCP:
+        break;
+    default:
+        result = SO_EBADF;
+        goto done;
+    }
+
+    so = (SOTcpSocket*)socket;
+    for (index = 0, entry = SocketTable; index < 256; index++, entry++) {
+        if (entry->ref != 0) {
+            continue;
+        }
+        for (;;) {
+            if (TCPGetStatus((TCPSocket*)so) != 1) {
+                result = SO_EINVAL;
+                goto done;
+            }
+            so->count++;
+            while (TCPGetStatus((TCPSocket*)so) == 1 && so->pendingTail != NULL) {
+                if (node->flag & SO_FNONBLOCK) {
+                    so->count--;
+                    result = SO_EWOULDBLOCK;
+                    goto done;
+                }
+                OSSleepThread((OSThreadQueue*)&so->tcp.unk20[0]);
+            }
+            so->count--;
+            if (TCPGetStatus((TCPSocket*)so) != 1) {
+                result = SO_EACCES;
+                goto done;
+            }
+
+            so2 = so->pendingTail;
+            if (so2->next == NULL) {
+                so->pendingHead = NULL;
+            } else {
+                ((SOTcpSocket*)so2->next)->prev = NULL;
+            }
+            so->pendingTail = so2->next;
+
+            result = 0;
+            if (addr != NULL) {
+                result = TCPGetRemoteSocket(&so2->tcp, addr);
+            }
+
+            status = TCPGetStatus(&so2->tcp);
+            if ((status == 4 || status == 7) && result >= 0) {
+                entry->flag = node->flag;
+                entry->ref = 1;
+                OSInitMutex(&entry->recvMutex);
+                OSInitMutex(&entry->sendMutex);
+                entry->proto = IP_PROTO_TCP;
+                result = index;
+                entry->socket = so2;
+                OSRestoreInterrupts(enabled);
+                AddBackLog((TCPSocket*)so);
+                goto out;
+            }
+
+            TCPCancel(&so2->tcp);
+            TCPOpen(&so2->tcp, (u8*)so2->tcp.unk174, so2->tcp.unk178,
+                    (u8*)so2->tcp.unk1F8, so2->tcp.unk1FC);
+            TCPSetTimeout(&so2->tcp, R2);
+            so2->listener = (TCPSocket*)so;
+            if (so->tail == NULL) {
+                so->head = so2;
+            } else {
+                ((SOTcpSocket*)so->tail)->next = so2;
+            }
+            so2->prev = so->tail;
+            so2->next = NULL;
+            so->tail = so2;
+            OSRestoreInterrupts(enabled);
+            TCPAcceptAsync(&so2->tcp, (TCPSocket*)so, AcceptCallback, 0);
+            OSRestoreInterrupts(enabled);
+        }
+    }
+out:
+    if (index >= 256) {
+        result = SO_ENOBUFS;
+    }
+
+done:
+    OSRestoreInterrupts(enabled);
+    PutNode(node);
+    return result;
+}
+
+s32 SOBind(s32 s, u8* addr)
+{
+    SOsock* node;
+    void* so;
+    s32 result;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    if (addr == NULL || addr[0] < 8) {
+        return SO_EINVAL;
+    }
+
+    node = GetNode(s, &so);
+    if (node == NULL || so == NULL) {
+        return SO_EBADF;
+    }
+
+    switch (((u8*)so)[0]) {
+    case IP_PROTO_UDP:
+        result = UDPBind(so, addr);
+        break;
+    case IP_PROTO_TCP:
+        result = TCPBind(so, addr);
+        break;
+    default:
+        PutNode(node);
+        return SO_EBADF;
+    }
+
+    PutNode(node);
+    switch (result) {
+    case 0:
+        return 0;
+    case -13:
+        return SO_EAFNOSUPPORT;
+    case -5:
+        return SO_ESRCH;
+    case -12:
+    default:
+        return SO_EINVAL;
+    }
+}
+
+s32 SOShutdown(s32 s, s32 how)
+{
+    SOsock* node;
+    TCPSocket* so;
+    s32 result;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    if (how >= 3 || how < 0) {
+        return SO_EINVAL;
+    }
+
+    node = GetNode(s, (void**)&so);
+    if (node == NULL || so == NULL) {
+        return SO_EBADF;
+    }
+
+    switch (((u8*)so)[0]) {
+    case IP_PROTO_UDP:
+        result = 0;
+        break;
+    case IP_PROTO_TCP:
+        result = TCPShutdown(so, how);
+        break;
+    default:
+        PutNode(node);
+        return SO_EBADF;
+    }
+
+    PutNode(node);
+    switch (result + 12) {
+    case 4:
+    case 12:
+        return 0;
+    case 8:
+        return SO_EMFILE;
+    case 0:
+    default:
+        return SO_EINVAL;
+    }
+}
+
+s32 SORead(s32 s, void* buf, s32 len)
+{
+    return SORecvFrom(s, buf, len, 0, NULL);
+}
+
+s32 SORecvFrom(s32 s, void* buf, s32 len, u32 flags, u8* addr)
+{
+    SOsock* node;
+    TCPSocket* so;
+    s32 result;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    if (addr != NULL && addr[0] < 8) {
+        return SO_EINVAL;
+    }
+
+    node = GetNode(s, (void**)&so);
+    if (node == NULL || so == NULL) {
+        return SO_EBADF;
+    }
+
+    switch (so->unk00[0]) {
+    case IP_PROTO_UDP:
+        if (flags & 0xF) {
+            PutNode(node);
+            return SO_EBADR;
+        }
+        OSLockMutex(&node->recvMutex);
+        if (node->socket == NULL) {
+            result = SO_EBADF;
+        } else {
+            if (node->flag & SO_FNONBLOCK) {
+                flags |= SO_FNONBLOCK;
+            }
+            result = UDPReceiveEx((SOUdpSocket*)so, buf, len, 0, addr, flags);
+        }
+        OSUnlockMutex(&node->recvMutex);
+        break;
+    case IP_PROTO_TCP:
+        if (flags & ~0x7) {
+            PutNode(node);
+            return SO_EBADR;
+        }
+        if (addr != NULL) {
+            result = TCPGetRemoteSocket(so, addr);
+            if (result < 0) {
+                PutNode(node);
+                return SO_EBADF;
+            }
+        }
+        OSLockMutex(&node->recvMutex);
+        if (node->socket == NULL) {
+            result = SO_EBADF;
+        } else {
+            if (node->flag & SO_FNONBLOCK) {
+                flags |= SO_FNONBLOCK;
+            }
+            {
+                TCPSocket* sock = so;
+                if (!(flags & 1)) {
+                    result = TCPReceiveEx(sock, buf, len, flags);
+                } else {
+                    result = TCPReceiveUrgEx(sock, buf, len, flags);
+                }
+            }
+        }
+        OSUnlockMutex(&node->recvMutex);
+        break;
+    default:
+        PutNode(node);
+        return SO_EBADF;
+    }
+
+    PutNode(node);
+    if (result < 0) {
+        switch (result) {
+        case -9:
+        case -1:
+            result = SO_EWOULDBLOCK;
+            break;
+        case -8:
+        case -4:
+            result = SO_EMFILE;
+            break;
+        case -16:
+            result = SO_EFBIG;
+            break;
+        case -19:
+        case -10:
+            result = SO_EOVERFLOW;
+            break;
+        case -18:
+        case -11:
+        case -3:
+            result = SO_EFAULT;
+            break;
+        default:
+            result = SO_EINVAL;
+            break;
+        }
+    }
+    return result;
+}
+
+s32 SOWrite(s32 s, const void* buf, s32 len)
+{
+    return SOSendTo(s, buf, len, 0, NULL);
+}
+
+s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr)
+{
+    SOsock* node;
+    TCPSocket* so;
+    s32 result;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    if (addr != NULL && addr[0] < 8) {
+        return SO_EINVAL;
+    }
+
+    node = GetNode(s, (void**)&so);
+    if (node == NULL || so == NULL) {
+        return SO_EBADF;
+    }
+
+    switch (so->unk00[0]) {
+    case IP_PROTO_UDP:
+        if (flags) {
+            PutNode(node);
+            return SO_EBADR;
+        }
+        OSLockMutex(&node->sendMutex);
+        if (node->socket == NULL) {
+            result = SO_EBADF;
+        } else if (flags == 0) {
+            result = UDPSend((SOUdpSocket*)so, buf, len, addr);
+        }
+        OSUnlockMutex(&node->sendMutex);
+        break;
+    case IP_PROTO_TCP:
+        if (flags & -6) {
+            PutNode(node);
+            return SO_EBADR;
+        }
+        OSLockMutex(&node->sendMutex);
+        if (node->socket == NULL) {
+            result = SO_EBADF;
+        } else {
+            if (node->flag & SO_FNONBLOCK) {
+                flags |= SO_FNONBLOCK;
+            }
+            {
+                TCPSocket* sock = so;
+                switch (flags) {
+                case 0:
+                    result = TCPSend(sock, buf, len);
+                    break;
+                case 1:
+                    result = TCPSendUrg(sock, buf, len);
+                    break;
+                case 4:
+                    result = TCPSendNonblock(sock, buf, len);
+                    break;
+                case 6:
+                    result = TCPSendUrgNonblock(sock, buf, len);
+                    break;
+                default:
+                    result = SO_EINVAL;
+                    break;
+                }
+            }
+        }
+        OSUnlockMutex(&node->sendMutex);
+        break;
+    default:
+        PutNode(node);
+        return SO_EBADF;
+    }
+
+    PutNode(node);
+    if (result < 0) {
+        switch (result + 19) {
+        case 6:
+            result = SO_EAFNOSUPPORT;
+            break;
+        case 13:
+            result = SO_EEXIST;
+            break;
+        case 2:
+            result = SO_EAGAIN;
+            break;
+        case 17:
+            result = SO_ELOOP;
+            break;
+        case 12:
+            result = SO_ENOMSG;
+            break;
+        case 10:
+        case 18:
+            result = SO_EWOULDBLOCK;
+            break;
+        case 11:
+        case 15:
+            result = SO_EMFILE;
+            break;
+        case 3:
+            result = SO_EFBIG;
+            break;
+        case 9:
+            result = SO_EOVERFLOW;
+            break;
+        case 1:
+        case 8:
+        case 16:
+            result = SO_EFAULT;
+            break;
+        case 7:
+            result = SO_EINVAL;
+            break;
+        case 0:
+            result = SO_ENAMETOOLONG;
+            break;
+        case 5:
+        case 4:
+        case 14:
+            result = SO_EBADF;
+            break;
+        default:
+            result = SO_EBADF;
+            break;
+        }
+    }
+    return result;
+}
+
+static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
+{
+    SOsock* node;
+    void* so;
+    u8* buf;
+    u8* old;
+    u32 oldSize;
+    s32 size;
+    s32 result;
+
+    node = GetNode(s, &so);
+    if (node == NULL || so == NULL) {
+        return SO_EBADF;
+    }
+
+    switch (((u8*)so)[0]) {
+    case IP_PROTO_UDP:
+        if (((u32)level >> 16) == 0xFFFF) {
+        SOUdpSocket* udp = (SOUdpSocket*)so;
+        switch (opt) {
+        case SO_SO_SNDBUF:
+            result = SO_ENOMEM;
+            if (len < 4 || val == NULL) {
+                goto done;
+            }
+            size = *(u32*)val;
+            if (size < 536) {
+                size = 536;
+            }
+            buf = SOAlloc(4, size + 88);
+            if (buf == NULL) {
+                result = -7;
+                goto done;
+            }
+            UDPGetSendBuff(so, &old, &oldSize);
+            result = UDPSetSendBuff(so, buf, size + 88);
+            if (result == 0) {
+                if (old != NULL) {
+                    SOFree(4, old, oldSize);
+                }
+            } else {
+                SOFree(4, buf, size + 88);
+            }
+            goto done;
+        case SO_SO_RCVBUF:
+            result = SO_ENOMEM;
+            if (len < 4 || val == NULL) {
+                goto done;
+            }
+            size = *(u32*)val;
+            if (size < 536) {
+                size = 536;
+            }
+            buf = SOAlloc(5, size);
+            if (buf == NULL) {
+                result = -7;
+                goto done;
+            }
+            UDPGetRecvBuff(so, &old, &oldSize);
+            result = UDPSetRecvBuff(so, buf, size);
+            if (result == 0) {
+                if (old != NULL) {
+                    SOFree(5, old, oldSize);
+                }
+            } else {
+                SOFree(5, buf, size);
+            }
+            goto done;
+        }
+        }
+        result = UDPSetSockOpt(so, level, opt, val, len);
+        goto done;
+    case IP_PROTO_TCP:
+        if (((u32)level >> 16) == 0xFFFF) {
+        SOTcpSocket* tcp = (SOTcpSocket*)so;
+        switch (opt) {
+        case SO_SO_SNDBUF:
+            result = SO_ENOMEM;
+            if (len < 4 || val == NULL) {
+                goto done;
+            }
+            size = *(u32*)val;
+            if (size < 536) {
+                size = 536;
+            }
+            buf = SOAlloc(1, size);
+            if (buf == NULL) {
+                result = -7;
+                goto done;
+            }
+            TCPGetSendBuff(&tcp->tcp, &old, &oldSize);
+            result = TCPSetSendBuff(&tcp->tcp, buf, size);
+            if (result == 0) {
+                if (old != NULL) {
+                    SOFree(1, old, oldSize);
+                }
+            } else {
+                SOFree(1, buf, size);
+            }
+            goto done;
+        case SO_SO_RCVBUF:
+            result = SO_ENOMEM;
+            if (len < 4 || val == NULL) {
+                goto done;
+            }
+            size = *(u32*)val;
+            if (size < 536) {
+                size = 536;
+            }
+            buf = SOAlloc(2, size);
+            if (buf == NULL) {
+                result = -7;
+                goto done;
+            }
+            TCPGetRecvBuff(&tcp->tcp, &old, &oldSize);
+            result = TCPSetRecvBuff(&tcp->tcp, buf, size);
+            if (result == 0) {
+                if (old != NULL) {
+                    SOFree(2, old, oldSize);
+                }
+            } else {
+                SOFree(2, buf, size);
+            }
+            goto done;
+        }
+        }
+        result = TCPSetSockOpt(so, level, opt, val, len);
+        goto done;
+    default:
+        PutNode(node);
+        return SO_EBADF;
+    }
+
+done:
+    PutNode(node);
+    switch (result) {
+    case -7:
+        result = SO_EPROTOTYPE;
+        break;
+    case -14:
+        result = SO_EBADMSG;
+        break;
+    case 0:
+        result = 0;
+        break;
+    default:
+        result = SO_EINVAL;
+        break;
+    }
+    return result;
+}
+
+s32 SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, s32 len)
+{
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    return __SOSetSockOpt(s, level, opt, val, len);
+}
+
+s32 SOFcntl(s32 s, s32 cmd, ...)
+{
+    void* so;
+    SOsock* node;
+    s32 result;
+    va_list ap;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+
+    node = GetNode(s, &so);
+    if (node == NULL || so == NULL) {
+        return SO_EBADF;
+    }
+
+    switch (((u8*)so)[0]) {
+    case IP_PROTO_UDP:
+    case IP_PROTO_TCP:
+        switch (cmd) {
+        case SO_F_GETFL:
+            result = node->flag;
+            break;
+        case SO_F_SETFL:
+            va_start(ap, cmd);
+            node->flag = *(u32*)__va_arg(ap, 1);
+            result = 0;
+            break;
+        default:
+            result = SO_ENOMEM;
+            break;
+        }
+        break;
+    default:
+        result = SO_ENOMEM;
+        break;
+    }
+
+    PutNode(node);
+    if (result >= 0) {
+        return result;
+    }
+    return SO_EINVAL;
+}
+u32 SOGetHostID(void)
+{
+    u32 addr;
+
+    IPGetAddr(0, &addr);
+    return addr;
+}
+
+static void PollTimeout(OSAlarm* alarm, OSContext* context)
+{
+    OSWakeupThread(&PollingQueue);
+}
+
+void __IPWakeupPollingThreads(void)
+{
+    OSWakeupThread(&PollingQueue);
+}
+
+s32 SOPoll(SOPollFd* fds, s32 nfds, s64 timeout)
+{
+    OSAlarm alarm;
+    SOsock* node;
+    TCPSocket* so;
+    s32 result;
+    s32 count;
+    s32 fd;
+    s32 i;
+    s16 events;
+    BOOL enabled;
+
+    if (State != 1) {
+        return SO_ENOTINIT;
+    }
+    if (nfds > 256) {
+        return SO_EINVAL;
+    }
+
+    enabled = OSDisableInterrupts();
+    for (i = 0; i < nfds; i++) {
+        fds[i].revents = 0;
+        fd = fds[i].fd;
+        node = NULL;
+        if (0 <= fd && fd < 256) {
+            node = &SocketTable[fd];
+            if (node->ref > 0 && node->socket != NULL) {
+                node->ref++;
+            } else {
+                node = NULL;
+            }
+        }
+        if (node != NULL) {
+            so = node->socket;
+            ((s16*)((u8*)so + 4))[0]++;
+        }
+    }
+    OSRestoreInterrupts(enabled);
+
+    if (timeout != 0) {
+        OSCreateAlarm(&alarm);
+        OSSetAlarm(&alarm, timeout, PollTimeout);
+    }
+
+    enabled = OSDisableInterrupts();
+    result = 0;
+    for (;;) {
+        for (i = 0; i < nfds; i++) {
+            fds[i].revents = 0;
+            fd = fds[i].fd;
+            node = NULL;
+            if (0 <= fd && fd < 256) {
+                node = &SocketTable[fd];
+                if (node->ref > 0 && node->socket != NULL) {
+                } else {
+                    node = NULL;
+                }
+            }
+            if (node == NULL) {
+                continue;
+            }
+            so = node->socket;
+            events = fds[i].events | 0xE0;
+            switch (so->unk00[0]) {
+            case IP_PROTO_UDP:
+                events &= __UDPPoll((SOUdpSocket*)so);
+                break;
+            case IP_PROTO_TCP:
+                events &= __TCPPoll(so);
+                break;
+            default:
+                events = 0;
+                break;
+            }
+            if (events != 0) {
+                fds[i].revents = events;
+                result++;
+            }
+        }
+
+        if (result > 0) {
+            break;
+        }
+        if (timeout != 0) {
+            if (timeout > 0) {
+                OSSleepThread(&PollingQueue);
+            } else if (alarm.fire != 0) {
+                OSSleepThread(&PollingQueue);
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+        if (State != 1) {
+            break;
+        }
+    }
+    OSRestoreInterrupts(enabled);
+
+    if (timeout != 0) {
+        OSCancelAlarm(&alarm);
+    }
+
+    count = 0;
+    for (i = 0; i < nfds; i++) {
+        fd = fds[i].fd;
+        node = NULL;
+        if (0 <= fd && fd < 256) {
+            node = &SocketTable[fd];
+            if (node->ref > 0 && node->socket != NULL) {
+            } else {
+                node = NULL;
+            }
+        }
+        if (node == NULL) {
+            continue;
+        }
+        enabled = OSDisableInterrupts();
+        so = node->socket;
+        ((s16*)((u8*)so + 4))[0]--;
+        OSRestoreInterrupts(enabled);
+        PutNode(node);
+        count++;
+    }
+    return result;
+}
+
+static BOOL OnReset(BOOL final)
+{
+    State = 3;
+    return TRUE;
 }
