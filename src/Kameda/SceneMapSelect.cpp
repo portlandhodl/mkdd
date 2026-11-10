@@ -112,58 +112,58 @@ void SceneMapSelect::reset() {
 
     if (mMapCount == 4) {
         for (int i = 0; i < 4; i++) {
-            J2DPicture *pane2 = (J2DPicture *)mMainScreen->search('SetA1' + (u64)i);
-            mPos[i].x = pane2->mOffset.x;
-            mPos[i].y = pane2->mOffset.y;
+            J2DPicture *pane = (J2DPicture *)mMainScreen->search('SetA1' + (u64)i);
+            mPos[i].x = pane->mOffset.x;
+            mPos[i].y = pane->mOffset.y;
         }
     }
     else {
         for (int i = 0; i < 6; i++) {
-            J2DPicture *pane2 = (J2DPicture *)mMainScreen->search('Set1' + (u64)i);
-            mPos[i].x = pane2->mOffset.x;
-            mPos[i].y = pane2->mOffset.y;
+            J2DPicture *pane = (J2DPicture *)mMainScreen->search('Set1' + (u64)i);
+            mPos[i].x = pane->mOffset.x;
+            mPos[i].y = pane->mOffset.y;
         }
     }
 
     for (int i = 0; i < 6; i++) {
-        J2DPicture *pane2 = (J2DPicture *)mScreens[i]->search('MapPict');
+        J2DPicture *pane = (J2DPicture *)mScreens[i]->search('MapPict');
 #line 175
-        JUT_ASSERT_MSG(pane2->getTypeID() == J2DPane_Picture, "pane2->getTypeID() == J2DPane_Picture");
-        pane2->changeTexture(mMapData[i].coName, 0);
-        pane2 = mMapBck[i][1].mPane;
+        JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
+        pane->changeTexture(mMapData[i].coName, 0);
+        pane = mMapBck[i][1].mPane;
 #line 179
-        JUT_ASSERT_MSG(pane2->getTypeID() == J2DPane_Picture, "pane2->getTypeID() == J2DPane_Picture");
-        pane2->changeTexture(mMapData[i].copName, 0);
+        JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
+        pane->changeTexture(mMapData[i].copName, 0);
     }
 
     if (mMapCount == 5 && gSystemRecord.isGameUnlocked(SystemRecord::MiniMario)) {
-        J2DPicture *pane2 = (J2DPicture *)mScreens[4]->search('MapPict');
+        J2DPicture *pane = (J2DPicture *)mScreens[4]->search('MapPict');
 #line 186
-        JUT_ASSERT_MSG(pane2->getTypeID() == J2DPane_Picture, "pane2->getTypeID() == J2DPane_Picture");
-        pane2->changeTexture(mMapData[5].coName, 0);
-        pane2 = mMapBck[4][1].mPane;
+        JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
+        pane->changeTexture(mMapData[5].coName, 0);
+        pane = mMapBck[4][1].mPane;
 #line 190
-        JUT_ASSERT_MSG(pane2->getTypeID() == J2DPane_Picture, "pane2->getTypeID() == J2DPane_Picture");
-        pane2->changeTexture(mMapData[5].copName, 0);
+        JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
+        pane->changeTexture(mMapData[5].copName, 0);
     }
 
-    J2DPicture *pane2 = (J2DPicture *)mMainScreen->search('SubM');
+    J2DPicture *pane = (J2DPicture *)mMainScreen->search('SubM');
 #line 197
-    JUT_ASSERT_MSG(pane2->getTypeID() == J2DPane_Picture, "pane2->getTypeID() == J2DPane_Picture");
-    pane2->changeTexture(BattleName2D::ptr()->getBattleNameTexture((BattleName2D::BattleName)gSequenceInfo.mBattleType), 0);
+    JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
+    pane->changeTexture(BattleName2D::ptr()->getBattleNameTexture((BattleName2D::BattleName)gSequenceInfo.mBattleType), 0);
 
-    pane2 = (J2DPicture *)mMainScreen->search('BtlPict');
+    pane = (J2DPicture *)mMainScreen->search('BtlPict');
 #line 203
-    JUT_ASSERT_MSG(pane2->getTypeID() == J2DPane_Picture, "pane2->getTypeID() == J2DPane_Picture");
+    JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
     switch (gRaceInfo.getRaceMode()) {
     case BALLOON_BATTLE:
-        pane2->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(0), 0);
+        pane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(0), 0);
         break;
     case BOMB_BATTLE:
-        pane2->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(1), 0);
+        pane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(1), 0);
         break;
     case ESCAPE_BATTLE:
-        pane2->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(2), 0);
+        pane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(2), 0);
         break;
     default:
         break;
