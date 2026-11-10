@@ -51,8 +51,8 @@ public:
     u32 GetItemButton(int);
     void DoLod();
     int GetPortPtr(int);
-    void GetCamFovy(int);
-    void GetCamAspect(int);
+    f32 GetCamFovy(int);
+    f32 GetCamAspect(int);
     // TODO: do these return references or pointers?
     CrsGround *GetBodyGround(int);
     CrsGround *GetRRTireGround(int);
