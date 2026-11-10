@@ -143,15 +143,28 @@ private:
     J2DPicture *mSceneQuitPicture;       // 0x278
     PLACEHOLDER_BYTES(0x27c, 0x2e4);
     J2DPicture *mSceneResultPicture2;    // 0x2e4
-    PLACEHOLDER_BYTES(0x2e8, 0x3cc);
-    f32 _3cc;                            // 0x3cc
-    PLACEHOLDER_BYTES(0x3d0, 0x4cc);
+    PLACEHOLDER_BYTES(0x2e8, 0x300);
+    J2DScreen *mResultRaceScreen;        // 0x300
+    J2DScreen *mResultLineScreen;        // 0x304
+    J2DScreen *mRankScreens[8];          // 0x308
+    J2DScreen *mGetPointScreens[8];     // 0x328
+    PLACEHOLDER_BYTES(0x348, 0x3cc);
+    f32 _3cc[8];                         // 0x3cc
+    f32 _3ec;                            // 0x3ec
+    f32 _3f0;                            // 0x3f0
+    f32 _3f4;                            // 0x3f4
+    JUTColor _3f8[3];                    // 0x3f8
+    JGeometry::TVec2f _404[8];           // 0x404
+    PLACEHOLDER_BYTES(0x444, 0x4cc);
     data2D mLines[8][20];                // 0x4cc
     PLACEHOLDER_BYTES(0xc4c, 0xc5c);
     RankRow mRankRows[8];                // 0xc5c
     J2DScreen *mScoreScreens[2][4];      // 0xddc
     J2DScreen *mPointScreens[4];         // 0xdfc
-    PLACEHOLDER_BYTES(0xe0c, 0xe58);
+    J2DScreen *mPointScreens2[4];        // 0xe0c
+    data2D _e1c[4];                      // 0xe1c
+    PLACEHOLDER_BYTES(0xe4c, 0xe54);
+    f32 _e54;                            // 0xe54
     f32 _e58;                            // 0xe58
     f32 _e5c;                            // 0xe5c
     f32 _e60;                            // 0xe60

@@ -1,3 +1,4 @@
+#include "Osako/Kart2DCommon.h"
 #include "Kameda/Result2D.h"
 #include "mathHelper.h"
 #include "JSystem/JUtility/TColor.h"
@@ -237,9 +238,100 @@ void Result2D::draw() {
     }
 }
 
-void Result2D::drawGP() {}
+void Result2D::drawGP() {
+    mScreen->draw(0.0f, 0.0f, mOrtho);
+    mResultRaceScreen->draw(0.0f, 0.0f, mOrtho);
 
-void Result2D::drawVS() {}
+    switch (mResultState) {
+    case 0:
+    case 1: {
+        for (int i = 0; i < 8; i++) {
+            mRankScreens[i]->draw(_3f0 + mLineYPos[i], _3cc[i], mOrtho);
+            f32 *off = (f32 *)((u8 *)this + mResultState * 8);
+            f32 x = _3cc[i] + off[786];
+            f32 y = _3f0 + mLineYPos[i] + off[785];
+            mGetPointScreens[i]->draw(y, x, mOrtho);
+        }
+        break;
+    }
+    case 2: {
+        f32 *baseY = (f32 *)((u8 *)&mRankRows[7].sub[2] + 4);
+        if (gSequenceInfo.isEndGP()) {
+            if (RaceMgr::getManager()->getPlayerNumber() == 1) {
+                mSelPanes[0].cursor->changeTexture("Mozi_Next_Com.bti", 0);
+                if (RaceMgr::getManager()->isReplayMode()) {
+                    mSelPanes[1].cursor->changeTexture("Mozi_First.bti", 0);
+                } else {
+                    mSelPanes[1].cursor->changeTexture("Mozi_Replay.bti", 0);
+                }
+                for (int i = 0; i < 2; i++) {
+                    mWinScreens[i]->draw(_1988, *baseY - 16.0f + 32.0f * i, mOrtho);
+                }
+            }
+        } else {
+            if (RaceMgr::getManager()->getPlayerNumber() == 1) {
+                mSelPanes[0].cursor->changeTexture("Mozi_Next.bti", 0);
+                if (RaceMgr::getManager()->isReplayMode()) {
+                    mSelPanes[1].cursor->changeTexture("Mozi_First.bti", 0);
+                } else {
+                    mSelPanes[1].cursor->changeTexture("Mozi_Replay.bti", 0);
+                }
+                mSelPanes[2].cursor->changeTexture("Mozi_Quit.bti", 0);
+                for (int i = 0; i < 3; i++) {
+                    mWinScreens[i]->draw(_1988, *baseY - 32.0f + 32.0f * i, mOrtho);
+                }
+            } else {
+                mSelPanes[0].cursor->changeTexture("Mozi_Next.bti", 0);
+                mSelPanes[1].cursor->changeTexture("Mozi_Quit.bti", 0);
+                for (int i = 0; i < 2; i++) {
+                    mWinScreens[i]->draw(_1988, *baseY - 32.0f + 32.0f * i, mOrtho);
+                }
+            }
+        }
+        break;
+    }
+    }
+}
+
+void Result2D::drawVS() {
+    int num = RaceMgr::getManager()->mRaceInfo->getStatusNumber();
+
+    f32 ypos[4];
+    f32 xpos[4];
+    for (int i = 0; i < num; i++) {
+        xpos[i] = 15.0f + 578.0f / i * (i + 1) + 578.0f / (num * 2);
+        ypos[i] = _e58 + (_e5c - _e58) / (num * 2) * (i + 1) + (_e5c - _e58) / ((num - 1) * 2);
+    }
+
+    mScreen->draw(0.0f, 0.0f, mOrtho);
+
+    for (int row = 0; row < 2; row++) {
+        for (int i = 0; i < num; i++) {
+            mScoreScreens[row][i]->draw(xpos[i], _e68, mOrtho);
+        }
+    }
+
+    for (int row = 0; row < num; row++) {
+        mPointScreens2[row]->draw(xpos[row], _e54 + mVSPointYPos[row][0], mOrtho);
+        for (int j = 0; j < num - 1; j++) {
+            J2DPane **pane = (J2DPane **)((u8 *)&_e1c[row]);
+            pane[j]->draw(xpos[row], mVSPointYPos[row][j + 1] + ypos[j], mOrtho, true, true);
+        }
+    }
+
+    mSelPanes[0].cursor->changeTexture("Mozi_One_More_Race.bti", 0);
+    mSelPanes[1].cursor->changeTexture("Mozi_Change_Course.bti", 0);
+    mSelPanes[2].cursor->changeTexture("Mozi_Change_Character.bti", 0);
+    if (RCMGetManager()->isReplayMode()) {
+        mSelPanes[3].cursor->changeTexture("Mozi_First.bti", 0);
+    } else {
+        mSelPanes[3].cursor->changeTexture("Mozi_Replay.bti", 0);
+    }
+
+    for (int i = 0; i < 4; i++) {
+        mWinScreens[i]->draw(_1988, 304.0f + 32.0f * i, mOrtho);
+    }
+}
 
 void Result2D::drawTA() {
     mScreen->draw(0.0f, 0.0f, mOrtho);
@@ -1073,9 +1165,74 @@ void Result2D::setVS() {}
 
 void Result2D::setTA() {}
 
-void Result2D::setMG() {}
+void Result2D::setMG() {
+    int num = RaceMgr::getManager()->getStatusNumber();
+    setBattleCharacter();
 
-void Result2D::setBattleCharacter() {}
+    for (int i = 0; i < num; i++) {
+        int point = gSequenceInfo.get_80(i);
+        int digit = point % 10;
+        mPointRows[i][0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)digit), 0);
+        mPointRows[i][1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(point / 10)), 0);
+
+        int kartNo = J2DManager::getStatus2Kart(i);
+        if (gSequenceInfo.getStartNo(kartNo) == 0) {
+            JUTColor color;
+            getMGColor(i, color);
+            mPointRows[i][0].mPane->setBlack(color);
+            mPointRows[i][1].mPane->setBlack(color);
+            getFrameColor(color);
+            mVSBattle[0][i][12].mPane->setBlack(color);
+        } else {
+            JUTColor color(0);
+            mPointRows[i][0].mPane->setBlack(color);
+            mPointRows[i][1].mPane->setBlack(color);
+        }
+    }
+}
+
+void Result2D::setBattleCharacter() {
+    int num = RaceMgr::getManager()->getStatusNumber();
+    int kartNo = -1;
+
+    for (int i = 0; i < num; i++) {
+        int k = J2DManager::getStatus2Kart(i);
+        if (gSequenceInfo.getStartNo(k) == 0) {
+            mScoreScreens[0][i]->show();
+            mScoreScreens[1][i]->hide();
+            kartNo = k;
+        } else {
+            mScoreScreens[0][i]->hide();
+            mScoreScreens[1][i]->show();
+        }
+    }
+
+    int player = -1;
+    KartInfo *info = gRaceInfo.getKartInfo(kartNo);
+    if (*(KartGamePad **)((u8 *)info + 0xc) != NULL) {
+        player = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(kartNo)->getPad());
+        if (player == -1) {
+            player = 0;
+        }
+        if (player < 2) {
+            player = 0;
+        } else if (player < 4) {
+            player = 2;
+        } else {
+#line 2799
+            JUT_ASSERT(0);
+        }
+    } else {
+        player = gSequenceInfo.getPad2Player(info->getPad());
+        if (player == -1) {
+            player = 0;
+        }
+    }
+
+    J2DPicture *pic = (J2DPicture *)mScoreScreens[3][0]->search((u64)'C4_1P' + (player << 8));
+    J2DPicture::TCornerColor corner;
+    pic->getCornerColor(corner);
+}
 
 void Result2D::getRaceRankLayoutAlpha(int frame, u8 &alpha) {
     if (frame < 0) {
@@ -1351,7 +1508,7 @@ void Result2D::getVSPointYPos(int frame, int no, f32 &yPos) {
 }
 
 void Result2D::getMGPointYPos(int frame, f32 &yPos) {
-    f32 h = _3cc - _e64;
+    f32 h = _3cc[0] - _e64;
     if (frame < 0) {
         yPos = h;
     } else if (frame < 10) {
@@ -1397,7 +1554,8 @@ void Result2D::getVSColor(int player, JUTColor &color) {
         u8 _0[0xc];
         KartGamePad *mPad;
     };
-    if (((TPadCheck *)RaceMgr::getManager()->getKartInfo(kartNo))->mPad != NULL && player != 0) {
+    TPadCheck *info = (TPadCheck *)RaceMgr::getManager()->getKartInfo(kartNo);
+    if (info->mPad != NULL && player != 0) {
         player++;
         if (player >= 4) {
             player = 3;
@@ -1420,7 +1578,8 @@ void Result2D::getMGColor(int player, JUTColor &color) {
     colors[3].set(0x95, 0x95, 0x4e, 0);
 
     int kartNo = J2DManager::getStatus2Kart(0);
-    if (RaceMgr::getManager()->getKartInfo(kartNo)->isTagMode() && player != 0) {
+    KartInfo *info = RaceMgr::getManager()->getKartInfo(kartNo);
+    if (info->isTagMode() && player != 0) {
         player++;
         if (player >= 4) {
             player = 3;
