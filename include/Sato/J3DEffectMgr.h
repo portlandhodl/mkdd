@@ -61,6 +61,7 @@ public:
     static J3DEffectMgr *sJ3DMgr;
 
     J3DModelData *getModelData() { return mModelDataAll[3]; }
+    J3DModelData *getBombModelData() { return mModelDataAll[0]; }
     J3DModelData *getSplashModelData() { return mModelDataAll[1]; }
     J3DModelData *getMudModelData() { return mModelDataAll[2]; }
 
