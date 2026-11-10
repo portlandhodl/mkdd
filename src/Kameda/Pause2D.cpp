@@ -1,38 +1,647 @@
 #include "Kameda/Pause2D.h"
+#include "Kameda/PauseManager.h"
+#include "Inagaki/GameAudioMain.h"
+#include "JSystem/JMath/JMath.h"
 #include "mathHelper.h"
 
 int Pause2D::mPauseSelector;
 Pause2D::PauseStatus Pause2D::mStatus;
 
+__declspec(weak) Pause2DParam::Pause2DParam() : mFlag(1) {}
+
+__declspec(weak) Pause2DParam::~Pause2DParam() {}
+
+__declspec(weak) Pause2DHioNode::~Pause2DHioNode() {}
+
+__declspec(weak) Pause2D::~Pause2D() {}
+
 Pause2D::Pause2D(JKRHeap *) {}
 
-void Pause2D::init() {}
+void Pause2D::init() {
+    switch (0) {
+    default:
+#line 277
+        JUT_ASSERT(0);
+        break;
+    }
+}
 
-void Pause2D::draw() {}
+void Pause2D::draw() {
+    if (mNode->mParam.mFlag & 1) {
+        if (PauseManager::tstPause()) {
+            mOrtho->setPort();
+            mScreen->draw(0.0f, 0.0f, mOrtho);
+        }
+    }
+}
 
-void Pause2D::calc(KartGamePad *) {}
+void Pause2D::calc(KartGamePad *pad) {
+    if (!(mNode->mParam.mFlag & 1))
+        return;
 
-void Pause2D::selectorGP(KartGamePad *) {}
+    if (pad != nullptr && mStatus != PAUSE_4 && mDrawState == 0) {
+        (this->*mCalcFunc)();
+    }
 
-void Pause2D::selectorVS(KartGamePad *) {}
+    switch (mStatus) {
+    case PAUSE_0:
+        break;
+    case PAUSE_1:
+        if (++_14 == 9)
+            mStatus = PAUSE_2;
+        break;
+    case PAUSE_2:
+        if (++_18 < 30)
+            _14 = 9;
+        else
+            mStatus = PAUSE_3;
+        break;
+    case PAUSE_3:
+        _14 = 9;
+        break;
+    case PAUSE_4:
+        if (++_14 >= 20)
+            mStatus = PAUSE_0;
+        break;
+    default:
+#line 370
+        JUT_ASSERT(0);
+        break;
+    }
 
-void Pause2D::selectorTA(KartGamePad *) {}
+    mAnm->setFrame((f32)_14);
+    mAnm2->setFrame((f32)_14);
+    mScreen->animation();
 
-void Pause2D::selectorMG(KartGamePad *) {}
+    for (int i = 0; i < 2; i++) {
+        int t = ++mCounters[i];
+        mCounters[i] = t % 50;
+        mScales[i] = getScale(mCounters[i]);
+    }
 
-void Pause2D::selectorCommon() {}
+    (this->*mDrawFunc)();
+}
 
-void Pause2D::setDrawGP() {}
+void Pause2D::selectorGP(KartGamePad *pad) {
+    if (pad->getRepeat() & JUTGamePad::MAINSTICK_UP) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 8;
+            break;
+        case 8:
+            mPauseSelector = 0;
+            break;
+        default:
+#line 405
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    } else if (pad->getRepeat() & JUTGamePad::MAINSTICK_DOWN) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 8;
+            break;
+        case 8:
+            mPauseSelector = 0;
+            break;
+        default:
+#line 419
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    }
+}
 
-void Pause2D::setDrawVS() {}
+void Pause2D::selectorVS(KartGamePad *pad) {
+    if (pad->getRepeat() & JUTGamePad::MAINSTICK_UP) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 8;
+            break;
+        case 1:
+            mPauseSelector = 0;
+            break;
+        case 2:
+            mPauseSelector = 1;
+            break;
+        case 4:
+            mPauseSelector = 2;
+            break;
+        case 8:
+            mPauseSelector = 4;
+            break;
+        default:
+#line 453
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    } else if (pad->getRepeat() & JUTGamePad::MAINSTICK_DOWN) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 1;
+            break;
+        case 1:
+            mPauseSelector = 2;
+            break;
+        case 2:
+            mPauseSelector = 4;
+            break;
+        case 4:
+            mPauseSelector = 8;
+            break;
+        case 8:
+            mPauseSelector = 0;
+            break;
+        default:
+#line 476
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    }
+}
 
-void Pause2D::setDrawTA() {}
+void Pause2D::selectorTA(KartGamePad *pad) {
+    if (pad->getRepeat() & JUTGamePad::MAINSTICK_UP) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 8;
+            break;
+        case 1:
+            mPauseSelector = 0;
+            break;
+        case 2:
+            mPauseSelector = 1;
+            break;
+        case 4:
+            mPauseSelector = 2;
+            break;
+        case 8:
+            mPauseSelector = 4;
+            break;
+        default:
+#line 510
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    } else if (pad->getRepeat() & JUTGamePad::MAINSTICK_DOWN) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 1;
+            break;
+        case 1:
+            mPauseSelector = 2;
+            break;
+        case 2:
+            mPauseSelector = 4;
+            break;
+        case 4:
+            mPauseSelector = 8;
+            break;
+        case 8:
+            mPauseSelector = 0;
+            break;
+        default:
+#line 533
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    }
+}
 
-void Pause2D::setDrawMG() {}
+void Pause2D::selectorMG(KartGamePad *pad) {
+    if (pad->getRepeat() & JUTGamePad::MAINSTICK_UP) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 8;
+            break;
+        case 1:
+            mPauseSelector = 0;
+            break;
+        case 3:
+            mPauseSelector = 1;
+            break;
+        case 4:
+            mPauseSelector = 3;
+            break;
+        case 7:
+            mPauseSelector = 4;
+            break;
+        case 8:
+            mPauseSelector = 6;
+            break;
+        default:
+#line 570
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    } else if (pad->getRepeat() & JUTGamePad::MAINSTICK_DOWN) {
+        switch (mPauseSelector) {
+        case 0:
+            mPauseSelector = 1;
+            break;
+        case 1:
+            mPauseSelector = 3;
+            break;
+        case 3:
+            mPauseSelector = 4;
+            break;
+        case 4:
+            mPauseSelector = 6;
+            break;
+        case 6:
+            mPauseSelector = 8;
+            break;
+        case 8:
+            mPauseSelector = 0;
+            break;
+        default:
+#line 596
+            JUT_ASSERT(0);
+            break;
+        }
+        selectorCommon();
+    }
+}
 
-void Pause2D::setDrawCommon() {}
+void Pause2D::selectorCommon() {
+    mCounters[0] = 0;
+    mCounters[1] = 0;
+    GameAudio::Main::getAudio()->startSystemSe(0x20000);
+    mDrawState = 1;
+}
 
-void Pause2D::getScale(int) {}
+void Pause2D::setDrawGP() {
+    switch (mPauseSelector) {
+    case 0:
+        mPics[0]->updateScale(mScales[0]);
+        mTo[0] = mPos[0];
+        mTo[1] = mPos[1];
+        if ((mSel[0].mVel += 1.0f) > 7.0f)
+            mSel[0].mVel = 7.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        break;
+    case 8:
+        mPics[1]->updateScale(mScales[0]);
+        mTo[0] = mPos[2];
+        mTo[1] = mPos[3];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel += 1.0f) > 7.0f)
+            mSel[1].mVel = 7.0f;
+        break;
+    default:
+#line 643
+        JUT_ASSERT(0);
+        break;
+    }
+
+    for (int i = 0; i < 2; i++)
+        mSel[i].mAnm->setFrame(mSel[i].mVel);
+
+    setDrawCommon();
+}
+
+void Pause2D::setDrawVS() {
+    switch (mPauseSelector) {
+    case 0:
+        mPics[0]->updateScale(mScales[0]);
+        mTo[0] = mPos[0];
+        mTo[1] = mPos[1];
+        if ((mSel[0].mVel += 1.0f) > 7.0f)
+            mSel[0].mVel = 7.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 1:
+        mPics[1]->updateScale(mScales[0]);
+        mTo[0] = mPos[2];
+        mTo[1] = mPos[3];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel += 1.0f) > 7.0f)
+            mSel[1].mVel = 7.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 2:
+        mPics[2]->updateScale(mScales[0]);
+        mTo[0] = mPos[4];
+        mTo[1] = mPos[5];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel += 1.0f) > 7.0f)
+            mSel[2].mVel = 7.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 4:
+        mPics[3]->updateScale(mScales[0]);
+        mTo[0] = mPos[6];
+        mTo[1] = mPos[7];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel += 1.0f) > 7.0f)
+            mSel[3].mVel = 7.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 8:
+        mPics[4]->updateScale(mScales[0]);
+        mTo[0] = mPos[8];
+        mTo[1] = mPos[9];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel += 1.0f) > 7.0f)
+            mSel[4].mVel = 7.0f;
+        break;
+    default:
+#line 716
+        JUT_ASSERT(0);
+        break;
+    }
+
+    for (int i = 0; i < 5; i++)
+        mSel[i].mAnm->setFrame(mSel[i].mVel);
+
+    setDrawCommon();
+}
+
+void Pause2D::setDrawTA() {
+    switch (mPauseSelector) {
+    case 0:
+        mPics[0]->updateScale(mScales[0]);
+        mTo[0] = mPos[0];
+        mTo[1] = mPos[1];
+        if ((mSel[0].mVel += 1.0f) > 7.0f)
+            mSel[0].mVel = 7.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 1:
+        mPics[1]->updateScale(mScales[0]);
+        mTo[0] = mPos[2];
+        mTo[1] = mPos[3];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel += 1.0f) > 7.0f)
+            mSel[1].mVel = 7.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 2:
+        mPics[2]->updateScale(mScales[0]);
+        mTo[0] = mPos[4];
+        mTo[1] = mPos[5];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel += 1.0f) > 7.0f)
+            mSel[2].mVel = 7.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 4:
+        mPics[3]->updateScale(mScales[0]);
+        mTo[0] = mPos[6];
+        mTo[1] = mPos[7];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel += 1.0f) > 7.0f)
+            mSel[3].mVel = 7.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        break;
+    case 8:
+        mPics[4]->updateScale(mScales[0]);
+        mTo[0] = mPos[8];
+        mTo[1] = mPos[9];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel += 1.0f) > 7.0f)
+            mSel[4].mVel = 7.0f;
+        break;
+    default:
+#line 788
+        JUT_ASSERT(0);
+        break;
+    }
+
+    for (int i = 0; i < 5; i++)
+        mSel[i].mAnm->setFrame(mSel[i].mVel);
+
+    setDrawCommon();
+}
+
+void Pause2D::setDrawMG() {
+    switch (mPauseSelector) {
+    case 0:
+        mPics[0]->updateScale(mScales[0]);
+        mTo[0] = mPos[0];
+        mTo[1] = mPos[1];
+        if ((mSel[0].mVel += 1.0f) > 7.0f)
+            mSel[0].mVel = 7.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        if ((mSel[5].mVel -= 1.0f) < 0.0f)
+            mSel[5].mVel = 0.0f;
+        break;
+    case 1:
+        mPics[1]->updateScale(mScales[0]);
+        mTo[0] = mPos[2];
+        mTo[1] = mPos[3];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel += 1.0f) > 7.0f)
+            mSel[1].mVel = 7.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        if ((mSel[5].mVel -= 1.0f) < 0.0f)
+            mSel[5].mVel = 0.0f;
+        break;
+    case 3:
+        mPics[2]->updateScale(mScales[0]);
+        mTo[0] = mPos[4];
+        mTo[1] = mPos[5];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel += 1.0f) > 7.0f)
+            mSel[2].mVel = 7.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        if ((mSel[5].mVel -= 1.0f) < 0.0f)
+            mSel[5].mVel = 0.0f;
+        break;
+    case 4:
+        mPics[3]->updateScale(mScales[0]);
+        mTo[0] = mPos[6];
+        mTo[1] = mPos[7];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel += 1.0f) > 7.0f)
+            mSel[3].mVel = 7.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        if ((mSel[5].mVel -= 1.0f) < 0.0f)
+            mSel[5].mVel = 0.0f;
+        break;
+    case 6:
+        mPics[4]->updateScale(mScales[0]);
+        mTo[0] = mPos[8];
+        mTo[1] = mPos[9];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel += 1.0f) > 7.0f)
+            mSel[4].mVel = 7.0f;
+        if ((mSel[5].mVel -= 1.0f) < 0.0f)
+            mSel[5].mVel = 0.0f;
+        break;
+    case 8:
+        mPics[5]->updateScale(mScales[0]);
+        mTo[0] = mPos[10];
+        mTo[1] = mPos[11];
+        if ((mSel[0].mVel -= 1.0f) < 0.0f)
+            mSel[0].mVel = 0.0f;
+        if ((mSel[1].mVel -= 1.0f) < 0.0f)
+            mSel[1].mVel = 0.0f;
+        if ((mSel[2].mVel -= 1.0f) < 0.0f)
+            mSel[2].mVel = 0.0f;
+        if ((mSel[3].mVel -= 1.0f) < 0.0f)
+            mSel[3].mVel = 0.0f;
+        if ((mSel[4].mVel -= 1.0f) < 0.0f)
+            mSel[4].mVel = 0.0f;
+        if ((mSel[5].mVel += 1.0f) > 7.0f)
+            mSel[5].mVel = 7.0f;
+        break;
+    default:
+#line 880
+        JUT_ASSERT(0);
+        break;
+    }
+
+    for (int i = 0; i < 6; i++)
+        mSel[i].mAnm->setFrame(mSel[i].mVel);
+
+    setDrawCommon();
+}
+
+void Pause2D::setDrawCommon() {
+    for (int i = 0; i < 2; i++) {
+        if (mDrawState < 8) {
+            f32 dx = (f32)(mTo[i].x - mFrom[i].x);
+            f32 dy = (f32)(mTo[i].y - mFrom[i].y);
+            f32 t = (f32)mDrawState;
+            f32 ax = (f32)(dx * t);
+            f32 ay = (f32)(dy * t);
+            mCur[i].x = mFrom[i].x + (f32)(ax * 0.125f);
+            mCur[i].y = mFrom[i].y + (f32)(ay * 0.125f);
+        } else {
+            mFrom[i] = mTo[i];
+            mCur[i] = mFrom[i];
+        }
+
+        f32 x = mCur[i].x + mResultPic->mOffset.x;
+        J2DPicture *pic = mCenterPics[i];
+        f32 py = mResultPic->mOffset.y;
+        f32 cy = mCur[i].y;
+        f32 y = cy + py;
+        pic->mOffset.x = x;
+        pic->mOffset.y = y;
+        pic->calcMtx();
+        mCenterPics[i]->updateScale(mScales[1]);
+    }
+
+    if (mDrawState != 0) {
+        if (mDrawState < 8)
+            mDrawState++;
+        else
+            mDrawState = 0;
+    }
+}
+
+f32 Pause2D::getScale(int i) {
+    int idx = (((i * 0xFFFF) / 50 + 0x7FFF) >> 5) & 0x7FF;
+    f32 c = JMath::sincosTable_.mTable[idx].second;
+    return 1.0f + 0.3f * (-0.5f * c + 0.5f);
+}
 
 int Pause2D::getPauseSelector() {
     return mPauseSelector;
