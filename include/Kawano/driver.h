@@ -5,42 +5,13 @@
 
 #include "Kaneshige/ExModel.h"
 #include "Kaneshige/KartInfo.h"
+#include "Kawano/driverData.h"
 #include "Sato/ItemObj.h"
 #include "JSystem/J3D/J3DJoint.h"
 
 class J3DAnmTransform; // TODO: JSystem
 class J3DJoint;
 class KartLoader;
-
-class DriverDataChild
-{
-    static int mInitCounter;
-    static f32 mDriverDataDefault[91][14];
-
-    f32 data[95];
-
-public:
-    DriverDataChild();
-    virtual ~DriverDataChild();
-    f32 getData(int idx) const { return ((const f32 *)this)[idx]; }
-
-}; // Size: 0x180
-
-class DriverData : public JKRDisposer
-{
-public:
-    u16 m_18; // 0x18
-    u8 _1a[0x48 - 0x1a];
-    JGeometry::TVec3f m_48; // 0x48
-    u8 _54[0x7c - 0x54];
-
-    DriverData(); // Auto Inlined
-    virtual ~DriverData();
-    static DriverData *create();
-
-    static DriverDataChild msDriverData[14];
-    static DriverData *mspDriverData;
-}; // Size: 0x7c
 
 class NullAnimator
 {
@@ -668,6 +639,8 @@ public:
     int IsDemoBack(StateEnum);
     void InitDriverOffsetPosition();
     void SetDriverOffsetPosition();
+    void SetDriverOffsetPosition_Change(DriverData *);
+    void SetDriverOffsetPosition_Demo(DriverData *);
     void InitMpaMtxCalcThrow(J3DAnmTransform *);
     void updateLoadCommand(int);
     void updateLoadCommand_Sound(int);
@@ -743,7 +716,9 @@ public:
     DriversAnimator mAdditiveAnim;               // 0x5F8..0x668
     LoopAnimatorWind m_668;                      // 0x668..0x688
     LoopAnimatorWind m_688;                      // 0x688..0x6A8
-    u8 _6a8[0xc];                                // 0x6A8..0x6B4
+    s32 mOffsetMode;                             // 0x6A8
+    s32 mOffsetDir;                              // 0x6AC
+    f32 mOffsetBlend;                            // 0x6B0
     Vec mPos;                                    // 0x6B4..0x6C0
     GameAudio::CharacterSoundMgr *mCharSoundMgr; // 0x6C0
     JGeometry::TVec3f m_6c4[4];                  // 0x6C4..0x6F4
