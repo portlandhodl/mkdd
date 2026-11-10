@@ -1,6 +1,7 @@
 #ifndef MAPOBJDANCEMONTE_H
 #define MAPOBJDANCEMONTE_H
 
+#include "Shiraiwa/AnmPlayer.h"
 #include "Shiraiwa/Objects/MapObjDemoObj.h"
 
 class TMapObjDanceMonte : public TMapObjDemoObj
@@ -14,6 +15,11 @@ public:
     virtual void reset();
     virtual void calc();
     virtual const char *getShadowBmdFileName() { return "/Objects/monL_a_sh.bmd"; }
+
+    static TAnmInfo sAnmInfos[2];
+
+private:
+    TAnmPlayer mAnmPlayer; // 0x16c
 };
 
 class TMapObjDanceMonteA : public TMapObjDanceMonte

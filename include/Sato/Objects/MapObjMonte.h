@@ -1,6 +1,7 @@
 #ifndef MAPOBJMONTE_H
 #define MAPOBJMONTE_H
 
+#include "Shiraiwa/AnmPlayer.h"
 #include "Shiraiwa/Objects/MapObjDemoObj.h"
 #include "Sato/StateObserver.h"
 
@@ -16,8 +17,23 @@ public:
     virtual void calc();
     virtual const char *getShadowBmdFileName() { return "/Objects/monL_a_sh.bmd"; }
 
-    void MoveExec() {}
-    void InitExec() {}
+    void MoveExec();
+    void InitExec();
+    void changeAllState(u16);
+
+    void initFunc_Clapping();
+    void doFunc_Clapping();
+    void initFunc_Banzai();
+    void doFunc_Banzai();
+
+    static const f32 sIdentityQuat[4];
+    static TAnmInfo sAnmInfos[2];
+    static StateObserver::StateFuncSet<TMapObjMonteBase> sTable[2];
+    static const s8 sAnmTable[2];
+
+private:
+    TAnmPlayer mAnmPlayer; // 0x178
+    f32 mLenSq2;           // 0x190
 };
 
 class TMapObjMonteA : public TMapObjMonteBase
@@ -78,6 +94,23 @@ public:
 private:
     u8 _pad[28];
 
+};
+
+class TMapObjUkleleMonte : public TMapObjDemoObj
+{
+public:
+    TMapObjUkleleMonte(const CrsData::SObject &);
+
+    virtual ~TMapObjUkleleMonte();
+    virtual void loadAnimation();
+    virtual void createModel(JKRSolidHeap *, u32);
+    virtual void reset();
+    virtual void calc();
+    virtual const char *getShadowBmdFileName();
+    virtual const char *getBmdFileName();
+
+    static J3DAnmTransform *sUkMonteBckAnmTrans;
+    static J3DMtxCalc *sUkMonteBckMtxCalc;
 };
 
 #endif
