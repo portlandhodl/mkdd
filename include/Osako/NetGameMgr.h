@@ -117,6 +117,8 @@ public:
 
     u8 get12ee() { return _12ee; }
     u16 get12ec() { return _12ec; }
+    u16 get12ea() { return *(u16 *)(_12e9 + 1); }
+    u8 get12e9() { return _12e9[0]; }
 
     void set12ee(int val) { _12ee = val; }
 
