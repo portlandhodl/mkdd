@@ -41,6 +41,7 @@ public:
     ResTIMG *getCupIconTexture(ERaceGpCup cup) { return mCupIconTex[cup]; }
     ResTIMG *getCupNameTexture(ERaceGpCup cup) { return mCupNameTex[cup]; }
     ResTIMG *getBattleIconTexture(int idx) { return mBattleIconTex[idx]; }
+    ResTIMG *getPartsLocName(int idx) { return mPartsLocName[idx]; }
 
     static Kart2DCommon *ptr() { return mspKart2DCommon; }
 private:
