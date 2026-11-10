@@ -159,7 +159,17 @@ public:
         return mRaceInfo->mIsDemoKart[camNo];
     }
 
-    KartInfo *getKartInfo(int index);
+    KartInfo *getKartInfo(int index)
+    {
+#line 170
+        JUT_MINMAX_ASSERT(0, index, 8);
+// TODO: in release it needs the other inline to prevent regswaps, debug grabs stuff from raceInfo without getters, why?
+#ifdef DEBUG
+        return &mRaceInfo->mKartInfo[index];
+#else
+        return mRaceInfo->getKartInfo(index);
+#endif
+    }
 
     bool isRaceEnd() const { return mRaceDirector->isRaceEnd(); };
     bool checkRaceEnd() { return mRaceDirector->checkRaceEnd(); }
