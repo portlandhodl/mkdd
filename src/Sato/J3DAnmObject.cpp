@@ -12,9 +12,9 @@
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
 
-void J3DAnmObjBase::loadJ3DModelData(void *param_1, u32 param_2) {
+J3DModelData *J3DAnmObjBase::loadJ3DModelData(void *param_1, u32 param_2) {
     // FIX: Identify what the bitmask here is really used for.
-    J3DModelLoaderDataBase().load(this, (u32)param_1 | 0x19200010);
+    return (J3DModelData *)J3DModelLoaderDataBase().load(param_1, param_2 | 0x19200010);
 }
 
 void J3DAnmObjBase::initFrameCtrl(J3DAnmBase *initAnmBase) {

@@ -13,7 +13,7 @@ class J3DEfctSplashDown : public J3DEffectObj
 {
 public:
     J3DEfctSplashDown();
-    void loadAnmData();
+    static void loadAnmData();
     static const char *getBmdFileName();
     static const char *getBckFileName();
     static const char *getBtkFileName();
@@ -44,7 +44,7 @@ class J3DEfctMudSplashDown : public J3DEfctSplashDown
 {
 public:
     J3DEfctMudSplashDown();
-    void loadAnmData();
+    static void loadAnmData();
     static const char *getBmdFileName();
     static const char *getBckFileName();
     static const char *getBtkFileName();

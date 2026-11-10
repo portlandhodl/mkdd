@@ -12,7 +12,7 @@ class J3DEfctIceRock : public J3DEffectObj
 {
 public:
     J3DEfctIceRock();
-    void loadAnmData();
+    static void loadAnmData();
     static const char *getBmdFileName();
     static const char *getBckFileName(u8);
     static const char *getBtkFileName();

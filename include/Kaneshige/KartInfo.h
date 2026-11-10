@@ -101,6 +101,8 @@ public:
         JUT_MINMAX_ASSERT(0, driverNo, 2);
         return mKartCharacters[driverNo].getPlayerKind();
     }
+    int getPlayerKind() const { return mKartCharacters[0].getPlayerKind(); }
+    KartGamePad *getPad() { return mKartCharacters[0].getPad(); }
 
     KartGamePad *getPad(int driverNo) {
 #line 126

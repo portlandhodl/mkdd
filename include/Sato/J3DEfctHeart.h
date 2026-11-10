@@ -19,7 +19,7 @@ class J3DEfctHeart : public J3DEffectObj
 {
 public:
     J3DEfctHeart();                                                             // 0x80287b74
-    void getBmdFileName();                                                      // 0x80287be8
+    static const char *getBmdFileName();                                        // 0x80287be8
     void onlyinit();                                                            // 0x80287bf4
     void init();                                                                // 0x80287ef8
     void calc();                                                                // 0x80287f94

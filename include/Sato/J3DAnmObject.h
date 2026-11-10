@@ -18,7 +18,7 @@ class J3DAnmObjBase
 public:
     J3DAnmObjBase() { mModel = nullptr; }
 
-    void loadJ3DModelData(void *, u32);
+    static J3DModelData *loadJ3DModelData(void *, u32);
     void initFrameCtrl(J3DAnmBase *base);
     void frameProc() { mFrameCtrl.update(); }
     void update() { mFrameCtrl.update(); }
