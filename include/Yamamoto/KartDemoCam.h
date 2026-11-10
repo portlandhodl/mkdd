@@ -4,6 +4,7 @@
 #include "Kaneshige/Course/CrsData.h"
 
 #include "Yamamoto/kartCtrl.h"
+#include "dolphin/mtx.h"
 
 class KartCam;
 
@@ -87,23 +88,32 @@ public:
 
     KartCam *mCam;
     KartBody *mBody;
-    Mtx mPosMtx;
+    u8 _8[0x38 - 0x8];
     u16 _38;
     u8 _3a;
     u8 _3b;
     u16 _3c;
-    u8 _3e[0x44 - 0x3e];
+    u16 _3e;
+    u16 _40;
     int mStartId;
     u8 _48[0x4c - 0x48];
     f32 _4c;
     JGeometry::TVec3f _50;
-    u8 _5c[0x70 - 0x5c];
+    u8 _5c[0x6c - 0x5c];
+    f32 _6c;
     f32 mCamKartDiffLength;
     JGeometry::TVec3f _74;
-    JGeometry::TVec3f _80;
-    JGeometry::TVec3f _8c;
-    JGeometry::TVec3f mCamKartDiff;
-    JGeometry::TVec3f _a4;
+    union
+    {
+        Mtx mPosMtx;
+        struct
+        {
+            JGeometry::TVec3f _80;
+            JGeometry::TVec3f _8c;
+            JGeometry::TVec3f mCamKartDiff;
+            JGeometry::TVec3f _a4;
+        } vec;
+    };
     u8 _b0[0x110 - 0xb0];
 }; // 110
 
