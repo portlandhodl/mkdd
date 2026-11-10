@@ -1356,10 +1356,10 @@ void ItemObj::doHandOneEquip(bool flag, f32 lerp)
                 emt->mGlobalTrs.x = mPos.x;
                 emt->mGlobalTrs.y = mPos.y;
                 emt->mGlobalTrs.z = mPos.z;
-                emt->setScale(allScale);
+                mEquipEmt[i]->setScale(allScale);
 
                 bool removeIt = false;
-                if (emt->checkStatus(0x8) && emt->getParticleNumber() == 0)
+                if (mEquipEmt[i]->checkStatus(0x8) && mEquipEmt[i]->getParticleNumber() == 0)
                     removeIt = true;
 
                 if (removeIt)
@@ -2120,9 +2120,11 @@ void ItemObj::moveColWall(CrsGround &gnd)
     refDir.zero();
     if (velLen > 0.0f)
     {
-        JGeometry::TVec3f nrm(wallNorm);
+        JGeometry::TVec3f nrm;
+        JGeometry::setTVec3f(&wallNorm.x, &nrm.x);
         nrm.normalize();
-        JGeometry::TVec3f vel(mVel);
+        JGeometry::TVec3f vel;
+        JGeometry::setTVec3f(&mVel.x, &vel.x);
         vel.normalize();
         vel.negate();
 
@@ -2196,9 +2198,10 @@ void ItemObj::moveCannon(CrsGround &gnd)
 
 void ItemObj::simpleDraw(u32 viewNo, f32 (*mtx)[4], u32 num)
 {
-    JGeometry::TVec3f sc = mDisScaleAnm;
+    JGeometry::TVec3f sc;
+    JGeometry::setTVec3f(&mDisScaleAnm.x, &sc.x);
     sc.scale(mDarkScale);
-    mModel.mScale = sc;
+    JGeometry::setTVec3f(&sc.x, &mModel.mScale.x);
     mModel.simpleDraw(viewNo, mtx, num);
 }
 
@@ -2217,9 +2220,9 @@ void ItemObj::setMultiType(ItemObj::cMultiType type)
 ItemObj::cMultiType ItemObj::getCharaMultiType(int charID, u8 driverNum)
 {
     u8 drv = driverNum;
-    (void)drv;
+    u8 drv2 = drv;
     cMultiType ret = cMultiType_0;
-    ECharID charBit = RCMGetManager()->getKartInfo(charID)->getDriverCharID(drv);
+    ECharID charBit = RCMGetManager()->getKartInfo(charID)->getDriverCharID(drv2);
     switch (charBit)
     {
     case BABY_LUIGI:
@@ -2248,7 +2251,7 @@ void ItemObj::doMoveGndParallel(const JGeometry::TVec3f &normVec, f32 pow)
     hv.y = 0.0f;
     stVecNormalize(&hv);
 
-    JGeometry::TVec3f hn(mNormal);
+    JGeometry::TVec3f hn = n;
     hn.y = 0.0f;
     f32 normMag = PSVECMag(&hn);
     stVecNormalize(&hn);
@@ -2327,7 +2330,8 @@ void ItemObj::initThrowVel(f32 dirScale, f32 upScale, f32 power)
         JGeometry::TVec3f kartPos;
         ObjUtility::getKartPos(mOwnerNum, &kartPos);
 
-        JGeometry::TVec3f diff = mPos - kartPos;
+        JGeometry::TVec3f diff;
+    diff.sub(mPos, kartPos);
         JGeometry::TVec3f mdir(diff);
         f32 mag = PSVECMag(&mdir);
         stVecNormalize(&mdir);
@@ -2399,6 +2403,7 @@ void ItemObj::calcVelUpDown(f32 amount)
 
 void ItemObj::calcGndNormal(JGeometry::TVec3f *dir, CrsGround &gnd, f32 threshold, f32 pow)
 {
+    JGeometry::TVec3f add;
     JGeometry::TVec3f gndNormal;
     gnd.getNormal(&gndNormal);
 
@@ -2409,7 +2414,7 @@ void ItemObj::calcGndNormal(JGeometry::TVec3f *dir, CrsGround &gnd, f32 threshol
 
     if (fabs(57.29578f * angle) > threshold)
     {
-        JGeometry::TVec3f add(gndNormal);
+        add.set(gndNormal);
         add.scale(pow);
         *dir += add;
         stVecNormalize(dir);
@@ -2424,7 +2429,7 @@ void ItemObj::calcBananaFirstQuat(const JGeometry::TVec3f &dir)
     QuatRotY(angle, &spin);
 
     JGeometry::TVec3f negDir;
-    negDir.negate(dir);
+    JGeometry::negateInternal(&dir.x, &negDir.x);
 
     JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
     JGeometry::TVec3f xdir;
@@ -2603,7 +2608,7 @@ void ItemObj::setHandOffsetPos(ItemHandOffsetData *data)
 
 const JGeometry::TVec3f &ItemObj::getHandOffsetPos()
 {
-    mHandOffsetPos = mHandOffset;
+    JGeometry::setTVec3f(&mHandOffset.x, &mHandOffsetPos.x);
     mHandOffsetPos *= mDarkScale;
     return mHandOffsetPos;
 }
