@@ -589,6 +589,8 @@ public:
     int IsBeforeStart();
     int IsDamage();
     int IsDamageL();
+    int IsDamageL12();
+    int IsDamageS12();
     int IsAttack();
     int IsThrow();
     int IsTandem();

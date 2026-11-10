@@ -1,4 +1,5 @@
 #include "Kawano/driver.h"
+#include "Kawano/driverTPAnim.h"
 
 #include "JSystem/J3D/J3DAnmTransform.h"
 #include "JSystem/J3D/J3DAnmLoader.h"
@@ -53,15 +54,6 @@ public:
     virtual void reset();
 };
 
-
-class DriverTPAnim // size 0x220
-{
-public:
-    DriverTPAnim(DriverModel *, int);
-    void setup(DriverModel *);
-    void update();
-    u8 _0[0x220];
-};
 
 class DriverAnimBufMgr // size 0x7C
 {
