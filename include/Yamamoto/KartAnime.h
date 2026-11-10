@@ -99,7 +99,7 @@ public:
     // void MakeDriverThrowAnime(int, int, int);
     // void MakeGetAnime(ItemObj *, int);
     // Inline
-    bool IsChangeStart() { return mFlags & 0x1; } // 0x802f9bc4
+    bool IsChangeStart(); // 0x802f9bc4
 
     u8 _0[0x10];         //
     u64 mFlags;          // 0x10, 0x14
@@ -110,7 +110,10 @@ public:
     int _24;               // 0x24
     u8 _28[0x30 - 0x28]; //
     u64 mDamageFlags;             // 30, 34
-    u8 _38[0x48 - 0x38]; //
+    u8 _38[0x3c - 0x38]; //
+    int _3c;              //
+    int _40;              //
+    u8 _44[0x48 - 0x44]; //
 
 }; // Size: 0x48
 
