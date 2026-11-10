@@ -7,6 +7,7 @@
 
 class TKartThrower : public TMapObjHioNode {
 public:
+    TKartThrower(const CrsData::SObject &obj) : TMapObjHioNode(obj) {}
     virtual ~TKartThrower() {}
 
     virtual void getThrowDir(JGeometry::TVec3f* dst, s16);

@@ -91,6 +91,8 @@ public:
         return &mObj[anm_no];
     }
 
+    T *getObjNoCheck(u8 anm_no) { return &mObj[anm_no]; }
+
     J3DFrameCtrl *getFrameCtrl(u8 anm_no)
     {
 #line 122
