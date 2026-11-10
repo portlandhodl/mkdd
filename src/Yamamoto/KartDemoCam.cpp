@@ -1,23 +1,62 @@
 #include "Yamamoto/KartDemoCam.h"
 #include "Yamamoto/kartCamera.h"
+#include "Yamamoto/KartMath.h"
+
+#include "Kameda/J2DManager.h"
+#include "Kaneshige/RaceMgr.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
 // comments inside functions are inline functions being called in that function
 
-void KartDemoCam::Init(KartCam *) {}
+void KartDemoCam::Init(KartCam *cam) {
+    mCam = cam;
+    mBody = mCam->getBody();
+    _38 = 0;
+    _3b = 0;
+    mStartId = -1;
+    _50.x = 0.0f;
+    _50.z = 0.0f;
+    _50.y = 0.0f;
+    _4c = 1000.0f;
+}
 
-void KartDemoCam::ChaseFovy(const CrsData::Camera *) {
-    // void KartCam::SetFovy(float) {}
-    // void CrsData::Camera::getFovy() const {}
-    // void CrsData::Camera::getFovy2() const {}
+void KartDemoCam::ChaseFovy(const CrsData::Camera *camera) {
+    f32 fovy = mCam->GetFovy();
+    f32 fovy2 = camera->getFovy2();
+    if (fovy2 == 0.0f) {
+        mCam->SetFovy(camera->getFovy());
+    } else {
+        GetKartCtrl()->ChaseFnumber(&fovy, fovy2, 0.01f);
+        mCam->SetFovy(fovy);
+    }
 }
 
 void KartDemoCam::DoInitCol() {
     _80.set(mCam->mCameraPos);
 }
 
-void KartDemoCam::DoCol() {}
+void KartDemoCam::DoCol() {
+    CrsGround ground;
+    JGeometry::TVec3f normal;
+    ground.search(mCam->mCameraPos, _80);
+    u64 status = mBody->mCarStatus;
+    if ((status & 0x0040000000000000ULL) == 0) {
+        if (ground.getAttribute() == 2 || ground.getAttribute() == 0x12) {
+            f32 scale = ground.getWallNormal(&normal, nullptr);
+            mCam->mCameraPos.x += normal.x * scale * 2.0f;
+            mCam->mCameraPos.y += normal.y * scale * 2.0f;
+            mCam->mCameraPos.z += normal.z * scale * 2.0f;
+        } else {
+            f32 height = ground.getHeight();
+            f32 diff = mCam->mCameraPos.y - 2.0f - height;
+            if (diff < 0.0f) {
+                mCam->mCameraPos.y -= diff;
+            }
+        }
+    }
+    _80.set(mCam->mCameraPos);
+}
 
 void KartDemoCam::InitFixCam() {
     // void CrsData::Camera::getPosition(JGeometry::TVec3<float> *) const {}
@@ -133,15 +172,59 @@ void KartDemoCam::InitStartDemoCam() {}
 
 void KartDemoCam::StartDemoCam() {}
 
-void KartDemoCam::SetLastDemo() {}
+void KartDemoCam::SetLastDemo() {
+    _38 |= 4;
+    _3c = 0;
+    _3a = 1;
+    if (mCam->mCamNo == 0) {
+        mCam->mCtrl->mBitfield |= 2;
+    }
+    InitLastCam();
+}
 
-void KartDemoCam::SetRaceCam() {}
+void KartDemoCam::SetRaceCam() {
+    _38 = 0;
+    mCam->mMode = 0;
+    mCam->InitOutView();
+    if (mCam->mCamNo == 0) {
+        mCam->mCtrl->mBitfield |= 2;
+    }
+}
 
-void KartDemoCam::SetNextID() {}
+void KartDemoCam::SetNextID() {
+    RaceMgr::getManager()->getCourse()->getCrsData();
+    mStartId = RaceMgr::getManager()->getCourse()->getCrsData()->getCameraData(mStartId)->getNextCameraID();
+    if (mStartId >= 0) {
+        InitStartDemoCam();
+    } else {
+        if (!(_38 & 0xc)) {
+            GETJ2DManager()->startPreRace();
+        }
+        _38 |= 4;
+        _3a = 0;
+    }
+}
 
-void KartDemoCam::DoExecution() {}
+void KartDemoCam::DoExecution() {
+    if (_38 & 1) {
+        if (_38 & 4) {
+            SetRaceCam();
+        } else {
+            if (!(_38 & 8)) {
+                GETJ2DManager()->startPreRace();
+            }
+            _38 |= 8;
+        }
+    }
+}
 
-u8 KartDemoCam::GetStartID() {}
+int KartDemoCam::GetStartID() {
+    mStartId = RaceMgr::getManager()->getCourse()->getCrsData()->getStartCameraID();
+    if (mCam->mMode == 2) {
+        return 1;
+    }
+    return (mStartId != -1) ? 1 : 0;
+}
 
 void KartDemoCam::InitStartID(bool isLast) {
     _38 = 1;
@@ -158,14 +241,42 @@ void KartDemoCam::InitStartMapCam() {}
 
 void KartDemoCam::StartMapCam() {}
 
-void KartDemoCam::SetMapNextID() {}
+void KartDemoCam::SetMapNextID() {
+    CrsData *crsData = RaceMgr::getManager()->getCourse()->getCrsData();
+    mStartId = RaceMgr::getManager()->getCourse()->getCrsData()->getCameraData(mStartId)->getNextCameraID();
+    if (mStartId < 0) {
+        mStartId = crsData->getStartLoserCameraID();
+    }
+    InitStartMapCam();
+}
 
-void KartDemoCam::SetUpMapID() {}
+void KartDemoCam::SetUpMapID() {
+    mStartId = RaceMgr::getManager()->getCourse()->getCrsData()->getStartLoserCameraID();
+    if (mStartId >= 0) {
+        InitStartMapCam();
+        _38 |= 0x100;
+    }
+}
 
 void KartDemoCam::InitStaffView() {}
 
 void KartDemoCam::StaffView() {}
 
-void KartDemoCam::SetStaffNextID() {}
+int KartDemoCam::SetStaffNextID() {
+    RaceMgr::getManager()->getCourse()->getCrsData();
+    CrsData::Camera *camera = RaceMgr::getManager()->getCourse()->getCrsData()->getCameraData(mStartId);
+    int result;
+    if (camera->getNextCameraID() < 0) {
+        result = 0;
+    } else {
+        mStartId = camera->getNextCameraID();
+        InitStaffView();
+        result = 1;
+    }
+    return result;
+}
 
-void KartDemoCam::SetUpStaffID() {}
+void KartDemoCam::SetUpStaffID() {
+    mStartId = RaceMgr::getManager()->getCourse()->getCrsData()->getStartCameraID();
+    _38 |= 0x200;
+}

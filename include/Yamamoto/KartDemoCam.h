@@ -70,7 +70,7 @@ public:
     void SetRaceCam();                          // 0x8030f7fc
     void SetNextID();                           // 0x8030f85c
     void DoExecution();                         // 0x8030f8ec
-    u8 GetStartID();                          // 0x8030f94c
+    int GetStartID();                          // 0x8030f94c
     void InitStartID(bool);                     // 0x8030f9b0
     void StartDemoView();                       // 0x8030f9e8
     void InitStartMapCam();                     // 0x8030fa08
@@ -79,7 +79,7 @@ public:
     void SetUpMapID();                          // 0x8030fc40
     void InitStaffView();                        // 0x8030fc9c
     void StaffView();                           // 0x8030fdbc
-    void SetStaffNextID();                      // 0x8030ff40
+    int SetStaffNextID();                      // 0x8030ff40
     void SetUpStaffID();                        // 0x8030ffb8
     // Inline/Unused
     // void GetPerView();
@@ -89,9 +89,15 @@ public:
     KartBody *mBody;
     Mtx mPosMtx;
     u16 _38;
-    u8 _3a[0x44 - 0x3a];
+    u8 _3a;
+    u8 _3b;
+    u16 _3c;
+    u8 _3e[0x44 - 0x3e];
     int mStartId;
-    u8 _48[0x70 - 0x48];
+    u8 _48[0x4c - 0x48];
+    f32 _4c;
+    JGeometry::TVec3f _50;
+    u8 _5c[0x70 - 0x5c];
     f32 mCamKartDiffLength;
     JGeometry::TVec3f _74;
     JGeometry::TVec3f _80;
