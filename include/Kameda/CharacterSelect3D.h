@@ -19,7 +19,8 @@ public:
     enum CHARACTER_STATUS
     {
         STATUS_0,
-        STATUS_1
+        STATUS_1,
+        STATUS_2
         // TODO
     };
 
@@ -33,7 +34,7 @@ public:
     void setCharacterStatus(int player, int position, CHARACTER_STATUS);              // 0x80185d20
     void setKart(int, EKartID, JGeometry::TVec3f, JGeometry::TVec3f, f32);            // 0x80185ef0
     void isCancel(int);                                                               // 0x80186054
-    void isNext(int);                                                                 // 0x801860a8
+    bool isNext(int);                                                                 // 0x801860a8
     MtxPtr getCameraMatrix();                                                           // 0x801860fc
     f32 getFovy();                                                                    // 0x80186104
     void calcCharacter(int, int, ECharID, JGeometry::TVec3f, JGeometry::TVec3f, f32); // 0x80186114

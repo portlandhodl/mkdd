@@ -684,7 +684,7 @@ void CharacterSelect3D::setKart(int, EKartID, JGeometry::TVec3f, JGeometry::TVec
 
 void CharacterSelect3D::isCancel(int) {}
 
-void CharacterSelect3D::isNext(int) {}
+bool CharacterSelect3D::isNext(int) { return false; }
 
 MtxPtr CharacterSelect3D::getCameraMatrix() {
     return _fb8;

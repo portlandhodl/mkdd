@@ -10,8 +10,11 @@
 #include "JSystem/JUtility/JUTDbg.h"
 #include "Kameda/SequenceInfo.h"
 #include "Kameda/CharacterSelect3D.h"
+#include "JSystem/JUtility/JUTGamePad.h"
+#include "Kameda/ReadPrintMessage.h"
 #include "Kaneshige/RaceInfo.h"
 #include "Kaneshige/KartInfo.h"
+#include "Kaneshige/KartChecker.h"
 #include "Inagaki/GameAudioMain.h"
 #include "Sato/JPEffectMgr.h"
 #include "Osako/MenuBackground.h"
@@ -661,9 +664,192 @@ void SceneMenu::calcEngineBrkAnm(SceneMenu::BrkData *data)
     }
 }
 
-void SceneMenu::calcModeOrder() {}
+void SceneMenu::calcModeOrder()
+{
+    J2DPane *panes[3];
+    for (int i = 0; i < 3; i++)
+        panes[i] = mModeBck[10 + i].mPane;
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 2; j > i; j--)
+        {
+            J2DPane *a = panes[i];
+            J2DPane *b = panes[j];
+            if (panes[i]->mScale.x > panes[j]->mScale.x)
+            {
+                panes[i] = b;
+                panes[j] = a;
+            }
+        }
+    }
+    for (int i = 0; i < 3; i++)
+    {
+        mModeBck[9].mPane->appendChild(panes[i]);
+    }
 
-void SceneMenu::entry_init() {}
+    for (int i = 0; i < 3; i++)
+        panes[i] = mModeBck[54 + i].mPane;
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 2; j > i; j--)
+        {
+            J2DPane *a = panes[i];
+            J2DPane *b = panes[j];
+            if (panes[i]->mScale.x > panes[j]->mScale.x)
+            {
+                panes[i] = b;
+                panes[j] = a;
+            }
+        }
+    }
+    for (int i = 0; i < 3; i++)
+    {
+        mModeBck[53].mPane->appendChild(panes[i]);
+    }
+}
+
+void SceneMenu::entry_init()
+{
+    if (mInfo.timer < 15)
+    {
+        MenuTitleLine::ptr()->drop(MenuTitleLine::mcHowManyPlayers);
+        mHowManyDriversBck[0].mFrame = mInfo.timer;
+
+        switch (mInfo.playerNum)
+        {
+        case 0:
+            mHowManyDriversBrk[0].mFrame = -1.0f;
+            mHowManyDriversBrk[1].mFrame = 0.0f;
+            mHowManyDriversBrk[2].mFrame = 0.0f;
+            mHowManyDriversBrk[3].mFrame = 0.0f;
+            mHowManyDriversBck[5].mFrame = 22.0f;
+            mHowManyDriversBck[6].mFrame = 14.0f;
+            mHowManyDriversBck[7].mFrame = 14.0f;
+            mHowManyDriversBck[8].mFrame = 14.0f;
+            mHowManyDriversBrk[4].mFrame = -1.0f;
+            mHowManyDriversBrk[5].mFrame = 0.0f;
+            mHowManyDriversBrk[6].mFrame = 0.0f;
+            mHowManyDriversBrk[7].mFrame = 0.0f;
+            mHowManyDriversBrk[8].mFrame = -1.0f;
+            mHowManyDriversBrk[9].mFrame = 0.0f;
+            mHowManyDriversBrk[10].mFrame = 0.0f;
+            mHowManyDriversBrk[11].mFrame = 0.0f;
+            mHowManyDriversBrk[12].mFrame = -1.0f;
+            mHowManyDriversBrk[13].mFrame = 0.0f;
+            mHowManyDriversBrk[14].mFrame = 0.0f;
+            mHowManyDriversBrk[15].mFrame = 0.0f;
+            mHowManyDriversBrk[16].mFrame = 0.0f;
+            mHowManyDriversBrk[17].mFrame = 0.0f;
+            mHowManyDriversBrk[18].mFrame = 0.0f;
+            mHowManyDriversBrk[19].mFrame = 0.0f;
+            mHowManyDriversBrk[20].mFrame = 0.0f;
+            mHowManyDriversBrk[21].mFrame = 0.0f;
+            break;
+        case 1:
+            mHowManyDriversBrk[0].mFrame = 0.0f;
+            mHowManyDriversBrk[1].mFrame = -1.0f;
+            mHowManyDriversBrk[2].mFrame = 0.0f;
+            mHowManyDriversBrk[3].mFrame = 0.0f;
+            mHowManyDriversBck[5].mFrame = 14.0f;
+            mHowManyDriversBck[6].mFrame = 22.0f;
+            mHowManyDriversBck[7].mFrame = 14.0f;
+            mHowManyDriversBck[8].mFrame = 14.0f;
+            mHowManyDriversBrk[4].mFrame = 0.0f;
+            mHowManyDriversBrk[5].mFrame = -1.0f;
+            mHowManyDriversBrk[6].mFrame = 0.0f;
+            mHowManyDriversBrk[7].mFrame = 0.0f;
+            mHowManyDriversBrk[8].mFrame = 0.0f;
+            mHowManyDriversBrk[9].mFrame = -1.0f;
+            mHowManyDriversBrk[10].mFrame = 0.0f;
+            mHowManyDriversBrk[11].mFrame = 0.0f;
+            mHowManyDriversBrk[12].mFrame = 0.0f;
+            mHowManyDriversBrk[13].mFrame = -1.0f;
+            mHowManyDriversBrk[14].mFrame = -1.0f;
+            mHowManyDriversBrk[15].mFrame = 0.0f;
+            mHowManyDriversBrk[16].mFrame = 0.0f;
+            mHowManyDriversBrk[17].mFrame = 0.0f;
+            mHowManyDriversBrk[18].mFrame = 0.0f;
+            mHowManyDriversBrk[19].mFrame = 0.0f;
+            mHowManyDriversBrk[20].mFrame = 0.0f;
+            mHowManyDriversBrk[21].mFrame = 0.0f;
+            break;
+        case 2:
+            mHowManyDriversBrk[0].mFrame = 0.0f;
+            mHowManyDriversBrk[1].mFrame = 0.0f;
+            mHowManyDriversBrk[2].mFrame = -1.0f;
+            mHowManyDriversBrk[3].mFrame = 0.0f;
+            mHowManyDriversBck[5].mFrame = 14.0f;
+            mHowManyDriversBck[6].mFrame = 14.0f;
+            mHowManyDriversBck[7].mFrame = 22.0f;
+            mHowManyDriversBck[8].mFrame = 14.0f;
+            mHowManyDriversBrk[4].mFrame = 0.0f;
+            mHowManyDriversBrk[5].mFrame = 0.0f;
+            mHowManyDriversBrk[6].mFrame = -1.0f;
+            mHowManyDriversBrk[7].mFrame = 0.0f;
+            mHowManyDriversBrk[8].mFrame = 0.0f;
+            mHowManyDriversBrk[9].mFrame = 0.0f;
+            mHowManyDriversBrk[10].mFrame = -1.0f;
+            mHowManyDriversBrk[11].mFrame = 0.0f;
+            mHowManyDriversBrk[12].mFrame = 0.0f;
+            mHowManyDriversBrk[13].mFrame = 0.0f;
+            mHowManyDriversBrk[14].mFrame = 0.0f;
+            mHowManyDriversBrk[15].mFrame = -1.0f;
+            mHowManyDriversBrk[16].mFrame = -1.0f;
+            mHowManyDriversBrk[17].mFrame = -1.0f;
+            mHowManyDriversBrk[18].mFrame = 0.0f;
+            mHowManyDriversBrk[19].mFrame = 0.0f;
+            mHowManyDriversBrk[20].mFrame = 0.0f;
+            mHowManyDriversBrk[21].mFrame = 0.0f;
+            break;
+        case 3:
+            mHowManyDriversBrk[0].mFrame = 0.0f;
+            mHowManyDriversBrk[1].mFrame = 0.0f;
+            mHowManyDriversBrk[2].mFrame = 0.0f;
+            mHowManyDriversBrk[3].mFrame = -1.0f;
+            mHowManyDriversBck[5].mFrame = 14.0f;
+            mHowManyDriversBck[6].mFrame = 14.0f;
+            mHowManyDriversBck[7].mFrame = 14.0f;
+            mHowManyDriversBck[8].mFrame = 22.0f;
+            mHowManyDriversBrk[4].mFrame = 0.0f;
+            mHowManyDriversBrk[5].mFrame = 0.0f;
+            mHowManyDriversBrk[6].mFrame = 0.0f;
+            mHowManyDriversBrk[7].mFrame = -1.0f;
+            mHowManyDriversBrk[8].mFrame = 0.0f;
+            mHowManyDriversBrk[9].mFrame = 0.0f;
+            mHowManyDriversBrk[10].mFrame = 0.0f;
+            mHowManyDriversBrk[11].mFrame = -1.0f;
+            mHowManyDriversBrk[12].mFrame = 0.0f;
+            mHowManyDriversBrk[13].mFrame = 0.0f;
+            mHowManyDriversBrk[14].mFrame = 0.0f;
+            mHowManyDriversBrk[15].mFrame = 0.0f;
+            mHowManyDriversBrk[16].mFrame = 0.0f;
+            mHowManyDriversBrk[17].mFrame = 0.0f;
+            mHowManyDriversBrk[18].mFrame = -1.0f;
+            mHowManyDriversBrk[19].mFrame = -1.0f;
+            mHowManyDriversBrk[20].mFrame = -1.0f;
+            mHowManyDriversBrk[21].mFrame = -1.0f;
+            break;
+        default:
+#line 2598
+            JUT_ASSERT(0);
+        }
+
+        mHowManyDriversBck[9].mFrame = mInfo.timer;
+        mHowManyDriversBck[10].mFrame = mInfo.timer;
+        mHowManyDriversBck[11].mFrame = mInfo.timer;
+        mHowManyDriversBck[12].mFrame = mInfo.timer;
+        mHowManyDriversBck[1].mFrame = mInfo.timer;
+        mHowManyDriversBck[2].mFrame = mInfo.timer;
+        mHowManyDriversBck[3].mFrame = mInfo.timer;
+        mHowManyDriversBck[4].mFrame = mInfo.timer;
+    }
+    else
+    {
+        mInfo.oldMode = mInfo.mode;
+        mInfo.mode = 1;
+        mInfo.timer = 0;
+    }
+}
 
 void SceneMenu::entry() {}
 
@@ -687,7 +873,83 @@ void SceneMenu::vs_init() {}
 
 void SceneMenu::vs() {}
 
-void SceneMenu::vs_end() {}
+void SceneMenu::vs_end()
+{
+    if (mInfo.timer < 15)
+    {
+        MenuTitleLine::ptr()->lift();
+        mIconBck[0].mFrame = mInfo.timer + 75;
+        mSingleTagSelectBck[0].mFrame = mInfo.timer + 75;
+    }
+    else
+    {
+        mIconBck[0].mPane->hide();
+        mIconBck[1].mPane->hide();
+        mIconBck[2].mPane->hide();
+        mSingleTagSelectBck[0].mPane->hide();
+
+        switch (mInfo.playerNum)
+        {
+        case 0:
+            mInfo.entryNum = 0;
+            break;
+        case 1:
+            switch (mInfo._18)
+            {
+            case 0:
+                mInfo.entryNum = 1;
+                break;
+            case 1:
+                mInfo.entryNum = 0;
+                break;
+            default:
+#line 3814
+                JUT_ASSERT(0);
+            }
+            break;
+        case 2:
+            switch (mInfo._18)
+            {
+            case 0:
+                mInfo.entryNum = 2;
+                break;
+            case 1:
+                mInfo.entryNum = 1;
+                break;
+            default:
+#line 3827
+                JUT_ASSERT(0);
+            }
+            break;
+        case 3:
+            switch (mInfo._18)
+            {
+            case 0:
+                mInfo.entryNum = 3;
+                break;
+            case 1:
+                mInfo.entryNum = 1;
+                break;
+            case 2:
+                mInfo.entryNum = 2;
+                break;
+            default:
+#line 3843
+                JUT_ASSERT(0);
+            }
+            break;
+        default:
+#line 3848
+            JUT_ASSERT(0);
+        }
+
+        mInfo.oldMode = mInfo.mode;
+        mInfo.mode = mInfo.nextMode;
+        mInfo.timer = 0;
+        if (mInfo._20 == 2 && mInfo.playerNum != 0)
+            mInfo._20 = 0;
+    }
+}
 
 void SceneMenu::mode_init() {}
 
@@ -695,9 +957,210 @@ void SceneMenu::mode() {}
 
 void SceneMenu::mode_end() {}
 
-void SceneMenu::battle_init() {}
+void SceneMenu::battle_init()
+{
+    if (mInfo.timer < 15)
+    {
+        MenuTitleLine::ptr()->drop(MenuTitleLine::mcBattleSelect);
+        for (int i = 0; i < 15; i++)
+            mBattleBck[i].mPane->show();
+        if (mInfo.timer < 10)
+            mBattleBck[0].mFrame = mInfo.timer;
 
-void SceneMenu::battle() {}
+        for (int i = 0; i < 3; i++)
+        {
+            if (i == mMsgId)
+            {
+                mBattleBck[1 + i].mFrame = 19.0f;
+                mBattleBck[4 + i].mFrame = 19.0f;
+                mBattleBck[7 + i].mFrame = 19.0f;
+                mBattleBck[10 + i].mFrame = 19.0f;
+
+                J2DPane *pane = mBattleBck[4 + i].mPane;
+#line 5491
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite);
+                static_cast<J2DPicture *>(pane)->setBlack(mBattleBlack);
+
+                pane = mBattleBck[7 + i].mPane;
+#line 5496
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite2);
+
+                pane = mBattleBck[10 + i].mPane;
+#line 5500
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite3);
+            }
+            else
+            {
+                mBattleBck[1 + i].mFrame = 14.0f;
+                mBattleBck[4 + i].mFrame = 14.0f;
+                mBattleBck[7 + i].mFrame = 14.0f;
+                mBattleBck[10 + i].mFrame = 14.0f;
+
+                J2DPane *pane = mBattleBck[4 + i].mPane;
+#line 5510
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                static_cast<J2DPicture *>(pane)->setWhite(mBattleWhiteInactive);
+                static_cast<J2DPicture *>(pane)->setBlack(mBattleBlackInactive);
+
+                pane = mBattleBck[7 + i].mPane;
+#line 5515
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite2Inactive);
+
+                pane = mBattleBck[10 + i].mPane;
+#line 5519
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite3Inactive);
+            }
+        }
+
+        mBattleBck[13].mFrame = 24.0f;
+        J2DPane *pane = mBattleBck[14].mPane;
+#line 5526
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        static_cast<J2DPicture *>(pane)->changeTexture(mBattleName[mMsgId], 0);
+        changeText();
+    }
+    else
+    {
+        mInfo.oldMode = mInfo.mode;
+        mInfo.mode = 10;
+        mInfo.timer = 0;
+    }
+}
+
+void SceneMenu::battle()
+{
+    if (mBattleBck[13].mFrame == 24.0f)
+    {
+        u32 trigger = ((JUTGamePad *)gpaGamePad[0])->mButtons.mTrigger;
+        if (trigger & JUTGamePad::A)
+        {
+            GameAudio::Main::getAudio()->startSystemSe(0x20003);
+            mInfo.nextMode = 12;
+            mInfo.mode = 11;
+            mInfo.oldMode = 10;
+            mInfo.timer = 0;
+        }
+        else if (trigger & JUTGamePad::B)
+        {
+            GameAudio::Main::getAudio()->startSystemSe(0x20005);
+            mInfo.nextMode = 6;
+            mInfo.mode = 11;
+            mInfo.oldMode = 10;
+            mInfo.timer = 0;
+        }
+        else
+        {
+            u32 repeat = ((JUTGamePad *)gpaGamePad[0])->mButtons.mRepeat;
+            if (repeat & JUTGamePad::MAINSTICK_UP)
+            {
+                GameAudio::Main::getAudio()->startSystemSe(0x20000);
+                mMsgId = (mMsgId + 2) % 3;
+                mBattleBck[13].mFrame = 34.0f;
+            }
+            else if (repeat & JUTGamePad::MAINSTICK_DOWN)
+            {
+                GameAudio::Main::getAudio()->startSystemSe(0x20000);
+                mMsgId = (mMsgId + 1) % 3;
+                mBattleBck[13].mFrame = 34.0f;
+            }
+        }
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        if (i == mMsgId)
+        {
+            f32 f0 = mBattleBck[1 + i].mFrame + -1.0f;
+            mBattleBck[1 + i].mFrame = f0;
+            if (f0 > 19.0f)
+                mBattleBck[1 + i].mFrame = 19.0f;
+            f32 f1 = mBattleBck[4 + i].mFrame + -1.0f;
+            mBattleBck[4 + i].mFrame = f1;
+            if (f1 > 19.0f)
+                mBattleBck[4 + i].mFrame = 19.0f;
+            f32 f2 = mBattleBck[7 + i].mFrame + -1.0f;
+            mBattleBck[7 + i].mFrame = f2;
+            if (f2 > 19.0f)
+                mBattleBck[7 + i].mFrame = 19.0f;
+            f32 f3 = mBattleBck[10 + i].mFrame + -1.0f;
+            mBattleBck[10 + i].mFrame = f3;
+            if (f3 > 19.0f)
+                mBattleBck[10 + i].mFrame = 19.0f;
+
+            J2DPane *pane = mBattleBck[4 + i].mPane;
+#line 5585
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite);
+            static_cast<J2DPicture *>(pane)->setBlack(mBattleBlack);
+
+            pane = mBattleBck[7 + i].mPane;
+#line 5592
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite2);
+
+            pane = mBattleBck[10 + i].mPane;
+#line 5597
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite3);
+        }
+        else
+        {
+            f32 f0 = mBattleBck[1 + i].mFrame - -1.0f;
+            mBattleBck[1 + i].mFrame = f0;
+            if (f0 < 14.0f)
+                mBattleBck[1 + i].mFrame = 14.0f;
+            f32 f1 = mBattleBck[4 + i].mFrame - -1.0f;
+            mBattleBck[4 + i].mFrame = f1;
+            if (f1 < 14.0f)
+                mBattleBck[4 + i].mFrame = 14.0f;
+            f32 f2 = mBattleBck[7 + i].mFrame - -1.0f;
+            mBattleBck[7 + i].mFrame = f2;
+            if (f2 < 14.0f)
+                mBattleBck[7 + i].mFrame = 14.0f;
+            f32 f3 = mBattleBck[10 + i].mFrame - -1.0f;
+            mBattleBck[10 + i].mFrame = f3;
+            if (f3 < 14.0f)
+                mBattleBck[10 + i].mFrame = 14.0f;
+
+            J2DPane *pane = mBattleBck[4 + i].mPane;
+#line 5607
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->setWhite(mBattleWhiteInactive);
+            static_cast<J2DPicture *>(pane)->setBlack(mBattleBlackInactive);
+
+            pane = mBattleBck[7 + i].mPane;
+#line 5614
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite2Inactive);
+
+            pane = mBattleBck[10 + i].mPane;
+#line 5619
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->setWhite(mBattleWhite3Inactive);
+        }
+    }
+
+    f32 frame = mBattleBck[13].mFrame;
+    if (frame != 24.0f)
+    {
+        mBattleBck[13].mFrame = frame + -1.0f;
+        if (frame == 29.0f)
+        {
+            J2DPane *pane = mBattleBck[14].mPane;
+#line 5628
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->changeTexture(mBattleName[mMsgId], 0);
+            changeText();
+        }
+        if (frame >= 27.0f)
+            mBattleBck[13].mFrame = 24.0f;
+    }
+}
 
 void SceneMenu::battle_end()
 {
@@ -734,9 +1197,239 @@ void SceneMenu::battle_end()
 
 void SceneMenu::character_init() {}
 
-void SceneMenu::character() {}
+void SceneMenu::character()
+{
+    if (mRouletteTimer != 0)
+    {
+        mRouletteTimer++;
 
-void SceneMenu::character_end() {}
+        bool pressed = false;
+        for (int i = 0; i <= mInfo.playerNum; i++)
+        {
+            u32 button = gpaGamePad[i]->mButtons.mButton;
+            if ((button & JUTGamePad::R) && (button & JUTGamePad::L))
+            {
+                pressed = true;
+                break;
+            }
+        }
+
+        if (!pressed && mRouletteTimer < 30)
+        {
+            rndRoulette();
+        }
+        else
+        {
+            rndSelect();
+            mRouletteTimer = 0;
+            GameAudio::Main::getAudio()->startSystemSe(0x20028);
+        }
+    }
+    else
+    {
+        KartGamePad **pads = gpaGamePad;
+        for (int i = 0; i <= mInfo.playerNum; i++)
+        {
+            if (mInfo.mode == 14)
+                break;
+
+            int done = 0;
+            for (int j = 0; j <= mInfo.entryNum; j++)
+            {
+                if (mPlayerData[j].mState == 2)
+                    done++;
+            }
+            if (mInfo.entryNum + 1 == done)
+                continue;
+
+            JUTGamePad *pad = pads[i];
+            u32 trigger = pad->mButtons.mTrigger;
+
+            if (trigger & JUTGamePad::A)
+            {
+                selectA(i);
+            }
+            else if (trigger & JUTGamePad::B)
+            {
+                selectB(i);
+            }
+            else
+            {
+                u32 repeat = ((JUTGamePad *)gpaGamePad[0])->mButtons.mRepeat;
+                if (repeat & JUTGamePad::MAINSTICK_UP)
+                    selectUp(i);
+                else if (repeat & JUTGamePad::MAINSTICK_DOWN)
+                    selectDown(i);
+                else if (repeat & JUTGamePad::MAINSTICK_LEFT)
+                    selectLeft(i);
+                else if (repeat & JUTGamePad::MAINSTICK_RIGHT)
+                    selectRight(i);
+                else if (trigger & JUTGamePad::Z)
+                    selectZ(i);
+                else if ((pad->mButtons.mButton & JUTGamePad::R) && (pad->mButtons.mButton & JUTGamePad::L) && i == 0)
+                {
+                    if (isRndRoulette())
+                        mRouletteTimer = 1;
+                }
+            }
+        }
+    }
+
+    f32 dec = -1.0f;
+    f32 endFrame = 26.0f;
+    for (int i = 0; i < 10; i++)
+    {
+        for (int j = 0; j < 2; j++)
+        {
+            f32 frame = mCharPane[i][j].mFrame + dec;
+            mCharPane[i][j].mFrame = frame;
+            if (endFrame == frame)
+            {
+                if (mSelectAnm[i][j].mEnable == 0)
+                    continue;
+                mSelectAnm[i][j].mEnable = 0;
+                int no = mSelectAnm[i][j].mNo;
+                int padNo = mPlayerPadNo[no];
+                int cursor = mPlayerData[no].mCursor;
+
+                if (mPlayerData[padNo].mCharNoF == no && mPlayerData[padNo].mCharF == -1)
+                {
+#line 6075
+                    JUT_ASSERT(0);
+                }
+                else if (mPlayerData[padNo].mCharNoB == no && mPlayerData[padNo].mCharB == -1)
+                {
+                    setCharacterFlag();
+                    do
+                    {
+                        cursor = (cursor + 1) % 20;
+                    } while (mCharacterFlag[cursor] == 0);
+                    mPlayerData[no].mCursor = cursor;
+                }
+                else
+                {
+                    mPlayerData[no].mCursor = -1;
+                }
+
+                if (mPlayerData[padNo].mCharF != -1 && mPlayerData[padNo].mCharB != -1)
+                {
+                    mPlayerData[padNo].mState = 1;
+                    mPlayerData[padNo].mKart = getKart(mPlayerData[padNo].mCharF, mPlayerData[padNo].mCharB);
+                }
+            }
+            else if (frame > 27.0f)
+            {
+                mCharPane[i][j].mFrame = 27.0f;
+            }
+        }
+    }
+
+    characterAnm();
+
+    int ready = 0;
+    for (int i = 0; i <= mInfo.entryNum; i++)
+    {
+        if (mPlayerData[i].mState == 2)
+        {
+            mCharacterSelect3D->setCharacterStatus(i, 0, CharacterSelect3D::STATUS_2);
+            mCharacterSelect3D->setCharacterStatus(i, 1, CharacterSelect3D::STATUS_2);
+        }
+        else
+        {
+            mCharacterSelect3D->setCharacterStatus(i, 0, CharacterSelect3D::STATUS_1);
+            mCharacterSelect3D->setCharacterStatus(i, 1, CharacterSelect3D::STATUS_1);
+        }
+
+        if (mPlayerData[i].mState == 2 && mCharacterSelect3D->isNext(i))
+            ready++;
+    }
+
+    if (mInfo.entryNum + 1 == ready)
+        setRaceData();
+    else
+        characterOkWaitAnm();
+}
+
+void SceneMenu::character_end()
+{
+    if (mInfo.timer < 25)
+    {
+        MenuTitleLine::ptr()->lift();
+        if (mInfo.timer >= 5)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    mCharPane[i][j].mFrame = 24 - mInfo.timer;
+                }
+            }
+
+            switch (mInfo.entryNum)
+            {
+            case 0:
+                for (int i = 0; i < 4; i++)
+                    mCharPaneBck[i].mFrame = 24 - mInfo.timer;
+                break;
+            case 1:
+                for (int i = 0; i < 7; i++)
+                    mChar2Bck[i].mFrame = 24 - mInfo.timer;
+                break;
+            case 2:
+                for (int i = 0; i < 8; i++)
+                    mChar3Bck[i].mFrame = 24 - mInfo.timer;
+                break;
+            case 3:
+                for (int i = 0; i < 9; i++)
+                    mChar4Bck[i].mFrame = 24 - mInfo.timer;
+                break;
+            default:
+#line 6155
+                JUT_ASSERT(0);
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 2; j++)
+            {
+                mCharPane[i][j].mPane->hide();
+            }
+        }
+
+        switch (mInfo.entryNum)
+        {
+        case 0:
+            for (int i = 0; i < 9; i++)
+                mCharPaneBck[i].mPane->hide();
+            break;
+        case 1:
+            for (int i = 0; i < 20; i++)
+                mChar2Bck[i].mPane->hide();
+            break;
+        case 2:
+            for (int i = 0; i < 27; i++)
+                mChar3Bck[i].mPane->hide();
+            break;
+        case 3:
+            for (int i = 0; i < 26; i++)
+                mChar4Bck[i].mPane->hide();
+            break;
+        default:
+#line 6181
+            JUT_ASSERT(0);
+        }
+
+        mInfo.oldMode = mInfo.mode;
+        mInfo.mode = mInfo.nextMode;
+        mInfo.timer = 0;
+    }
+
+    characterAnm();
+    characterOkWaitAnm();
+}
 
 void SceneMenu::nextScene()
 {
@@ -1340,9 +2033,280 @@ int SceneMenu::changeKart(int charF, int charB, int kart, int dir)
 
 void SceneMenu::characterAnm() {}
 
-void SceneMenu::characterOkWaitAnm() {}
+void SceneMenu::characterOkWaitAnm()
+{
+    switch (mInfo.entryNum)
+    {
+    case 0:
+        switch (mPlayerData[0].mState)
+        {
+        case 0:
+        case 2:
+            mCharPaneBck[4].mPane->hide();
+            mCharPaneBck[5].mPane->hide();
+            mCharPaneBck[6].mPane->hide();
+            mCharPaneBck[7].mPane->hide();
+            break;
+        case 1:
+            mCharPaneBck[4].mPane->show();
+            mCharPaneBck[5].mPane->show();
+            mCharPaneBck[6].mPane->show();
+            mCharPaneBck[7].mPane->hide();
+            break;
+        default:
+#line 7228
+            JUT_ASSERT(0);
+        }
+        break;
+    case 1:
+        for (int i = 0; i < 2; i++)
+        {
+            switch (mPlayerData[i].mState)
+            {
+            case 0:
+                mChar2Bck[7 + i].mPane->hide();
+                mChar2Bck[9 + i].mPane->hide();
+                mChar2Bck[11 + i].mPane->hide();
+                mChar2Bck[13 + i].mPane->hide();
+                mChar2Bck[15 + i].mPane->hide();
+                mChar2Bck[17 + i].mPane->hide();
+                break;
+            case 1:
+                mChar2Bck[7 + i].mPane->show();
+                mChar2Bck[9 + i].mPane->show();
+                mChar2Bck[11 + i].mPane->show();
+                mChar2Bck[13 + i].mPane->show();
+                mChar2Bck[15 + i].mPane->show();
+                mChar2Bck[17 + i].mPane->hide();
+                break;
+            case 2:
+                mChar2Bck[7 + i].mPane->hide();
+                mChar2Bck[9 + i].mPane->hide();
+                mChar2Bck[11 + i].mPane->hide();
+                mChar2Bck[13 + i].mPane->hide();
+                mChar2Bck[15 + i].mPane->hide();
+                mChar2Bck[17 + i].mPane->show();
+                break;
+            default:
+#line 7260
+                JUT_ASSERT(0);
+            }
+        }
+        break;
+    case 2:
+        for (int i = 0; i < 3; i++)
+        {
+            switch (mPlayerData[i].mState)
+            {
+            case 0:
+                mChar3Bck[8 + i].mPane->hide();
+                mChar3Bck[11 + i].mPane->hide();
+                mChar3Bck[14 + i].mPane->hide();
+                mChar3Bck[17 + i].mPane->hide();
+                mChar3Bck[20 + i].mPane->hide();
+                mChar3Bck[23 + i].mPane->hide();
+                break;
+            case 1:
+                mChar3Bck[8 + i].mPane->show();
+                mChar3Bck[11 + i].mPane->show();
+                mChar3Bck[14 + i].mPane->show();
+                mChar3Bck[17 + i].mPane->show();
+                mChar3Bck[20 + i].mPane->show();
+                mChar3Bck[23 + i].mPane->hide();
+                break;
+            case 2:
+                mChar3Bck[8 + i].mPane->hide();
+                mChar3Bck[11 + i].mPane->hide();
+                mChar3Bck[14 + i].mPane->hide();
+                mChar3Bck[17 + i].mPane->hide();
+                mChar3Bck[20 + i].mPane->hide();
+                mChar3Bck[23 + i].mPane->show();
+                break;
+            default:
+#line 7293
+                JUT_ASSERT(0);
+            }
+        }
+        break;
+    case 3:
+        for (int i = 0; i < 4; i++)
+        {
+            switch (mPlayerData[i].mState)
+            {
+            case 0:
+                mChar4Bck[9 + i].mPane->hide();
+                mChar4Bck[13 + i].mPane->hide();
+                mChar4Bck[17 + i].mPane->hide();
+                mChar4Bck[21 + i].mPane->hide();
+                break;
+            case 1:
+                mChar4Bck[9 + i].mPane->show();
+                mChar4Bck[13 + i].mPane->show();
+                mChar4Bck[17 + i].mPane->show();
+                mChar4Bck[21 + i].mPane->hide();
+                break;
+            case 2:
+                mChar4Bck[9 + i].mPane->hide();
+                mChar4Bck[13 + i].mPane->hide();
+                mChar4Bck[17 + i].mPane->hide();
+                mChar4Bck[21 + i].mPane->show();
+                break;
+            default:
+#line 7320
+                JUT_ASSERT(0);
+            }
+        }
+        break;
+    default:
+#line 7326
+        JUT_ASSERT(0);
+    }
 
-void SceneMenu::setChar1Plus() {}
+    if (mInfo.mode != 14)
+    {
+    }
+    else
+    {
+        for (int i = 0; i < 2; i++)
+            mChar2Bck[17 + i].mPane->hide();
+        for (int i = 0; i < 3; i++)
+            mChar3Bck[23 + i].mPane->hide();
+        for (int i = 0; i < 4; i++)
+            mChar4Bck[21 + i].mPane->hide();
+    }
+}
+
+void SceneMenu::setChar1Plus()
+{
+    int charF = mPlayerData[0].mCharF;
+    int charB = mPlayerData[0].mCharB;
+    int kart = mPlayerData[0].mKart;
+    bool busy = mPlayerData[0].mState == 2;
+
+    if (charF >= 0 && charF < 20 && !busy)
+    {
+        mChar1PlusBck[0].mPane->show();
+        
+        f32 f1 = mChar1PlusBck[0].mFrame;
+
+        f1 = -1.0f + f1;
+
+        mChar1PlusBck[0].mFrame = f1;
+
+        if (f1 > 9.0f)
+
+            mChar1PlusBck[0].mFrame = 9.0f;
+        
+        f32 f2 = mChar1PlusBrk[0].mFrame;
+
+        f2 = -1.0f + f2;
+
+        mChar1PlusBrk[0].mFrame = f2;
+
+        if (f2 > 9.0f)
+
+            mChar1PlusBrk[0].mFrame = 9.0f;
+
+        J2DPane *pane = mChar1PlusBck[0].mPane;
+#line 7362
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        static_cast<J2DPicture *>(pane)->changeTexture(mCharName[charF], 0);
+
+        mChar1PlusBck[1].mPane->show();
+        
+        f32 f3 = mChar1PlusBck[1].mFrame;
+
+        f3 = -1.0f + f3;
+
+        mChar1PlusBck[1].mFrame = f3;
+
+        if (f3 > 9.0f)
+
+            mChar1PlusBck[1].mFrame = 9.0f;
+        
+        f32 f4 = mChar1PlusBpk.mFrame;
+
+        f4 = -1.0f + f4;
+
+        mChar1PlusBpk.mFrame = f4;
+
+        if (f4 > 9.0f)
+
+            mChar1PlusBpk.mFrame = 9.0f;
+    }
+    else
+    {
+        mChar1PlusBck[0].mPane->hide();
+        mChar1PlusBck[0].mFrame = -1.0f;
+        mChar1PlusBrk[0].mFrame = -1.0f;
+        mChar1PlusBck[1].mPane->hide();
+        mChar1PlusBck[1].mFrame = -1.0f;
+        mChar1PlusBpk.mFrame = -1.0f;
+    }
+
+    if (charB >= 0 && charB < 20 && !busy)
+    {
+        mChar1PlusBck[2].mPane->show();
+        
+        f32 f5 = mChar1PlusBck[2].mFrame;
+
+        f5 = -1.0f + f5;
+
+        mChar1PlusBck[2].mFrame = f5;
+
+        if (f5 > 9.0f)
+
+            mChar1PlusBck[2].mFrame = 9.0f;
+        
+        f32 f6 = mChar1PlusBrk[1].mFrame;
+
+        f6 = -1.0f + f6;
+
+        mChar1PlusBrk[1].mFrame = f6;
+
+        if (f6 > 9.0f)
+
+            mChar1PlusBrk[1].mFrame = 9.0f;
+
+        J2DPane *pane = mChar1PlusBck[2].mPane;
+#line 7384
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        static_cast<J2DPicture *>(pane)->changeTexture(mCharName[charB], 0);
+    }
+    else
+    {
+        mChar1PlusBck[2].mPane->hide();
+        mChar1PlusBck[2].mFrame = -1.0f;
+        mChar1PlusBrk[1].mFrame = -1.0f;
+    }
+
+    if (kart >= 0 && kart < 21 && !busy)
+    {
+        const s8 *p0 = (const s8 *)mKartPerf + kart * 3;
+        mChar1PlusBck[3].mPane->show();
+        const s8 *p1 = p0 + 1;
+        const s8 *p2 = p0 + 2;
+        for (int i = 0; i < 5; i++)
+        {
+            if (i < p0[0])
+                mChar1PlusBck[4 + i].mPane->show();
+            else
+                mChar1PlusBck[4 + i].mPane->hide();
+            if (i < p1[0])
+                mChar1PlusBck[9 + i].mPane->show();
+            else
+                mChar1PlusBck[9 + i].mPane->hide();
+            if (i < p2[0])
+                mChar1PlusBck[14 + i].mPane->show();
+            else
+                mChar1PlusBck[14 + i].mPane->hide();
+        }
+    }
+    else
+    {
+        mChar1PlusBck[3].mPane->hide();
+    }
+}
 
 void SceneMenu::setRaceData() {}
 
@@ -1539,6 +2503,27 @@ void SceneMenu::getRndCharSel(int &charF, int &charB)
     }
 }
 
-void SceneMenu::changeText() {}
+void SceneMenu::changeText()
+{
+    if (mInfo.entryNum + 1 <= 2)
+        ReadPrintMessage::mNum[0] = KartChecker::sBombPointFullS;
+    else
+        ReadPrintMessage::mNum[0] = KartChecker::sBombPointFullL;
+
+    int messageId = ReadPrintMessage::getBmgMessageID(mMsgId);
+    char *message = ReadPrintMessage::getMessage(mMsgRes, messageId);
+
+    mTextBox->setFontSize(
+        mFontSize.x * ReadPrintMessage::getRate(mMsgRes, messageId) / 100.0f,
+        mFontSize.y * ReadPrintMessage::getRate(mMsgRes, messageId) / 100.0f);
+
+    mTextBox->setCharSpace(ReadPrintMessage::getCharSpace(mMsgRes, messageId));
+
+    J2DTextBox::TFontSize fontSize;
+    mTextBox->getFontSize(fontSize);
+    char buf[512];
+    ReadPrintMessage::tagCnv(message, mColorRes, fontSize, sizeof(buf), buf);
+    strncpy(mTextBox->getStringPtr(), buf, sizeof(buf));
+}
 
 #include "JSystem/JAudio/JASFakeMatch2.h"

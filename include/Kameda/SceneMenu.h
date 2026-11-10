@@ -4,6 +4,8 @@
 #include "Kameda/Scene.h"
 #include "kartEnums.h"
 #include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J2D/J2DPane.h"
+#include "JSystem/JUtility/TColor.h"
 #include "JSystem/JGeometry/Box.h"
 
 class J2DAnmBase;
@@ -204,8 +206,19 @@ private:
     BrkData mModeBrk[30];                  // 0x10C8
     BrkData mModeBpk[6];                   // 0x1230
     BckData mBattleBck[15];                // 0x1278
-    BckData mBattleBrk[3];                 // 0x132C
-    u8 _1350[0x136C - 0x1350];             // 0x1350
+    BckData mBattleBrk;                    // 0x132C
+    JUtility::TColor mBattleWhite;         // 0x1338
+    JUtility::TColor mBattleWhiteInactive; // 0x133C
+    JUtility::TColor mBattleBlack;         // 0x1340
+    JUtility::TColor mBattleBlackInactive; // 0x1344
+    JUtility::TColor mBattleWhite2;        // 0x1348
+    JUtility::TColor mBattleWhite2Inactive;// 0x134C
+    JUtility::TColor mBattleWhite3;        // 0x1350
+    JUtility::TColor mBattleWhite3Inactive;// 0x1354
+    void *mColorRes;                       // 0x1358
+    void *mMsgRes;                         // 0x135C
+    J2DTextBox *mTextBox;                  // 0x1360
+    J2DTextBox::TFontSize mFontSize;       // 0x1364
     BckData mCharPane[10][2];              // 0x136C (select_character.bck, per-char cell anm)
     BckData mCharCCBck[10];                // 0x145C
     BckData mCharCCBrk[10][4];             // 0x14D4
@@ -250,7 +263,7 @@ private:
     int _210c;                             // 0x210C
     int _2110;                             // 0x2110
     int _2114;                             // 0x2114
-    int _2118;                             // 0x2118
+    int mMsgId;                            // 0x2118
     int mPlayerPadNo[4];                   // 0x211C
     PlayerData mPlayerData[4];             // 0x212C
     u8 _219c[0x21EC - 0x219C];             // 0x219C
@@ -258,7 +271,8 @@ private:
     u8 mCharacterFlag[20];                 // 0x228C
     u8 mCharSelFlag[20];                   // 0x22A0
     NameEntryHelper *mNameEntry;           // 0x22B4
-    u8 _22b8[0x22C0 - 0x22B8];             // 0x22B8
+    char mName[4];                         // 0x22B8
+    int mRouletteTimer;                    // 0x22BC
 }; // Size: 0x22c0
 
 #endif
