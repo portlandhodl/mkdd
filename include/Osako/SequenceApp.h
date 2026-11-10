@@ -43,7 +43,9 @@ public:
 
 private:
     static Scene::SceneType msScene;     // 0x80414868
+public:
     static Scene::SceneType msNextScene; // 0x8041486c
+private:
     static SequenceApp *mspSequenceApp;  // 0x80416a18
 
     Scene *mNextScene;

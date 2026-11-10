@@ -152,6 +152,7 @@ public:
     friend class SceneMapSelect;
 
 private:
+    friend class SceneGhostLoadSave;
     JMARandFast mRnd;          // 00
     int mStartNo[8];           // 004
     KartGamePad *mDecidePad;   // 024
