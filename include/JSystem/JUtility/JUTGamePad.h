@@ -5,6 +5,7 @@
 #include <dolphin/os.h>
 #include <dolphin/pad.h>
 #include "JSystem/Logitech/Wheels.h"
+#include "JSystem/Logitech/LGWheels.h"
 #include "JSystem/JUtility/JUTAssert.h"
 #include "JSystem/JKernel/JKRDisposer.h"
 
