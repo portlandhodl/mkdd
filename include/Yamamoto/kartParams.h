@@ -175,7 +175,7 @@ extern f32 tireOffsetPos[21];
 // extern UNK kinopioSus;
 // extern UNK demoSus;
 // extern UNK normalTire;
-// extern UNK Jdata;
+extern f32 Jdata[63];
 extern f32 BodyFullHeightData[21];
 extern f32 BodyFullBumpData[21];
 // extern UNK SusPowerData;

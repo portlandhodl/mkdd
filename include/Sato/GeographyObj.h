@@ -121,6 +121,8 @@ public:
 
     bool IsPathMove() const { return mObjData->pathID != 0xffff; }
 
+    const CrsData::SObject *getObjData() const { return mObjData; }
+
     template<class T>
     static GeographyObj *New(const CrsData::SObject &object) { return new T(object); }
     template<class T>
