@@ -61,8 +61,8 @@ public:
     void GetBodyVel(int, JGeometry::TVec3f *);
     bool GetLeftFTirePos(int, Vec *);
     bool GetRightFTirePos(int, Vec *);
-    void GetLeftTirePos(int, Vec *);
-    void GetRightTirePos(int, Vec *);
+    bool GetLeftTirePos(int, Vec *);
+    bool GetRightTirePos(int, Vec *);
     int GetTirePos(int, int, Vec *);
     f32 GeTireG(int);
     f32 GetCarSpeed(int);

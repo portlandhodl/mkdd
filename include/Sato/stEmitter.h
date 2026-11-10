@@ -8,6 +8,7 @@
 struct stEmitter
 {
     stEmitter(); // 0x802359b4
+    stEmitter &operator=(const stEmitter &);
 
     u8 _00[0x18];
     u8 mCreateRate; // 0x18
@@ -76,18 +77,37 @@ struct stEmitterParamLineIP
     u8 funcCnt;
 }; // Size: Unknown, probably 0x18
 
+struct stParticleMgr
+{
+    stParticleMgr();
+    void init(int);
+    ~stParticleMgr()
+    {
+        if (&_04)
+            if (&_10)
+                _10.~JSUPtrList();
+    }
+    u8 _00[4];
+    JSUPtrList _04;
+    JSUPtrList _10;
+    u8 _1c[0x3c];
+};
+
+struct stEmitterCallBack;
+
 struct stEmitterPtcl : public stEmitter
 {
-    stEmitterPtcl() {} // TODO
-    ~stEmitterPtcl() {}
+    stEmitterPtcl();
+    ~stEmitterPtcl();
     // Inline/Unused
     void update();
     void removeAllParticles();
 
-    // stParticleMgr particle;
-    // 12c;
-    // JSUPtrLink some link
-    // s16 _147
+    stParticleMgr mParticle; // 0xd8
+    stEmitterCallBack *_130;
+    JSUPtrLink _134;
+    u16 _144;
+    s16 _146;
 }; // Size: 0x148
 
 struct stEmitterCallBack
@@ -136,7 +156,7 @@ struct stEmitterPtclMgr
 {
     void calc();
     void draw(u32);
-    void Create(stEmitterCallBack *, u16);
+    stEmitterPtcl *Create(stEmitterCallBack *, u16);
     void RemoveEmt(JSUList<stEmitterPtcl> &, JSUListIterator<stEmitterPtcl> &);
     void ChkRemoveBecomeInvalidEmt(JSUList<stEmitterPtcl> &, JSUListIterator<stEmitterPtcl> &);
     void removeAllEmt();
