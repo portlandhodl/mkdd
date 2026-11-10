@@ -53,7 +53,7 @@ public:
     struct ItemHandOffsetData
     {
         JGeometry::TVec3f _0; // 0x0
-        u16 _c[3];            // 0xc
+        s16 _c[3];            // 0xc
     };
 
     ItemObj(u32 kind); // 0x8024a2b0
@@ -92,7 +92,7 @@ public:
     virtual void doSpRelease() {}                                                    // 80
     virtual void doDisappear() {}                                                    // 84
     virtual void doFall();                                                           // 88
-    virtual void doDivested() { moveDivested(); }                                    // 8C
+    virtual void doDivested();                                    // 8C
     virtual void doForceDisappear();                                                 // 90
     virtual void initCommonMoveFallMtx();                                            // 94
     virtual void moveColWall(CrsGround &);                                           // 98
@@ -154,7 +154,7 @@ public:
     void rotationRad(f32 &, f32);                                             // 0x8024ccf0
     static void QuatRotX(f32, Quaternion *);                                  // 0x8024cd40
     static void QuatRotY(f32, Quaternion *);                                  // 0x8024cd84
-    static bool IsSpecialItem(int);                                           // 0x8024cdc8
+    static int IsSpecialItem(int);                                           // 0x8024cdc8
     void getCompVecLength(JGeometry::TVec3f &, f32 &);                        // 0x8024cdf8
     void setFrameNoColKart(u8, bool);                                         // 0x8024ced0
     void doFrameNoColKart();                                                  // 0x8024cfa0
@@ -281,8 +281,8 @@ public:
     // static f32 sDivPosLerpValue;
 
     // Inline
-    bool IsSuccessionItem() { return mItemKind > 0x10; }                                // 0x8024b30c
-    bool IsSuccessionChildItem() { return mSuccessionItemLink.getList() != nullptr; }   // 0x8024b324
+    bool IsSuccessionItem();
+    bool IsSuccessionChildItem();
     void doOccur() { doFall(); }                                                        // 0x8024af68, ptmf shit
 
     int get_1fc() const { return _1fc; }

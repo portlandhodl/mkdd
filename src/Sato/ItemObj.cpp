@@ -126,9 +126,11 @@ void ItemObj::initForceDisappear()
 
     if (available)
     {
-        const char *emtName = "mk_item_out_a";
+        const char *emtName;
         if (_12c & 0x200)
             emtName = "mk_item_out_b";
+        else
+            emtName = "mk_item_out_a";
 
         mDisappearEmt = GetJPAMgr()->createEmt(emtName, pos);
         mDisappearEmt->setScale(mEquipScale * getForceEfctOffsetScale());
@@ -144,9 +146,10 @@ void ItemObj::doForceDisappear()
 
     if (mDisappearEmt != nullptr)
     {
-        mDisappearEmt->mGlobalTrs.x = mPos.x;
-        mDisappearEmt->mGlobalTrs.y = mPos.y;
-        mDisappearEmt->mGlobalTrs.z = mPos.z;
+        JPABaseEmitter *emt = mDisappearEmt;
+        emt->mGlobalTrs.x = mPos.x;
+        emt->mGlobalTrs.y = mPos.y;
+        emt->mGlobalTrs.z = mPos.z;
 
         bool deleteIt = false;
         if (mDisappearEmt->checkStatus(0x8) && mDisappearEmt->getParticleNumber() == 0)
@@ -294,6 +297,7 @@ void ItemObj::setStateHeartWaiting(u8 colorID)
 
 void ItemObj::setStateRelease(bool flag)
 {
+    static const char sItemModelMtx0[] = "itemModelMtx 0";
     mState = 2;
     mStateFunc = &ItemObj::doRelease;
     mWaitFrame = 0;
@@ -457,6 +461,16 @@ void ItemObj::setStateDivested(bool flag)
         if (flag)
             initDivested();
     }
+}
+
+inline bool ItemObj::IsSuccessionItem()
+{
+    return mItemKind > 0x10;
+}
+
+inline bool ItemObj::IsSuccessionChildItem()
+{
+    return mSuccessionItemLink.getList() != nullptr;
 }
 
 void ItemObj::setStateDisappear(bool flag)
@@ -848,9 +862,11 @@ void ItemObj::calc()
 
 void ItemObj::calcDarkRatio()
 {
-    if (mState == 1 && mOwnerNum >= 0 && mOwnerNum < RCMGetManager()->getKartNumber())
+    int owner = mOwnerNum;
+    if (mState == 1 && owner >= 0 && owner < RCMGetManager()->getKartNumber())
     {
-        if (mDriverNum != ItemObjMgr::getNowTandemDriverNum(mOwnerNum))
+        int driverNum = mDriverNum;
+        if ((u8)ItemObjMgr::getNowTandemDriverNum(owner) != (u8)driverNum)
         {
             if (mDarkCount < 20.0f)
             {
@@ -1154,12 +1170,14 @@ void ItemObj::QuatRotX(f32 rad, Quaternion *out)
 void ItemObj::QuatRotY(f32 rad, Quaternion *out)
 {
     Vec axis = {0.0f, 1.0f, 0.0f};
+    static const Vec axisZ = {0.0f, 0.0f, 1.0f};
+    (void)axisZ;
     C_QUATRotAxisRad(rad, (f32 *)out, &axis);
 }
 
-bool ItemObj::IsSpecialItem(int kind)
+int ItemObj::IsSpecialItem(int kind)
 {
-    bool ret = false;
+    u8 ret = false;
     switch (kind)
     {
     case 1:
@@ -1249,8 +1267,7 @@ void ItemObj::calcColPos()
 {
     JGeometry::TVec3f up;
     getModelUpDir(&up);
-    f32 s = _6c * mDisScaleAnm.y;
-    up.scale(s);
+    up.scale(_6c * mDisScaleAnm.y);
     mColPos.add(mPos, up);
 }
 
@@ -1395,15 +1412,16 @@ void ItemObj::doEquipScaleUp(f32 scale)
         u32 startFrame = 0;
         if (mSuccessionItemLink.getList() != nullptr)
         {
-            switch (*(int *)((char *)mSuccessionParent + 0x2d4))
+            int num;
+            ItemObjSuc *suc = mSuccessionParent;
+            switch (*(int *)((char *)suc + 0x2d4))
             {
             case 0:
                 startFrame = *(u32 *)((char *)mJuggle + 0x1c);
                 break;
             case 1:
             {
-                ItemObjSuc *suc = mSuccessionParent;
-                int num = -1;
+                num = -1;
                 startFrame = *(u8 *)((char *)mBuild + 0x2d);
                 if (*(u32 *)((char *)suc + 0x7c) > 0x10)
                     num = *(int *)((char *)suc + 0x1ac);
@@ -1477,13 +1495,6 @@ void ItemObj::calcForceDisappearScaleDown(JGeometry::TVec3f &out, u32 startFrame
     }
 }
 
-void ItemObj::doMovePos()
-{
-    if (mVel.y < -95.0f)
-        mVel.y = -95.0f;
-    mPos += mVel;
-}
-
 void ItemObj::doReflectGeoObj(GeographyObj *geoObj, f32 pow)
 {
     JGeometry::TVec3f normVec;
@@ -1538,6 +1549,13 @@ void ItemObj::doReflectGeoObj(GeographyObj *geoObj, f32 pow)
     mReflectWallVec += normVec;
     outVec *= scale;
     mVel = outVec;
+}
+
+void ItemObj::doMovePos()
+{
+    if (mVel.y < -95.0f)
+        mVel.y = -95.0f;
+    mPos += mVel;
 }
 
 void ItemObj::doGeoObjectCol(GeographyObj *geoObj)
@@ -1636,7 +1654,9 @@ void ItemObj::moveDivested()
     {
         if (mMulti == mBuild)
         {
-            if (mSuccessionParent->getSuccessionItemNum() > 1 || GetGeoObjMgr()->isBombBattle())
+            ItemObjSuc *suc = mSuccessionParent;
+            int num = suc->getSuccessionItemNum();
+            if (num > 1 || GetGeoObjMgr()->isBombBattle())
             {
                 ItemHandOffsetData offsetData = GetItemObjMgr()->getHandOffsetData(this);
                 setHandOffsetPos(&offsetData);
@@ -1685,7 +1705,7 @@ void ItemObj::initmoveFall()
 
 void ItemObj::initCommonMoveFall(const JGeometry::TVec3f &vel)
 {
-    mVel.set(vel);
+    mVel = vel;
     _12c |= 1;
     _12c |= 2;
     setFrameNoColKart(30, true);
@@ -1881,8 +1901,8 @@ void ItemObj::doColMoveJumpDown(JGeometry::TVec3f vec, f32 pow)
 
 void ItemObj::doColMoveReflectJumpDownAndDisappear(JGeometry::TVec3f vec, f32 pow)
 {
-    bool stopped = false;
     bool flag2 = false;
+    bool stopped = false;
     if (mState != 8)
     {
         if (mVel.length() < 3.0f)
@@ -2395,8 +2415,7 @@ void ItemObj::calcBananaFirstQuat(const JGeometry::TVec3f &dir)
     f32 angle = (getItemRnd()->get_ufloat_1() * 2.0f - 1.0f) * 3.14f;
 
     Quaternion spin;
-    Vec axis = {0.0f, 1.0f, 0.0f};
-    C_QUATRotAxisRad(angle, (f32 *)&spin, &axis);
+    QuatRotY(angle, &spin);
 
     JGeometry::TVec3f negDir;
     negDir.negate(dir);
@@ -2542,7 +2561,32 @@ void ItemObj::setHandOffsetData()
     ItemHandOffsetData data = GetItemObjMgr()->getHandOffsetData(this);
     setHandOffsetPos(&data);
 
-    Vec axis1 = {};    // mat stuff
+    s16 ry = data._c[1];
+    s16 rx = data._c[0];
+    s16 rz = data._c[2];
+
+    f32 cy = JMASCos(ry);
+    f32 cz = JMASCos(rz);
+    f32 sz = JMASSin(rz);
+    f32 cx = JMASCos(rx);
+    f32 sx = JMASSin(rx);
+    f32 sy = JMASSin(ry);
+
+    _210[0][0] = cy * cz;
+    _210[1][0] = cy * sz;
+    _210[2][0] = -sy;
+
+    f32 cxsz = cx * sz;
+    f32 sxcz = sx * cz;
+    _210[0][1] = sxcz * sy - cxsz;
+
+    f32 sxsz = sx * sz;
+    f32 cxcz = cx * cz;
+    _210[1][1] = cxcz + sxsz * sy;
+    _210[2][1] = sx * cy;
+    _210[0][2] = sxsz + cxcz * sy;
+    _210[1][2] = cxsz * sy - sxcz;
+    _210[2][2] = cx * cy;
 }
 
 void ItemObj::setHandOffsetPos(ItemHandOffsetData *data)
@@ -2578,4 +2622,9 @@ void ItemObj::initMaxDivestedFrame()
         mDivestedMaxFrame = sDivestedFrame;
 
     mDivestedGravity = -((f32)mDivestedMaxFrame * sDivestedGravity);
+}
+
+inline void ItemObj::doDivested()
+{
+    moveDivested();
 }
