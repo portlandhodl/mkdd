@@ -247,9 +247,9 @@ public:
     RaceInfo *mRaceInfo;
     RaceBGMPlayer *mRaceBGMPlayer;
     Console *mConsole;
-private:
     Course *mCourse;
     KartChecker *mKartChecker[8];
+private:
     KartLoader *mKartLoader[8];
     Award2D *mAward2D;
     StaffRoll2D *mStaffRoll2D;

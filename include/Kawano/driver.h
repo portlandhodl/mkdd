@@ -528,9 +528,12 @@ public:
     void goFront();
     void TurnFront();
     void StartThrow(int, int, int);
+    void StartThrow(int);
     void StartDriverThrow(int, int);
     void StartJump(int);
+    void StartJump();
     void StartSit();
+    void StartSit(int);
     void StartStand();
     void StartStart();
     void StartAttackL();
@@ -559,6 +562,8 @@ public:
     void StartGoalMotion();
     void StartGood();
     void StartBad();
+    void StartFire();
+    void StartFireEnd();
     void StartJuggle();
     void StartSpeak();
     void SetDriverFlags(StateEnum);
@@ -575,15 +580,20 @@ public:
     int IsSit();
     int IsStand();
     int IsBack();
+    int IsFront();
     int IsDemo();
+    int IsDemoBack();
+    int IsDemoFront();
     int IsDrive();
     int IsDanger();
     int IsDangerPlus();
+    int IsDangerEnd();
     int IsDash();
     int IsDash1();
     int IsDash2();
     int IsTire();
     int IsWait();
+    int IsWait(StateEnum);
     int IsTurn();
     int IsJuggle();
     int IsBeforeStart();
@@ -614,6 +624,7 @@ public:
     int IsStart();
     int IsNormalStart();
     int IsTurnBack();
+    int IsTurnFront();
     int IsDamageS();
     int IsItemThrowOK();
     int IsAppeal();
@@ -629,6 +640,32 @@ public:
     void StartGood1st();
     void StartAppeal();
     void StartAnimationWC(StateEnum);
+    void StartHokanDWait();
+    void StartAttack(int, int);
+    void StartAttack(int);
+    void StartWait();
+    void StartWaitBack();
+    void StartRun2();
+    void StartDRunAnim(DriversAnimator *);
+    void Check4StartDrift();
+    void StartDrift();
+    void StartDriftEnd();
+    void StartHokanDash();
+    void StartHokanDash2();
+    void SetHangRate(f32);
+    void StartDanger(int);
+    void StartDriverPiyo();
+    void StartSetTire(int);
+    void StartSetTireL();
+    void StartSetTireR();
+    int IsThrowBack();
+    int IsTire2();
+    int IsDamage2();
+    int IsDamageS2();
+    int IsDamageL2();
+    int IsAppeal(StateEnum);
+    int IsDemoFront(StateEnum);
+    int IsDemoBack(StateEnum);
     void InitDriverOffsetPosition();
     void SetDriverOffsetPosition();
     void InitMpaMtxCalcThrow(J3DAnmTransform *);
@@ -664,10 +701,10 @@ public:
     u8 m_ba;                                     // 0xBA
     u8 m_bb;                                     // 0xBB
     u8 mHokanDamageCnt;                          // 0xBC
-    u16 m_be;                                    // 0xBE
+    s16 m_be;                                    // 0xBE
     u16 m_c0;                                    // 0xC0
-    u16 m_c2;                                    // 0xC2
-    u16 m_c4;                                    // 0xC4
+    s16 m_c2;                                    // 0xC2
+    s16 m_c4;                                    // 0xC4
     s32 m_c8;                                    // 0xC8
     s32 m_cc;                                    // 0xCC
     s32 m_d0;                                    // 0xD0

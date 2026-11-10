@@ -99,15 +99,21 @@ private:
     f32 _1c;
     f32 _20;
     u8 _24;
+public:
     f32 _28;
+private:
     u8 _2c;
     J3DModelData *mMdlData;
+public:
     u8 mBlendTimes[0x27];
+private:
+public:
     u8 _5b;
     u8 _5c;
     u8 _5d;
     u8 _5e;
     u8 _5f;
+private:
     u8 _60[20][82];
     u8 _6c8[20][12];
     u8 _7b8[20];
@@ -115,9 +121,10 @@ private:
     u8 _7e0[20];
     u8 mMdlCnt;                      // 7f4
     DriverModel *mMdls[16];          // 7f8, unknown count as of now
+public:
     u16 _838;
-    u16 _83a;
-    u16 _83c;
+    s16 _83a;
+    s16 _83c;
     f64 _840;
     int _848;
     PLACEHOLDER_BYTES(0x84c, 0x858);
