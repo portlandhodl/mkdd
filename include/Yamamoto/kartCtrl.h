@@ -101,7 +101,7 @@ public:
     int GetDriftCnt(int);
     bool IsMiniGame();
     bool IsMiniGameEnd();
-    u8 CheckWinner();
+    int CheckWinner();
     void GetKartEffctVel(int, JGeometry::TVec3f *);
     bool CheckChange(int);
     bool CheckMatchless(int);

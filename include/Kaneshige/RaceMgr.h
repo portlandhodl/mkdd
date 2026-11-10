@@ -173,6 +173,9 @@ public:
 
     bool isRaceEnd() const { return mRaceDirector->isRaceEnd(); };
     bool checkRaceEnd() { return mRaceDirector->checkRaceEnd(); }
+    bool isPlayingWinnerAnm() const { return mRaceDirector->isPlayingWinnerAnm(); }
+    bool isPlayingDemoWinnerAnm() const { return mRaceDirector->isPlayingDemoWinnerAnm(); }
+    bool isMovingToStartPoint() const { return mRaceDirector->isMovingToStartPoint(); }
 
     BlurScreen *getBlurScreen() { return mRaceDrawer->getBlurScreen(); }
     void setBlurColor(const JUTColor &color) { mRaceDrawer->setBlurColor(color); }

@@ -63,6 +63,8 @@ public:
     }
 
     void setDemoPoint(JugemPoint *point) { mDemoPoint = point; }
+    JugemPoint *getDemoPoint() { return mDemoPoint; }
+    void clrDemoPoint() { mDemoPoint = nullptr; }
 
     const RaceTime &getLapSplit(int lap)
     {

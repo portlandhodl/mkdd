@@ -82,6 +82,7 @@ public:
     bool isFlashing() const { return mFlashState != 0; }
     bool isHide(u32 viewNo) const { return (mHiddenDrivers & 1 << viewNo) != 0; }
     void hide() { mHiddenDrivers = 0xffff; }
+    void fadeOutGhost() { if (mGhostFadeTimer < 0) mGhostFadeTimer = 0; }
     
 
     void setLight(u32 viewNo, RaceKartLight *kartLight)

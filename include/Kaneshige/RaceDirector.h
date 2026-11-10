@@ -46,6 +46,8 @@ public:
     bool checkRaceEndForEscapeBattle(); // 0x801c8cf8
     int requestDemoCameraID() const; // 0x801c8d60
     bool isPlayingDemoWinnerAnm() const; // 0x801c8dac
+    bool isPlayingWinnerAnm() const { return mPlayingWinAnm; }
+    bool isMovingToStartPoint() const { return mMovingToStart; }
     u32 getDemoCameraTagName() const; // 0x801c8df8
     bool isFrameRenewal() const {
 #ifdef DEBUG

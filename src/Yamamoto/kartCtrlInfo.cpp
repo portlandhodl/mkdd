@@ -701,7 +701,7 @@ bool KartCtrl::IsMiniGameEnd() {
     return false;
 }
 
-u8 KartCtrl::CheckWinner() {
+int KartCtrl::CheckWinner() {
     int kartNumber = GetKartCtrl()->GetKartNumber();
     
     for (int kartIndex = 0; kartIndex < kartNumber; kartIndex++) {
