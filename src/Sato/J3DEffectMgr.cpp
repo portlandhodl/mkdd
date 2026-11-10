@@ -74,6 +74,10 @@ const char *BrkEfctEffectName[3] = { "star", "dark", "frez" };
 #include "JSystem/JAudio/JASFakeMatch.h"
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
+PermissionCounter::PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
+
+PermissionCounter::~PermissionCounter() {}
+
 template <>
 void J3DEffectObj::LoadAnm<J3DEfctHeart>()
 {

@@ -11,8 +11,8 @@ class CrsGround;
 class PermissionCounter
 {
 public:
-    PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
-    ~PermissionCounter() {}
+    PermissionCounter();
+    ~PermissionCounter();
 
     u8 mCount;        // 0x0
     u8 mPermission;   // 0x1
@@ -23,6 +23,7 @@ class PermissionCounterObserver : public JSUList<PermissionCounter>
 {
 public:
     PermissionCounterObserver() { initiate(); }
+    ~PermissionCounterObserver();
 
     void init() { initiate(); }
     void reset();
