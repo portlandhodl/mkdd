@@ -84,7 +84,8 @@ struct TCPSocket {
     s32 unkE0;
     s32 state;
     u32 flags;
-    u8 unkEC[8];
+    void (*closeCallback)(TCPSocket* so, s32 result);
+    s32* closeArg;
     s32 mss;
     s32 outputPending;
     IPHeader ip;
@@ -130,7 +131,13 @@ struct TCPSocket {
     u8 unk23C[4];
     s64 rxtcur;
     s64 unk248;
-    s64 idleTimeout;
+    union {
+        s64 value;
+        struct {
+            s32 hi;
+            s32 lo;
+        } words;
+    } idleTimeout;
     OSAlarm rxmitAlarm;
     s32 cwnd;
     s32 ssthresh;
@@ -141,7 +148,7 @@ struct TCPSocket {
     s64 rttvar;
     s64 rxtmin;
     s64 rxtmax;
-    s32 unk2B8;
+    TCPSocket* unk2B8;
     u8* remoteAddrInfo;
     u8* localAddrInfo;
     TCPSocket* unk2C4;
@@ -155,5 +162,9 @@ struct TCPSocket {
 
 void TCPOutput(TCPSocket* so, u16 flag);
 void TCPStartRxmitTimer(TCPSocket* so);
+s32 TCPSetSendBuff(TCPSocket* so, u8* buffer, u32 size);
+s32 TCPSetRecvBuff(TCPSocket* so, u8* buffer, u32 size);
+s32 TCPGetSendBuff(TCPSocket* so, u8** buffer, u32* size);
+s32 TCPGetRecvBuff(TCPSocket* so, u8** buffer, u32* size);
 
 #endif

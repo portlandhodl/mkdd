@@ -197,9 +197,9 @@ extern s32 TCPSendUrgNonblock(TCPSocket* so, const void* buf, s32 len);
 extern s32 TCPGetSockOpt(TCPSocket* so, s32 level, s32 opt, void* val, s32* len);
 extern s32 TCPSetSockOpt(TCPSocket* so, s32 level, s32 opt, void* val, s32 len);
 extern s32 TCPSetSendBuff(TCPSocket* so, u8* buffer, u32 size);
-extern void TCPGetSendBuff(TCPSocket* so, u8** buffer, u32* size);
+extern s32 TCPGetSendBuff(TCPSocket* so, u8** buffer, u32* size);
 extern s32 TCPSetRecvBuff(TCPSocket* so, u8* buffer, u32 size);
-extern void TCPGetRecvBuff(TCPSocket* so, u8** buffer, u32* size);
+extern s32 TCPGetRecvBuff(TCPSocket* so, u8** buffer, u32* size);
 extern s32 TCPClose(TCPSocket* so);
 extern s32 TCPCloseAsync(TCPSocket* so, void (*callback)(TCPSocket*), s32 arg);
 extern void TCPAcceptAsync(TCPSocket* so, TCPSocket* listener,

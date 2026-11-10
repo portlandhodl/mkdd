@@ -55,11 +55,11 @@ static void TCPRxmitTimeOut(OSAlarm* alarm, OSContext* context)
             case 2:
             case 3:
                 timeout = OSSecondsToTicks((s64)180);
-                if (so->unk48 == so->snd_una && so->idleTimeout < timeout) {
+                if (so->unk48 == so->snd_una && so->idleTimeout.value < timeout) {
                     break;
                 }
             default:
-                timeout = so->idleTimeout;
+                timeout = so->idleTimeout.value;
                 break;
             }
             if (OSGetTime() - so->unk248 >= timeout) {
