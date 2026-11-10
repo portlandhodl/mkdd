@@ -845,9 +845,10 @@ void Result2D::calcMG() {
 void Result2D::calcPASSWD(KartGamePad *pad) {
     if (pad != NULL && getAnmEnd() && mPASSWDEnabled && !mPASSWDAccepted) {
         u16 code[9] = { 0x40, 0x20, 0x40, 0x20, 0x400, 0x800, 0x400, 0x800, 0x10 };
-        int idx = mPASSWDCount;
-        u32 trigger = pad->getTrigger();
+        u32 trigger;
+        trigger = pad->getTrigger();
         if (trigger != 0) {
+            int idx = mPASSWDCount;
             if (code[idx] == trigger) {
                 mPASSWDCount = idx + 1;
                 if (idx + 1 >= 9) {
