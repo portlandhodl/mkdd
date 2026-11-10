@@ -2,6 +2,7 @@
 #define STEFFECTMGR_H
 
 #include "Sato/stEmitter.h"
+#include "Sato/stParticle.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "JSystem/JGeometry/Vec.h"
 #include "dolphin/mtx.h"
@@ -13,13 +14,6 @@ struct stGndAttrDataIndex;
 struct stGndAttrParam;
 struct stTireEfctStatusSet;
 struct stTireEffectStatus;
-
-struct stParticle {
-    stParticle();
-    ~stParticle();
-    u8 _00[0x5c];
-    JSUPtrLink mLink; // 0x5c
-};
 
 struct stEffectMgr {
     struct stExhaustAccelCounter {

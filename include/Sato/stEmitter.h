@@ -4,13 +4,15 @@
 #include "PowerPC_EABI_Support/Runtime/MWCPlusPlusLib.h"
 #include <JSystem/JSupport/JSUList.h>
 #include <JSystem/JGeometry.h>
+#include "Sato/stParticle.h"
 
 struct stEmitter
 {
     stEmitter(); // 0x802359b4
     stEmitter &operator=(const stEmitter &);
 
-    u8 _00[0x18];
+    JGeometry::TVec3f _00; // 0x00
+    u8 _0c[0xc];
     u8 mCreateRate; // 0x18
     u8 _19[3];
     f32 _1c;
@@ -18,7 +20,7 @@ struct stEmitter
     u8 _21;
     s16 mLife; // 0x22
     f32 mLifeRndRate; // 0x24
-    u8 _28[0xc];
+    JGeometry::TVec3f mFirstVelDir; // 0x28
     f32 mFirstVelRndAngle; // 0x34
     f32 mFirstVel; // 0x38
     u8 _3c[4];
@@ -32,7 +34,13 @@ struct stEmitter
     f32 mSizeLast; // 0x70
     u8 _74[8];
     f32 mAlphaStdRate; // 0x7c
-    u8 _80[0x58];
+    u8 _80[0x36];
+    u16 mFlags;   // 0xb6
+    u8 mTevMode;  // 0xb8
+    u8 mKind;     // 0xb9
+    u8 mDrawType; // 0xba
+    u8 _bb;       // 0xbb
+    u8 _bc[0x1c];
 }; // Size: 0xd8
 
 struct stEmitterParamLineIP
@@ -76,22 +84,6 @@ struct stEmitterParamLineIP
     f32 scalar;
     u8 funcCnt;
 }; // Size: Unknown, probably 0x18
-
-struct stParticleMgr
-{
-    stParticleMgr();
-    void init(int);
-    ~stParticleMgr()
-    {
-        if (&_04)
-            if (&_10)
-                _10.~JSUPtrList();
-    }
-    u8 _00[4];
-    JSUPtrList _04;
-    JSUPtrList _10;
-    u8 _1c[0x3c];
-};
 
 struct stEmitterCallBack;
 
