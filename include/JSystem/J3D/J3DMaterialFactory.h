@@ -90,8 +90,8 @@ struct J3DMaterialInitData {
     u8 _58[0x2C];                     // _58 - unknown
     u16 mTexNoIndices[8];             // _84 - guessed length
     u16 mTevKColorIndices[4];         // _94 - guessed length
-    u8 mTevKColorSelIndices[4];       // _9C - unknown length
-    u8 _A0[0x1C];                     // _A0 - unknown
+    u8 mTevKColorSelIndices[16];      // _9C - unknown length
+    u8 mTevKAlphaSelIndices[16];      // _AC - unknown
     u16 mTevOrderInfoIndices[16];     // _BC - guessed length
     u16 mTevColorIndices[4];          // _DC - guessed length
     u16 mTevStageIndices[16];         // _E4 - guessed length
@@ -140,7 +140,7 @@ struct J3DMaterialFactory {
     u8 newTevStageNum(int) const;
     J3DTevSwapModeTable newTevSwapModeTable(int, int) const;
     J3DTexCoord newTexCoord(int, int) const;
-    u8 newTexGenNum(int) const;
+    u32 newTexGenNum(int) const;
     J3DTexMtx* newTexMtx(int, int) const;
     u16 newTexNo(int, int) const;
     u8 newZCompLoc(int) const;
@@ -158,6 +158,22 @@ struct J3DMaterialFactory {
             return _24[id];
         return 0;
     }
+    inline u32 countStages(int matID) const
+    {
+        J3DMaterialInitData& data = _04[_08[matID]];
+        u32 texNoCount = 0;
+        u32 stageNum    = 0;
+        if (data._04 != 0xFF)
+            stageNum = _4C[data._04];
+        for (int i = 0; i < 8; i++) {
+            if (data.mTexNoIndices[i] != 0xFFFF)
+                texNoCount++;
+        }
+        if (stageNum != texNoCount && texNoCount != 0)
+            return stageNum > texNoCount ? stageNum : texNoCount;
+        return stageNum;
+    }
+    inline u8 getMaterialMode(int matID) const { return _04[_08[matID]]._00; }
 
 
     /** @fabricated */

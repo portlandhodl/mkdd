@@ -82,7 +82,7 @@ struct J3DMaterial
 {
     inline J3DMaterial() { initialize(); }
 
-    ~J3DMaterial();
+    ~J3DMaterial() { }
 
     virtual void calc(const Mtx);            // _08
     virtual void calcDiffTexMtx(const Mtx); // _0C
@@ -200,6 +200,12 @@ struct J3DLockedMaterial : public J3DMaterial
  */
 struct J3DPatchedMaterial : public J3DMaterial
 {
+    inline J3DPatchedMaterial()
+        : J3DMaterial()
+    {
+        initialize();
+    }
+
     virtual void makeDisplayList();          // _10
     virtual void makeSharedDisplayList(); // _14
     virtual void load();                  // _18

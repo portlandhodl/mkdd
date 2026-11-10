@@ -698,7 +698,7 @@ struct J3DTexCoord : public J3DTexCoordInfo {
 
     u8 getTexGenType() { return mTexGenType; }
     u8 getTexGenSrc() { return mTexGenSrc; }
-    u8 getTexGenMtx() { return mTexGenMtx & 0xFF; }
+    u8 getTexGenMtx() { return mTexGenMtx; }
     u16 getTexMtxReg() { return mTexMtxReg & 0xFF; }
 
     void setTexMtxReg(u16 reg) { mTexMtxReg = reg; }
