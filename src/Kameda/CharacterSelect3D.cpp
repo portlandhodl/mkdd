@@ -1,6 +1,11 @@
 #include "Kameda/CharacterSelect3D.h"
 #include "dolphin/mtx.h"
 
+#include "JSystem/J3D/J3DSys.h"
+#include "JSystem/JFramework/JFWDisplay.h"
+#include "JSystem/JUtility/JUTAssert.h"
+#include "Kaneshige/LightMgr.h"
+#include "Kaneshige/SimpleDrawer.h"
 #include "mathHelper.h"
 
 const f32 CharacterSelect3D::mCharacterDefScale[20] = {
@@ -652,51 +657,442 @@ const f32 CharacterSelect3D::mBonusTire[4][9] = {
 };
 
 
+
+static const Vec sUpVector = {0.0f, 1.0f, 0.0f};
+static const Vec sUpVector2 = {0.0f, 1.0f, 0.0f};
+
 void *CharacterSelect3D::mDiddyDump;
 void *CharacterSelect3D::mKinopioDump;
 CharacterSelect3D *CharacterSelect3D::mCharacterSelect3D;
 
-CharacterSelect3DParam::CharacterSelect3DParam() {}
+CharacterSelect3DParam::CharacterSelect3DParam()
+{
+    mAdjust = 0;
+    mFovy = 30.0f;
+    mEye.set(0.0f, 135.0f, 1000.0f);
+    mTarget.set(0.0f, 135.0f, 0.0f);
+    mBodyPos[0].set(0.0f, 0.0f, 0.0f);
+    mBodyTarget[0].set(0.0f, 0.0f, 0.0f);
+    mBodyScale[0] = 1.0f;
+    mBodyPos[1].set(0.0f, 0.0f, 0.0f);
+    mBodyTarget[1].set(0.0f, 0.0f, 0.0f);
+    mBodyScale[1] = 1.0f;
+    mKartPos.set(0.0f, 135.0f, 0.0f);
+    mKartTarget.set(0.0f, 0.0f, 0.0f);
+    mKartScale = 1.0f;
+}
 
 CharacterSelect3D::CharacterSelect3D(JKRHeap *) {}
 
-void CharacterSelect3D::init() {}
+void CharacterSelect3D::init()
+{
+    JGeometry::TVec3f zero(0.0f, 0.0f, 0.0f);
 
-CharacterSelect3D::~CharacterSelect3D() {}
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 2; ++j)
+        {
+            mCharacterStatus[i][j].mActive = 0;
+            mCharacterStatus[i][j].mCharID = (ECharID)0;
+            mCharacterStatus[i][j].mPos = zero;
+            mCharacterStatus[i][j].mScale = 1.0f;
+            mCharacterStatus[i][j].mState = 0;
+            mCharacterStatus[i][j].mPrevState = 0;
+            for (int k = 0; k < 3; ++k)
+            {
+                mCharacterStatus[i][j].mTimer[k] = 0.0f;
+            }
+        }
 
-void CharacterSelect3D::draw(int, float) {
-    //SimpleDrawer::~SimpleDrawer() {}
+        mKartStatus[i].mActive = 0;
+        mKartStatus[i].mKartID = (EKartID)0xff;
+        mKartStatus[i].mPos = zero;
+        mKartStatus[i].mScale = 1.0f;
+    }
 
-    //void MenuSubLight::getEffectMtx() {}
-
-    //void MenuSceneLight::getEffectMtx() {}
+    mAccessoryScale = 0.0f;
+    mKartHeight = 0.0f;
 }
 
-void CharacterSelect3D::draw(int, float, JGeometry::TVec3f, JGeometry::TVec3f) {}
+CharacterSelect3D::~CharacterSelect3D()
+{
+    if (mCharacterSelect3D != nullptr)
+    {
+        mCharacterSelect3D = nullptr;
+    }
+}
+
+void CharacterSelect3D::draw(int player, f32 aspect)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+    j3dSys.drawInit();
+
+    JGeometry::TVec3f target;
+    JGeometry::TVec3f up = sUpVector;
+    JGeometry::TVec3f eye;
+    Mtx tmp;
+    Mtx projMtx;
+
+    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
+    GXSetProjection(projMtx, GX_PERSPECTIVE);
+
+    eye = param->mEye;
+    target = param->mTarget;
+
+    if (player == 0)
+    {
+        C_MTXLookAt(mCameraMatrix, &eye, &up, &target);
+
+        if (ExModel::isMtxCombinationOn())
+        {
+            PSMTXCopy(mCameraMatrix, tmp);
+            for (int i = 0; i < 3; ++i)
+            {
+                for (int k = 0; k < 4; ++k)
+                {
+                    mCameraMatrix[i][k] = (tmp[i][k] - mEffectMatrix[i][k]) *
+                                              JFWDisplay::getManager()->getCombinationRatio() +
+                                          mEffectMatrix[i][k];
+                }
+            }
+            PSMTXCopy(tmp, mEffectMatrix);
+        }
+    }
+
+    mSceneLight->mCameraPos.set(eye.x, eye.y, eye.z);
+    mSceneLight->mTargetPos.set(target.x, target.y, target.z);
+    j3dSys.setViewMtx(mCameraMatrix);
+
+    LightMgr::getManager()->setCurrentViewNo(0);
+    LightMgr::getManager()->draw();
+
+    if (mKartStatus[player].mActive)
+    {
+        drawKart(mKartStatus[player].mKartID);
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        if (!mCharacterStatus[player][i].mActive)
+            continue;
+
+        int index = mCharacterStatus[player][i].mCharID - 1;
+        mCharacterModel[index].mModel->setCurrentViewNo(0);
+
+        LightObj *light = i == 1 ? (LightObj *)mSubLight[1] : (LightObj *)mSceneLight;
+        MtxPtr effectMtx = light->getEffectMtx();
+        mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
+
+        if (index + 1 == 17)
+        {
+            mCharacterModel[20].mModel->setCurrentViewNo(0);
+            mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+        }
+    }
+
+    j3dSys.setDrawModeOpaTexEdge();
+    mDrawBufferA[player]->draw();
+    j3dSys.setDrawModeXlu();
+    mDrawBufferB[player]->draw();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        if (mCharacterStatus[player][i].mActive && mCharacterStatus[player][i].mCharID == 19)
+        {
+            SimpleDrawer drawer;
+            drawer.drawInit(mAccessoryModel);
+            while (drawer.loadPreDrawSetting())
+            {
+                mAccessoryModel->simpleDraw(0, nullptr, 1);
+            }
+        }
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        mCharacterStatus[player][i].mActive = 0;
+    }
+    mKartStatus[player].mActive = 0;
+}
+
+void CharacterSelect3D::draw(int player, f32 aspect, JGeometry::TVec3f eye, JGeometry::TVec3f target)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+    j3dSys.drawInit();
+
+    Mtx projMtx;
+    Mtx tmp;
+    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
+    GXSetProjection(projMtx, GX_PERSPECTIVE);
+
+    JGeometry::TVec3f up = sUpVector2;
+
+    if (player == 0)
+    {
+        C_MTXLookAt(mCameraMatrix, &eye, &up, &target);
+
+        if (ExModel::isMtxCombinationOn())
+        {
+            PSMTXCopy(mCameraMatrix, tmp);
+            for (int i = 0; i < 3; ++i)
+            {
+                for (int k = 0; k < 4; ++k)
+                {
+                    mCameraMatrix[i][k] = (tmp[i][k] - mEffectMatrix[i][k]) *
+                                              JFWDisplay::getManager()->getCombinationRatio() +
+                                          mEffectMatrix[i][k];
+                }
+            }
+            PSMTXCopy(tmp, mEffectMatrix);
+        }
+    }
+
+    mSceneLight->mCameraPos.set(eye.x, eye.y, eye.z);
+    mSceneLight->mTargetPos.set(target.x, target.y, target.z);
+    j3dSys.setViewMtx(mCameraMatrix);
+
+    LightMgr::getManager()->setCurrentViewNo(0);
+    LightMgr::getManager()->draw();
+
+    if (mKartStatus[player].mActive)
+    {
+        drawKart(mKartStatus[player].mKartID);
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        if (!mCharacterStatus[player][i].mActive)
+            continue;
+
+        int index = mCharacterStatus[player][i].mCharID - 1;
+        mCharacterModel[index].mModel->setCurrentViewNo(0);
+
+        LightObj *light = i == 1 ? (LightObj *)mSubLight[1] : (LightObj *)mSceneLight;
+        MtxPtr effectMtx = light->getEffectMtx();
+        mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
+
+        if (index + 1 == 17)
+        {
+            mCharacterModel[20].mModel->setCurrentViewNo(0);
+            mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+        }
+    }
+
+    j3dSys.setDrawModeOpaTexEdge();
+    mDrawBufferA[player]->draw();
+    j3dSys.setDrawModeXlu();
+    mDrawBufferB[player]->draw();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        if (mCharacterStatus[player][i].mActive && mCharacterStatus[player][i].mCharID == 19)
+        {
+            SimpleDrawer drawer;
+            drawer.drawInit(mAccessoryModel);
+            while (drawer.loadPreDrawSetting())
+            {
+                mAccessoryModel->simpleDraw(0, nullptr, 1);
+            }
+        }
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        mCharacterStatus[player][i].mActive = 0;
+    }
+    mKartStatus[player].mActive = 0;
+}
 
 void CharacterSelect3D::calc() {}
 
-void CharacterSelect3D::setCharacter(int, int, ECharID, JGeometry::TVec3f, JGeometry::TVec3f, float) {}
+void CharacterSelect3D::setCharacter(int player, int position, ECharID character,
+                                     JGeometry::TVec3f pos, JGeometry::TVec3f target, f32 scale)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
 
-void CharacterSelect3D::setCharacterStatus(int, int, CharacterSelect3D::CHARACTER_STATUS) {}
+#line 1448
+    JUT_MINMAX_ASSERT(0, player, 4);
+    JUT_MINMAX_ASSERT(0, position, 2);
+    JUT_ASSERT(cCharIDNone < character && character < cCharIDMax);
+#line 723
 
-void CharacterSelect3D::setKart(int, EKartID, JGeometry::TVec3f, JGeometry::TVec3f, float) {}
+    mCharacterStatus[player][position].mActive = 1;
+    mCharacterStatus[player][position].mCharID = character;
+    mCharacterStatus[player][position].mPos = pos;
+    mCharacterStatus[player][position].mTarget = target;
+    mCharacterStatus[player][position].mScale = scale;
 
-void CharacterSelect3D::isCancel(int) {}
-
-bool CharacterSelect3D::isNext(int) { return false; }
-
-MtxPtr CharacterSelect3D::getCameraMatrix() {
-    return _fb8;
+    if (param->mAdjust & 1)
+    {
+        mCharacterStatus[player][position].mScale = param->mBodyScale[position];
+    }
 }
 
-f32 CharacterSelect3D::getFovy() {}
+void CharacterSelect3D::setCharacterStatus(int player, int position, CharacterSelect3D::CHARACTER_STATUS status)
+{
+#line 1475
+    JUT_MINMAX_ASSERT(0, player, 4);
+    JUT_MINMAX_ASSERT(0, position, 2);
+#line 745
+
+    switch (status)
+    {
+    case STATUS_0:
+        mCharacterStatus[player][position].mState = status;
+        mCharacterStatus[player][position].mPrevState = status;
+        mCharacterStatus[player][position].mTimer[0] = 0.0f;
+        mCharacterStatus[player][position].mTimer[1] = 0.0f;
+        mCharacterStatus[player][position].mTimer[2] = 0.0f;
+        break;
+    case STATUS_1:
+        if (mCharacterStatus[player][position].mState != STATUS_0 &&
+            mCharacterStatus[player][position].mState == STATUS_2)
+        {
+            mCharacterStatus[player][position].mPrevState = mCharacterStatus[player][position].mState;
+            mCharacterStatus[player][position].mState = status;
+            mCharacterStatus[player][position].mTimer[1] = 0.0f;
+        }
+        break;
+    case STATUS_2:
+        if (mCharacterStatus[player][position].mState != STATUS_2)
+        {
+            mCharacterStatus[player][position].mPrevState = mCharacterStatus[player][position].mState;
+            mCharacterStatus[player][position].mState = status;
+            mCharacterStatus[player][position].mTimer[2] = 0.0f;
+        }
+        break;
+    default:
+#line 1503
+        JUT_ASSERT(0);
+    }
+}
+
+void CharacterSelect3D::setKart(int player, EKartID kartType, JGeometry::TVec3f pos,
+                                JGeometry::TVec3f target, f32 scale)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+
+#line 1523
+    JUT_MINMAX_ASSERT(0, player, 4);
+    JUT_MINMAX_ASSERT(0, kartType, 21);
+#line 784
+
+    mKartStatus[player].mActive = 1;
+    mKartStatus[player].mKartID = kartType;
+    mKartStatus[player].mPos = pos;
+    mKartStatus[player].mTarget = target;
+    mKartStatus[player].mTarget.y = mKartHeight;
+    mKartStatus[player].mScale = scale;
+
+    if (param->mAdjust & 1)
+    {
+        mKartStatus[player].mScale = param->mKartScale;
+    }
+}
+
+int CharacterSelect3D::isCancel(int player)
+{
+    if (mCharacterStatus[player][0].mState == STATUS_2 &&
+        mCharacterStatus[player][1].mState == STATUS_2 &&
+        mCharacterStatus[player][0].mTimer[2] >= 0.0f &&
+        mCharacterStatus[player][1].mTimer[2] >= 0.0f)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int CharacterSelect3D::isNext(int player)
+{
+    if (mCharacterStatus[player][0].mState == STATUS_2 &&
+        mCharacterStatus[player][1].mState == STATUS_2 &&
+        mCharacterStatus[player][0].mTimer[2] >= 0.0f &&
+        mCharacterStatus[player][1].mTimer[2] >= 0.0f)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+MtxPtr CharacterSelect3D::getCameraMatrix() {
+    return mCameraMatrix;
+}
+
+f32 CharacterSelect3D::getFovy()
+{
+    return ((CharacterSelect3DParam *)mNode->getReflexible())->mFovy;
+}
 
 void CharacterSelect3D::calcCharacter(int, int, ECharID, JGeometry::TVec3f, JGeometry::TVec3f, float) {}
 
-void CharacterSelect3D::drawKart(EKartID) {}
+void CharacterSelect3D::drawKart(EKartID kartType)
+{
+#line 1765
+    JUT_MINMAX_ASSERT(0, kartType, 21);
+#line 837
 
-void CharacterSelect3D::calcRotTrans(float (*) [4], JGeometry::TVec3f, JGeometry::TVec3f) {}
+    SimpleDrawer drawer;
+    int count;
+    if (kartType == 7 || kartType == 9)
+    {
+        count = 6;
+    }
+    else
+    {
+        count = 4;
+    }
+
+    drawer.drawInit(mKartModel[kartType]);
+    while (drawer.loadPreDrawSetting())
+    {
+        mKartModel[kartType]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+    }
+
+    for (int i = 0; i < count; ++i)
+    {
+        drawer.drawInit(mKartPartsA[kartType][i]);
+        while (drawer.loadPreDrawSetting())
+        {
+            mKartPartsA[kartType][i]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+        }
+    }
+
+    if (kartType != 9 && (u32)(kartType - 16) > 1)
+    {
+        for (int i = 0; i < count; ++i)
+        {
+            drawer.drawInit(mKartPartsB[kartType][i]);
+            while (drawer.loadPreDrawSetting())
+            {
+                mKartPartsB[kartType][i]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+            }
+        }
+    }
+
+    for (int i = 0; i < count; ++i)
+    {
+        drawer.drawInit(mKartPartsC[kartType][i]);
+        while (drawer.loadPreDrawSetting())
+        {
+            mKartPartsC[kartType][i]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+        }
+    }
+}
+
+void CharacterSelect3D::calcRotTrans(Mtx m, JGeometry::TVec3f pos, JGeometry::TVec3f rot)
+{
+    Mtx rotX, rotY, rotZ, trans;
+
+    PSMTXRotRad(rotX, 'X', 0.017453292f * rot.x);
+    PSMTXRotRad(rotY, 'Y', 0.017453292f * rot.y);
+    PSMTXRotRad(rotZ, 'Z', 0.017453292f * rot.z);
+    PSMTXTrans(trans, pos.x, pos.y, pos.z);
+
+    PSMTXConcat(rotX, m, m);
+    PSMTXConcat(rotY, m, m);
+    PSMTXConcat(rotZ, m, m);
+    PSMTXConcat(trans, m, m);
+}
 
 
 #include "JSystem/JAudio/JASFakeMatch2.h"

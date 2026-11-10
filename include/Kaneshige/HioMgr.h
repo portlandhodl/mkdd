@@ -12,6 +12,8 @@ public:
     HioNode(const char *nodeName, JORReflexible *jor, u32 p3, u32 p4);
     virtual ~HioNode();
 
+    JORReflexible *getReflexible() const { return mReflexible; }
+
 private:
     const char *mName;
     JORReflexible *mReflexible;

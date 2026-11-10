@@ -86,6 +86,7 @@ public:
     virtual ~JFWDisplay();      // 0x80015b80
 
     static JFWDisplay *getManager() { return sManager; }
+    f32 getCombinationRatio() const { return mCombinationRatio; }
 
     int getEfbHeight() const {
         return JUTVideo::getManager()->getEfbHeight();
