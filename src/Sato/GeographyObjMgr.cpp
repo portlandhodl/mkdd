@@ -465,16 +465,6 @@ private:
     u8 _stub[0x44]; // 0x190
 };
 
-class TMapObjUkleleMonte : public GeographyObj
-{
-public:
-    TMapObjUkleleMonte(const CrsData::SObject &);
-    virtual ~TMapObjUkleleMonte() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x24]; // 0x170
-};
 
 class TMapObjPakkun : public GeographyObj
 {
