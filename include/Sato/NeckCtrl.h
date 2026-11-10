@@ -8,6 +8,17 @@
 
 class StringNodeManager;
 class DriverModel;
+
+struct NeckIKParam {
+    f32 m0;          // 0x00
+    f32 m4;          // 0x04
+    f32 m8;          // 0x08
+    f32 mC;          // 0x0c
+    f32 m10;         // 0x10
+    f32 m14;         // 0x14
+    u8 _18[0x48];
+    f32 m60;         // 0x60
+};
 class LumbarCtrl;
 class CharIKParamMgr;
 
@@ -21,7 +32,7 @@ public:
     int mKartNo;      // 0x34
     u8 mDriverNo;     // 0x38
     u8 _39[3];
-    CharIKParamMgr* mParam; // 0x3c
+    NeckIKParam* mParam; // 0x3c
 };
 
 class CharIKParamMgr {
@@ -43,6 +54,7 @@ public:
     virtual void reset();
     virtual void update_hair1(float (*)[4], float (*)[4], DriverModel*);
     virtual void update_hair2(float (*)[4], DriverModel*);
+    virtual void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&) = 0;
     virtual void calcHairMtx(u32, DriverModel*);
     void makeFaceNormalizeMtx(float (*)[4], JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >&, JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >&);
     void lockString(float (*)[4], const JGeometry::TVec3<f32>&, f32);
@@ -63,7 +75,7 @@ public:
     virtual void update_hair1(float (*)[4], float (*)[4], DriverModel*);
     virtual void update_hair2(float (*)[4], DriverModel*);
     virtual void calcHairMtx(u32, DriverModel*);
-    void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
+    virtual void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
 };
 
 class DaisyHairCtrl : public HairCtrl {
@@ -72,7 +84,7 @@ public:
     virtual ~DaisyHairCtrl() {}
     virtual void update_hair1(float (*)[4], float (*)[4], DriverModel*);
     virtual void update_hair2(float (*)[4], DriverModel*);
-    void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
+    virtual void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
 };
 
 class KinopicoHairCtrl : public HairCtrl {
@@ -85,13 +97,16 @@ public:
     virtual void update_hair2(float (*)[4], DriverModel*);
     virtual void calcHairMtx(u32, DriverModel*);
     void calcJointMtx(u32, JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >&, DriverModel*);
-    void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
+    virtual void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
     void offsetMtxPos(u32);
     void lockStringKp(float (*)[4], const JGeometry::TVec3<f32>&);
-    u8 _48[0x78 - 0x48];
+    JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > mMtx48; // 0x48
     u8 m78; // 0x78
     u8 _79[3];
-    u8 _7c[0x8c - 0x7c];
+    u8 _7c[4];
+    f32 m80; // 0x80
+    f32 m84; // 0x84
+    f32 m88; // 0x88
 };
 
 class DonkeyTieCtrl : public HairCtrl {
@@ -99,7 +114,7 @@ public:
     DonkeyTieCtrl(int, u8);
     virtual ~DonkeyTieCtrl() {}
     virtual void update_hair1(float (*)[4], float (*)[4], DriverModel*);
-    void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
+    virtual void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
     void lockStringTieMin(float (*)[4], const JGeometry::TVec3<f32>&, f32, bool);
 };
 
@@ -140,11 +155,12 @@ public:
     NeckFunc* mVec4c;   // 0x4c
     u32 mTimer;         // 0x50
     u8 mCount;          // 0x54
-    u8 _55[0x68 - 0x55];
+    u8 _55[0x58 - 0x55];
+    Quaternion mQuatPrev; // 0x58
     Quaternion mQuat;   // 0x68
-    u8 _78[0x88 - 0x78];
+    Quaternion mQuat78; // 0x78
     JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > mMtx88; // 0x88
-    u8 _b8[0xe8 - 0xb8];
+    JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > mMtxB8; // 0xb8
     void* mPtrE8;       // 0xe8
     u8 mEC;             // 0xec
     u8 mED;             // 0xed
