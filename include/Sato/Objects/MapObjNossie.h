@@ -37,6 +37,8 @@ public:
     bool isStepped(int);
     void getHitFlag(u8 *);
 
+    static f32 sShakeRadius;
+
     JGeometry::TVec3f mShadowPos; // 0x174
     f32 mShake;                   // 0x180
     u8 mPrevHit;                  // 0x184
@@ -75,7 +77,6 @@ public:
     virtual void calc();
     virtual void createColModel(J3DModelData *);
 
-    static f32 sShakeRadius;
 };
 
 class TMapObjNossieColBody : public TMapObjNossieColBase
@@ -111,7 +112,7 @@ public:
     static const char *sHeadJointName;
     static int sNossieLegJointNo[4];
     static int sHeadJointNo;
-    static JGeometry::TVec3f sOffsetY[4];
+    static f32 sOffsetY[4];
     static JGeometry::TVec3f sHeadOffset;
     static JGeometry::TVec3f sBodyOffset;
 
@@ -140,6 +141,9 @@ public:
     static f32 sMoveMaxSpeed;
     static f32 sMoveAccel;
     static f32 sReachLength;
+    static J3DAnmTransform *sSwimNossieBckAnmTrans;
+    static J3DMtxCalc *sSwimNossieBckMtxCalc;
+    static J3DAnmTexPattern *sSwimNossieBtpAnm;
 
     J3DAnmObjMaterial mMaterial; // 0x14c
     TPathUtil *mPath;            // 0x16c
