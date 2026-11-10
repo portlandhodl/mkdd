@@ -82,6 +82,7 @@ class DriversAnimator
 {
 public:
     DriversAnimator() { reset(); }
+    ~DriversAnimator();
 
     void reset()
     {
@@ -409,7 +410,7 @@ public:
     };
 
     DriverModel(KartLoader *, int, u16, bool, int);
-    virtual ~DriverModel();
+    virtual __declspec(weak) ~DriverModel();
 
     // -- driver.cpp (this unit) --
     static int convCharIDToDataID(ECharID);
@@ -418,31 +419,60 @@ public:
     void initMtxCalc();
     void initAnmTrans_BossPakkun(J3DAnmTransform *);
     void InitMpaMtxCalc(StateEnum, J3DAnmTransform *, J3DAnmTransform *, J3DAnmTransform *, J3DAnmTransform *);
+    void InitMpaMtxCalcThrow(J3DAnmTransform *);
     void restart(int);
     void setDriveAnm(f32);
     void setTandemAnm(f32, f32);
+    void setTandemAnm(f32);
     void Start1ShotAnm_base(DriversAnimator *, StateEnum);
     void StartAnimation2();
+    void StartAnimationWC(StateEnum);
     void StartAnimation(StateEnum);
+    void setShakeAnm(StateEnum, f32);
+    void setShakeAnm2(StateEnum, f32, int, int);
+    void setShakeAnm3(StateEnum, f32);
+    void setCommon1ShotAnm_Single(f32, int);
+    void setCommon1ShotAnm(f32);
+    void setCommon1ShotAnm_Single2(int, f32, int);
+    void setCommon1ShotAnm2(int, f32);
+    void setCommonAnm_Base(int, f32, int);
+    void setCommonAnm2(int, f32);
+    void setCommonAnm(f32);
+    void setCommonAnm_Blend(f32, int);
+    void Change_next_mState(StateEnum);
     void updateFrame();
     void updateFrame_base(DriversAnimator *, StateEnum);
+    void updateSetFrame_base(StateEnum);
     void updateSetFrame();
     void updateLoad_Animation();
+    void updateLoadCommand(int);
+    void updateLoadCommand_Sound(int);
+    void updateLoad_Sound();
     void updateLoad();
     int updateCheckRenew_Animation();
+    void updateCheckRenew_Sound();
     int updateCheckRenew();
+    void BlendValue(f32);
+    void updateBlendCount_Func1(u8, u8);
+    void updateBlendCount_Func2(u8);
     void updateBlendCount();
     int updateSetBlendWeight_GetBlendTime(StateEnum);
+    void updateSetBlendWeight_Func1(u8, u8);
+    void updateSetBlendWeight_FuncABCD(f32, f32, f32, f32);
+    void updateSetBlendWeight_mStateThrow();
     void updateSetBlendWeight();
+    void update_mIsSpeakBCA();
     void BacktoDWait() { StartAnimation((StateEnum)0x95); }
     void setItem(ItemObj *);
     void resetItem();
+    void setLODLevel(int);
     Mtx *getMtxP_HandR();
     Mtx *getMtxP_HandR2();
     Mtx *getMtxP(int);
     J3DAnmTransform *getAnmTransformPtr(int);
     int IsAnmResInMRAM(int);
     int IsAnmSoundResInMRAM(int);
+    bool IsARAMDMAFinished();
 
     // -- driver_ik.cpp (this unit) --
     void setDirMtx(JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > *);
@@ -610,7 +640,6 @@ public:
     void StartHappy();
     void StartGood1st();
     void StartAppeal();
-    void StartAnimationWC(StateEnum);
     void StartHokanDWait();
     void StartAttack(int, int);
     void StartAttack(int);
@@ -642,13 +671,6 @@ public:
     void SetDriverOffsetPosition_Func1(JGeometry::TVec3<f32> *);
     void SetDriverOffsetPosition_Change(DriverData *);
     void SetDriverOffsetPosition_Demo(DriverData *);
-    void InitMpaMtxCalcThrow(J3DAnmTransform *);
-    void updateLoadCommand(int);
-    void updateLoadCommand_Sound(int);
-    void updateLoad_Sound();
-    void updateCheckRenew_Sound();
-    void Change_next_mState(StateEnum);
-    void update_mIsSpeakBCA();
 
     static u8 msNext_mState_HokanDamages[2];
     static const u32 msAnmBlendList[152][2]; // state -> 2 animation ids
@@ -728,7 +750,7 @@ public:
     f32 m_754[4];                                // 0x754..0x764
     f32 mAnmWorkFrame[8];                        // 0x764..0x784
     s32 mAnmWorkID[8];                           // 0x784..0x7A4
-    s32 mAnmSabunNum;                            // 0x7A4
+    s32 mAnmID_debug_index;                            // 0x7A4
 }; // Size: 0x7A8
 
 #endif // DRIVER_H

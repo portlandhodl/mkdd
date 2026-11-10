@@ -7,6 +7,9 @@
 #include "JSystem/J3D/J3DMtxCalc.h"
 #include "JSystem/JUtility/JUTAssert.h"
 
+#include "JSystem/JAudio/JASFakeMatch.h"
+#include "JSystem/JAudio/JASFakeMatch2.h"
+
 #include "Kaneshige/KartLoader.h"
 #include "Kaneshige/KartMotion.h"
 #include "Kawano/driverMgr.h"
@@ -160,6 +163,10 @@ DriverModel::DriverModel(KartLoader *kart, int driverNo, u16 level, bool b, int 
     DriverManager::ptr()->SetDriverModelPtr(this);
 }
 
+DriversAnimator::~DriversAnimator()
+{
+}
+
 int DriverModel::convCharIDToDataID(ECharID charID)
 {
     int ret = 20;
@@ -270,7 +277,7 @@ void DriverModel::init(int driverNo)
     m_e4 = 0;
     m_e8 = 0;
 
-    mDriveAnim.reset();
+    mDriveAnim.mLoopAnim.reset();
     mTandemAnim.reset();
     mAdditiveAnim.reset();
     m_668.reset();
@@ -455,9 +462,25 @@ void DriverModel::InitMpaMtxCalc(StateEnum state, J3DAnmTransform *a1, J3DAnmTra
     ((KartMtxCalcBlendAnm *)mMtxCalcs[state])->setAnm(a1, a2, a3, a4);
 }
 
+void DriverModel::InitMpaMtxCalcThrow(J3DAnmTransform *a)
+{
+}
+
 void DriverModel::restart(int i)
 {
     init(i);
+}
+
+void DriverModel::setShakeAnm(StateEnum s, f32 a)
+{
+}
+
+void DriverModel::setShakeAnm2(StateEnum s, f32 a, int b, int c)
+{
+}
+
+void DriverModel::setShakeAnm3(StateEnum s, f32 a)
+{
 }
 
 void DriverModel::setDriveAnm(f32 rate)
@@ -469,7 +492,8 @@ void DriverModel::setDriveAnm(f32 rate)
     case (StateEnum)11:
     case (StateEnum)12:
     case (StateEnum)120:
-        for (int i = 0; i < 2; i++) {
+        int i;
+        for (i = 0; i < 2; i++) {
             mAnmID = msAnmBlendList[0][i];
 #line 997
             JUT_MINMAX_ASSERT(0, mAnmID, 82);
@@ -489,7 +513,8 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
     if (!IsMove())
         m_b0 = rate;
 
-    switch (mState) {
+    s32 state = mState;
+    switch (state) {
     case mcDriveBack:
     case mcTandemB:
     case (StateEnum)50:
@@ -523,6 +548,7 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
     case (StateEnum)148: {
         for (int i = 0; i < 2; i++) {
             mAnmID = msAnmBlendList[3][i];
+#line 1050
             JUT_MINMAX_ASSERT(0, mAnmID, 82);
             if (getAnmTransformPtr(mAnmID)) {
                 f32 frameMaxHalf = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
@@ -565,6 +591,7 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
     case (StateEnum)145: {
         for (int i = 0; i < 2; i++) {
             mAnmID = msAnmBlendList[4][i];
+#line 1050
             JUT_MINMAX_ASSERT(0, mAnmID, 82);
             if (getAnmTransformPtr(mAnmID)) {
                 f32 frameMaxHalf = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
@@ -591,6 +618,7 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
         if (m_500 == 3) {
             for (int i = 0; i < 2; i++) {
                 mAnmID = msAnmBlendList[3][i];
+#line 997
                 JUT_MINMAX_ASSERT(0, mAnmID, 82);
                 if (getAnmTransformPtr(mAnmID)) {
                     f32 frameMaxHalf = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
@@ -607,6 +635,7 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
         if (!IsDrift((StateEnum)m_500)) {
             for (int i = 0; i < 2; i++) {
                 mAnmID = msAnmBlendList[4][i];
+#line 997
                 JUT_MINMAX_ASSERT(0, mAnmID, 82);
                 if (getAnmTransformPtr(mAnmID)) {
                     f32 frameMaxHalf = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
@@ -624,6 +653,7 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
         if (IsTandemAnmStartOK()) {
             for (int i = 0; i < 2; i++) {
                 mAnmID = msAnmBlendList[3][i];
+#line 997
                 JUT_MINMAX_ASSERT(0, mAnmID, 82);
                 if (getAnmTransformPtr(mAnmID)) {
                     f32 frameMaxHalf = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
@@ -635,29 +665,41 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
     }
     case (StateEnum)63: {
 #line 994
-        JUT_MINMAX_ASSERT(0, mState, 152);
-        for (int i = 0; i < 2; i++) {
-            mAnmID = msAnmBlendList[mState][i];
+        JUT_MINMAX_ASSERT(0, state, 152);
+        const u8 *p = (const u8 *)msAnmBlendList[state];
+        int i = 0;
+        state = 0;
+        while (i < 2) {
+            mAnmID = *(const u32 *)(p + state);
 #line 997
             JUT_MINMAX_ASSERT(0, mAnmID, 82);
             if (getAnmTransformPtr(mAnmID)) {
                 f32 frameMaxHalf = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
-                mAnmFrame[mAnmID] = 1.0f * frameMaxHalf + frameMaxHalf;
+                f32 one = 1.0f;
+                mAnmFrame[mAnmID] = one * frameMaxHalf + frameMaxHalf;
             }
+            i++;
+            state += 4;
         }
         break;
     }
     case (StateEnum)64: {
 #line 994
-        JUT_MINMAX_ASSERT(0, mState, 152);
-        for (int i = 0; i < 2; i++) {
-            mAnmID = msAnmBlendList[mState][i];
+        JUT_MINMAX_ASSERT(0, state, 152);
+        const u8 *p = (const u8 *)msAnmBlendList[state];
+        int i = 0;
+        state = 0;
+        while (i < 2) {
+            mAnmID = *(const u32 *)(p + state);
 #line 997
             JUT_MINMAX_ASSERT(0, mAnmID, 82);
             if (getAnmTransformPtr(mAnmID)) {
                 f32 frameMaxHalf = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
-                mAnmFrame[mAnmID] = 1.0f * frameMaxHalf + frameMaxHalf;
+                f32 one = 1.0f;
+                mAnmFrame[mAnmID] = one * frameMaxHalf + frameMaxHalf;
             }
+            i++;
+            state += 4;
         }
         break;
     }
@@ -674,26 +716,26 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
             goto L_ED78;
 
         if (!IsBack()) {
-            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartNum) & 0x10000) != 0) {
+            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartLoader->mKartNum) & 0x10000) != 0) {
                 if (mState != 0x33) {
                     StartAnimation((StateEnum)0x88);
                     return;
                 }
             }
-            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartNum) & 0x8000) != 0) {
+            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartLoader->mKartNum) & 0x8000) != 0) {
                 if (mState != 0x36) {
                     StartAnimation((StateEnum)0x89);
                     return;
                 }
             }
         } else {
-            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartNum) & 0x10000) != 0) {
+            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartLoader->mKartNum) & 0x10000) != 0) {
                 if (mState != 0x39) {
                     StartAnimation((StateEnum)0x8a);
                     return;
                 }
             }
-            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartNum) & 0x8000) != 0) {
+            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartLoader->mKartNum) & 0x8000) != 0) {
                 if (mState != 0x3c) {
                     StartAnimation((StateEnum)0x8b);
                     return;
@@ -704,8 +746,8 @@ void DriverModel::setTandemAnm(f32 a, f32 rate)
 L_ED78:
 
     if (IsDriftEnd()) {
-        if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartNum) & 0x10000) == 0) {
-            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartNum) & 0x8000) == 0) {
+        if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartLoader->mKartNum) & 0x10000) == 0) {
+            if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartLoader->mKartNum) & 0x8000) == 0) {
                 if (!IsBack()) {
                     if (IsDriftLeft()) {
                         StartAnimation((StateEnum)0x33);
@@ -750,6 +792,10 @@ L_ED78:
         break;
     }
 }
+void DriverModel::setTandemAnm(f32 a)
+{
+}
+
 void DriverModel::Start1ShotAnm_base(DriversAnimator *animator, StateEnum state)
 {
 #line 1348
@@ -824,6 +870,114 @@ void DriverModel::Start1ShotAnm_base(DriversAnimator *animator, StateEnum state)
         }
     }
 }
+void DriverModel::StartAnimation2()
+{
+    s32 state = mState;
+#line 1429
+    JUT_MINMAX_ASSERT(0, state, 152);
+    for (int i = 0; i < 2; i++) {
+        int anmID = msAnmBlendList[state][i];
+        if (anmID != 0 && getAnmTransformPtr(anmID) == nullptr)
+            return;
+    }
+
+    s32 before_mState_Hokan = mBeforeState;
+#line 1439
+    JUT_MINMAX_ASSERT(0, before_mState_Hokan, 152);
+    if (m_ac != 0) {
+        for (int i = 0; i < 2; i++) {
+            int anmID = msAnmBlendList[before_mState_Hokan][i];
+            if (anmID != 0 && getAnmTransformPtr(anmID) == nullptr)
+                return;
+        }
+    }
+
+    if (m_c8 == 0)
+        return;
+
+    if (m_c8 == 1) {
+        if (IsDemo((StateEnum)state)) {
+            mAnmID = msAnmBlendList[state][0];
+            f32 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
+            StartLoopAnm((StateEnum)state, &mDriveAnim, 0.0f, 1.0f, 60.0f / frameMax, 0.3f * frameMax);
+            goto L_end;
+        }
+
+        if (state < 63) {
+            if (state >= 21)
+                goto L_common1;
+            if (state >= 13)
+                goto L_copy;
+            goto L_common1;
+        }
+        if (state < 65)
+            goto L_copy;
+        goto L_common1;
+
+    L_copy:
+        mTandemAnim = mDriveAnim;
+    L_common1:
+        Start1ShotAnm_base(&mDriveAnim, (StateEnum)state);
+        goto L_end;
+    }
+
+    switch (state) {
+    case 69: case 72: case 75: case 76: case 77: case 78:
+    case 93: case 108: case 109: case 110: case 118: case 119:
+    case 123: case 124: case 128: case 129: case 130: case 131:
+    case 132: case 133: case 135: case 149:
+        mTandemAnim = mDriveAnim;
+        goto L_loop;
+
+    case 70: case 71: case 73: case 74:
+        if (mBeforeState == 0x48 || (mBeforeState >= 0x45 && mBeforeState < 0x4d)) {
+            mTandemAnim.mLoopAnim.mCurrentValue = mDriveAnim.mLoopAnim.mCurrentValue;
+            mTandemAnim.mLoopAnim.mFrameCounter = mDriveAnim.mLoopAnim.mFrameCounter;
+            mTandemAnim.mLoopAnim.mAnimationState = mDriveAnim.mLoopAnim.mAnimationState;
+            mTandemAnim.mLoopAnim.mMinValue = mDriveAnim.mLoopAnim.mMinValue;
+            mTandemAnim.mLoopAnim.mMaxValue = mDriveAnim.mLoopAnim.mMaxValue;
+            mTandemAnim.mLoopAnim.mSpeed = mDriveAnim.mLoopAnim.mSpeed;
+            mTandemAnim.mLoopAnim.mCurrentPhase = mDriveAnim.mLoopAnim.mCurrentPhase;
+        } else {
+            StartLoopAnm2(&mTandemAnim, 0.0f, 1.0f, 1.0f, 0.0f);
+        }
+        break;
+
+    case 79: case 80: case 81: case 82: case 83: case 84:
+    case 111: case 112: case 113: case 114: case 115: case 116: case 120:
+        mTandemAnim = mDriveAnim;
+        break;
+
+    case 85: case 86: case 87: case 88: case 89: case 90: case 91: case 92:
+        Start1ShotAnm_base(&mDriveAnim, (StateEnum)state);
+        break;
+
+    default:
+        mTandemAnim = mDriveAnim;
+        Start1ShotAnm_base(&mDriveAnim, (StateEnum)state);
+        break;
+    }
+    goto L_end;
+
+L_loop:
+    mAnmID = msAnmBlendList[state][0];
+    mDriveAnim.reset();
+    {
+        f32 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
+        mDriveAnim.mLoopAnim.stop();
+        StartLoopAnm2(&mDriveAnim, 0.0f, 1.0f, 60.0f / frameMax, 0.0f);
+    }
+    mDriveAnim.mLoopAnim.update();
+    mDriveAnim.mLoopAnim.start();
+
+L_end:
+    m_c8 = 0;
+}
+
+void DriverModel::StartAnimationWC(StateEnum s)
+{
+}
+
 void DriverModel::StartAnimation(StateEnum state)
 {
 #line 1639
@@ -834,8 +988,14 @@ void DriverModel::StartAnimation(StateEnum state)
         return;
     if (m_e8)
         return;
-    if (m_c8 != 0 && (int)state < 0x6e && (int)state >= 0x6c)
-        return;
+    if (m_c8 != 0) {
+        if ((int)state >= 0x6e)
+            goto L_go;
+        if ((int)state >= 0x6c)
+            return;
+        goto L_go;
+    }
+L_go:;
 
     m_c8 = 2;
     SetDriverFlags(state);
@@ -845,14 +1005,45 @@ void DriverModel::StartAnimation(StateEnum state)
 
     if ((int)state == 0x48)
         goto simple;
-    if ((int)state >= 0x48) {
-        if ((int)state >= 0x4b)
-            goto simple;
-        goto mid;
-    }
+    if ((int)state >= 0x48)
+        goto L_ge48;
     if ((int)state >= 0x46)
         goto mid;
     goto simple;
+
+L_ge48:
+    if ((int)state >= 0x4b)
+        goto simple;
+    goto mid;
+
+mid:
+    if (mState == 0x48)
+        goto L_keep;
+    if (mState >= 0x48)
+        goto L_ge49;
+    if (mState == 0x45)
+        goto L_keep;
+    goto L_use;
+
+L_ge49:
+    if (mState >= 0x4d)
+        goto L_use;
+    if (mState >= 0x4b) {
+        mBeforeState = mState;
+        mState = state;
+        return;
+    }
+    goto L_use;
+    goto L_use;
+
+L_keep:
+    mBeforeState = mState;
+    mState = state;
+    return;
+L_use:
+    mBeforeState = state;
+    mState = state;
+    return;
 
 simple:
     mBeforeState = mState;
@@ -860,18 +1051,45 @@ simple:
     mState = state;
     return;
 
-mid:
-    if (mState == 0x48 || mState == 0x45 || (mState >= 0x4b && mState < 0x4d)) {
-        mBeforeState = mState;
-    } else {
-        mBeforeState = state;
-    }
-    mState = state;
-    return;
-
 no_ac:
     mState = state;
     m_c8 = 1;
+}
+
+void DriverModel::setCommon1ShotAnm_Single(f32 a, int b)
+{
+}
+
+void DriverModel::setCommon1ShotAnm(f32 a)
+{
+}
+
+void DriverModel::setCommon1ShotAnm_Single2(int b, f32 a, int d)
+{
+}
+
+void DriverModel::setCommon1ShotAnm2(int b, f32 a)
+{
+}
+
+void DriverModel::setCommonAnm_Base(int b, f32 a, int d)
+{
+}
+
+void DriverModel::setCommonAnm2(int b, f32 a)
+{
+}
+
+void DriverModel::setCommonAnm(f32 a)
+{
+}
+
+void DriverModel::setCommonAnm_Blend(f32 a, int c)
+{
+}
+
+void DriverModel::Change_next_mState(StateEnum s)
+{
 }
 
 void DriverModel::updateFrame()
@@ -926,6 +1144,188 @@ void DriverModel::updateFrame()
         updateFrame_base(&mAdditiveAnim, (StateEnum)m_500);
     done:;
     }
+}
+
+void DriverModel::updateFrame_base(DriversAnimator *animator, StateEnum state)
+{
+}
+
+void DriverModel::updateSetFrame_base(StateEnum s)
+{
+}
+
+void DriverModel::updateSetFrame()
+{
+    const u32 (*list)[2] = this->msAnmBlendList;
+    {
+        s32 state = mState;
+#line 2381
+        JUT_MINMAX_ASSERT(0, state, 152);
+        const u8 *p = (const u8 *)list[state];
+        int blend_num = 0;
+        state = 0;
+        while (blend_num < 2) {
+            mAnmID = *(const u32 *)(p + state);
+#line 2384
+            JUT_MINMAX_ASSERT(0, mAnmID, 82);
+            if (getAnmTransformPtr(mAnmID) != nullptr) {
+                f32 frame = mAnmFrame[mAnmID];
+                getAnmTransformPtr(mAnmID)->setFrame(frame);
+#line 2390
+                JUT_MINMAX_ASSERT(0, mAnmID_debug_index, 8);
+                mAnmWorkFrame[mAnmID_debug_index] = mAnmFrame[mAnmID];
+                mAnmWorkID[mAnmID_debug_index] = mAnmID;
+                mAnmID_debug_index++;
+            }
+            blend_num++;
+            state += 4;
+        }
+    }
+
+    if (m_ac != 0) {
+        s32 state = mBeforeState;
+#line 2381
+        JUT_MINMAX_ASSERT(0, state, 152);
+        const u8 *p = (const u8 *)list[state];
+        int blend_num = 0;
+        state = 0;
+        while (blend_num < 2) {
+            mAnmID = *(const u32 *)(p + state);
+#line 2384
+            JUT_MINMAX_ASSERT(0, mAnmID, 82);
+            if (getAnmTransformPtr(mAnmID) != nullptr) {
+                f32 frame = mAnmFrame[mAnmID];
+                getAnmTransformPtr(mAnmID)->setFrame(frame);
+#line 2390
+                JUT_MINMAX_ASSERT(0, mAnmID_debug_index, 8);
+                mAnmWorkFrame[mAnmID_debug_index] = mAnmFrame[mAnmID];
+                mAnmWorkID[mAnmID_debug_index] = mAnmID;
+                mAnmID_debug_index++;
+            }
+            blend_num++;
+            state += 4;
+        }
+    }
+
+    if (mState < 21) {
+        if (mState < 17) {
+            if (mState >= 13)
+                goto L_use3;
+        } else {
+            goto L_use4;
+        }
+    } else if (mState < 65) {
+        if (mState >= 63)
+            goto L_use3;
+    }
+    goto done;
+
+L_use3:
+    {
+        s32 state = m_500;
+#line 2381
+        JUT_MINMAX_ASSERT(0, state, 152);
+        const u8 *p = (const u8 *)list[state];
+        int blend_num = 0;
+        state = 0;
+        while (blend_num < 2) {
+            mAnmID = *(const u32 *)(p + state);
+#line 2384
+            JUT_MINMAX_ASSERT(0, mAnmID, 82);
+            if (getAnmTransformPtr(mAnmID) != nullptr) {
+                f32 frame = mAnmFrame[mAnmID];
+                getAnmTransformPtr(mAnmID)->setFrame(frame);
+#line 2390
+                JUT_MINMAX_ASSERT(0, mAnmID_debug_index, 8);
+                mAnmWorkFrame[mAnmID_debug_index] = mAnmFrame[mAnmID];
+                mAnmWorkID[mAnmID_debug_index] = mAnmID;
+                mAnmID_debug_index++;
+            }
+            blend_num++;
+            state += 4;
+        }
+    }
+    goto L_item;
+
+L_use4:
+    {
+        s32 state = m_500;
+#line 2381
+        JUT_MINMAX_ASSERT(0, state, 152);
+        const u8 *p = (const u8 *)list[state];
+        int blend_num = 0;
+        state = 0;
+        while (blend_num < 2) {
+            mAnmID = *(const u32 *)(p + state);
+#line 2384
+            JUT_MINMAX_ASSERT(0, mAnmID, 82);
+            if (getAnmTransformPtr(mAnmID) != nullptr) {
+                f32 frame = mAnmFrame[mAnmID];
+                getAnmTransformPtr(mAnmID)->setFrame(frame);
+#line 2390
+                JUT_MINMAX_ASSERT(0, mAnmID_debug_index, 8);
+                mAnmWorkFrame[mAnmID_debug_index] = mAnmFrame[mAnmID];
+                mAnmWorkID[mAnmID_debug_index] = mAnmID;
+                mAnmID_debug_index++;
+            }
+            blend_num++;
+            state += 4;
+        }
+    }
+
+L_item:
+    if (mItem != nullptr && m_b8 != 0 && mItem->getSuccessionItemNum() > 1) {
+        const u8 *p = (const u8 *)list[0x96];
+        int blend_num = 0;
+        int state = 0;
+        while (blend_num < 2) {
+            mAnmID = *(const u32 *)(p + state);
+#line 2384
+            JUT_MINMAX_ASSERT(0, mAnmID, 82);
+            if (getAnmTransformPtr(mAnmID) != nullptr) {
+                f32 frame = mAnmFrame[mAnmID];
+                getAnmTransformPtr(mAnmID)->setFrame(frame);
+#line 2390
+                JUT_MINMAX_ASSERT(0, mAnmID_debug_index, 8);
+                mAnmWorkFrame[mAnmID_debug_index] = mAnmFrame[mAnmID];
+                mAnmWorkID[mAnmID_debug_index] = mAnmID;
+                mAnmID_debug_index++;
+            }
+            blend_num++;
+            state += 4;
+        }
+    }
+
+    if (m_b9 != 0) {
+        const u8 *p = (const u8 *)list[0x97];
+        int blend_num = 0;
+        int state = 0;
+        while (blend_num < 2) {
+            mAnmID = *(const u32 *)(p + state);
+#line 2384
+            JUT_MINMAX_ASSERT(0, mAnmID, 82);
+            if (getAnmTransformPtr(mAnmID) != nullptr) {
+                f32 frame = mAnmFrame[mAnmID];
+                getAnmTransformPtr(mAnmID)->setFrame(frame);
+#line 2390
+                JUT_MINMAX_ASSERT(0, mAnmID_debug_index, 8);
+                mAnmWorkFrame[mAnmID_debug_index] = mAnmFrame[mAnmID];
+                mAnmWorkID[mAnmID_debug_index] = mAnmID;
+                mAnmID_debug_index++;
+            }
+            blend_num++;
+            state += 4;
+        }
+    }
+done:;
+}
+
+void DriverModel::updateLoadCommand(int a)
+{
+}
+
+void DriverModel::updateLoadCommand_Sound(int a)
+{
 }
 
 void DriverModel::updateLoad_Animation()
@@ -1040,6 +1440,10 @@ void DriverModel::updateLoad_Animation()
     }
 }
 
+void DriverModel::updateLoad_Sound()
+{
+}
+
 void DriverModel::updateLoad()
 {
     if (mState == next_mState_Hokan && m_504 == 0)
@@ -1048,8 +1452,9 @@ void DriverModel::updateLoad()
     updateLoad_Animation();
     mAnimBufMgr->resetFrameSound();
 
+    s32 next_mState = next_mState_Hokan;
 #line 2565
-    JUT_MINMAX_ASSERT(0, next_mState_Hokan, 152);
+    JUT_MINMAX_ASSERT(0, next_mState, 152);
     u8 anmID = (u8)msAnmBlendList[next_mState_Hokan][0];
     DriverLoader::checkAnmID(anmID);
     int sndNo = DriverLoader::mscAnm2SoundList[anmID];
@@ -1157,6 +1562,10 @@ L_367C:
 
 
 #pragma inline_depth(4)
+void DriverModel::updateCheckRenew_Sound()
+{
+}
+
 int DriverModel::updateCheckRenew()
 {
     int result = updateCheckRenew_Animation();
@@ -1180,6 +1589,391 @@ int DriverModel::updateCheckRenew()
 #line 2684
     JUT_ASSERT(result != 0);
     return result;
+}
+
+void DriverModel::BlendValue(f32 a)
+{
+}
+
+void DriverModel::updateBlendCount_Func1(u8 a, u8 b)
+{
+}
+
+void DriverModel::updateBlendCount_Func2(u8 a)
+{
+}
+
+void DriverModel::updateBlendCount()
+{
+    if (m_b8 != 0 && !(*(s32 *)((u8 *)mItem + 0x118) == 2 && *(u32 *)((u8 *)mItem + 0x7c) == 7)) {
+        if (DriverManager::ptr()->mBlendTimes[0] > m_ba)
+            m_ba++;
+    } else {
+        if (m_ba != 0)
+            m_ba--;
+    }
+
+    int blendTime = (u8)updateSetBlendWeight_GetBlendTime((StateEnum)mState);
+
+    switch (mState) {
+    case 42:
+    case 48:
+    case 69:
+    case 72:
+    case 91:
+    case 92:
+    case 93:
+    case 94:
+    case 95:
+    case 97:
+    case 99:
+    case 101:
+    case 103:
+    case 104:
+    case 106:
+    case 107:
+    case 108:
+    case 109:
+    case 110:
+    case 117:
+    case 118:
+    case 119:
+    case 121:
+    case 122:
+    case 123:
+    case 124:
+    case 125:
+    case 126:
+    case 127:
+    case 128:
+    case 129:
+    case 130:
+    case 131:
+    case 132:
+    case 133:
+    case 134:
+    case 135:
+    case 136:
+    case 137:
+    case 138:
+    case 139:
+    case 146:
+    case 147:
+    case 148:
+    case 149:
+        if (m_bb < blendTime)
+            m_bb++;
+        else
+            m_bb = blendTime;
+        break;
+
+    case 120:
+        if (m_bb < blendTime) {
+            m_bb++;
+            if (m_bb == blendTime && m_e8 == 0 && m_504 == 0 && mState == next_mState_Hokan)
+                next_mState_Hokan = 0;
+        } else {
+            m_bb = blendTime;
+        }
+        break;
+
+    case 70:
+    case 71:
+    case 73:
+    case 74:
+        if (m_bb < blendTime) {
+            m_bb++;
+            if (m_bb == blendTime) {
+                if (mState == 72)
+                    goto L_bend;
+                if (mState >= 72)
+                    goto L_bge72;
+                if (mState == 70)
+                    goto L_b70;
+                if (mState >= 70)
+                    goto L_b111;
+                goto L_bend;
+            L_bge72:
+                if (mState == 74)
+                    goto L_b112;
+                if (mState >= 74)
+                    goto L_bend;
+                goto L_b4;
+            L_b70:
+                if (m_e8 == 0 && m_504 == 0 && mState == next_mState_Hokan)
+                    next_mState_Hokan = 3;
+                goto L_bend;
+            L_b4:
+                if (m_e8 == 0 && m_504 == 0 && mState == next_mState_Hokan)
+                    next_mState_Hokan = 4;
+                goto L_bend;
+            L_b111:
+                if (m_e8 == 0 && m_504 == 0 && mState == next_mState_Hokan)
+                    next_mState_Hokan = 111;
+                goto L_bend;
+            L_b112:
+                if (m_e8 == 0 && m_504 == 0 && mState == next_mState_Hokan)
+                    next_mState_Hokan = 112;
+            L_bend:;
+            }
+        } else {
+            m_bb = blendTime;
+        }
+        break;
+
+    case 75:
+    case 76:
+        if (m_bb > blendTime)
+            m_bb = blendTime;
+        if (m_e0 == 0) {
+            if (m_bb < blendTime)
+                m_bb++;
+        } else {
+            if (m_bb != 0)
+                m_bb--;
+            if (m_bb == 0) {
+                m_e0 = 0;
+                if (mState == 76)
+                    goto L_c4;
+                if (mState >= 76)
+                    goto L_cend;
+                if (mState >= 75)
+                    goto L_c3;
+                goto L_cend;
+            L_c3:
+                if (m_e8 == 0 && m_504 == 0 && mState == next_mState_Hokan)
+                    next_mState_Hokan = 3;
+                goto L_cend;
+            L_c4:
+                if (m_e8 == 0 && m_504 == 0 && mState == next_mState_Hokan)
+                    next_mState_Hokan = 4;
+            L_cend:;
+            }
+        }
+        break;
+
+    case 77:
+    case 78:
+    case 79:
+    case 80: {
+        if (m_bb < blendTime) {
+            m_bb++;
+            if (m_bb == blendTime) {
+                int nes = mState - 76;
+#line 1839
+                JUT_ASSERT((int)nes >= mcDrive);
+                if (m_e8 == 0 && m_504 == 0) {
+                    if (next_mState_Hokan != mState) {
+                        if (nes < 104) {
+                            if (nes < 7) {
+                                if (nes >= 5)
+                                    goto L_set_d;
+                            } else if (nes >= 96) {
+                                goto L_set_d;
+                            }
+                        } else {
+                            if (nes >= 123)
+                                goto L_done_d;
+                            if (nes >= 121)
+                                goto L_set_d;
+                            goto L_done_d;
+                        }
+                        goto L_done_d;
+                    L_set_d:
+                        next_mState_Hokan = nes;
+                    L_done_d:;
+                    }
+                }
+            }
+        }
+        break;
+    }
+
+    case 81:
+    case 82:
+    case 83:
+    case 84:
+        if (m_bb < blendTime) {
+            m_bb++;
+            if (m_bb >= blendTime) {
+                if (m_e8 == 0 && m_504 == 0) {
+                    if (next_mState_Hokan != mState) {
+                        if (mState < 83) {
+                            if (mState >= 81)
+                                next_mState_Hokan = 3;
+                        } else {
+                            next_mState_Hokan = 4;
+                        }
+                    }
+                }
+            }
+        }
+        break;
+
+    case 85:
+    case 86:
+    case 87:
+    case 88:
+    case 140:
+    case 141:
+    case 142:
+    case 143:
+    case 144:
+    case 145:
+        m_bb++;
+#line 2714
+        JUT_MINMAX_ASSERT(0, mState, 152);
+        mAnmID = msAnmBlendList[mState][0];
+        if (mAnmID != 0 && getAnmTransformPtr(mAnmID) != nullptr) {
+            s16 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
+            s32 frame = (s32)(getAnmTransformPtr(mAnmID)->getFrame() + 0.5f);
+            s16 t0 = DriverManager::ptr()->mBlendTimes[8];
+            s16 t1 = DriverManager::ptr()->mBlendTimes[9];
+            if (frame - frameMax <= t1)
+                m_bb = t1 - frameMax - frame;
+            else if (frameMax > t0)
+                m_bb = 0;
+        }
+        break;
+
+    case 89:
+    case 90:
+        m_bb++;
+#line 2714
+        JUT_MINMAX_ASSERT(0, mState, 152);
+        mAnmID = msAnmBlendList[mState][0];
+        if (mAnmID != 0 && getAnmTransformPtr(mAnmID) != nullptr) {
+            s16 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
+            s32 frame = (s32)(getAnmTransformPtr(mAnmID)->getFrame() + 0.5f);
+            s16 t0 = DriverManager::ptr()->mBlendTimes[10];
+            s16 t1 = DriverManager::ptr()->mBlendTimes[11];
+            if (frame - frameMax <= t1)
+                m_bb = t1 - frameMax - frame;
+            else if (frameMax > t0)
+                m_bb = 0;
+        }
+        break;
+
+    case 96:
+    case 98:
+    case 100:
+    case 102:
+        m_bb++;
+#line 2714
+        JUT_MINMAX_ASSERT(0, mState, 152);
+        mAnmID = msAnmBlendList[mState][0];
+        if (mAnmID != 0 && getAnmTransformPtr(mAnmID) != nullptr) {
+            s16 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
+            s32 frame = (s32)(getAnmTransformPtr(mAnmID)->getFrame() + 0.5f);
+            s16 t0 = DriverManager::ptr()->mBlendTimes[17];
+            s16 t1 = DriverManager::ptr()->mBlendTimes[18];
+            if (frame - frameMax <= t1)
+                m_bb = t1 - frameMax - frame;
+            else if (frameMax > t0)
+                m_bb = 0;
+        }
+        break;
+
+    case 105:
+        m_bb++;
+#line 2714
+        JUT_MINMAX_ASSERT(0, mState, 152);
+        mAnmID = msAnmBlendList[mState][0];
+        if (mAnmID != 0 && getAnmTransformPtr(mAnmID) != nullptr) {
+            s16 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
+            s32 frame = (s32)(getAnmTransformPtr(mAnmID)->getFrame() + 0.5f);
+            s16 t0 = DriverManager::ptr()->mBlendTimes[21];
+            s16 t1 = DriverManager::ptr()->mBlendTimes[22];
+            if (frame - frameMax <= t1)
+                m_bb = t1 - frameMax - frame;
+            else if (frameMax > t0)
+                m_bb = 0;
+        }
+        break;
+
+    case 111:
+    case 112: {
+        if (m_bb < blendTime) {
+            m_bb++;
+            if (m_bb == blendTime) {
+                int nes = mState - 108;
+#line 1839
+                JUT_ASSERT((int)nes >= mcDrive);
+                if (m_e8 == 0 && m_504 == 0) {
+                    if (next_mState_Hokan != mState) {
+                        if (nes < 104) {
+                            if (nes < 7) {
+                                if (nes >= 5)
+                                    goto L_set_j;
+                            } else if (nes >= 96) {
+                                goto L_set_j;
+                            }
+                        } else {
+                            if (nes >= 123)
+                                goto L_done_j;
+                            if (nes >= 121)
+                                goto L_set_j;
+                            goto L_done_j;
+                        }
+                        goto L_done_j;
+                    L_set_j:
+                        next_mState_Hokan = nes;
+                    L_done_j:;
+                    }
+                }
+            }
+        }
+        break;
+    }
+
+    case 113:
+    case 114:
+    case 115:
+    case 116: {
+        if (m_bb < blendTime) {
+            m_bb++;
+            if (m_bb == blendTime) {
+                int nes = (mState - 113) * 3 + 50;
+#line 1839
+                JUT_ASSERT((int)nes >= mcDrive);
+                if (m_e8 == 0 && m_504 == 0) {
+                    if (next_mState_Hokan != mState) {
+                        if (nes < 104) {
+                            if (nes < 7) {
+                                if (nes >= 5)
+                                    goto L_set_k;
+                            } else if (nes >= 96) {
+                                goto L_set_k;
+                            }
+                        } else {
+                            if (nes >= 123)
+                                goto L_done_k;
+                            if (nes >= 121)
+                                goto L_set_k;
+                            goto L_done_k;
+                        }
+                        goto L_done_k;
+                    L_set_k:
+                        next_mState_Hokan = nes;
+                    L_done_k:;
+                    }
+                }
+            }
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+
+void DriverModel::updateSetBlendWeight_Func1(u8 a, u8 b)
+{
+}
+
+void DriverModel::updateSetBlendWeight_FuncABCD(f32 a, f32 b, f32 c, f32 d)
+{
 }
 
 int DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
@@ -1279,6 +2073,22 @@ int DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
 }
 
 
+void DriverModel::updateSetBlendWeight_mStateThrow()
+{
+}
+
+void DriverModel::updateSetBlendWeight()
+{
+}
+
+void DriverModel::update_mIsSpeakBCA()
+{
+}
+
+void DriverModel::update(u16 param)
+{
+}
+
 bool DriverModel::createModel(JKRSolidHeap *heap, u32 a, u32 b)
 {
     if (ExModel::createDifferedModel(heap, a, 0x1080200, true)) {
@@ -1288,12 +2098,16 @@ bool DriverModel::createModel(JKRSolidHeap *heap, u32 a, u32 b)
         lock();
         FeelingMgr::ptr()->createModel(this, heap, a, b);
 
-        if (mCharID == 19) {
-        } else if (mCharID >= 19) {
-        } else if (mCharID >= 18) {
-            OsageMgr::ptr()->createModel(this, heap, a, b);
-        } else {
-        }
+        if (mCharID == 19)
+            goto L_create_done;
+        if (mCharID >= 19)
+            goto L_create_done;
+        if (mCharID >= 18)
+            goto L_create_osage;
+        goto L_create_done;
+    L_create_osage:
+        OsageMgr::ptr()->createModel(this, heap, a, b);
+    L_create_done:;
     }
 
     LaurelMgr::ptr()->createModel(this, heap, a, b);
@@ -1305,11 +2119,16 @@ void DriverModel::setCurrentViewNo(u32 viewNo)
 {
     ExModel::setCurrentViewNo(viewNo);
 
-    if (mCharID == 19) {
-    } else if (mCharID >= 19) {
-    } else if (mCharID >= 18) {
-        OsageMgr::ptr()->setCurrentViewNo(this, viewNo);
-    }
+    if (mCharID == 19)
+        goto L_view_done;
+    if (mCharID >= 19)
+        goto L_view_done;
+    if (mCharID >= 18)
+        goto L_view_osage;
+    goto L_view_done;
+L_view_osage:
+    OsageMgr::ptr()->setCurrentViewNo(this, viewNo);
+L_view_done:;
     LaurelMgr::ptr()->setCurrentViewNo(this, viewNo);
 
     MtxPtr mtx = RaceMgr::getManager()->getKartDrawer(mKartNum)->getLight(viewNo)->getEffectMtx();
@@ -1330,6 +2149,10 @@ void DriverModel::resetItem()
     mItem = nullptr;
 }
 
+void DriverModel::setLODLevel(int a)
+{
+}
+
 Mtx *DriverModel::getMtxP_HandR()
 {
     return &getModel()->mMtxBuffer->getAnmMtx(mDriverLoader->getJntNo(16));
@@ -1344,7 +2167,7 @@ Mtx *DriverModel::getMtxP(int ctrlNo)
 {
 #line 4209
     JUT_MINMAX_ASSERT(0, ctrlNo, 27);
-    u16 jntNo = mDriverLoader->getJntBindNo(ctrlNo);
+    int jntNo = mDriverLoader->getJntBindNo(ctrlNo);
     if (jntNo == 0xffff)
         return nullptr;
     return &getModel()->mMtxBuffer->getAnmMtx(jntNo);
@@ -1377,6 +2200,11 @@ int DriverModel::IsAnmSoundResInMRAM(int sndID)
     return ret;
 }
 
-DriverModel::~DriverModel()
+bool DriverModel::IsARAMDMAFinished()
+{
+    return false;
+}
+
+__declspec(weak) DriverModel::~DriverModel()
 {
 }
