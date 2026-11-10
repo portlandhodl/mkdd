@@ -31,6 +31,7 @@ struct J3DFog : J3DFogInfo {
         : J3DFogInfo(other)
     {
     }
+    ~J3DFog();
 
     void setFogInfo(J3DFogInfo info) { *(J3DFogInfo*)this = info; }
     void setFogInfo(const J3DFogInfo* info) { *(J3DFogInfo*)this = *info; }

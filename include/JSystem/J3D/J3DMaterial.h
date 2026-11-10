@@ -108,6 +108,8 @@ struct J3DMaterial
     static J3DTevBlock *createTevBlock(int);
     static J3DTexGenBlock *createTexGenBlock(u32);
     void initialize();
+    void copy(J3DMaterial *);
+    void makeDisplayList_private(J3DDisplayListObj *);
     J3DErrType newSharedDisplayList(u32);
     J3DErrType newSingleSharedDisplayList(u32);
     void setCurrentMtx();

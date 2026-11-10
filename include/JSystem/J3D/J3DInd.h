@@ -32,12 +32,8 @@ struct J3DIndTexCoordScale : public J3DIndTexCoordScaleInfo {
     }
 
     // NOTE: names fabricated
-    u8 getScaleS() { return _00; }
-    u8 getScaleT() { return _01; }
-
-    u8 _00;    // _00
-    u8 _01;    // _01
-    u8 _02[2]; // _02
+    u8 getScaleS() { return mScaleS; }
+    u8 getScaleT() { return mScaleT; }
 };
 
 struct J3DIndTexMtxInfo {
