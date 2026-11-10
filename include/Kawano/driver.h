@@ -6,8 +6,10 @@
 #include "Kaneshige/ExModel.h"
 #include "Kaneshige/KartInfo.h"
 #include "Sato/ItemObj.h"
+#include "JSystem/J3D/J3DJoint.h"
 
 class J3DAnmTransform; // TODO: JSystem
+class J3DJoint;
 class KartLoader;
 
 class DriverDataChild
@@ -471,6 +473,52 @@ public:
     int IsAnmResInMRAM(int);
     int IsAnmSoundResInMRAM(int);
 
+    // -- driver_ik.cpp (this unit) --
+    void setDirMtx(JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > *);
+    void calcMPos(JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TVec3f &, float, float, JGeometry::TVec3f *);
+    void calc1stJnt(J3DModel *, u16, u16, u16, u16, u16);
+    void calc2ndJnt(J3DModel *, u16, u16, u16);
+    void calc3rdJnt(J3DModel *, u16, u16, bool);
+    bool CheckNoIK();
+    static bool koshiCallBack(J3DJoint *, int);
+    static bool spinCallBack(J3DJoint *, int);
+    static bool footL1CallBack(J3DJoint *, int);
+    static bool footL2CallBack(J3DJoint *, int);
+    static bool footL3CallBack(J3DJoint *, int);
+    static bool footLPosCallBack(J3DJoint *, int);
+    static bool footR1CallBack(J3DJoint *, int);
+    static bool footR2CallBack(J3DJoint *, int);
+    static bool footR3CallBack(J3DJoint *, int);
+    static bool footRPosCallBack(J3DJoint *, int);
+    static bool armL1CallBack(J3DJoint *, int);
+    static bool armL2CallBack(J3DJoint *, int);
+    static bool armL3CallBack(J3DJoint *, int);
+    static bool armR1CallBack(J3DJoint *, int);
+    static bool armR2CallBack(J3DJoint *, int);
+    static bool armR3CallBack(J3DJoint *, int);
+    static bool handRCallBack(J3DJoint *, int);
+    static bool faceCallBack(J3DJoint *, int);
+    static bool mouthCallBack(J3DJoint *, int);
+    static bool skirtCallBack(J3DJoint *, int);
+    static bool skirtPosCallBack(J3DJoint *, int);
+    static bool dHair1CallBack(J3DJoint *, int);
+    static bool dHair2CallBack(J3DJoint *, int);
+    static bool pHair1CallBack(J3DJoint *, int);
+    static bool pHair2CallBack(J3DJoint *, int);
+    static bool tie1CallBack(J3DJoint *, int);
+
+    static int IsFootLIKOn(DriverModel *);
+    static int IsFootRIKOn(DriverModel *);
+    static int IsArmLIKOn(DriverModel *);
+    static int IsArmRIKOn(DriverModel *);
+    static int IsAllIKOff(DriverModel *);
+    static int IsAllIKOffWithoutFace(DriverModel *);
+    void SetOffset(J3DModel *, DriverModel *, u16);
+    void SetOffset2(DriverModel *, u16);
+
+    static DriverModel *sCurDriver;
+    static const J3DJointCallBack mscaCallBackTbl[27];
+
     virtual void update(u16);                           // override
     virtual bool createModel(JKRSolidHeap *, u32, u32); // override
     virtual void setCurrentViewNo(u32);                 // override
@@ -532,6 +580,13 @@ public:
     int IsDanger();
     int IsDangerPlus();
     int IsDash();
+    int IsDash1();
+    int IsDash2();
+    int IsTire();
+    int IsWait();
+    int IsTurn();
+    int IsJuggle();
+    int IsBeforeStart();
     int IsDamage();
     int IsDamageL();
     int IsAttack();
