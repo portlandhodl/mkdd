@@ -529,7 +529,58 @@ f32 Race2D::getReachBombScale(int no, int type)
     return scale;
 }
 
-void Race2D::drawEscape() {}
+void Race2D::drawEscape()
+{
+    int frame;
+    if (RCMGetManager()->getConsoleNumber() == 3 || RCMGetManager()->getConsoleNumber() == 4)
+        frame = mEscapeTimer4;
+    else
+        frame = mEscapeTimer;
+    if (frame < 14)
+    {
+        f32 scale = getStartShineTimeScale(frame);
+        u8 alpha = K2DPicture::mK2DGlobalAlpha;
+        K2DPicture::mK2DGlobalAlpha = 0xff;
+        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++)
+        {
+            for (int item = 0; item < 5; item++)
+            {
+                K2DPicture *pic = *(K2DPicture **)((u8 *)this + status * 20 + 0xcb0 + item * 4);
+                f32 s = mSpecialItemScale[mShineKind[status]] * scale;
+                f32 px = mShinePos[item].x * s;
+                f32 w = s * pic->mPicture.getWidth();
+                f32 py = mShinePos[item].y * s;
+                f32 h = s * pic->mPicture.getHeight();
+                px = px - w * 0.5f;
+                py = py - h * 0.5f;
+                f32 x = mShineBase[status].x + px;
+                f32 y = mShineBase[status].y + py;
+                pic->drawK2D(x, y, w, h, true);
+            }
+        }
+        K2DPicture::mK2DGlobalAlpha = alpha;
+    }
+    else
+    {
+        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++)
+        {
+            for (int item = 0; item < 5; item++)
+            {
+                K2DPicture *pic = *(K2DPicture **)((u8 *)this + status * 20 + 0xcb0 + item * 4);
+                f32 s = mSpecialItemScale[mShineKind[status]];
+                f32 px = mShinePos[item].x * s;
+                f32 w = s * pic->mPicture.getWidth();
+                f32 py = mShinePos[item].y * s;
+                f32 h = s * pic->mPicture.getHeight();
+                px = px - w * 0.5f;
+                py = py - h * 0.5f;
+                f32 x = mShineBase[status].x + px;
+                f32 y = mShineBase[status].y + py;
+                pic->drawK2D(x, y, w, h, true);
+            }
+        }
+    }
+}
 
 f32 Race2D::getStartShineTimeScale(int frame)
 {
@@ -906,7 +957,104 @@ bool Race2D::isAlarm(int status)
     return ret;
 }
 
-void Race2D::getMapPos(int, JGeometry::TVec3f &, JGeometry::TVec2f &) {}
+void Race2D::getMapPos(int status, JGeometry::TVec3f &pos, JGeometry::TVec2f &dst)
+{
+    u8 *o = *(u8 **)((u8 *)this + 0x34c);
+    f32 wd = *(f32 *)(o + 40) - *(f32 *)(o + 32);
+    f32 hg = *(f32 *)(o + 44) - *(f32 *)(o + 36);
+    f32 a = *(f32 *)((u8 *)this + 0x1118);
+    f32 b = *(f32 *)((u8 *)this + 0x1110);
+    f32 c = *(f32 *)((u8 *)this + 0x111c);
+    f32 d = *(f32 *)((u8 *)this + 0x1114);
+    f32 e = *(f32 *)((u8 *)this + 0x1108);
+    f32 g = *(f32 *)((u8 *)this + 0x110c);
+    f32 *gfx = *(f32 **)((u8 *)this + 0x1b0);
+    f32 gx = gfx[20];
+    f32 gy = gfx[21];
+    f32 gs = gfx[22];
+    f32 f5 = a - b;
+    f32 f6 = c - d;
+
+    switch (status)
+    {
+    case 0:
+        if (RCMGetManager()->isMirror())
+        {
+            f32 q = (pos.x - b) / f5;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * (1.0f - q);
+        }
+        else
+        {
+            f32 q = (pos.x - b) / f5;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * q;
+        }
+        {
+            f32 q = (pos.z - d) / f6;
+            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
+            dst.y = off + hg * gs * q;
+        }
+        break;
+    case 1:
+        if (RCMGetManager()->isMirror())
+        {
+            f32 q = (pos.z - c) / f6;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * (1.0f - q);
+        }
+        else
+        {
+            f32 q = (pos.z - c) / f6;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * q;
+        }
+        {
+            f32 q = (pos.x - b) / f5;
+            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
+            dst.y = off + hg * gs * q;
+        }
+        break;
+    case 2:
+        if (RCMGetManager()->isMirror())
+        {
+            f32 q = (pos.x - a) / f5;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * (1.0f - q);
+        }
+        else
+        {
+            f32 q = (pos.x - a) / f5;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * q;
+        }
+        {
+            f32 q = (pos.z - c) / f6;
+            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
+            dst.y = off + hg * gs * q;
+        }
+        break;
+    case 3:
+        if (RCMGetManager()->isMirror())
+        {
+            f32 q = (pos.z - d) / f6;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * (1.0f - q);
+        }
+        else
+        {
+            f32 q = (pos.z - d) / f6;
+            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
+            dst.x = off + wd * gs * q;
+        }
+        {
+            f32 q = (pos.x - a) / f5;
+            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
+            dst.y = off + hg * gs * q;
+        }
+        break;
+    }
+}
 
 void Race2D::getCharacterInfo(int no, int which, f32 &x, f32 &y, f32 &z)
 {
@@ -918,7 +1066,117 @@ void Race2D::getCharacterInfo(int no, int which, f32 &x, f32 &y, f32 &z)
     z = mCharPos[1 - no][which].z;
 }
 
-void Race2D::getCharacterClr(int, int, int, JUTColor &, JUTColor &, u8 &) {}
+void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTColor &color2, u8 &alpha)
+{
+#line 4756
+    JUT_MINMAX_ASSERT(0, no, 8);
+#line 4757
+    JUT_MINMAX_ASSERT(0, which, 2);
+#line 4758
+    JUT_MINMAX_ASSERT(0, type, 39);
+
+    int v0, v1, v2, v3, v4, v5;
+    v0 = v1 = 125;
+    v2 = v4 = 140;
+    v3 = v5 = 255;
+
+    if (no == J2DManager::getStatus2Kart(0) || no == J2DManager::getStatus2Kart(1))
+    {
+        v0 = 255;
+        v1 = 190;
+        v2 = 255;
+        v3 = 255;
+        v4 = 190;
+        v5 = 230;
+    }
+
+    f32 t = type / 38.0f;
+    switch (1 - which)
+    {
+    case 1:
+    {
+        u8 c = (u8)(int)(80 + t * 0.0f);
+        color1.r = c;
+        color1.g = c;
+        color1.b = (u8)(int)(100 + t * 0.0f);
+        color1.a = 255;
+        color2.r = (u8)(int)(v0 + t * (v1 - v0));
+        color2.g = (u8)(int)(v2 + t * (v4 - v2));
+        color2.b = (u8)(int)(v3 + t * (v5 - v3));
+        color2.a = 255;
+        alpha = 255;
+    }
+    break;
+    case 0:
+    {
+        u8 c = (u8)(int)(80 + t * 0.0f);
+        color1.r = c;
+        color1.g = c;
+        color1.b = (u8)(int)(100 + t * 0.0f);
+        color1.a = 255;
+        color2.r = (u8)(int)(v1 + t * (v0 - v1));
+        color2.g = (u8)(int)(v4 + t * (v2 - v4));
+        color2.b = (u8)(int)(v5 + t * (v3 - v5));
+        color2.a = 255;
+        alpha = 255;
+    }
+    break;
+    }
+
+    int u0, u1, u2, u3, u4, u5;
+    if (no == J2DManager::getStatus2Kart(0))
+    {
+        u0 = 255;
+        u1 = 128;
+        u2 = 80;
+        u3 = 55;
+        u4 = 93;
+        u5 = 70;
+    }
+    else if (no == J2DManager::getStatus2Kart(1))
+    {
+        if (RCMGetManager()->getKartInfo(0)->getPad(1) != NULL)
+        {
+            u0 = 0;
+            u1 = 0;
+            u2 = 220;
+            u3 = 128;
+            u4 = 0;
+            u5 = 0;
+        }
+        else
+        {
+            u0 = 0;
+            u1 = 0;
+            u2 = 150;
+            u3 = 64;
+            u4 = 255;
+            u5 = 128;
+        }
+    }
+    else
+        return;
+
+    alpha = 255;
+    int frame = *(int *)((u8 *)this + 0x4e9c);
+    f32 s = JMASCos((s16)(frame * 0xffff / 40 + 0x7fff));
+    f32 f = 0.5f + -0.5f * s;
+
+    if (which == 0)
+    {
+        color1.r = (u8)(int)(u0 + f * (u1 - u0));
+        color1.g = (u8)(int)(u2 + f * (u3 - u2));
+        color1.b = (u8)(int)(u4 + f * (u5 - u4));
+        color1.a = 255;
+    }
+    else if (which == 1)
+    {
+        color1.r = (u8)(int)(u0 + f * (u1 - u0));
+        color1.g = (u8)(int)(u2 + f * (u3 - u2));
+        color1.b = (u8)(int)(u4 + f * (u5 - u4));
+        color1.a = 255;
+    }
+}
 
 void Race2D::getItemInfo(int no, int type, int which, f32 &x, f32 &y, f32 &z)
 {
@@ -943,8 +1201,9 @@ void Race2D::decideItem(int no, u8 driverNo, int &item)
     JUT_MINMAX_ASSERT(0, no, 4);
     JUT_MINMAX_ASSERT(0, driverNo, 2);
 
-    int itemKind = ItemObjMgr::gItemMgr->getStockItem(J2DManager::getStatus2Kart(no), (u8)driverNo);
-    ItemObj *itemObj = ItemObjMgr::gItemMgr->getKartEquipItem(J2DManager::getStatus2Kart(no), (u8)driverNo);
+    ItemObjMgr *mgr = ItemObjMgr::gItemMgr;
+    int itemKind = mgr->getStockItem(J2DManager::getStatus2Kart(no), (u8)driverNo);
+    ItemObj *itemObj = mgr->getKartEquipItem(J2DManager::getStatus2Kart(no), (u8)driverNo);
     if (itemKind == 0x10 && itemObj != NULL)
         itemKind = itemObj->getKind();
 
@@ -1300,7 +1559,7 @@ void Race2D::setUsisi(int, ECharID) {}
 
 void Race2D::alarmX(int no, f32 &x)
 {
-    x = mAlarm[no].mStep * 0.5f + mAlarm[no].mBase;
+    x = (f32)mAlarm[no].mStep * 0.5f + (f32)mAlarm[no].mBase;
 }
 
 void Race2D::getStartScaleA(int frame, f32 &scale)
@@ -1333,13 +1592,15 @@ void Race2D::getStartScaleB(int frame, f32 &scale)
 
 void Race2D::getStartSpeedMeterScale(int frame, int no, f32 &scale)
 {
-    int t = frame - no * 4;
-    if (t < 0)
+    if (frame - no * 4 < 0)
         scale = 0.0f;
-    else if (t < 9)
-        scale = 1.2f * t / 9.0f;
-    else if (t < 13)
-        scale = -0.20000005f * (t - 9) * 0.25f + 1.2f;
+    else if (frame - no * 4 < 9)
+        scale = (frame - no * 4) * 1.2f / 9.0f;
+    else if (frame - no * 4 < 13)
+    {
+        f32 s = (frame - no * 4 - 9) * -0.20000005f;
+        scale = s * 0.25f + 1.2f;
+    }
     else
         scale = 1.0f;
 }
