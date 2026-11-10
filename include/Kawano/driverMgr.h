@@ -48,6 +48,12 @@ public:
 
     u16 getJntNo(u16 i) const { return _c[i]; }
 
+    static void checkAnmID(u8 anmID)
+    {
+#line 231
+        JUT_MINMAX_ASSERT(0, anmID, 82);
+    }
+
 
     static const u8 mscAnm2SoundList[82];
     static const u8 msAnmMRAMList[11];
@@ -80,6 +86,7 @@ public:
 
     u8 getGoodB2Flag(int dataID) { return _7e0[dataID]; }
     u8 getHokanDamageCnt() { return _24; }
+    int getBlendTime(int i) { return mBlendTimes[i]; }
 
     // Inline/Unused
     bool IsAllARAMDMAFinished();

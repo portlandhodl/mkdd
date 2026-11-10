@@ -366,13 +366,13 @@ void DriverModel::init(int driverNo)
 
     init_ik(driverNo);
 
-    m_4f4 = mState;
+    mBeforeState = mState;
     m_4f8 = mState;
     mBeforeState = mState;
     m_500 = 3;
     m_504 = 1;
-    mNext_mState_Hokan = mState;
-    m_50c = mBeforeState;
+    next_mState_Hokan = mState;
+    next_before_mState_Hokan = mBeforeState;
     m_510 = -1;
     m_514 = 0;
 
@@ -864,7 +864,7 @@ void DriverModel::StartAnimation(StateEnum state)
 
 simple:
     mBeforeState = mState;
-    m_50c = mBeforeState;
+    next_before_mState_Hokan = mBeforeState;
     mState = state;
     return;
 
@@ -882,16 +882,202 @@ no_ac:
     m_c8 = 1;
 }
 
+void DriverModel::updateFrame()
+{
+    f32 rate = m_668.mCurrentValue;
+    for (int blend_num = 0; blend_num < 2; blend_num++) {
+#line 1789
+        JUT_MINMAX_ASSERT(0, blend_num, 2);
+        mAnmID = msAnmBlendList[0x96][blend_num];
+#line 1791
+        JUT_MINMAX_ASSERT(0, mAnmID, 82);
+        if (mAnmID != 0 && getAnmTransformPtr(mAnmID)) {
+            s32 frame = (s32)(rate * getAnmTransformPtr(mAnmID)->getFrameMax() + 0.5f);
+            if (frame == getAnmTransformPtr(mAnmID)->getFrameMax())
+                frame = 0;
+            mAnmFrame[mAnmID] = frame;
+        }
+    }
+    m_668.update();
+
+    rate = m_688.mCurrentValue;
+    for (int blend_num = 0; blend_num < 2; blend_num++) {
+#line 1789
+        JUT_MINMAX_ASSERT(0, blend_num, 2);
+        mAnmID = msAnmBlendList[0x97][blend_num];
+#line 1791
+        JUT_MINMAX_ASSERT(0, mAnmID, 82);
+        if (mAnmID != 0 && getAnmTransformPtr(mAnmID)) {
+            s32 frame = (s32)(rate * getAnmTransformPtr(mAnmID)->getFrameMax() + 0.5f);
+            if (frame == getAnmTransformPtr(mAnmID)->getFrameMax())
+                frame = 0;
+            mAnmFrame[mAnmID] = frame;
+        }
+    }
+    m_688.update();
+
+    if (m_c8 == 0) {
+        updateFrame_base(&mDriveAnim, (StateEnum)mState);
+        if (m_ac != 0) {
+            updateFrame_base(&mTandemAnim, (StateEnum)mBeforeState);
+        } else if (mState < 63) {
+            if (mState >= 21) {
+            } else if (mState >= 13) {
+                goto add;
+            }
+        } else {
+            if (mState < 65)
+                goto add;
+        }
+        goto done;
+    add:
+        updateFrame_base(&mAdditiveAnim, (StateEnum)m_500);
+    done:;
+    }
+}
+
+void DriverModel::updateLoad_Animation()
+{
+#line 2465
+    JUT_MINMAX_ASSERT(0, next_mState_Hokan, 152);
+    mAnimBufMgr->resetFrame();
+    int anmID;
+
+    if ((u8)CheckDriverFlags_Hokan((StateEnum)next_mState_Hokan)) {
+#line 2471
+        JUT_MINMAX_ASSERT(0, next_before_mState_Hokan, 152);
+        anmID = msAnmBlendList[next_before_mState_Hokan][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        anmID = msAnmBlendList[next_before_mState_Hokan][1];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        anmID = msAnmBlendList[next_mState_Hokan][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        anmID = msAnmBlendList[next_mState_Hokan][1];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        return;
+    }
+
+    switch (next_mState_Hokan) {
+    case 13:
+    case 14:
+    case 15:
+    case 16: {
+        anmID = msAnmBlendList[next_mState_Hokan][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        if (mState >= 126) {
+            if (mState >= 128)
+                m_500 = 3;
+            else
+                m_500 = mState;
+        } else {
+            if (mState >= 55)
+                m_500 = 3;
+            else if (mState >= 49)
+                m_500 = mState;
+            else
+                m_500 = 3;
+        }
+        anmID = msAnmBlendList[m_500][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        anmID = msAnmBlendList[m_500][1];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        break;
+    }
+    case 17:
+    case 18:
+    case 19:
+    case 20: {
+        anmID = msAnmBlendList[next_mState_Hokan][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        if (mState >= 55 && mState < 61)
+            m_500 = mState;
+        else
+            m_500 = 4;
+        anmID = msAnmBlendList[m_500][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        anmID = msAnmBlendList[m_500][1];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        break;
+    }
+    case 9:
+    case 10:
+    case 11:
+    case 12: {
+        anmID = msAnmBlendList[next_mState_Hokan][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        m_500 = 0;
+        anmID = msAnmBlendList[m_500][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        break;
+    }
+    case 63:
+    case 64: {
+        anmID = msAnmBlendList[next_mState_Hokan][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        m_500 = next_mState_Hokan + 63;
+        anmID = msAnmBlendList[m_500][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        anmID = msAnmBlendList[m_500][1];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        break;
+    }
+    default: {
+        anmID = msAnmBlendList[next_mState_Hokan][0];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        anmID = msAnmBlendList[next_mState_Hokan][1];
+        if (!IsAnmResInMRAM(anmID))
+            mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
+        break;
+    }
+    }
+}
+
+void DriverModel::updateLoad()
+{
+    if (mState == next_mState_Hokan && m_504 == 0)
+        return;
+
+    updateLoad_Animation();
+    mAnimBufMgr->resetFrameSound();
+
+#line 2565
+    JUT_MINMAX_ASSERT(0, next_mState_Hokan, 152);
+    u8 anmID = (u8)msAnmBlendList[next_mState_Hokan][0];
+    DriverLoader::checkAnmID(anmID);
+    int sndNo = DriverLoader::mscAnm2SoundList[anmID];
+    if (!IsAnmSoundResInMRAM(sndNo))
+        mAnimBufMgr->CheckAndLoadAnimSoundAvailable(sndNo, mDataID);
+    if (mAnimBufMgr->mRes0 == 0)
+        m_cc = 1;
+    if (mAnimBufMgr->mRes4 == 0)
+        m_d0 = 1;
+}
+
+#pragma inline_depth(0)
 int DriverModel::updateCheckRenew_Animation()
 {
     int result = mAnimBufMgr->CheckRenew();
     if (result == -1)
         return 0;
     if (result != 1) {
-        if (m_cc == 0) {
-            m_cc = 0;
-            return 1;
-        }
+        if (m_cc == 0)
+            goto L_367C;
     }
 #line 2598
     JUT_MINMAX_ASSERT(0, mBeforeState, 152);
@@ -977,3 +1163,228 @@ L_367C:
     return 1;
 }
 
+
+#pragma inline_depth(4)
+int DriverModel::updateCheckRenew()
+{
+    int result = updateCheckRenew_Animation();
+    if (result != 0) {
+        int renewSound = mAnimBufMgr->CheckRenewSound();
+        if (renewSound == -1) {
+            result = 0;
+        } else {
+            if (renewSound == 1 || m_d0 != 0) {
+                u8 anmID = (u8)msAnmBlendList[next_mState_Hokan][0];
+                DriverLoader::checkAnmID(anmID);
+                void *sound = mAnimBufMgr->GetSoundPtr(DriverLoader::mscAnm2SoundList[anmID]);
+                GameAudio::CharacterSoundMgr *mgr = mCharSoundMgr;
+                mgr->mAnimator->startAnimation((const JAUSoundAnimation *)sound, false, 1.0f, 1.0f);
+                *((u8 *)mgr->mStarter + 4) = mgr->getKartSound()->mKartCount;
+            }
+            m_d0 = 0;
+            result = 1;
+        }
+    }
+#line 2684
+    JUT_ASSERT(result != 0);
+    return result;
+}
+
+int DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
+{
+    switch (stt) {
+    case 0: case 1: case 3:
+    case 37: case 38: case 39: case 40: case 41:
+    case 49: case 50: case 51: case 52: case 53: case 54:
+        return DriverManager::ptr()->getBlendTime(0);
+    case 42: case 48:
+        return 10;
+    case 69: case 72:
+        return DriverManager::ptr()->getBlendTime(1);
+    case 70: case 71: case 73: case 74:
+        return DriverManager::ptr()->getBlendTime(2);
+    case 75: case 76:
+        return m_e0 == 0 ? DriverManager::ptr()->getBlendTime(3) : DriverManager::ptr()->getBlendTime(4);
+    case 77: case 78:
+        return DriverManager::ptr()->getBlendTime(5);
+    case 79: case 80:
+        return DriverManager::ptr()->getBlendTime(6);
+    case 81: case 82: case 83: case 84:
+        return DriverManager::ptr()->getBlendTime(7);
+    case 108: case 109:
+        return DriverManager::ptr()->getBlendTime(25);
+    case 110:
+        return DriverManager::ptr()->getBlendTime(27);
+    case 91: case 92:
+        return DriverManager::ptr()->getBlendTime(12);
+    case 93: case 149:
+        return DriverManager::ptr()->getBlendTime(14);
+    case 94:
+        return DriverManager::ptr()->getBlendTime(15);
+    case 95:
+        return DriverManager::ptr()->getBlendTime(16);
+    case 97: case 99: case 101: case 103: case 121:
+        return DriverManager::ptr()->getBlendTime(18);
+    case 96: case 98: case 100: case 102: case 122:
+        return DriverManager::ptr()->getBlendTime(17);
+    case 104:
+        return DriverManager::ptr()->getBlendTime(19);
+    case 105:
+        return DriverManager::ptr()->getBlendTime(21);
+    case 106: case 107:
+        return DriverManager::ptr()->getBlendTime(24);
+    case 117:
+        return DriverManager::ptr()->getBlendTime(28);
+    case 111:
+        if (mBeforeState < 108) {
+            if (mBeforeState == 74)
+                return DriverManager::ptr()->getBlendTime(13);
+            if (mBeforeState < 74) {
+                if (mBeforeState == 71)
+                    return DriverManager::ptr()->getBlendTime(13);
+                return DriverManager::ptr()->getBlendTime(26);
+            }
+            if (mBeforeState >= 93)
+                return DriverManager::ptr()->getBlendTime(26);
+            if (mBeforeState >= 91)
+                return DriverManager::ptr()->getBlendTime(13);
+            return DriverManager::ptr()->getBlendTime(26);
+        }
+        if (mBeforeState == 117)
+            return DriverManager::ptr()->getBlendTime(29);
+        if (mBeforeState < 117)
+            return DriverManager::ptr()->getBlendTime(26);
+        if (mBeforeState >= 125)
+            return DriverManager::ptr()->getBlendTime(26);
+        if (mBeforeState >= 123)
+            return DriverManager::ptr()->getBlendTime(33);
+        return DriverManager::ptr()->getBlendTime(26);
+    case 112:
+        if (mBeforeState < 125) {
+            if (mBeforeState >= 123)
+                return DriverManager::ptr()->getBlendTime(33);
+        }
+        return DriverManager::ptr()->getBlendTime(26);
+    case 113: case 114: case 115: case 116:
+        return DriverManager::ptr()->getBlendTime(30);
+    case 118: case 119:
+        return DriverManager::ptr()->getBlendTime(31);
+    case 120:
+        return DriverManager::ptr()->getBlendTime(32);
+    case 123: case 124:
+        return DriverManager::ptr()->getBlendTime(34);
+    case 125:
+        return DriverManager::ptr()->getBlendTime(35);
+    case 126: case 127:
+        return DriverManager::ptr()->getBlendTime(35);
+    case 128: case 129: case 130: case 131: case 132: case 133: case 134: case 135:
+        return DriverManager::ptr()->getBlendTime(35);
+    case 136: case 137: case 138: case 139:
+        return DriverManager::ptr()->getBlendTime(38);
+    default:
+        return 5;
+    }
+}
+
+
+bool DriverModel::createModel(JKRSolidHeap *heap, u32 a, u32 b)
+{
+    if (ExModel::createDifferedModel(heap, a, 0x1080200, true)) {
+        m_d8 = 1;
+        makeSharedDL();
+        m_d8 = 0;
+        lock();
+        FeelingMgr::ptr()->createModel(this, heap, a, b);
+
+        if (mCharID == 19) {
+        } else if (mCharID >= 19) {
+        } else if (mCharID >= 18) {
+            OsageMgr::ptr()->createModel(this, heap, a, b);
+        } else {
+        }
+    }
+
+    LaurelMgr::ptr()->createModel(this, heap, a, b);
+    mTPAnim->setup(this);
+    return true;
+}
+
+void DriverModel::setCurrentViewNo(u32 viewNo)
+{
+    ExModel::setCurrentViewNo(viewNo);
+
+    if (mCharID == 19) {
+    } else if (mCharID >= 19) {
+    } else if (mCharID >= 18) {
+        OsageMgr::ptr()->setCurrentViewNo(this, viewNo);
+    }
+    LaurelMgr::ptr()->setCurrentViewNo(this, viewNo);
+
+    MtxPtr mtx = RaceMgr::getManager()->getKartDrawer(mKartNum)->getLight(viewNo)->getEffectMtx();
+    setEffectMtx(mtx, 1);
+}
+
+void DriverModel::setItem(ItemObj *item)
+{
+    if (!m_b8)
+        StartJuggle();
+    m_b8 = 1;
+    mItem = item;
+}
+
+void DriverModel::resetItem()
+{
+    m_b8 = 0;
+    mItem = nullptr;
+}
+
+Mtx *DriverModel::getMtxP_HandR()
+{
+    return &getModel()->mMtxBuffer->getAnmMtx(mDriverLoader->getJntNo(16));
+}
+
+Mtx *DriverModel::getMtxP_HandR2()
+{
+    return &getModel()->mMtxBuffer->getAnmMtx(mDriverLoader->getJntNo(17));
+}
+
+Mtx *DriverModel::getMtxP(int ctrlNo)
+{
+#line 4209
+    JUT_MINMAX_ASSERT(0, ctrlNo, 27);
+    u16 jntNo = mDriverLoader->getJntBindNo(ctrlNo);
+    if (jntNo == 0xffff)
+        return nullptr;
+    return &getModel()->mMtxBuffer->getAnmMtx(jntNo);
+}
+
+J3DAnmTransform *DriverModel::getAnmTransformPtr(int anmID)
+{
+    int keepID = DriverLoader::convAnmIDToKeepID((DriverLoader::AnmEnum)anmID);
+    if (keepID >= 0)
+        return mKeepAnmTrans[keepID];
+    J3DAnmTransform *anm = (J3DAnmTransform *)mAnimBufMgr->GetPtr(anmID);
+    if (anm != nullptr)
+        return anm;
+    return nullptr;
+}
+
+int DriverModel::IsAnmResInMRAM(int anmID)
+{
+    int ret = 0;
+    if (DriverLoader::convAnmIDToKeepID((DriverLoader::AnmEnum)anmID) >= 0)
+        ret = 1;
+    return ret;
+}
+
+int DriverModel::IsAnmSoundResInMRAM(int sndID)
+{
+    int ret = 0;
+    if (DriverLoader::convSndIDToKeepID((DriverLoader::AnmSoundEnum)sndID) >= 0)
+        ret = 1;
+    return ret;
+}
+
+DriverModel::~DriverModel()
+{
+}

@@ -459,7 +459,7 @@ public:
     int updateCheckRenew_Animation();
     int updateCheckRenew();
     void updateBlendCount();
-    void updateSetBlendWeight_GetBlendTime(StateEnum);
+    int updateSetBlendWeight_GetBlendTime(StateEnum);
     void updateSetBlendWeight();
     void BacktoDWait() { StartAnimation((StateEnum)0x95); }
     void setItem(ItemObj *);
@@ -640,8 +640,8 @@ public:
     s32 mBeforeState;                            // 0x4FC
     s32 m_500;                                   // 0x500
     s32 m_504;                                   // 0x504
-    s32 mNext_mState_Hokan;                      // 0x508
-    s32 m_50c;                                   // 0x50C
+    s32 next_mState_Hokan;                       // 0x508
+    s32 next_before_mState_Hokan;                // 0x50C
     s32 m_510;                                   // 0x510
     s32 m_514;                                   // 0x514
     DriversAnimator mDriveAnim;                  // 0x518..0x588
