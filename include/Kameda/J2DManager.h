@@ -65,6 +65,7 @@ public:
     static int mStatus2Kart[4];      // 0x803fba10
     static J2DManager *mThis;        // 0x80416288
     static bool mNetFlag;            // 0x8041628c
+    static bool getNetFlag() { return mNetFlag; }
 
     JKRArchive *mArchive;
     J2DOrthoGraph *mOrtho;

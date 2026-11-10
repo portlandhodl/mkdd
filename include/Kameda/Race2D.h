@@ -14,12 +14,24 @@ public:
     // Inline/Unused
     Race2DParam();
     virtual ~Race2DParam() {}
+
+    void setX(f32 v) { mX = v; }
+    void setY(f32 v) { mY = v; }
+    void setS(f32 v) { mS = v; }
+
+    u8 mFlag;   // +0x04
+    f32 mUnk8;  // +0x08
+    f32 mX;     // +0x0c
+    f32 mY;     // +0x10
+    f32 mS;     // +0x14
 };
 
 class Race2DHioNode : public HioNode {
 public:
-    Race2DHioNode();
+    Race2DHioNode(const char *name) : HioNode(name, &mParam, 0, 0) {}
     virtual ~Race2DHioNode() {}
+
+    Race2DParam *getParam() { return &mParam; }
 
     Race2DParam mParam;
 };
@@ -165,7 +177,7 @@ public:
             JGeometry::TVec2f mShineBase[4]; // 0xd00
             JGeometry::TVec2f mShinePos[5];  // 0xd20
             int mBattleTimeCount[4];         // 0xd48 (calcTimeFrame state counters)
-            u32 mShineKind[4];               // 0xd58
+            int mShineKind[4];               // 0xd58
             int mTimeColorFrame;             // 0xd68
             int mBombColorFrame;             // 0xd6c
             int mBombWinFrame[4];            // 0xd70

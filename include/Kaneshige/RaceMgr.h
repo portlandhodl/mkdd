@@ -140,6 +140,7 @@ public:
     bool isWaitDemoMode() const { return mRaceInfo->isWaitDemo(); }
     bool isLastWaitDemo() const { return mRaceInfo->isLastWaitDemo(); } 
     int getKartNumber() const { return mRaceInfo->getKartNumber(); }
+    int getPlayerNumber() const { return mRaceInfo->getPlayerKartNumber(); }
     int getAwardKartNo() const { return mRaceInfo->getAwardKartNo(); }
     int getConsoleNumber() const { return mRaceInfo->getConsoleNumber(); }
     int getItemSlotType() const { return mRaceInfo->getItemSlotType(); }

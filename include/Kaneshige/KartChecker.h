@@ -140,6 +140,7 @@ public:
     Course::Sector *getCheckSector() const { return mSector2; }
 
     static bool isInsideSector(f32 unitDist) { return (unitDist >= 0.0f && unitDist < 1.0f); }
+    static int getWinBombPoint() { return sBombPointFull; }
     static int getWinBombPointForMenu(int p1)
     {
         if (p1 <= 2)

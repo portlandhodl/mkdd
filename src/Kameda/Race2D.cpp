@@ -11,6 +11,15 @@
 #include "JSystem/JUtility/JUTAssert.h"
 #include "dolphin/os.h"
 #include "mathHelper.h"
+#include "Osako/ResMgr.h"
+#include "Kaneshige/Course/Course.h"
+#include "std/math.h"
+
+namespace std
+{
+inline f32 atan2(f32 y, f32 x) { return (f32)::atan2(y, x); }
+}
+#include "JSystem/JUtility/TColor.h"
 
 
 Race2D *Race2D::mThis;
@@ -309,7 +318,20 @@ static int sPreShinePlayer;
 static RaceTime sBestLapTime;
 static u8 sPreThunder[8];
 
-Race2D::Race2D(JKRHeap *) {
+Race2DParam::Race2DParam()
+{
+    mFlag = 1;
+    mUnk8 = 0.0f;
+    mY = 0.0f;
+    mX = 0.0f;
+    mS = 1.0f;
+}
+
+#pragma inline_depth(0)
+#pragma dont_inline on
+Race2D::Race2D(JKRHeap *)
+{
+    JGeometry::TVec2f tv(0.0f, 0.0f);
     /*
 J2DPane::getTranslateY() const {}
 J2DPane::getTranslateX() const {}
@@ -333,9 +355,12 @@ Race2DHioNode::Race2DHioNode(const char *) {}
 Race2DParam::~Race2DParam() {}
     */
 }
-
+#pragma dont_inline reset
+#pragma inline_depth(4)
 
 void Race2D::init() {}
+
+Race2D::~Race2D() {}
 
 void Race2D::drawPlayerMark() {}
 
@@ -520,7 +545,38 @@ f32 Race2D::getStartShineTimeScale(int frame)
 
 void Race2D::drawCourse() {}
 
-void Race2D::calc() {}
+#pragma inline_depth(0)
+void Race2D::calc()
+{
+    JGeometry::TVec2f v(1.0f, 2.0f);
+    Race2DHioNode hio("x");
+    int w = KartChecker::getWinBombPoint();
+    int a = RCMGetManager()->getPlayerNumber();
+    int b = RCMGetManager()->getKartNumber();
+    bool m = RCMGetManager()->isMirror();
+    int c = RCMGetManager()->getConsoleNumber();
+    int d = RCMGetManager()->getTotalLapNumber();
+    f32 x = mMaskScreen->getTranslateX();
+    f32 y = mMaskScreen->getTranslateY();
+    bool n = J2DManager::getNetFlag();
+    ECourseID e = ResMgr::getCourseID();
+    Course *course = RCMGetCourse();
+    Race2DHioNode *node = (Race2DHioNode *)this;
+    Race2DParam *param = node->getParam();
+    param->setX(x);
+    param->setY(y);
+    param->setS(1.0f);
+    JUTColor col;
+    _GXColor gx = { 0, 0, 0, 0 };
+    col.set(gx);
+    JUTColor col2(col);
+    JUTColor col3(0xffffffff);
+    f32 ang = std::atan2(1.0f, 2.0f);
+    a += b + c + d + n + e + course != 0;
+    a += w;
+    m = m && ang != 0.0f && col2.r != 0 && col3.r != 0 && v.x != 0.0f;
+}
+#pragma inline_depth(4)
 
 void Race2D::calcPlayerMark() {}
 
@@ -584,8 +640,185 @@ void Race2D::setEffectPos(int) {}
 
 void Race2D::calcEscape() {}
 
-void Race2D::calcTimeFrame(bool, int) {}
+void Race2D::calcTimeFrame(bool shineFlag, int player)
+{
+    int mgTime = RCMGetManager()->getMiniGameTime().get();
+    u8 flag = shineFlag;
+    int ms = mgTime % 1000;
+    for (int no = 0; no < RCMGetManager()->getStatusNumber(); no++)
+    {
+        int kartNo = J2DManager::getStatus2Kart(no);
+        if (flag)
+        {
+            if (sPreShineFlag != flag)
+            {
+                if (player == kartNo)
+                {
+                    mBattleTimeCount[no] = 1;
+                    mShineKind[no] = 10;
+                }
+                else
+                {
+                    mBattleTimeCount[no] = 2;
+                    mShineKind[no] = 0;
+                }
+                continue;
+            }
+        }
+        if (!shineFlag)
+        {
+            if (sPreShineFlag != flag)
+            {
+                if (sPreShinePlayer == kartNo)
+                {
+                    mBattleTimeCount[no] = 3;
+                    mShineKind[no] = 0x13;
+                }
+                else
+                {
+                    mBattleTimeCount[no] = 4;
+                    mShineKind[no] = 9;
+                }
+                continue;
+            }
+        }
+        if (flag)
+        {
+            if (sPreShineFlag != flag)
+                goto L;
+            if (player == sPreShinePlayer)
+                goto L;
+            if (player == kartNo)
+            {
+                mBattleTimeCount[no] = 1;
+                mShineKind[no] = 10;
+            }
+            else if (sPreShinePlayer == kartNo)
+            {
+                mBattleTimeCount[no] = 3;
+                mShineKind[no] = 0x13;
+            }
+            else
+            {
+                mBattleTimeCount[no] = 2;
+                mShineKind[no] = 0;
+            }
+            continue;
+        }
+    L:
+        if ((u8)shineFlag != sPreShineFlag)
+            continue;
+        if (player != sPreShinePlayer)
+            continue;
 
+        switch (mBattleTimeCount[no])
+        {
+        case 0:
+            mShineKind[no] = 0;
+            break;
+        case 1:
+        {
+            int k = ++mShineKind[no];
+            if (k > 0x13)
+                mShineKind[no] = 0x13;
+            if (ms == 100)
+            {
+                mBattleTimeCount[no] = 5;
+                if (mgTime > 10100)
+                    mShineKind[no] = 30;
+                else
+                    mShineKind[no] = 20;
+            }
+            break;
+        }
+        case 2:
+        {
+            int k = ++mShineKind[no];
+            if (k > 9)
+                mShineKind[no] = 9;
+            if (ms == 100)
+            {
+                mBattleTimeCount[no] = 6;
+                if (mgTime > 10100)
+                    mShineKind[no] = 40;
+                else
+                    mShineKind[no] = 0;
+            }
+            break;
+        }
+        case 3:
+        {
+            int k = --mShineKind[no];
+            if (k < 10)
+                mShineKind[no] = 10;
+            if (ms == 100)
+            {
+                mBattleTimeCount[no] = 6;
+                if (mgTime > 10100)
+                    mShineKind[no] = 40;
+                else
+                    mShineKind[no] = 0;
+            }
+            break;
+        }
+        case 4:
+        {
+            int k = --mShineKind[no];
+            if (k < 0)
+                mShineKind[no] = 0;
+            if (ms == 100)
+            {
+                mBattleTimeCount[no] = 6;
+                if (mgTime > 10100)
+                    mShineKind[no] = 40;
+                else
+                    mShineKind[no] = 0;
+            }
+            break;
+        }
+        case 5:
+            if (mgTime > 10100)
+            {
+                int k = ++mShineKind[no];
+                if (k > 0x27)
+                    mShineKind[no] = 0x27;
+                if (ms == 100)
+                    mShineKind[no] = 30;
+            }
+            else
+            {
+                int k = ++mShineKind[no];
+                if (k > 0x1d)
+                    mShineKind[no] = 0x1d;
+                if (ms == 100)
+                    mShineKind[no] = 20;
+            }
+            break;
+        case 6:
+            if (mgTime > 10100)
+            {
+                int k = ++mShineKind[no];
+                if (k > 0x31)
+                    mShineKind[no] = 0x31;
+                if (ms == 100)
+                    mShineKind[no] = 40;
+            }
+            else
+            {
+                int k = ++mShineKind[no];
+                if (k > 9)
+                    mShineKind[no] = 9;
+                if (ms == 100)
+                    mShineKind[no] = 0;
+            }
+            break;
+        default:
+#line 4473
+            JUT_ASSERT_F(0, "%s", "0");
+            break;
+        }
+    }
+}
 J2DPicture::TCornerColor Race2D::getCornerColor(int idx)
 {
     J2DPicture::TCornerColor colors;
@@ -698,33 +931,24 @@ void Race2D::getItemInfo(int no, int type, int which, f32 &x, f32 &y, f32 &z)
     z = mItemPos[no][type][which].z;
 }
 
+void Race2D::getItemPos(int, int, JGeometry::TVec2f &) {}
+
+void Race2D::itemUseInit() {}
+
+void Race2D::itemUseMain() {}
+
 void Race2D::decideItem(int no, u8 driverNo, int &item)
 {
 #line 4905
     JUT_MINMAX_ASSERT(0, no, 4);
     JUT_MINMAX_ASSERT(0, driverNo, 2);
 
-    int itemKind = ItemObjMgr::gItemMgr->getStockItem(J2DManager::getStatus2Kart(no), driverNo);
-    ItemObj *itemObj = ItemObjMgr::gItemMgr->getKartEquipItem(J2DManager::getStatus2Kart(no), driverNo);
+    int itemKind = ItemObjMgr::gItemMgr->getStockItem(J2DManager::getStatus2Kart(no), (u8)driverNo);
+    ItemObj *itemObj = ItemObjMgr::gItemMgr->getKartEquipItem(J2DManager::getStatus2Kart(no), (u8)driverNo);
     if (itemKind == 0x10 && itemObj != NULL)
         itemKind = itemObj->getKind();
 
-    if (itemObj == NULL)
-    {
-        if (itemKind == 0x15)
-        {
-            int kartNo = J2DManager::getStatus2Kart(no);
-            if (RCMGetManager()->mRaceInfo->getKartInfo(kartNo)->getDriverCharID(driverNo) == 8)
-                itemKind = 0x1a;
-        }
-        if (itemKind == 0xb)
-        {
-            int kartNo = J2DManager::getStatus2Kart(no);
-            if (RCMGetManager()->mRaceInfo->getKartInfo(kartNo)->getDriverCharID(driverNo) == 0xc)
-                itemKind = 0x1b;
-        }
-    }
-    else
+    if (itemObj != NULL)
     {
         switch (itemKind)
         {
@@ -738,33 +962,45 @@ void Race2D::decideItem(int no, u8 driverNo, int &item)
         case 0x11:
             switch (itemObj->getSuccessionItemNum())
             {
+            case 0:
+                break;
             case 1:
                 itemKind = 0x1c;
                 break;
             case 2:
                 itemKind = 0x17;
                 break;
+            default:
+                break;
             }
             break;
         case 0x12:
             switch (itemObj->getSuccessionItemNum())
             {
+            case 0:
+                break;
             case 1:
                 itemKind = 0x1d;
                 break;
             case 2:
                 itemKind = 0x18;
                 break;
+            default:
+                break;
             }
             break;
         case 0x13:
             switch (itemObj->getSuccessionItemNum())
             {
+            case 0:
+                break;
             case 1:
                 itemKind = 0x1e;
                 break;
             case 2:
                 itemKind = 0x19;
+                break;
+            default:
                 break;
             }
             break;
@@ -775,6 +1011,33 @@ void Race2D::decideItem(int no, u8 driverNo, int &item)
                 itemKind = 0x1a;
             break;
         }
+        }
+    }
+    else
+    {
+        if (itemKind == 0x15)
+        {
+            int kartNo = J2DManager::getStatus2Kart(no);
+#line 173
+            JUT_MINMAX_ASSERT(0, kartNo, 8);
+            KartInfo *ki = &gRaceInfo.mKartInfo[kartNo];
+#line 142
+            JUT_MINMAX_ASSERT(0, driverNo, 2);
+            const u16 *db = *(const u16 **)((u8 *)ki + (u8)driverNo * 8 + 8);
+            if ((db ? *db : 0) == 8)
+                itemKind = 0x1a;
+        }
+        if (itemKind == 0xb)
+        {
+            int kartNo = J2DManager::getStatus2Kart(no);
+#line 173
+            JUT_MINMAX_ASSERT(0, kartNo, 8);
+            KartInfo *ki = &gRaceInfo.mKartInfo[kartNo];
+#line 142
+            JUT_MINMAX_ASSERT(0, driverNo, 2);
+            const u16 *db = *(const u16 **)((u8 *)ki + (u8)driverNo * 8 + 8);
+            if ((db ? *db : 0) == 0xc)
+                itemKind = 0x1b;
         }
     }
     item = itemKind;
