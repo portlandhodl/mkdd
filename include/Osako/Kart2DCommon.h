@@ -43,8 +43,9 @@ public:
     ResTIMG *getCupNameTexture(ERaceGpCup cup) { return mCupNameTex[cup]; }
     ResTIMG *getBattleIconTexture(int idx) { return mBattleIconTex[idx]; }
     ResTIMG *getPartsLocName(int idx) { return mPartsLocName[idx]; }
-#line 152
-    ResTIMG *getCharIconTexture(ECharID id)
+    ResTIMG *getCharIconTexture(ECharID id) { return mCharIconTex[id]; }
+#line 153
+    ResTIMG *getCharIconTextureChecked(ECharID id)
     {
         JUT_MINMAX_ASSERT(1, id, cCharIDMax);
         return mCharIconTex[id];

@@ -9,6 +9,7 @@
 #include "JSystem/J2D/J2DPane.h"
 #include "JSystem/J2D/J2DPicture.h"
 #include "JSystem/J2D/J2DScreen.h"
+#include "JSystem/J2D/J2DAnimation.h"
 
 #include "Kaneshige/HioMgr.h"
 #include "Osako/kartPad.h"
@@ -46,10 +47,33 @@ public:
         JGeometry::TVec2f b; // 0x8
     }; // size: 0x10
 
+    struct AnimVal {
+        J2DAnmBase *mAnm; // 0x0
+        f32 mVal;         // 0x4
+    }; // size: 0x8
+
     struct RankRow {
         data2D main;     // 0x00
         data2D sub[3];   // 0x0c
     }; // size: 0x30
+
+    struct TALinePics {
+        J2DPicture *namePics[3]; // 0x00
+        J2DPicture *idPics[3];   // 0x0c
+        J2DPicture *kartPic;     // 0x18
+        J2DPicture *charPic1;    // 0x1c
+        J2DPicture *charPic2;    // 0x20
+        J2DPicture *msPics[3];   // 0x24
+        J2DPicture *secPics[2];  // 0x30
+        J2DPicture *minPics[2];  // 0x38
+    }; // size: 0x40
+
+    struct TABestPics {
+        J2DPicture *namePics[3]; // 0x00
+        J2DPicture *msPics[3];   // 0x0c
+        J2DPicture *secPics[2];  // 0x18
+        J2DPicture *minPics[2];  // 0x20
+    }; // size: 0x28
 
     struct SelPanes {
         data2D parts[6];        // 0x00
@@ -133,7 +157,7 @@ private:
     Result2DHioNode *mNode;              // 0x000
     J2DGrafContext *mOrtho;              // 0x004
     J2DScreen *mScreenPw;                // 0x008
-    PLACEHOLDER_BYTES(0xc, 0x4c);
+    J2DTextBox *mPassWDText[16];         // 0x00c
     J2DScreen *mScreen;                  // 0x04c
     J2DScreen *mWinScreens[6];           // 0x050
     int mEntries;                        // 0x068
@@ -178,14 +202,16 @@ private:
     data2D mPointRows[8][2];             // 0x13b8
     PLACEHOLDER_BYTES(0x1478, 0x1710);
     J2DScreen *mScreenMG;                // 0x1710
-    PLACEHOLDER_BYTES(0x1714, 0x1740);
-    f32 _1740[6];                        // 0x1740
-    JGeometry::TVec2f _1758[5];          // 0x1758
-    JGeometry::TVec2f _1780[6];          // 0x1780
-    f32 _17b0[4];                        // 0x17b0
-    JGeometry::TVec2f _17c0[5];          // 0x17c0
-    JGeometry::TVec2f _17e8[6];          // 0x17e8
-    PLACEHOLDER_BYTES(0x1818, 0x197c);
+    J2DScreen *mScreenMG2;               // 0x1714
+    J2DScreen *mTAScreens[11];           // 0x1718
+    AnimVal _1744[2];                    // 0x1744
+    AnimVal _1754[5];                    // 0x1754
+    AnimVal _177c[6];                    // 0x177c
+    AnimVal _17ac[2];                    // 0x17ac
+    AnimVal _17bc[5];                    // 0x17bc
+    AnimVal _17e4[6];                    // 0x17e4
+    TABestPics mTABest;                  // 0x1814
+    TALinePics mTALines[5];              // 0x183c
     int _197c;                           // 0x197c
     int _1980;                           // 0x1980
     int _1984;                           // 0x1984
@@ -226,6 +252,8 @@ private:
     void (Result2D::*mDrawFunc)();       // 0x1bf4
     void (Result2D::*mCalcFunc)();       // 0x1c00
     void (Result2D::*mAutoFunc)();       // 0x1c0c
+    PLACEHOLDER_BYTES(0x1c14, 0x1c18);
+    ResTIMG *mRankIconPics[3];        // 0x1c18
 }; // class Result2D
 
 #endif // RESULT2D_H

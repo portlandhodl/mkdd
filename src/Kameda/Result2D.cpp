@@ -1,6 +1,9 @@
 #include "Osako/Kart2DCommon.h"
 #include "Kameda/Result2D.h"
 #include "mathHelper.h"
+#include <stdio.h>
+#include "Osako/password.h"
+#include "Osako/ResMgr.h"
 #include "JSystem/JUtility/TColor.h"
 #include "JSystem/JMath/JMath.h"
 #include "Inagaki/GameAudioMain.h"
@@ -207,17 +210,17 @@ void Result2D::init() {
     J2DPane *pane;
     pane = mScreen->search(ot);
     pane->setAlpha(0);
-    _1740[2] = 0.0f;
-    _17b0[0] = 0.0f;
-    _1740[4] = 0.0f;
-    _17b0[2] = 0.0f;
+    _1744[0].mVal = 0.0f;
+    _17ac[0].mVal = 0.0f;
+    _1744[1].mVal = 0.0f;
+    _17ac[1].mVal = 0.0f;
     for (int i = 0; i < 5; i++) {
-        _1758[i].x = 0.0f;
-        _17c0[i].x = 0.0f;
+        _1754[i].mVal = 0.0f;
+        _17bc[i].mVal = 0.0f;
     }
     for (int i = 0; i < 6; i++) {
-        _1780[i].x = 0.0f;
-        _17e8[i].x = 0.0f;
+        _177c[i].mVal = 0.0f;
+        _17e4[i].mVal = 0.0f;
     }
     if (RaceMgr::getManager()->getRaceMode() == TIME_ATTACK) {
         calcTA(NULL);
@@ -230,11 +233,15 @@ void Result2D::draw() {
         bool _f;        // 0xf
         bool mGameOver; // 0x10
     };
-    PauseState *pause = (PauseState *)PauseManager::getManager();
-    if ((mNode->mParam.mFlag & 1) && !pause->_f && !pause->mGameOver && mDrawFlag
-        && (RaceMgr::getManager()->isReplayMode() || Goal2D::mDrawEndFlag)) {
-        mOrtho->setPort();
-        (this->*mDrawFunc)();
+    PauseState *pause;
+    if ((mNode->mParam.mFlag & 1) && ((pause = (PauseState *)PauseManager::getManager()), !pause->_f)) {
+        if (pause->mGameOver) {
+        } else {
+            if (mDrawFlag && (RaceMgr::getManager()->isReplayMode() || Goal2D::mDrawEndFlag)) {
+                mOrtho->setPort();
+                (this->*mDrawFunc)();
+            }
+        }
     }
 }
 
@@ -584,8 +591,9 @@ void Result2D::calcRaceRank() {
         }
     }
     for (int i = 0; i < 8; i++) {
+        JGeometry::TVec2f *sb = &mLineScale[i].b;
         J2DPane *pane2 = mRankRows[i].main.mPane;
-        pane2->updateScale(mLineScale[i].b.x, mLineScale[i].b.y);
+        pane2->updateScale(sb->x, sb->y);
         for (int j = 0; j < 3; j++) {
             J2DPane *sub = mRankRows[i].sub[j].mPane;
             sub->updateScale(mLineScale[i].a.x, mLineScale[i].a.y);
@@ -657,7 +665,160 @@ void Result2D::calcVS() {
     getResultLinePos(frame, _1988);
 }
 
-void Result2D::calcTA(KartGamePad *) {}
+void Result2D::calcTA(KartGamePad *pad) {
+    getResultLinePos(_197c, _1988);
+    f32 one = 1.0f;
+    if (_1ab0 || _1ab8) {
+        if (_197c < 60) {
+            _1744[0].mVal = (f32)_197c;
+        } else if (_197c < 180) {
+            _1744[0].mVal = 70.0f;
+        } else if (_197c < 240) {
+            _1744[0].mVal = (f32)(_197c - 80);
+        } else {
+            _1744[0].mVal = 170.0f;
+        }
+        f32 vzero = _17ac[0].mVal;
+        f32 v0 = vzero + one;
+        _17ac[0].mVal = v0;
+        if (v0 >= 80.0f) {
+            _17ac[0].mVal = 0.0f;
+        }
+        if (_1ab8) {
+            f32 v1a = _1744[1].mVal;
+                f32 v1 = v1a + one;
+            _1744[1].mVal = v1;
+            if (v1 >= 80.0f) {
+                _1744[1].mVal = 0.0f;
+            }
+            f32 v2a = _17ac[1].mVal;
+                f32 v2 = v2a + one;
+            _17ac[1].mVal = v2;
+            if (v2 >= 80.0f) {
+                _17ac[1].mVal = 0.0f;
+            }
+        } else {
+            _1744[1].mVal = 0.0f;
+            _17ac[1].mVal = 0.0f;
+        }
+        for (int i = 0; i < 5; i++) {
+            if (_1ab0 && i == _1ab4) {
+                f32 s0a = _1754[i].mVal;
+                f32 s0 = s0a + one;
+                _1754[i].mVal = s0;
+                if (s0 >= 80.0f) {
+                    _1754[i].mVal = 0.0f;
+                }
+                f32 s1a = _17bc[i].mVal;
+                f32 s1 = s1a + one;
+                _17bc[i].mVal = s1;
+                if (s1 >= 80.0f) {
+                    _17bc[i].mVal = 0.0f;
+                }
+            } else {
+                _1754[i].mVal = 0.0f;
+                _17bc[i].mVal = 0.0f;
+            }
+        }
+        for (int i = 0; i < 6; i++) {
+            f32 t0a = _177c[i].mVal;
+                f32 t0 = t0a + one;
+            _177c[i].mVal = t0;
+            if (t0 >= 160.0f) {
+                _177c[i].mVal = 0.0f;
+            }
+            if (_197c < 60) {
+                _17e4[i].mVal = 0.0f;
+            } else if (_197c < 180) {
+                f32 t1a = _17e4[i].mVal;
+                f32 t1 = t1a + one;
+                _17e4[i].mVal = t1;
+                if (t1 > 100.0f) {
+                    _17e4[i].mVal = 100.0f;
+                }
+            } else if (_197c < 240) {
+                f32 t1a = _17e4[i].mVal;
+                f32 t1 = t1a - one;
+                _17e4[i].mVal = t1;
+                if (t1 < 0.0f) {
+                    _17e4[i].mVal = 0.0f;
+                }
+            }
+        }
+        for (int i = 0; i < 5; i++) {
+            if (_1ab0 && i == _1ab4) {
+                mTAScreens[5 + i]->mIsVisible = true;
+            } else {
+                mTAScreens[5 + i]->mIsVisible = false;
+            }
+        }
+        if (_1ab8) {
+            mTAScreens[10]->mIsVisible = true;
+        } else {
+            mTAScreens[10]->mIsVisible = false;
+        }
+    }
+
+    _1744[0].mAnm->setFrame(_1744[0].mVal);
+    _17ac[0].mAnm->setFrame(_17ac[0].mVal);
+    _1744[1].mAnm->setFrame(_1744[1].mVal);
+    _17ac[1].mAnm->setFrame(_17ac[1].mVal);
+    for (int i = 0; i < 5; i++) {
+        _1754[i].mAnm->setFrame(_1754[i].mVal);
+        _17bc[i].mAnm->setFrame(_17bc[i].mVal);
+    }
+    for (int i = 0; i < 6; i++) {
+        _177c[i].mAnm->setFrame(_177c[i].mVal);
+        _17e4[i].mAnm->setFrame(_17e4[i].mVal);
+    }
+
+    for (int i = 0; i < 5; i++) {
+        mTAScreens[i]->animation();
+    }
+    for (int i = 0; i < 6; i++) {
+        mTAScreens[5 + i]->animation();
+    }
+
+    switch ((int)_1744[0].mVal) {
+    case 30:
+        GameAudio::Main::getAudio()->startSystemSe(0x2003b);
+        break;
+    case 34:
+        GameAudio::Main::getAudio()->startSystemSe(0x2003a);
+        break;
+    case 38:
+        GameAudio::Main::getAudio()->startSystemSe(0x20039);
+        break;
+    case 42:
+        GameAudio::Main::getAudio()->startSystemSe(0x20038);
+        break;
+    case 46:
+        GameAudio::Main::getAudio()->startSystemSe(0x20037);
+        break;
+    case 50:
+        GameAudio::Main::getAudio()->startSystemSe(0x20036);
+        break;
+    case 100:
+        GameAudio::Main::getAudio()->startSystemSe(0x20043);
+        break;
+    case 104:
+        GameAudio::Main::getAudio()->startSystemSe(0x20042);
+        break;
+    case 108:
+        GameAudio::Main::getAudio()->startSystemSe(0x20041);
+        break;
+    case 112:
+        GameAudio::Main::getAudio()->startSystemSe(0x20040);
+        break;
+    case 116:
+        GameAudio::Main::getAudio()->startSystemSe(0x2003f);
+        break;
+    case 120:
+        GameAudio::Main::getAudio()->startSystemSe(0x2003e);
+        break;
+    }
+    calcPASSWD(pad);
+}
 
 void Result2D::calcMG() {
     int frame = _197c;
@@ -1157,9 +1318,214 @@ void Result2D::setDrawMG() {
 
 int Result2D::getResultSelector() { return mResultSelector; }
 
-void Result2D::setRaceRank() {}
+void Result2D::setRaceRank() {
+    for (int i = 0; i < 11; i++) {
+        J2DPicture *pane = *(J2DPicture **)((u8 *)this + 0x350 + i * 12);
+        pane->setAlpha(mLayoutAlpha);
+    }
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 11; j++) {
+            mLines[i][j].mPane->mIsVisible = true;
+        }
+    }
 
-void Result2D::setGPRank() {}
+    for (int i = 0; i < 8; i++) {
+        int kartNo = gSequenceInfo.get_2b8(i);
+        int player;
+        if (kartNo < RaceMgr::getManager()->mRaceInfo->getStatusNumber()) {
+            player = -1;
+            if (kartNo == J2DManager::getStatus2Kart(0)) {
+                player = 0;
+            } else if (kartNo == J2DManager::getStatus2Kart(1)) {
+                if (gRaceInfo.getKartInfo(0)->getPad(1) != NULL) {
+                    player = 2;
+                } else {
+                    player = 1;
+                }
+            }
+            JUTColor color;
+            u8 alpha;
+            getFrameClr(player, color, alpha);
+            for (int j = 0; j < 3; j++) {
+                mLines[i][j].mPane->mIsVisible = true;
+                mLines[i][j].mPane->setAlpha(alpha);
+                mLines[i][j].mPane->setBlack(mWhiteColor[player][0]);
+            }
+            mLines[i][5].mPane->setBlack(color);
+            mLines[i][3].mPane->setBlack(color);
+        } else {
+            for (int j = 0; j < 3; j++) {
+                mLines[i][j].mPane->mIsVisible = false;
+            }
+            mLines[i][5].mPane->setBlack(mWhiteColor[3][0]);
+            mLines[i][3].mPane->setBlack(mWhiteColor[3][0]);
+        }
+
+        ECharID charID0 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
+        if (charID0 > 0 && charID0 < 0x15) {
+            mLines[i][6].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID0), 0);
+        }
+        ECharID charID1 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
+        if (charID1 > 0 && charID1 < 0x15) {
+            mLines[i][4].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID1), 0);
+        }
+
+        for (int j = 0; j < 8; j++) {
+            if (gSequenceInfo.getCourse() == 1) {
+                mLines[j][19].mPane->mIsVisible = false;
+            } else {
+                mLines[j][19].mPane->mIsVisible = true;
+                mLines[j][19].mPane->mScale.set(0.0f, 0.0f);
+                mLines[j][19].mPane->calcMtx();
+                int kart = gSequenceInfo.get_2d8(j);
+                int idx = 0;
+                while (idx < 8) {
+                    if (kart == gSequenceInfo.get_2f8(idx)) {
+                        break;
+                    }
+                    idx++;
+                }
+                int icon;
+                if (player < idx) {
+                    icon = 0;
+                } else if (player > idx) {
+                    icon = 2;
+                } else {
+                    icon = 1;
+                }
+                mLines[j][19].mPane->changeTexture(mRankIconPics[icon], 0);
+            }
+        }
+
+        int ms, sec, min;
+        RaceTime time = RaceMgr::getManager()->getKartChecker(kartNo)->getTotalTime();
+        if (time.get() != -1) {
+            time.get(&min, &sec, &ms);
+            mLines[i][8].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(ms % 10)), 0);
+            mLines[i][9].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((ms / 10) % 10)), 0);
+            mLines[i][10].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((ms / 100) % 10)), 0);
+            mLines[i][11].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(sec % 10)), 0);
+            mLines[i][12].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((sec / 10) % 10)), 0);
+            mLines[i][13].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(min % 10)), 0);
+            mLines[i][14].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((min / 10) % 10)), 0);
+        } else {
+            ResTIMG *dash = Kart2DCommon::ptr()->getAsciiTexture('-');
+            for (int j = 8; j < 15; j++) {
+                mLines[i][j].mPane->changeTexture(dash, 0);
+            }
+        }
+
+        int point = gSequenceInfo.getRankPoint(kartNo) - mLinePoint[i];
+        int hund = point / 100;
+        int tens = (point / 10) % 10;
+        int ones = point % 10;
+
+        if (hund != 0) {
+            if (hund >= 0 && hund < 10) {
+                mRankRows[i].sub[2].mPane->mIsVisible = true;
+                mRankRows[i].sub[2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)hund), 0);
+            }
+        } else {
+            mRankRows[i].sub[2].mPane->mIsVisible = false;
+        }
+        if (tens != 0) {
+            if (tens >= 0 && tens < 10) {
+                mRankRows[i].sub[1].mPane->mIsVisible = true;
+                mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+            }
+        } else if (hund != 0) {
+            mRankRows[i].sub[1].mPane->mIsVisible = true;
+            mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+        } else {
+            mRankRows[i].sub[1].mPane->mIsVisible = false;
+        }
+        if (ones >= 0 && ones < 10) {
+            mRankRows[i].sub[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)ones), 0);
+        }
+    }
+}
+
+void Result2D::setGPRank() {
+    int j;
+    for (int i = 0; i < 11; i++) {
+        J2DPicture *pane = *(J2DPicture **)((u8 *)this + 0x350 + i * 12);
+        pane->setAlpha(mLayoutAlpha);
+    }
+    for (int i = 0; i < 8; i++) {
+        for (j = 0; j < 11; j++) {
+            mLines[i][j].mPane->mIsVisible = false;
+        }
+    }
+
+    for (int i = 0; i < 8; i++) {
+        int kartNo = gSequenceInfo.get_2d8(i);
+        if (kartNo < RaceMgr::getManager()->mRaceInfo->getStatusNumber()) {
+            int player = -1;
+            if (kartNo == J2DManager::getStatus2Kart(0)) {
+                player = 0;
+            } else if (kartNo == J2DManager::getStatus2Kart(1)) {
+                if (gRaceInfo.getKartInfo(0)->getPad(1) != NULL) {
+                    player = 2;
+                } else {
+                    player = 1;
+                }
+            }
+            JUTColor color;
+            u8 alpha;
+            getFrameClr(player, color, alpha);
+            for (j = 0; j < 3; j++) {
+                mLines[i][j].mPane->mIsVisible = true;
+                mLines[i][j].mPane->setAlpha(alpha);
+                mLines[i][j].mPane->setBlack(mWhiteColor[player][0]);
+            }
+            mLines[i][5].mPane->setBlack(color);
+            mLines[i][3].mPane->setBlack(color);
+        } else {
+            for (j = 0; j < 3; j++) {
+                mLines[i][j].mPane->mIsVisible = false;
+            }
+            mLines[i][5].mPane->setBlack(mWhiteColor[3][0]);
+            mLines[i][3].mPane->setBlack(mWhiteColor[3][0]);
+        }
+
+        ECharID charID0 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
+        if (charID0 > 0 && charID0 < 0x15) {
+            mLines[i][6].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID0), 0);
+        }
+        ECharID charID1 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
+        if (charID1 > 0 && charID1 < 0x15) {
+            mLines[i][4].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID1), 0);
+        }
+
+        int point = gSequenceInfo.get_298(kartNo);
+        int hund = point / 100;
+        int tens = (point / 10) % 10;
+        int ones = point % 10;
+
+        if (hund != 0) {
+            if (hund >= 0 && hund < 10) {
+                mRankRows[i].sub[2].mPane->mIsVisible = true;
+                mRankRows[i].sub[2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)hund), 0);
+            }
+        } else {
+            mRankRows[i].sub[2].mPane->mIsVisible = false;
+        }
+        if (tens != 0) {
+            if (tens >= 0 && tens < 10) {
+                mRankRows[i].sub[1].mPane->mIsVisible = true;
+                mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+            }
+        } else if (hund != 0) {
+            mRankRows[i].sub[1].mPane->mIsVisible = true;
+            mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+        } else {
+            mRankRows[i].sub[1].mPane->mIsVisible = false;
+        }
+        if (ones >= 0 && ones < 10) {
+            mRankRows[i].sub[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)ones), 0);
+        }
+    }
+}
 
 void Result2D::setVS() {
     int num = RaceMgr::getManager()->getStatusNumber();
@@ -1199,7 +1565,109 @@ void Result2D::setVS() {
     }
 }
 
-void Result2D::setTA() {}
+void Result2D::setTA() {
+    int kartNo = J2DManager::getStatus2Kart(0);
+    KartInfo *info = gRaceInfo.getKartInfo(kartNo);
+    ECharID charID0 = info->getDriverCharID(0);
+    ECharID charID1 = info->getDriverCharID(1);
+    EKartID kartID = info->getKartID();
+    ECourseID course = ResMgr::msCourseID;
+
+    TARecord rec((u8)charID0, (u8)charID1, (u8)kartID, (u8)course);
+    rec.setName(&gSystemRecord.mDefaultName[0]);
+    TARecord lap((u8)charID0, (u8)charID1, (u8)kartID, (u8)course);
+    lap.setName(&gSystemRecord.mDefaultName[0]);
+
+    rec.setRaceTime(RaceMgr::getManager()->getKartChecker(kartNo)->getTotalTime());
+    lap.setRaceTime(*RaceMgr::getManager()->getKartChecker(kartNo)->getBestLapTime());
+
+    if (RaceMgr::getManager()->getKartChecker(kartNo)->isBestTotalTimeRenewal(4)) {
+        int rank = gSystemRecord.rankTARecord(course, rec);
+        if (rank >= 1 && rank <= 5) {
+            _1ab0 = 1;
+            _1ab4 = rank - 1;
+        }
+    }
+
+    TARecord bestLap = *gSystemRecord.getBestLap(course);
+    if (bestLap.isValid() && bestLap.less(lap)) {
+        gSystemRecord.setBestLap(course, lap);
+        _1ab8 = 1;
+    } else if (bestLap.getRaceTime().get() != -1) {
+        gSystemRecord.setBestLap(course, lap);
+        _1ab8 = 1;
+    }
+
+    if (_1ab0 || _1ab8) {
+        for (int i = 0; i < 5; i++) {
+            TARecord *r = gSystemRecord.getTARecord(course, i);
+            TALinePics &pics = mTALines[i];
+            if (r->isValid()) {
+                Kart2DCommon::ptr()->changeStringTexture((const char *)r, pics.namePics, 3);
+                for (int j = 0; j < 3; j++) {
+                    pics.idPics[j]->mIsVisible = true;
+                }
+                pics.charPic1->changeTexture(Kart2DCommon::ptr()->getCharIconTextureChecked(r->getCharID(0)), 0);
+                pics.charPic2->changeTexture(Kart2DCommon::ptr()->getCharIconTextureChecked(r->getCharID(1)), 0);
+                pics.kartPic->changeTexture(Kart2DCommon::ptr()->getKartIconTexture(r->getKartID()), 0);
+                RaceTime time = r->getRaceTime();
+                if (time.get() != -1) {
+                    int min, sec, ms;
+                    time.get(&min, &sec, &ms);
+                    Kart2DCommon::ptr()->changeNumberTexture(ms, pics.msPics, 3, true, false);
+                    Kart2DCommon::ptr()->changeNumberTexture(sec, pics.secPics, 2, true, false);
+                    Kart2DCommon::ptr()->changeNumberTexture(min, pics.minPics, 2, true, false);
+                } else {
+                    Kart2DCommon::ptr()->changeNumberTexture(0, pics.msPics, 3, true, true);
+                    Kart2DCommon::ptr()->changeNumberTexture(0, pics.secPics, 2, true, true);
+                    Kart2DCommon::ptr()->changeNumberTexture(0, pics.minPics, 2, true, true);
+                }
+            } else {
+                Kart2DCommon::ptr()->changeStringTexture("---", pics.namePics, 3);
+                for (int j = 0; j < 3; j++) {
+                    pics.idPics[j]->mIsVisible = false;
+                }
+                Kart2DCommon::ptr()->changeNumberTexture(0, pics.msPics, 3, true, true);
+                Kart2DCommon::ptr()->changeNumberTexture(0, pics.secPics, 2, true, true);
+                Kart2DCommon::ptr()->changeNumberTexture(0, pics.minPics, 2, true, true);
+            }
+        }
+
+        TARecord *best = gSystemRecord.getBestLap(course);
+        if (best->isValid()) {
+            Kart2DCommon::ptr()->changeStringTexture((const char *)best, mTABest.namePics, 3);
+            RaceTime time = best->getRaceTime();
+            if (time.get() != -1) {
+                int min, sec, ms;
+                time.get(&min, &sec, &ms);
+                Kart2DCommon::ptr()->changeNumberTexture(ms, mTABest.msPics, 3, true, false);
+                Kart2DCommon::ptr()->changeNumberTexture(sec, mTABest.secPics, 2, true, false);
+                Kart2DCommon::ptr()->changeNumberTexture(min, mTABest.minPics, 2, true, false);
+            } else {
+                Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.msPics, 3, true, true);
+                Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.secPics, 2, true, true);
+                Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.minPics, 2, true, true);
+            }
+        } else {
+            Kart2DCommon::ptr()->changeStringTexture("---", mTABest.namePics, 3);
+            Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.msPics, 3, true, true);
+            Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.secPics, 2, true, true);
+            Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.minPics, 2, true, true);
+        }
+    } else {
+        _197c = 0xf2;
+    }
+
+    Password pw;
+    mPASSWDEnabled = pw.make(kartID, charID0, charID1, course, rec.getRaceTime(), lap.getRaceTime());
+    if (mPASSWDEnabled) {
+        for (int i = 0; i < 16; i++) {
+            char buf[2];
+            snprintf(buf, 2, "%c", pw.getPassAtIndex(i));
+            strncpy(mPassWDText[i]->getStringPtr(), buf, 2);
+        }
+    }
+}
 
 void Result2D::setMG() {
     int num = RaceMgr::getManager()->getStatusNumber();

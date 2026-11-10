@@ -149,10 +149,29 @@ public:
         return _40[kart][rank];
     }
 
+    int getCourse() { return mMapInfo.course; }
+
+    int get_298(int kart) {
+#line 226
+        return mRankPoint[kart];
+    }
+
     int get_2d8(int rank) {
 #line 240
         JUT_MINMAX_ASSERT(0, rank, 8);
         return _2d8[rank];
+    }
+
+    int get_2b8(int rank) {
+#line 235
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        return _2b8[rank];
+    }
+
+    int get_2f8(int rank) {
+#line 245
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        return _2f8[rank];
     }
 
     int get_3cc(int course) {
