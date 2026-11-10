@@ -5,6 +5,7 @@
 
 class RivalKart;
 class RivalBodyCtrl;
+class KartBody;
 struct stRandom;
 
 class RivalCtrlBase
@@ -27,7 +28,7 @@ public:
     RivalCtrlBase(RivalKart *);
     int getMyID();
     RivalBodyCtrl *getBodyCtrl();
-    void getBody();
+    KartBody *getBody();
     stRandom *getRandom();
     int getRankParamID();
     bool tstEndRace();
