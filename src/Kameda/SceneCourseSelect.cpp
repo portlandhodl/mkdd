@@ -1,5 +1,6 @@
 #include "Kameda/SceneCourseSelect.h"
 
+#include "Kameda/Cup2D.h"
 #include "Kameda/Scene.h"
 #include "Kameda/SequenceInfo.h"
 #include "Kaneshige/RaceInfo.h"
@@ -8,7 +9,9 @@
 #include "JSystem/J2D/J2DAnmLoader.h"
 #include "JSystem/JKernel/JKRFileLoader.h"
 #include "JSystem/JUtility/JUTAssert.h"
+#include "JSystem/JUtility/JUTTexture.h"
 #include "Osako/AppMgr.h"
+#include "Osako/Kart2DCommon.h"
 #include "Osako/MenuBackground.h"
 #include "Osako/MenuTitleLine.h"
 #include "Osako/RaceApp.h"
@@ -409,7 +412,8 @@ void SceneCourseSelect::course() {
     else
         mScreens[0]->search('NRandom')->hide();
 
-    if (mField394 != 0 && mField388 == 0) {
+    if (mField394 != 0) {
+        if (mField388 == 0) {
         mField394++;
         switch (mState) {
         case 0: {
@@ -440,6 +444,7 @@ void SceneCourseSelect::course() {
             JUT_ASSERT(0);
             break;
         }
+        }
     } else if (mField388 == 0 && mBck[0].mFrame == 9.0f) {
         RaceInfo *raceInfo = &gRaceInfo;
         u32 trigger = gpaGamePad[0]->getTrigger();
@@ -469,7 +474,9 @@ void SceneCourseSelect::course() {
                 if (mState == 0) {
                     GetGameAudioMain()->startSystemSe(0x20000);
                     int cupCount = mCupCount;
-                    int cup = mCup + cupCount;
+                    int cup;
+                    cup = mCup;
+                    cup += cupCount;
                     mCup = (cup - 1) % cupCount;
                     mGpStage = 0;
                     mCourse = 0;
@@ -491,14 +498,14 @@ void SceneCourseSelect::course() {
                 u32 button = gpaGamePad[0]->getButton();
                 if ((button & 0x20) && (button & 0x40)) {
                     if (mMode == 2) {
-                        if (mState == 0) {
-                            if (raceInfo->getRaceMode() != 1)
-                                mField394 = 1;
-                        } else {
+                        if (mState != 0) {
                             if (mState < 0 || mState >= 3) {
 #line 779
                                 JUT_ASSERT(0);
                             }
+                        } else {
+                            if (raceInfo->getRaceMode() != 1)
+                                mField394 = 1;
                         }
                     }
                 }
@@ -631,9 +638,238 @@ void SceneCourseSelect::nextRace() {
     }
 }
 
-void SceneCourseSelect::calcAnm() {}
+void SceneCourseSelect::calcAnm() {
+    if (mBck[0].mFrame == 13.0f)
+        setTexture();
 
-void SceneCourseSelect::setTexture() {}
+    for (int i = 0; i < mCupCount; i++) {
+        JUtility::TColor color = mCupColor[i == mCup ? 1 : 0];
+        mCupPict[i]->setWhite(color);
+    }
+
+    if (mMode == 1) {
+        mBck[3].mPane->hide();
+        for (int i = 0; i < 4; i++) {
+            JUtility::TColor color = mCupColor[1];
+            mCupIcon[i]->setWhite(color);
+        }
+    }
+    else if (mState == 0) {
+        mBck[3].mPane->hide();
+        for (int i = 0; i < 4; i++) {
+            JUtility::TColor color = mCupColor[0];
+            mCupIcon[i]->setWhite(color);
+        }
+    }
+    else {
+        mBck[3].mPane->show();
+        for (int i = 0; i < 4; i++) {
+            JUtility::TColor color = mCupColor[i == mCourse ? 1 : 0];
+            mCupIcon[i]->setWhite(color);
+        }
+    }
+    mBck[3].mFrame = mCourse;
+
+    if (mField388 != 0) {
+        mField388++;
+        if (mField38c == 0) {
+            switch (mState) {
+            case 0:
+                if (mMode == 1) {
+                    if ((f32)mField388 > 15.0f) {
+                        mState = 2;
+                        mField388 = 0;
+                    }
+                }
+                else if ((f32)mField388 > 15.0f) {
+                    mState = 1;
+                    mField388 = 0;
+                }
+                break;
+            case 1:
+                if (mMode == 1) {
+#line 1041
+                    JUT_ASSERT(0);
+                }
+                else {
+                    mState = 2;
+                    mField388 = 0;
+                }
+                break;
+            default:
+#line 1047
+                JUT_ASSERT(0);
+                break;
+            }
+        }
+        else {
+            switch (mState) {
+            case 1:
+                if (mMode == 1) {
+#line 1054
+                    JUT_ASSERT(0);
+                }
+                else if ((f32)mField388 > 15.0f) {
+                    mState = 0;
+                    mField388 = 0;
+                }
+                break;
+            case 2:
+                if (mMode == 1) {
+                    if ((f32)mField388 > 15.0f) {
+                        mState = 0;
+                        mField388 = 0;
+                    }
+                }
+                else {
+                    mState = 1;
+                    mField388 = 0;
+                }
+                break;
+            default:
+#line 1054
+                JUT_ASSERT(0);
+                break;
+            }
+        }
+    }
+
+    if (mField388 != 0) {
+        f32 t;
+        if (mField38c == 0)
+            t = 1.0f - (f32)mField388 / 15.0f;
+        else
+            t = (f32)mField388 / 15.0f;
+
+        for (int i = 0; i < mCupCount; i++) {
+            if (i != mCup) {
+                mScreens[2 + i]->mScale.x = t;
+                mScreens[2 + i]->mScale.y = t;
+                mScreens[2 + i]->calcMtx();
+            }
+            else {
+                f32 x = mCupPos[i].x;
+                f32 y = mCupPos[i].y;
+                f32 dx = x - 301.0f;
+                f32 dy = y - 140.0f;
+                mPos[i].x = 301.0f + dx * t;
+                mPos[i].y = 140.0f + dy * t;
+            }
+        }
+
+        f32 f = 9.0f * (1.0f - t);
+        mBck[2].mFrame = f;
+        if (mMode == 1) {
+            mBck[4].mFrame = f;
+            mBck[5].mFrame = f;
+        }
+    }
+
+    if (mMode == 1) {
+        GPRecord rec = gSystemRecord.getGPRecord(mRaceGpCup[mCup], gRaceInfo.getRaceLevel());
+        if (rec.isValid() && rec.mRank < 3) {
+            J2DPicture *pane = mBck[5].mPane;
+            pane->show();
+#line 1114
+            JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
+            pane->changeTexture((const ResTIMG *)Cup2D::ptr()->getCupTexture(mRaceGpCup[mCup], rec.mRank), 0);
+        }
+        else {
+            mBck[5].mPane->hide();
+        }
+    }
+    else if (mState == 2) {
+        mBck[4].mPane->show();
+        f32 f = mBck[4].mFrame + 1.0f;
+        mBck[4].mFrame = f;
+        if (f > 9.0f)
+            mBck[4].mFrame = 9.0f;
+    }
+    else {
+        f32 f = mBck[4].mFrame - 1.0f;
+        mBck[4].mFrame = f;
+        if (f < 0.0f)
+            mBck[4].mFrame = 0.0f;
+        if (mBck[4].mFrame == 0.0f)
+            mBck[4].mPane->hide();
+    }
+}
+
+void SceneCourseSelect::setTexture() {
+    mPane2c0->changeTexture(mCupName[mCup], 0);
+
+    if (mMode == 1) {
+        if (mCup == 4) {
+            for (int i = 0; i < 4; i++)
+                mCupIcon[i]->changeTexture(mCupName[i], 0);
+            for (int i = 0; i < 2; i++)
+                mCoPict[i]->changeTexture(mCourseData[mGpStage][mCourse].copName, 0);
+        }
+        else {
+            for (int i = 0; i < 4; i++)
+                mCupIcon[i]->changeTexture(mCourseData[mCup][i].coName, 0);
+            for (int i = 0; i < 2; i++)
+                mCoPict[i]->changeTexture(mCourseData[mCup][mCourse].copName, 0);
+        }
+    }
+    else {
+        for (int i = 0; i < 4; i++)
+            mCupIcon[i]->changeTexture(mCourseData[mCup][i].coName, 0);
+        mCoPict[1]->changeTexture(mCourseData[mCup][mCourse].copName, 0);
+    }
+
+    const ResTIMG *timg = (const ResTIMG *)J2DScreen::getNameResource(mSelectCupName[mCup]);
+    ((JUTTexture *)mPane2f8)->storeTIMG(timg, (u8)0);
+    mUnderBrk.mFrame = mCup;
+
+    if (gRaceInfo.getRaceMode() == TIME_ATTACK) {
+        Kart2DCommon *kart = Kart2DCommon::ptr();
+        ECourseID courseID = mCourseData[mCup][mCourse].courseID;
+
+        TARecord record;
+        int min, sec, ms;
+
+        record = *gSystemRecord.getTARecord(courseID, 0);
+        if (record.isValid()) {
+            if (record.getRaceTime().isAvailable()) {
+                record.getRaceTime().get(&min, &sec, &ms);
+                kart->changeNumberTexture(min, &mBestL[5], 2, false, false);
+                kart->changeNumberTexture(sec, &mBestL[3], 2, true, false);
+                kart->changeNumberTexture(ms, &mBestL[0], 3, true, false);
+            }
+            else {
+                kart->changeNumberTexture(0, &mBestL[5], 2, true, true);
+                kart->changeNumberTexture(0, &mBestL[3], 2, true, true);
+                kart->changeNumberTexture(0, &mBestL[0], 3, true, true);
+            }
+        }
+        else {
+            kart->changeNumberTexture(0, &mBestL[5], 2, true, true);
+            kart->changeNumberTexture(0, &mBestL[3], 2, true, true);
+            kart->changeNumberTexture(0, &mBestL[0], 3, true, true);
+        }
+
+        record = *gSystemRecord.getBestLap(courseID);
+        if (record.isValid()) {
+            if (record.getRaceTime().isAvailable()) {
+                record.getRaceTime().get(&min, &sec, &ms);
+                kart->changeNumberTexture(min, &mBestT[5], 2, false, false);
+                kart->changeNumberTexture(sec, &mBestT[3], 2, true, false);
+                kart->changeNumberTexture(ms, &mBestT[0], 3, true, false);
+            }
+            else {
+                kart->changeNumberTexture(0, &mBestT[5], 2, true, true);
+                kart->changeNumberTexture(0, &mBestT[3], 2, true, true);
+                kart->changeNumberTexture(0, &mBestT[0], 3, true, true);
+            }
+        }
+        else {
+            kart->changeNumberTexture(0, &mBestT[5], 2, true, true);
+            kart->changeNumberTexture(0, &mBestT[3], 2, true, true);
+            kart->changeNumberTexture(0, &mBestT[0], 3, true, true);
+        }
+    }
+}
 
 void SceneCourseSelect::setRivalKart() {
     int num = gRaceInfo.getPlayerKartNumber();
@@ -697,9 +933,7 @@ void SceneCourseSelect::rndRoulette() {
         if (mTimer % 7 == 0) {
             GetGameAudioMain()->startSystemSe(0x20000);
             int cup = mCup;
-            int divisor;
-            divisor = mCupCount - 1;
-            mCup = (int)(cup + time % divisor + 1) % mCupCount;
+            mCup = (int)(cup + time % (mCupCount - 1) + 1) % mCupCount;
             mBck[0].mFrame = 1.0f;
         }
         break;
