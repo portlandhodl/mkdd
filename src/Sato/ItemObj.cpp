@@ -1277,7 +1277,10 @@ bool ItemObj::IsHitKart(int kartNo, const JGeometry::TVec3f &kartPos, f32 radius
     }
 
     if (_12c & 0x100)
+    {
+        ret = false;
         return ret;
+    }
 
 hit:
     ret = mBounds->IsHitSphere(mColPos, kp, radius);
@@ -2073,11 +2076,12 @@ void ItemObj::doMoveColGround(Quaternion *quat, bool flagExp)
 void ItemObj::moveCommonAttr(CrsGround &gnd, bool updVel)
 {
     gnd.getNormal(&mNormal);
+    JGeometry::TVec3f up;
     JGeometry::TVec3f vel;
     if (updVel)
     {
         f32 yLevel = gnd.getHeight() + mHeightOffset * mDisScaleAnm.y;
-        if (mPos.y > yLevel)
+        if (mPos.y <= yLevel)
         {
             mTransferFlags |= 0x2;
             mTransferFlags |= 0x100;
@@ -2087,19 +2091,20 @@ void ItemObj::moveCommonAttr(CrsGround &gnd, bool updVel)
 
             gnd.getVelocity(&vel);
 
-            if (!vel.isZero())
+            if (vel.isZero())
             {
                 if (RCMGetCourse()->getCourseID() != MINI_5)
                     mVel.y *= -1.0f;
             }
 
-            bool sameUp = mModel.mBaseTRMtx[0][1] == mNormal.x && mModel.mBaseTRMtx[1][1] == mNormal.y &&
-                          mModel.mBaseTRMtx[2][1] == mNormal.z;
+            f32 upY = mModel.mBaseTRMtx[1][1];
+            f32 upZ = mModel.mBaseTRMtx[2][1];
+            bool sameUp = mModel.mBaseTRMtx[0][1] == mNormal.x && upY == mNormal.y && upZ == mNormal.z;
             if (!sameUp)
             {
                 Mtx rotM;
                 stQt2Mtx(rotM, &_34);
-                JGeometry::TVec3f up(rotM[0][1], rotM[1][1], rotM[2][1]);
+                up.set(rotM[0][1], rotM[1][1], rotM[2][1]);
                 stVec2QtUpdate(_34, _44, up, mNormal);
             }
 
@@ -2415,9 +2420,9 @@ void ItemObj::calcGndNormal(JGeometry::TVec3f *dir, CrsGround &gnd, f32 threshol
     f32 len = PSVECMag(&cross);
     f32 angle = fabs(JMAAtan2Radian(len, dir->dot(gndNormal)));
 
-    if (fabs(57.29578f * angle) > threshold)
+    if (fabs(angle * 57.29578f) > threshold)
     {
-        add.set(gndNormal);
+        JGeometry::setTVec3f(&gndNormal.x, &add.x);
         add.scale(pow);
         *dir += add;
         stVecNormalize(dir);
