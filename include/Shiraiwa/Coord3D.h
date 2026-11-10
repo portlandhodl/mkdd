@@ -114,16 +114,18 @@ public:
 };
 class TFreeFall {
 public:
+    TFreeFall();
     TFreeFall(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
-    virtual ~TFreeFall() {}
-    virtual void update();
+    virtual ~TFreeFall();
+    void init(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
+    virtual u8 update();
     virtual void reset();
-    virtual void addAccel(const JGeometry::TVec3f &);
-    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
-    virtual void getGravity(JGeometry::TVec3f *);
-    virtual void rotate();
-    virtual void reflect(const JGeometry::TVec3f &);
     virtual void roll();
+    virtual void reflect(const JGeometry::TVec3f &);
+    virtual void rotate();
+    virtual void getGravity(JGeometry::TVec3f *);
+    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
+    virtual void addAccel(const JGeometry::TVec3f &);
 
     f32 _04;                    // 04
     f32 _08;                    // 08
@@ -147,16 +149,14 @@ public:
         _2C = NULL;
     }
     virtual ~TFreeFallShakeSky() {}
-    virtual void update();
     virtual void reset();
-    virtual void addAccel(const JGeometry::TVec3f &);
-    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
-    virtual void getGravity(JGeometry::TVec3f *);
-    virtual void rotate();
-    virtual void reflect(const JGeometry::TVec3f &);
     virtual void roll();
+    virtual void reflect(const JGeometry::TVec3f &);
+    virtual void rotate();
+    virtual void getGravity(JGeometry::TVec3f *);
+    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
 
-    u8 _30[4];
+    f32 _30;
     f32 _34;
     u8 _38;
     u8 _39[3];
