@@ -26,9 +26,12 @@ public:
 
 class DriverData : public JKRDisposer
 {
-    u8 _18[0x7c - 0x18];
-
 public:
+    u16 m_18; // 0x18
+    u8 _1a[0x48 - 0x1a];
+    JGeometry::TVec3f m_48; // 0x48
+    u8 _54[0x7c - 0x54];
+
     DriverData(); // Auto Inlined
     virtual ~DriverData();
     static DriverData *create();

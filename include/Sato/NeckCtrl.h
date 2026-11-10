@@ -88,10 +88,10 @@ public:
     void calcHairString(float (*)[4], const JGeometry::TVec3<f32>&);
     void offsetMtxPos(u32);
     void lockStringKp(float (*)[4], const JGeometry::TVec3<f32>&);
-
     u8 _48[0x78 - 0x48];
     u8 m78; // 0x78
     u8 _79[3];
+    u8 _7c[0x8c - 0x7c];
 };
 
 class DonkeyTieCtrl : public HairCtrl {
