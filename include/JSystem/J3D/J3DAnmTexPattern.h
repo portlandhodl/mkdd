@@ -22,6 +22,7 @@ struct J3DAnmTexPattern : public J3DAnmBase {
     }
 
     void getTexNo(u16, u16*) const;
+    void searchUpdateMaterialID(struct J3DModelData*);
 
     // _00     = VTBL
     // _00-_0C = J3DAnmBase
