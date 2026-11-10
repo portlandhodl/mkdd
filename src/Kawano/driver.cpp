@@ -31,7 +31,9 @@ class LumbarCtrl // 0xF0
 public:
     LumbarCtrl(int, u8);
     void reset();
-    u8 _0[0xf0];
+    u8 _0[0x70];
+    u8 m_70;
+    u8 _71[0xf0 - 0x71];
 };
 
 class ArmCtrl // 0x40
@@ -886,16 +888,19 @@ void DriverModel::StartAnimation2()
     JUT_MINMAX_ASSERT(0, before_mState_Hokan, 152);
     if (m_ac != 0) {
         for (int i = 0; i < 2; i++) {
-            int anmID = msAnmBlendList[before_mState_Hokan][i];
+            int anmID = msAnmBlendList[mBeforeState][i];
             if (anmID != 0 && getAnmTransformPtr(anmID) == nullptr)
                 return;
         }
     }
 
-    if (m_c8 == 0)
+    if (m_d4 == 0)
         return;
-
-    if (m_c8 == 1) {
+    if (m_d4 == 2)
+        goto L_main;
+    if (m_d4 >= 2)
+        goto L_end;
+    if (m_d4 >= 1) {
         if (IsDemo((StateEnum)state)) {
             mAnmID = msAnmBlendList[state][0];
             f32 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
@@ -920,7 +925,9 @@ void DriverModel::StartAnimation2()
         Start1ShotAnm_base(&mDriveAnim, (StateEnum)state);
         goto L_end;
     }
+    goto L_end;
 
+L_main:
     switch (state) {
     case 69: case 72: case 75: case 76: case 77: case 78:
     case 93: case 108: case 109: case 110: case 118: case 119:
@@ -971,7 +978,7 @@ L_loop:
     mDriveAnim.mLoopAnim.start();
 
 L_end:
-    m_c8 = 0;
+    m_d4 = 0;
 }
 
 void DriverModel::StartAnimationWC(StateEnum s)
@@ -1483,17 +1490,18 @@ int DriverModel::updateCheckRenew_Animation()
     JUT_MINMAX_ASSERT(0, mState, 152);
 #line 2600
     JUT_MINMAX_ASSERT(0, m_500, 152);
+    const u32 (*list)[2] = msAnmBlendList;
     if (m_ac != 0) {
-        J3DAnmTransform *pa1 = getAnmTransformPtr(msAnmBlendList[mState][1]);
-        J3DAnmTransform *pa0 = getAnmTransformPtr(msAnmBlendList[mState][0]);
-        J3DAnmTransform *pb1 = getAnmTransformPtr(msAnmBlendList[mBeforeState][1]);
-        J3DAnmTransform *pb0 = getAnmTransformPtr(msAnmBlendList[mBeforeState][0]);
+        J3DAnmTransform *pa1 = getAnmTransformPtr(list[mState][1]);
+        J3DAnmTransform *pa0 = getAnmTransformPtr(list[mState][0]);
+        J3DAnmTransform *pb1 = getAnmTransformPtr(list[mBeforeState][1]);
+        J3DAnmTransform *pb0 = getAnmTransformPtr(list[mBeforeState][0]);
         InitMpaMtxCalc((StateEnum)mState, pb0, pb1, pa0, pa1);
-        J3DAnmTransform *pb150_1 = getAnmTransformPtr(msAnmBlendList[0x96][1]);
-        InitMpaMtxCalc((StateEnum)0x96, getAnmTransformPtr(msAnmBlendList[0x96][0]), pb150_1, nullptr, nullptr);
-        if (getAnmTransformPtr(msAnmBlendList[0x97][0]) != nullptr) {
-            J3DAnmTransform *pb151_1 = getAnmTransformPtr(msAnmBlendList[0x97][1]);
-            InitMpaMtxCalc((StateEnum)0x97, getAnmTransformPtr(msAnmBlendList[0x97][0]), pb151_1, nullptr, nullptr);
+        J3DAnmTransform *pb150_1 = getAnmTransformPtr(list[0x96][1]);
+        InitMpaMtxCalc((StateEnum)0x96, getAnmTransformPtr(list[0x96][0]), pb150_1, nullptr, nullptr);
+        if (getAnmTransformPtr(list[0x97][0]) != nullptr) {
+            J3DAnmTransform *pb151_1 = getAnmTransformPtr(list[0x97][1]);
+            InitMpaMtxCalc((StateEnum)0x97, getAnmTransformPtr(list[0x97][0]), pb151_1, nullptr, nullptr);
         }
         goto L_367C;
     }
@@ -1516,43 +1524,43 @@ int DriverModel::updateCheckRenew_Animation()
 
 L_useThree:
     {
-        J3DAnmTransform *throwAnm = getAnmTransformPtr(msAnmBlendList[m_500][0]);
+        J3DAnmTransform *throwAnm = getAnmTransformPtr(list[m_500][0]);
 #line 970
         JUT_MINMAX_ASSERT(0, mState, 152);
         ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->setAnmTransform(0, throwAnm);
-        ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->setAnmTransform(1, getAnmTransformPtr(msAnmBlendList[mState][0]));
+        ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->setAnmTransform(1, getAnmTransformPtr(list[mState][0]));
         ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->_28 = 20.0f;
-        J3DAnmTransform *pa1 = getAnmTransformPtr(msAnmBlendList[m_500][1]);
-        InitMpaMtxCalc((StateEnum)3, getAnmTransformPtr(msAnmBlendList[m_500][0]), pa1, nullptr, nullptr);
-        J3DAnmTransform *qb1 = getAnmTransformPtr(msAnmBlendList[mState][1]);
-        InitMpaMtxCalc((StateEnum)mState, getAnmTransformPtr(msAnmBlendList[mState][0]), qb1, nullptr, nullptr);
+        J3DAnmTransform *pa1 = getAnmTransformPtr(list[m_500][1]);
+        InitMpaMtxCalc((StateEnum)3, getAnmTransformPtr(list[m_500][0]), pa1, nullptr, nullptr);
+        J3DAnmTransform *qb1 = getAnmTransformPtr(list[mState][1]);
+        InitMpaMtxCalc((StateEnum)mState, getAnmTransformPtr(list[mState][0]), qb1, nullptr, nullptr);
     }
     goto L_367C;
 
 L_useThrow:
     {
-        J3DAnmTransform *throwAnm = getAnmTransformPtr(msAnmBlendList[m_500][0]);
+        J3DAnmTransform *throwAnm = getAnmTransformPtr(list[m_500][0]);
 #line 970
         JUT_MINMAX_ASSERT(0, mState, 152);
         ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->setAnmTransform(0, throwAnm);
-        ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->setAnmTransform(1, getAnmTransformPtr(msAnmBlendList[mState][0]));
+        ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->setAnmTransform(1, getAnmTransformPtr(list[mState][0]));
         ((KartMtxCalcAdditiveAnm *)mMtxCalcsThrow[0])->_28 = 20.0f;
-        J3DAnmTransform *pa1 = getAnmTransformPtr(msAnmBlendList[m_500][1]);
-        InitMpaMtxCalc((StateEnum)m_500, getAnmTransformPtr(msAnmBlendList[m_500][0]), pa1, nullptr, nullptr);
-        J3DAnmTransform *qb1 = getAnmTransformPtr(msAnmBlendList[mState][1]);
-        InitMpaMtxCalc((StateEnum)mState, getAnmTransformPtr(msAnmBlendList[mState][0]), qb1, nullptr, nullptr);
+        J3DAnmTransform *pa1 = getAnmTransformPtr(list[m_500][1]);
+        InitMpaMtxCalc((StateEnum)m_500, getAnmTransformPtr(list[m_500][0]), pa1, nullptr, nullptr);
+        J3DAnmTransform *qb1 = getAnmTransformPtr(list[mState][1]);
+        InitMpaMtxCalc((StateEnum)mState, getAnmTransformPtr(list[mState][0]), qb1, nullptr, nullptr);
     }
     goto L_367C;
 
 L_default:
     {
-        J3DAnmTransform *pa1 = getAnmTransformPtr(msAnmBlendList[mState][1]);
-        InitMpaMtxCalc((StateEnum)mState, getAnmTransformPtr(msAnmBlendList[mState][0]), pa1, nullptr, nullptr);
-        J3DAnmTransform *pb150_1 = getAnmTransformPtr(msAnmBlendList[0x96][1]);
-        InitMpaMtxCalc((StateEnum)0x96, getAnmTransformPtr(msAnmBlendList[0x96][0]), pb150_1, nullptr, nullptr);
-        if (getAnmTransformPtr(msAnmBlendList[0x97][0]) != nullptr) {
-            J3DAnmTransform *pb151_1 = getAnmTransformPtr(msAnmBlendList[0x97][1]);
-            InitMpaMtxCalc((StateEnum)0x97, getAnmTransformPtr(msAnmBlendList[0x97][0]), pb151_1, nullptr, nullptr);
+        J3DAnmTransform *pa1 = getAnmTransformPtr(list[mState][1]);
+        InitMpaMtxCalc((StateEnum)mState, getAnmTransformPtr(list[mState][0]), pa1, nullptr, nullptr);
+        J3DAnmTransform *pb150_1 = getAnmTransformPtr(list[0x96][1]);
+        InitMpaMtxCalc((StateEnum)0x96, getAnmTransformPtr(list[0x96][0]), pb150_1, nullptr, nullptr);
+        if (getAnmTransformPtr(list[0x97][0]) != nullptr) {
+            J3DAnmTransform *pb151_1 = getAnmTransformPtr(list[0x97][1]);
+            InitMpaMtxCalc((StateEnum)0x97, getAnmTransformPtr(list[0x97][0]), pb151_1, nullptr, nullptr);
         }
     }
 L_367C:
@@ -2046,10 +2054,8 @@ int DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
             return DriverManager::ptr()->getBlendTime(33);
         return DriverManager::ptr()->getBlendTime(26);
     case 112:
-        if (mBeforeState < 125) {
-            if (mBeforeState >= 123)
-                return DriverManager::ptr()->getBlendTime(33);
-        }
+        if (mBeforeState < 125 && mBeforeState >= 123)
+            return DriverManager::ptr()->getBlendTime(33);
         return DriverManager::ptr()->getBlendTime(26);
     case 113: case 114: case 115: case 116:
         return DriverManager::ptr()->getBlendTime(30);
@@ -2085,10 +2091,422 @@ void DriverModel::update_mIsSpeakBCA()
 {
 }
 
+#pragma inline_depth(0)
 void DriverModel::update(u16 param)
 {
+    for (int i = 0; i < 8; i++) {
+        mAnmWorkFrame[i] = 0.0f;
+        mAnmWorkID[i] = -1;
+    }
+    mAnmID_debug_index = 0;
+
+#line 3678
+    JUT_ASSERT_F(mState >= 0, "%s", "mState >= 0");
+
+    if (m_e8 == 0 && m_514 > 0) {
+        m_514--;
+        if (m_514 == 0) {
+            StartAnimation((StateEnum)m_510);
+            m_510 = -1;
+        }
+    }
+
+    if (param != 0) {
+        ExModel::update(param);
+        return;
+    }
+
+    sCurDriver = this;
+
+    if (m_e8 != 0) {
+        mState = m_4f4;
+        mBeforeState = m_4f8;
+    }
+
+    next_mState_Hokan = mState;
+    next_before_mState_Hokan = mBeforeState;
+
+    if (m_4f4 != mState) {
+        m_504 = 1;
+        mState = m_4f4;
+        mBeforeState = m_4f8;
+    } else {
+        m_504 = 0;
+    }
+
+    CheckDriverFlags();
+
+    if (m_e8 == 0) {
+        mTPAnim->update();
+
+        if (IsDanger()) {
+            if (m_be <= 0)
+                m_be = 1;
+            else if (m_be < DriverManager::ptr()->_5b)
+                m_be++;
+        } else {
+            m_be = 0;
+        }
+
+        if (m_c0 != 0) {
+            m_c0--;
+            if (m_c0 == 0) {
+                if (mKartLoader->mDriverModels[0]->IsPiyo())
+                    mKartLoader->mDriverModels[0]->StartAnimation((StateEnum)122);
+                else
+                    mKartLoader->mDriverModels[1]->StartAnimation((StateEnum)122);
+            }
+        }
+
+        if (IsGoal()) {
+            if (m_c2 < 0)
+                m_c2 = 0;
+            if (m_c2 > 0) {
+                if (m_c2 < DriverManager::ptr()->_5c * 60)
+                    m_c2++;
+            }
+        } else {
+            if (m_c2 != 1)
+                m_c2 = 0;
+        }
+
+        if (IsHappy()) {
+            if (m_c4 <= 0) {
+                m_c4 = 1;
+            } else {
+                if (IsHappyFront()) {
+                    s16 limit;
+                    if (DriverManager::ptr()->_838 != 0)
+                        limit = DriverManager::ptr()->_83a;
+                    else
+                        limit = (s16)DriverData::msDriverData[mDataID].data[84];
+                    if (m_c4 < limit)
+                        m_c4++;
+                }
+                if (IsHappyBack()) {
+                    s16 limit;
+                    if (DriverManager::ptr()->_838 != 0)
+                        limit = DriverManager::ptr()->_83c;
+                    else
+                        limit = (s16)DriverData::msDriverData[mDataID].data[85];
+                    if (m_c4 < limit)
+                        m_c4++;
+                }
+            }
+        } else {
+            m_c4 = 0;
+        }
+
+        if (mHokanDamageCnt != 0)
+            mHokanDamageCnt--;
+
+        if ((KartCtrl::getKartCtrl()->GetCarStatus(mKartLoader->mKartNum) & 2) != 0)
+            m_e4 = 1;
+        else
+            m_e4 = 0;
+    }
+
+    int renew = updateCheckRenew();
+
+    if (m_e8 == 0)
+        updateBlendCount();
+
+    if (m_d4 != 0)
+        StartAnimation2();
+    m_d4 = 0;
+
+    if (!PauseManager::tstPause() && renew != 0) {
+        if (m_e8 == 0)
+            updateFrame();
+        updateSetFrame();
+    }
+
+    if (renew == 0) {
+        getModelData()->getJointNodePointer(0)->mMtxCalc = nullptr;
+
+        u16 jnt = mDriverLoader->getJntBindNo(1);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = nullptr;
+        jnt = mDriverLoader->getJntBindNo(10);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = nullptr;
+        jnt = mDriverLoader->getJntBindNo(14);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = nullptr;
+
+        jnt = mDriverLoader->getJntBindNo(18);
+        if (jnt != 0xffff) {
+            J3DJoint *jnt18 = getModelData()->getJointNodePointer(jnt);
+            if (jnt18 != nullptr)
+                jnt18->mMtxCalc = nullptr;
+        }
+
+        goto L_after;
+    }
+
+    updateSetBlendWeight();
+
+    if (m_e8 != 0) {
+        m_b9 = 0;
+    } else if (mCharSoundMgr->isSpeak()) {
+        if (DriverManager::ptr()->getSpeakFlag(mDataID) != 0) {
+            if (IsAttack() || IsDamage() || IsDash() || IsRocketStart() || IsGoal() || IsDanger()) {
+                m_b9 = 0;
+            } else {
+                if (m_b9 == 0)
+                    StartSpeak();
+                m_b9 = 1;
+            }
+        } else {
+            m_b9 = 0;
+        }
+    } else {
+        m_b9 = 0;
+    }
+
+#line 3875
+    JUT_MINMAX_ASSERT(0, mState, 152);
+#line 3876
+    JUT_MINMAX_ASSERT(0, m_500, 152);
+
+    if (mState < 21) {
+        if (mState < 13) {
+            if (mState >= 9)
+                goto L_useThrow;
+            goto L_default;
+        }
+        if (mState >= 17)
+            goto L_useThrow;
+        goto L_useThree;
+    }
+    if (mState >= 65)
+        goto L_default;
+    if (mState >= 63)
+        goto L_useThree;
+    goto L_default;
+
+L_useThree:
+    if (mState < 17) {
+#line 3206
+        JUT_MINMAX_ASSERT(0, m_500, 152);
+        if (mMtxCalcs[m_500] != nullptr) {
+            mMtxCalcs[m_500]->setWeight(0, 1.0f - (f32)m_ba / (f32)DriverManager::ptr()->mBlendTimes[0]);
+            mMtxCalcs[m_500]->setWeight(1, (f32)m_ba / (f32)DriverManager::ptr()->mBlendTimes[0]);
+            if (DriverData::mspDriverData->m_1a != 0) {
+                mMtxCalcs[m_500]->setWeight(0, 1.0f);
+                mMtxCalcs[m_500]->setWeight(1, 0.0f);
+            }
+        }
+
+        getModelData()->getJointNodePointer(0)->mMtxCalc = mMtxCalcs[m_500];
+
+        u16 jnt = mDriverLoader->getJntBindNo(10);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[mState];
+        jnt = mDriverLoader->getJntBindNo(14);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[mState];
+        jnt = mDriverLoader->getJntBindNo(18);
+        if (jnt != 0xffff) {
+            J3DJoint *jnt18 = getModelData()->getJointNodePointer(jnt);
+            if (jnt18 != nullptr)
+                jnt18->mMtxCalc = mMtxCalcs[mState];
+        }
+    } else if (mState < 21) {
+        getModelData()->getJointNodePointer(0)->mMtxCalc = mMtxCalcs[m_500];
+
+        u16 jnt = mDriverLoader->getJntBindNo(10);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[mState];
+        jnt = mDriverLoader->getJntBindNo(14);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[mState];
+        jnt = mDriverLoader->getJntBindNo(18);
+        if (jnt != 0xffff) {
+            J3DJoint *jnt18 = getModelData()->getJointNodePointer(jnt);
+            if (jnt18 != nullptr)
+                jnt18->mMtxCalc = mMtxCalcs[mState];
+        }
+    } else {
+        getModelData()->getJointNodePointer(0)->mMtxCalc = mMtxCalcs[m_500];
+
+        u16 jnt = mDriverLoader->getJntBindNo(10);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = (J3DMtxCalc *)mMtxCalcsThrow[0];
+        jnt = mDriverLoader->getJntBindNo(14);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[mState];
+        jnt = mDriverLoader->getJntBindNo(18);
+        if (jnt != 0xffff) {
+            J3DJoint *jnt18 = getModelData()->getJointNodePointer(jnt);
+            if (jnt18 != nullptr)
+                jnt18->mMtxCalc = mMtxCalcs[mState];
+        }
+    }
+    goto L_after;
+
+L_useThrow:
+    getModelData()->getJointNodePointer(0)->mMtxCalc = mMtxCalcs[0];
+
+    {
+        u16 jnt = mDriverLoader->getJntBindNo(1);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = (J3DMtxCalc *)mMtxCalcsThrow[0];
+        jnt = mDriverLoader->getJntBindNo(10);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[mState];
+        jnt = mDriverLoader->getJntBindNo(14);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[mState];
+        jnt = mDriverLoader->getJntBindNo(18);
+        if (jnt != 0xffff) {
+            J3DJoint *jnt18 = getModelData()->getJointNodePointer(jnt);
+            if (jnt18 != nullptr)
+                jnt18->mMtxCalc = mMtxCalcs[mState];
+        }
+    }
+    goto L_after;
+
+L_default:
+    getModelData()->getJointNodePointer(0)->mMtxCalc = mMtxCalcs[mState];
+
+    {
+        u16 jnt = mDriverLoader->getJntBindNo(1);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = nullptr;
+        jnt = mDriverLoader->getJntBindNo(10);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = nullptr;
+
+        int set = 0;
+        if (mItem != nullptr && m_b8 != 0 && mItem->getSuccessionItemNum() > 1 &&
+            *(u32 *)((u8 *)mItem + 0x2d4) == 0) {
+            jnt = mDriverLoader->getJntBindNo(14);
+            if (jnt != 0xffff)
+                getModelData()->getJointNodePointer(jnt)->mMtxCalc = mMtxCalcs[0x96];
+            set = 1;
+        }
+        if (!set) {
+            jnt = mDriverLoader->getJntBindNo(14);
+            if (jnt != 0xffff)
+                getModelData()->getJointNodePointer(jnt)->mMtxCalc = nullptr;
+        }
+
+        jnt = mDriverLoader->getJntBindNo(18);
+        if (jnt != 0xffff)
+            getModelData()->getJointNodePointer(jnt)->mMtxCalc = nullptr;
+
+        if (m_b9 != 0) {
+            jnt = mDriverLoader->getJntBindNo(18);
+            if (jnt != 0xffff) {
+                J3DJoint *jnt18 = getModelData()->getJointNodePointer(jnt);
+                if (jnt18 != nullptr)
+                    jnt18->mMtxCalc = mMtxCalcs[0x97];
+            }
+        }
+    }
+
+L_after:
+    if (!PauseManager::tstPause())
+        SetDriverOffsetPosition();
+
+    ExModel::update(param);
+    LaurelMgr::ptr()->update(this);
+
+    mPos.x = getModel()->getBaseTRMtx()[0][3];
+    mPos.y = getModel()->getBaseTRMtx()[1][3];
+    mPos.z = getModel()->getBaseTRMtx()[2][3];
+
+    mAnmID = msAnmBlendList[mState][0];
+    mCharSoundMgr->frameWork(mAnmFrame[mAnmID], 1.0f);
+    mAnimBufMgr->Check();
+
+    if (mState != next_mState_Hokan) {
+        if (next_mState_Hokan < 106) {
+            if (next_mState_Hokan < 63) {
+                if (next_mState_Hokan == 54)
+                    goto L_start_anim;
+                if (next_mState_Hokan >= 54)
+                    goto L_finish;
+                if (next_mState_Hokan == 51)
+                    goto L_start_anim;
+                goto L_finish;
+            }
+            if (next_mState_Hokan == 69)
+                goto L_start_anim;
+            if (next_mState_Hokan >= 69)
+                goto L_finish;
+            if (next_mState_Hokan >= 65)
+                goto L_finish;
+            goto L_start_anim;
+        }
+        if (next_mState_Hokan == 120)
+            goto L_start_anim;
+        if (next_mState_Hokan >= 120) {
+            if (next_mState_Hokan == 135)
+                goto L_start_anim;
+            goto L_finish;
+        }
+        if (next_mState_Hokan >= 110) {
+            if (next_mState_Hokan >= 117)
+                goto L_finish;
+            goto L_start_anim;
+        }
+        if (next_mState_Hokan >= 108)
+            goto L_finish;
+        goto L_start_anim;
+
+    L_start_anim:
+        StartAnimation((StateEnum)next_mState_Hokan);
+        m_504 = 1;
+    L_finish:;
+        m_bb = 0;
+        m_d4 = m_c8;
+        m_c8 = 0;
+    }
+
+    if (IsDemo() && m_c8 == 1) {
+        m_d4 = m_c8;
+        m_c8 = 0;
+        m_504 = 1;
+    }
+
+    if (mState != next_mState_Hokan || m_504 != 0) {
+        updateLoad_Animation();
+        mAnimBufMgr->resetFrameSound();
+
+#line 2565
+        JUT_MINMAX_ASSERT(0, next_mState_Hokan, 152);
+        u8 anmID = (u8)msAnmBlendList[next_mState_Hokan][0];
+        DriverLoader::checkAnmID(anmID);
+        int sndNo = DriverLoader::mscAnm2SoundList[anmID];
+        if (!IsAnmSoundResInMRAM(sndNo))
+            mAnimBufMgr->CheckAndLoadAnimSoundAvailable(sndNo, mDataID);
+
+        if (mAnimBufMgr->mRes0 == 0)
+            m_cc = 1;
+        if (mAnimBufMgr->mRes4 == 0)
+            m_d0 = 1;
+    }
+
+#line 4031
+    JUT_ASSERT_F(mState >= 0, "%s", "mState >= 0");
+
+    mState = next_mState_Hokan;
+    mBeforeState = next_before_mState_Hokan;
+    m_4f4 = mState;
+    m_4f8 = mBeforeState;
+    sCurDriver = nullptr;
+
+    if ((mLumbarCtrl->m_70 & 4) != 0) {
+        if (!IsDamageL() && !IsThrow() && !IsDash()) {
+            mLumbarCtrl->m_70 &= ~4;
+            mLumbarCtrl->m_70 &= ~2;
+        }
+    }
 }
 
+#pragma inline_depth(4)
 bool DriverModel::createModel(JKRSolidHeap *heap, u32 a, u32 b)
 {
     if (ExModel::createDifferedModel(heap, a, 0x1080200, true)) {

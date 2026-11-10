@@ -698,7 +698,7 @@ public:
     u8 m_bb;                                     // 0xBB
     u8 mHokanDamageCnt;                          // 0xBC
     s16 m_be;                                    // 0xBE
-    u16 m_c0;                                    // 0xC0
+    s16 m_c0;                                    // 0xC0
     s16 m_c2;                                    // 0xC2
     s16 m_c4;                                    // 0xC4
     s32 m_c8;                                    // 0xC8

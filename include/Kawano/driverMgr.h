@@ -86,6 +86,7 @@ public:
 
     u8 getGoodB2Flag(int dataID) { return _7e0[dataID]; }
     u8 getDriverFlag(int dataID) { return _7b8[dataID]; }
+    u8 getSpeakFlag(int dataID) { return _7cc[dataID]; }
     u8 getHokanDamageCnt() { return _24; }
     int getBlendTime(int i) { return mBlendTimes[i]; }
 
