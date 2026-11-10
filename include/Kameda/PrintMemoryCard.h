@@ -95,9 +95,11 @@ private:
     u8 _0[0x4];
     void *mpBmg; // 0x4
     class PrintWindow *mpWindow; // 0x8
+public:
     u8 _c;
     u8 _d;
     u8 _e;
+private:
     u8 _f;                          // 0x0f
     MessageID mMessageID;           // 0x10
     int _14;                        // 0x14
