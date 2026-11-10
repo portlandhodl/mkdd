@@ -439,7 +439,9 @@ namespace JGeometry {
     // These need to be specialized or explicitly instantiated here to emit them in the right order in RaceMgr, and
     // MWCC doesn't allow explicitly instantiating template constructors, so they're probably both specialized
     template <> template <> inline TVec3f::TVec3(f32 X, f32 Y, f32 Z) { set(X, Y, Z); }
+#ifndef JGEOM_NO_TVEC3_SET
     template <> template <> inline void TVec3f::set(f32 X, f32 Y, f32 Z) { x = X; y = Y; z = Z; }
+#endif
 }
 
 #endif

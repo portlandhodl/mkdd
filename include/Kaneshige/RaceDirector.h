@@ -33,6 +33,7 @@ public:
     void doSafety(); // 0x801c7bb4
     void doRunning(bool); // 0x801c7c14
     s16 checkZoomWinConsoleNo(); // 0x801c8008
+    s16 getZoomWinConsoleNo() const;
     bool isAllGoalAnmEnd(); // 0x801c8108
     void doEnding(); // 0x801c81a8
     void setEndingPhaseZoomConsole(); // 0x801c8608
@@ -61,7 +62,7 @@ public:
 #endif
     }
     bool isRaceEnd() const { return mIsRaceEnd; };
-    bool isZoomWinConsole() const { return mZoomWinCnsNo >= 0; }
+    bool isZoomWinConsole() const;
     ERacePhase getRacePhase() const { return mRacePhase; };
 
     int getWaitDemoResult() const { return mWaitDemoResult; }
