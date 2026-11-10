@@ -52,10 +52,10 @@ struct J3DTexGenBlock {
  * @size{0x4}
  */
 struct J3DTexGenBlockNull : public J3DTexGenBlock {
-    virtual void calc(const f32 (*)[4]) { }                         // _0C (weak)
-    virtual void calcWithoutViewMtx(const f32 (*)[4]) { }           // _10 (weak)
-    virtual void calcPostTexMtx(const f32 (*)[4]) { }               // _14 (weak)
-    virtual void calcPostTexMtxWithoutViewMtx(const f32 (*)[4]) { } // _18 (weak)
+    virtual void calc(const f32 (*)[4]);                         // _0C (weak)
+    virtual void calcWithoutViewMtx(const f32 (*)[4]);           // _10 (weak)
+    virtual void calcPostTexMtx(const f32 (*)[4]);               // _14 (weak)
+    virtual void calcPostTexMtxWithoutViewMtx(const f32 (*)[4]); // _18 (weak)
     virtual void load() { }                                         // _1C (weak)
     virtual void patch() { }                                        // _20 (weak)
     virtual void diff(u32) { }                                      // _24 (weak)
@@ -78,10 +78,10 @@ struct J3DTexGenBlockPatched : public J3DTexGenBlock {
     }
 
     virtual void reset(J3DTexGenBlock*);                                                          // _08
-    virtual void calc(const f32 (*)[4]) { }                                                          // _0C
-    virtual void calcWithoutViewMtx(const f32 (*)[4]) { }                                            // _10
-    virtual void calcPostTexMtx(const f32 (*)[4]) { }                                                // _14
-    virtual void calcPostTexMtxWithoutViewMtx(const f32 (*)[4]) { }                                  // _18
+    virtual void calc(const f32 (*)[4]);                                                          // _0C
+    virtual void calcWithoutViewMtx(const f32 (*)[4]);                                            // _10
+    virtual void calcPostTexMtx(const f32 (*)[4]);                                                // _14
+    virtual void calcPostTexMtxWithoutViewMtx(const f32 (*)[4]);                                  // _18
     virtual void load() { }                                                                       // _1C (weak)
     virtual void patch();                                                                         // _20
     virtual void diff(u32);                                                                       // _24
