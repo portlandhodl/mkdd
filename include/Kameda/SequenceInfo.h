@@ -36,11 +36,11 @@ public:
     SequenceInfo();
     void setGPRank(int, int);
 
-    void setStartNo(int kartNo, int startNo) {
+    void setStartNo(int kart, int kartNo) {
 #line 167
+        JUT_MINMAX_ASSERT(0, kart, 8);
         JUT_MINMAX_ASSERT(0, kartNo, 8);
-        JUT_MINMAX_ASSERT(0, startNo, 8);
-        mStartNo[kartNo] = startNo;
+        mStartNo[kart] = kartNo;
     }
 
     void set_318_charId(int kart, int driverNo, ECharID charId) {
@@ -80,6 +80,48 @@ public:
     void set_318_Pad(int kart, KartGamePad *pad) {
         _318[kart]._18 = pad;
     }
+    ECharID get_318_charId0(int kart) {
+#line 293
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._0[0];
+    }
+
+    ECharID get_318_charId1(int kart) {
+#line 273
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._0[1];
+    }
+
+    EKartID get_318_kartId(int kart) {
+#line 273
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._8;
+    }
+
+    bool get_318_coop(int kart) {
+#line 226
+        JUT_MINMAX_ASSERT(0, kart, 8);
+        return _318[kart]._C[0];
+    }
+
+    int get_318_rankPoint(int kart) {
+#line 284
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return mRankPoint[kart];
+    }
+
+    int get_318_14(int kart) {
+#line 309
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._14;
+    }
+
+    KartGamePad *get_318_Pad(int kart) {
+#line 318
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._18;
+    }
+
 
     void getDemoKart(int no, ECharID &charID1, ECharID &charID2, EKartID &kartID)
     {
@@ -149,7 +191,49 @@ public:
         return _40[kart][rank];
     }
 
+    void set_80(int kart, int val) {
+#line 192
+        JUT_MINMAX_ASSERT(0, kart, 4);
+        _80[kart] = val;
+    }
+
+    void set_40(int kart, int rank, int val) {
+#line 205
+        JUT_MINMAX_ASSERT(0, kart, 4);
+#line 206
+        JUT_MINMAX_ASSERT(0, rank, 4);
+        _40[kart][rank] = val;
+    }
+
+    void inc_80(int kart) {
+        int k = kart;
+#line 188
+        JUT_MINMAX_ASSERT(0, kart, 4);
+        int val = _80[kart] + 1;
+        if (val > 99)
+            val = 99;
+#line 192
+        JUT_MINMAX_ASSERT(0, k, 4);
+        _80[k] = val;
+    }
+
+    void inc_40(int kart, int rank) {
+        int val = _40[kart][rank] + 1;
+#line 200
+        JUT_MINMAX_ASSERT(0, kart, 4);
+#line 201
+        JUT_MINMAX_ASSERT(0, rank, 4);
+        if (val > 99)
+            val = 99;
+#line 205
+        JUT_MINMAX_ASSERT(0, kart, 4);
+#line 206
+        JUT_MINMAX_ASSERT(0, rank, 4);
+        _40[kart][rank] = val;
+    }
+
     int getCourse() { return mMapInfo.course; }
+    int getCup() const { return mMapInfo.cup; }
 
     int get_298(int kart) {
 #line 226
@@ -181,6 +265,7 @@ public:
     }
 
     friend class SceneMap;
+    friend class Goal2D;
     friend class Award2D;
     friend class SceneMapSelect;
 
@@ -211,7 +296,7 @@ private:
     struct {
         ECharID _0[2];     // 00
         EKartID _8;        // 08
-        u8 _C[0x10 - 0xc]; // 0C
+        bool _C[0x10 - 0xc]; // 0C
         RaceTime mTime;    // 10
         int _14;           // 14
         KartGamePad *_18;  // 18
