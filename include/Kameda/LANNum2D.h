@@ -1,6 +1,9 @@
 #ifndef LANNUM2D_H
 #define LANNUM2D_H
 
+#include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J2D/J2DPicture.h"
+#include "JSystem/J2D/J2DScreen.h"
 #include "JSystem/JKernel/JKRHeap.h"
 
 #include "JSystem/JORReflexible.h"
@@ -8,15 +11,18 @@
 
 class LANNum2DParam : public JORReflexible {
 public:
-    // Inline/Unused
-    LANNum2DParam();
-    virtual ~LANNum2DParam() {}
+    LANNum2DParam() : _48(0), mFlag(1) {}
+    virtual ~LANNum2DParam();
+
+    u16 _48; // 0x48
+    u8 mFlag; // 0x4a
 };
 
 class LANNum2DHioNode : public HioNode {
 public:
-    LANNum2DHioNode();
-    virtual ~LANNum2DHioNode() {}
+    LANNum2DHioNode()
+    : HioNode("ＬＡＮＮｕｍ２Ｄ", &mParam, 0, 0) {}
+    virtual ~LANNum2DHioNode();
 
     LANNum2DParam mParam;
 };
@@ -36,7 +42,34 @@ public:
     ~LANNum2D();
 
     void reset() { init(); }
+
 private:
-    PLACEHOLDER_BYTES(0, 0x10c);
+    struct AnmEntry {
+        J2DAnmTransform *mAnimation; // +0x0
+        J2DPicture *mPane;           // +0x4
+        f32 mFrame;                  // +0x8
+    };
+    struct ConsolePanes {
+        J2DPicture *mPane[2][3]; // +0x0
+    };
+    struct NumPanes {
+        J2DPicture *mNum;  // +0x0
+        J2DPicture *mNumB; // +0x4
+        J2DPicture *mNumK; // +0x8
+    };
+
+    J2DAnmTransform *mAnimation; // 0x00
+    PLACEHOLDER_BYTES(0x04, 0x08); // 0x04
+    f32 mFrame; // 0x08
+    AnmEntry mEnEntry[4]; // 0x0c
+    AnmEntry mNuEntry[4]; // 0x3c
+    LANNum2DHioNode *mNode; // 0x6c
+    J2DOrthoGraph *mOrtho; // 0x70
+    J2DScreen *mScreen; // 0x74
+    bool mDrawFlag; // 0x78
+    bool mDrawFlag2; // 0x79
+    PLACEHOLDER_BYTES(0x7a, 0x7c); // 0x7a
+    ConsolePanes mConsolePanes[4]; // 0x7c
+    NumPanes mNumPanes[4]; // 0xdc
 }; // class LANNum2D
 #endif // LANNUM2D_H
