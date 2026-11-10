@@ -7,7 +7,7 @@
 class ItemObj;
 class ItemHeart;
 
-class JPTraceHParticleCallBack
+class JPTraceHParticleCallBack : public JPAParticleCallBack
 {
 public:
     void execute(JPABaseEmitter *, JPABaseParticle *);
@@ -18,6 +18,8 @@ public:
 class J3DEfctHeart : public J3DEffectObj
 {
 public:
+    typedef void (J3DEfctHeart::*StateFunc)();
+
     J3DEfctHeart();                                                             // 0x80287b74
     static const char *getBmdFileName();                                        // 0x80287be8
     void onlyinit();                                                            // 0x80287bf4
@@ -39,25 +41,42 @@ public:
     // Inline/Unused
     // void StateObserverT<J3DEfctHeart>::~StateObserverT();
     // Inline
-    virtual ~J3DEfctHeart(); // 0x80288b24
+    virtual ~J3DEfctHeart() {} // 0x80288b24
 
     void set_dc(const u8 &val)
     {
         _dc = val;
     }
 
-    u8 _d8[0xdc - 0xd8];    //
-    u8 _dc;                 //
-    u8 _dd;                 //
-    u8 _de;                 //
-    u8 _df[0xec - 0xdf];    //
-    u32 _ec;                //
-    u8 _f0;                 //
-    u8 _f1[0xf4 - 0xf1];    //
-    u8 _f4;                 //
-    u8 _f5[0x158 - 0xf5];   //
-    ItemHeart *mHeartLink;  // 158
-    u8 _15c[0x164 - 0x15c]; //
+    int mKartNo;             // d8
+    u8 _dc;                  // dc
+    u8 _dd;                  // dd
+    u8 _de;                  // de
+    u8 _df[0xe0 - 0xdf];     //
+    J3DEfctHeart *mSelf;     // e0
+    StateFunc *mInitFuncs;   // e4
+    StateFunc *mDoFuncs;     // e8
+    u32 _ec;                 // ec
+    u8 _f0;                  // f0
+    u8 _f1[0xf4 - 0xf1];     //
+    u8 _f4;                  // f4
+    u8 _f5[0xf8 - 0xf5];     //
+    JGeometry::TVec3f mPos;   // f8
+    JGeometry::TVec3f _104;  // 104
+    JGeometry::TVec3f _110;  // 110
+    JGeometry::TVec3f _11c;  // 11c
+    JGeometry::TVec3f _128;  // 128
+    JGeometry::TVec3f _134;  // 134
+    s16 _140;                // 140
+    u8 _142[0x144 - 0x142];  //
+    JPABaseEmitter *mEmitters[2]; // 144
+    f32 _14c;                // 14c
+    u32 _150;                // 150
+    ItemObj *mItem;          // 154
+    ItemHeart *mHeartLink;   // 158
+    u8 _15c;                 // 15c
+    u8 _15d[0x160 - 0x15d];  //
+    JPABaseEmitter *_160;    // 160
 }; // 0x164
 
 #endif // J3DEFCTHEART_H
