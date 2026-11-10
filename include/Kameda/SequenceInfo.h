@@ -141,6 +141,14 @@ public:
         return _80[kart];
     }
 
+    int get_40(int kart, int rank) {
+#line 200
+        JUT_MINMAX_ASSERT(0, kart, 4);
+#line 201
+        JUT_MINMAX_ASSERT(0, rank, 4);
+        return _40[kart][rank];
+    }
+
     int get_2d8(int rank) {
 #line 240
         JUT_MINMAX_ASSERT(0, rank, 8);

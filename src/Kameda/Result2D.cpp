@@ -1161,7 +1161,43 @@ void Result2D::setRaceRank() {}
 
 void Result2D::setGPRank() {}
 
-void Result2D::setVS() {}
+void Result2D::setVS() {
+    int num = RaceMgr::getManager()->getStatusNumber();
+    setBattleCharacter();
+
+    int num1 = num - 1;
+    for (int i = 0; i < num; i++) {
+        int point = gSequenceInfo.get_40(i, 0);
+        u8 *p1 = (u8 *)this + i * 48;
+        data2D *row = (data2D *)(p1 + 0x1418);
+        int digit = point % 10;
+        row[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)digit), 0);
+        row[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(point / 10)), 0);
+
+        int kartNo = J2DManager::getStatus2Kart(i);
+        if (gSequenceInfo.getStartNo(kartNo) == 0) {
+            JUTColor color;
+            getVSColor(i, color);
+            row[0].mPane->setBlack(color);
+            row[1].mPane->setBlack(color);
+            getFrameColor(color);
+            ((data2D *)((u8 *)this + 0xee4 + i * 168))->mPane->setBlack(color);
+        } else {
+            JUTColor color(0);
+            row[0].mPane->setBlack(color);
+            row[1].mPane->setBlack(color);
+        }
+
+        for (int j = 0; j < num1; j++) {
+            int p = gSequenceInfo.get_40(i, j + 1);
+            u8 *p2 = (u8 *)this + i * 144 + j * 48;
+            data2D *row2 = (data2D *)(p2 + 0x14d8);
+            int d = p % 10;
+            row2[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)d), 0);
+            row2[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(p / 10)), 0);
+        }
+    }
+}
 
 void Result2D::setTA() {}
 
