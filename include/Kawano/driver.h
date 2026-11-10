@@ -639,6 +639,7 @@ public:
     int IsDemoBack(StateEnum);
     void InitDriverOffsetPosition();
     void SetDriverOffsetPosition();
+    void SetDriverOffsetPosition_Func1(JGeometry::TVec3<f32> *);
     void SetDriverOffsetPosition_Change(DriverData *);
     void SetDriverOffsetPosition_Demo(DriverData *);
     void InitMpaMtxCalcThrow(J3DAnmTransform *);

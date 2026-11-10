@@ -9,6 +9,7 @@ class DriverDataChild
     static int mInitCounter;
     static f32 mDriverDataDefault[20][95];
 
+public:
     f32 data[95];
 
 public:
