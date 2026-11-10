@@ -1511,3 +1511,85 @@ bool Result2D::getAnmEnd() {
 }
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
+KartInfo *RaceMgr::getKartInfo(int index) {
+#line 170
+    JUT_MINMAX_ASSERT(0, index, 8);
+    return &mRaceInfo->mKartInfo[index];
+}
+
+J2DPicture *Race2D::getRankPic(int rank, int no) {
+#line 490
+    JUT_MINMAX_ASSERT(0, rank, 4);
+    JUT_MINMAX_ASSERT(0, no, 8);
+    return mRankDigits1[rank][no];
+}
+
+ECharID KartInfo::getDriverCharID(int driverNo) const {
+#line 142
+    JUT_MINMAX_ASSERT(0, driverNo, 2);
+    return mKartCharacters[driverNo].getCharID();
+}
+
+void J2DPicture::setCornerColor(JUtility::TColor color) {
+    JUtility::TColor c0 = color;
+    JUtility::TColor c1 = color;
+    JUtility::TColor c2 = color;
+    JUtility::TColor c3 = color;
+    mCornerColors[0].set(c0);
+    mCornerColors[1].set(c1);
+    mCornerColors[2].set(c2);
+    mCornerColors[3].set(c3);
+}
+
+void J2DPicture::setCornerColor(J2DPicture::TCornerColor colors) {
+    JUtility::TColor c0 = colors.mColor0;
+    JUtility::TColor c1 = colors.mColor1;
+    JUtility::TColor c2 = colors.mColor2;
+    JUtility::TColor c3 = colors.mColor3;
+    mCornerColors[0].set(c0);
+    mCornerColors[1].set(c1);
+    mCornerColors[2].set(c2);
+    mCornerColors[3].set(c3);
+}
+
+void J2DPicture::getCornerColor(J2DPicture::TCornerColor &colors) {
+    colors.mColor0.r = mCornerColors[0].r;
+    colors.mColor0.g = mCornerColors[0].g;
+    colors.mColor0.b = mCornerColors[0].b;
+    colors.mColor0.a = mCornerColors[0].a;
+    colors.mColor1.r = mCornerColors[1].r;
+    colors.mColor1.g = mCornerColors[1].g;
+    colors.mColor1.b = mCornerColors[1].b;
+    colors.mColor1.a = mCornerColors[1].a;
+    colors.mColor2.r = mCornerColors[2].r;
+    colors.mColor2.g = mCornerColors[2].g;
+    colors.mColor2.b = mCornerColors[2].b;
+    colors.mColor2.a = mCornerColors[2].a;
+    colors.mColor3.r = mCornerColors[3].r;
+    colors.mColor3.g = mCornerColors[3].g;
+    colors.mColor3.b = mCornerColors[3].b;
+    colors.mColor3.a = mCornerColors[3].a;
+}
+
+KartGamePad *KartInfo::getPad(int driverNo) {
+#line 126
+    JUT_MINMAX_ASSERT(0, driverNo, 2);
+    return mKartCharacters[driverNo].getPad();
+}
+
+KartInfo *RaceInfo::getKartInfo(int kartNo) {
+#line 173
+    JUT_MINMAX_ASSERT(0, kartNo, 8);
+    return mKartInfo + kartNo;
+}
+
+bool J2DScreen::set(const char *path, JKRArchive *archive) {
+    return set(path, 0, archive);
+}
+
+void *JKRGetNameResource(const char *path, JKRFileLoader *loader) {
+    return JKRFileLoader::getGlbResource(path, loader);
+}
+
+Result2DHioNode::Result2DHioNode(const char *name)
+: HioNode(name, &mParam, 0, 0) {}

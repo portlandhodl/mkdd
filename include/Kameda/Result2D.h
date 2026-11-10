@@ -16,7 +16,7 @@
 class Result2DParam : public JORReflexible {
 public:
     // Inline/Unused
-    Result2DParam();
+    Result2DParam() : _48(0), mFlag(1) {}
     virtual ~Result2DParam() {}
 
     u16 _48;  // 0x48
@@ -25,7 +25,7 @@ public:
 
 class Result2DHioNode : public HioNode {
 public:
-    Result2DHioNode();
+    Result2DHioNode(const char *);
     virtual ~Result2DHioNode() {}
 
     Result2DParam mParam;

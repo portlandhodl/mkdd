@@ -96,11 +96,7 @@ public:
         return mIsDemoKart[cnsNo];
     }
 
-    KartInfo *getKartInfo(int kartNo) {
-#line 173
-        JUT_MINMAX_ASSERT(0, kartNo, 8);
-        return mKartInfo + kartNo;
-    }
+    KartInfo *getKartInfo(int kartNo);
 
 //private:
     bool mIsTinyProcess;       // 000

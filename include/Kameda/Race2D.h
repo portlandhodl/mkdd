@@ -28,6 +28,7 @@ class Race2D
 { 
 public:
     Race2D(JKRHeap *);                                                                            // 0x801531b8
+    J2DPicture *getRankPic(int, int);
     void init();                                                                                  // 0x80157714
     void drawPlayerMark();                                                                        // 0x8015838c
     void drawMask();                                                                              // 0x801588b0

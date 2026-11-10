@@ -25,6 +25,7 @@ namespace JUtility
 
         TColor(GXColor color) { set(color); }
 
+
         /** @fabricated */
         TColor &operator=(const GXColorS10 &other)
         {

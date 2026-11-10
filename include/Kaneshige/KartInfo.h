@@ -104,17 +104,9 @@ public:
     int getPlayerKind() const { return mKartCharacters[0].getPlayerKind(); }
     KartGamePad *getPad() { return mKartCharacters[0].getPad(); }
 
-    KartGamePad *getPad(int driverNo) {
-#line 126
-        JUT_MINMAX_ASSERT(0, driverNo, 2);
-        return mKartCharacters[driverNo].getPad();
-    }
+    KartGamePad *getPad(int driverNo);
     
-    ECharID getDriverCharID(int driverNo) const {
-#line 142
-        JUT_MINMAX_ASSERT(0, driverNo, 2);
-        return mKartCharacters[driverNo].getCharID();
-    }
+    ECharID getDriverCharID(int driverNo) const;
 
     int getDriverWeight(int driverNo) const {
 #line 148

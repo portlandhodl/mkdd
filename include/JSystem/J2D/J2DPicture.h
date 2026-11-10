@@ -194,21 +194,9 @@ struct J2DPicture : public J2DPane {
         mBlendAlpha      = other.mBlendAlpha;
     }
 
-    inline void setCornerColor(TCornerColor colors)
-    {
-        mCornerColors[0].set(colors.mColor0);
-        mCornerColors[1].set(colors.mColor1);
-        mCornerColors[2].set(colors.mColor2);
-        mCornerColors[3].set(colors.mColor3);
-    }
+    void setCornerColor(TCornerColor colors);
 
-    inline void setCornerColor(JUtility::TColor color)
-    {
-        mCornerColors[0].set(color);
-        mCornerColors[1].set(color);
-        mCornerColors[2].set(color);
-        mCornerColors[3].set(color);
-    }
+    void setCornerColor(JUtility::TColor color);
 
     inline void setCornerColorRef(JUtility::TColor& color)
     {
@@ -226,7 +214,7 @@ struct J2DPicture : public J2DPane {
         mCornerColors[3] = (color3);
     }
 
-    inline void getCornerColor(TCornerColor& colors) { colors = mCornerColors; }
+    void getCornerColor(TCornerColor& colors);
 
     inline ResTIMG* getTIMG(u8 i) { return getTexture(i)->mTexInfo; }
 
