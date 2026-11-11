@@ -49,10 +49,15 @@ public:
     {
         J3DModelData *mModelData;         // 0x00
         ExModel *mModel;                  // 0x04
-        J3DAnmTransform *mAnmTransform[3]; // 0x08
-        J3DMtxCalc *mMtxCalc[3];          // 0x14
-        J3DAnmTexPattern *mAnmTexPattern; // 0x20
-        u8 _24[0xc];                      // 0x24
+        struct
+        {
+            J3DAnmTransform *mAnmTransform;
+            J3DMtxCalc *mMtxCalc;
+        } mAnm[3];                        // 0x08
+        J3DMtxCalc *mMtxCalc01;           // 0x20
+        J3DMtxCalc *mMtxCalc02;           // 0x24
+        J3DMtxCalc *mMtxCalc12;           // 0x28
+        J3DAnmTexPattern *mAnmTexPattern; // 0x2c
     }; // Size: 0x30
 
 
