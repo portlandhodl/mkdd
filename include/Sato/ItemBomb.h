@@ -59,14 +59,14 @@ public:
     const bool checkKartColDisappear(int);                                // 0x8025d670
     void setCurrentViewNo(u32);                                           // 0x8025d690
     void createEffect();                                                  // 0x8025d6f0
-    bool findAnyKart();                                                   // 0x8025d760
+    u8 findAnyKart();                                                   // 0x8025d760
     static u8 getMaxBombReactFrame();                                     // 0x8025d7b8
 
     static J3DAnmTransform *mAnmTrans[3]; // 0x803a0dfc
     static J3DMtxCalc *mAnmCalc[3];       // 0x803a0e08
     static J3DAnmColor *sColorAnm[7];     // 0x803a0e14
     static Vec sHandOffsetPos;            // 0x80411984
-    static J3DAnmColor *sNowColorAnm;     // 0x80416c18
+    static J3DAnmObjMatColor *sNowColorAnm;     // 0x80416c18
     static int sLocatorJointNo;           // 0x80416c1c
     // Inline/Unused
 
@@ -99,8 +99,7 @@ private:
     u32 mBlastFrame;             // 2fc
     u8 mDisappearing;            // 300
     u8 _301[3];                  // 301
-    u16 mColFlags;               // 304
-    u16 _306;                    // 306
+    ObjColBase *mNewBounds;      // 304
     JPABaseEmitter *mBlastEmt;   // 308
     u8 mGndBoundCnt;             // 30c
     u8 mIsOnGnd;                 // 30d

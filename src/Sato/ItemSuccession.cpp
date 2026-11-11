@@ -5,6 +5,8 @@
 #include "Kaneshige/RaceMgr.h"
 #include "Sato/ItemObj.h"
 #include "Sato/ItemObjMgr.h"
+#include "Sato/ObjUtility.h"
+#include "Sato/stMath.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -89,6 +91,69 @@ __declspec(weak) f32 ItemObjSuc::getRotAxisRatio()
     return sJuggleRotAxisRatio;
 }
 
+void ItemBuild::ParamInit(const JGeometry::TVec3<s16> &rot)
+{
+    mCount = 0;
+    _2d = 0;
+    _18.z = 0.0f;
+    _18.y = 0.0f;
+    _18.x = 0.0f;
+    mOffset.z = 0.0f;
+    mOffset.y = 0.0f;
+    mOffset.x = 0.0f;
+    mHeight = 0.0f;
+    mAngle = 0;
+    mRadAngle = 0.0f;
+    mFirstPos = 0;
+
+    mObj->mpHandAnmMtx = mObj->getJuggleHandAnmMtx();
+
+    _34 = 0;
+    _35 = 0;
+    _36 = 0;
+    PSMTXIdentity(_38);
+
+    if (mObj->mSuccessionItemLink.getList() != nullptr)
+    {
+        f32 cy = JMASCos(rot.y);
+        f32 cz = JMASCos(rot.z);
+        f32 sz = JMASSin(rot.z);
+        f32 cx = JMASCos(rot.x);
+        f32 sx = JMASSin(rot.x);
+        f32 sy = JMASSin(rot.y);
+
+        Mtx &mtx = mObj->_210;
+        mtx[0][0] = cy * cz;
+        mtx[1][0] = cy * sz;
+        mtx[2][0] = -sy;
+        mtx[0][1] = sx * sy * cz - cx * sz;
+        mtx[1][1] = sx * sy * sz + cx * cz;
+        mtx[2][1] = sx * cy;
+        mtx[0][2] = cx * cz * sy + sx * sz;
+        mtx[1][2] = cx * sz * sy - sx * cz;
+        mtx[2][2] = cx * cy;
+
+        f32 gravUp = mObj->mSuccessionParent->mJuggleGravityUp;
+        f32 rnd = mObj->getItemRnd()->get_ufloat_1();
+        s16 angle = (s16)((2.0f * rnd - 1.0f) * 32767.0f * gravUp);
+        f32 s = JMASSin(angle);
+        f32 c = JMASCos(angle);
+
+        _38[1][1] = 1.0f;
+        _38[0][0] = s;
+        _38[2][0] = c;
+        _38[0][2] = -c;
+        _38[2][2] = s;
+        _38[2][1] = 0.0f;
+        _38[1][2] = 0.0f;
+        _38[1][0] = 0.0f;
+        _38[0][1] = 0.0f;
+        _38[0][3] = 0.0f;
+        _38[1][3] = 0.0f;
+        _38[2][3] = 0.0f;
+    }
+}
+
 void ItemBuild::DoEquipScaleUp(f32 scale)
 {
     mObj->mEquipScale = scale * mObj->getThunderScale();
@@ -134,6 +199,84 @@ void ItemBuild::MoveEquip()
         mObj->mpHandAnmMtx = mObj->getJuggleHandAnmMtx();
 }
 
+void ItemBuild::setFirstPos(JGeometry::TVec3f *pos, f32 scale)
+{
+    setHeight(scale);
+    if (!mFirstPos)
+    {
+        JGeometry::TVec3f vel;
+        ObjUtility::getKartVel(mObj->mOwnerNum, &vel);
+        vel.y = 0.0f;
+        vel.scale(-0.5f);
+        mOffset.z = 0.0f;
+        mOffset.x = 15.0f * JMASSin(mAngle) * scale;
+        mAngle += 1200;
+        mObj->rotationRad(mRadAngle, 0.01f);
+
+        Mtx mtx;
+        PSMTXRotRad(mtx, 'Y', mRadAngle);
+        PSMTXMultVec(mtx, &mOffset, &mOffset);
+
+        mObj->mPos = *pos;
+    }
+    else
+    {
+        mObj->mPos = *pos;
+    }
+
+    mObj->mPos.y += mOffset.y;
+}
+
+void ItemBuild::setVel(f32 scale)
+{
+    JGeometry::TVec3f dir;
+    dir.sub(mPrev->mOffset, mOffset);
+    stVecNormalize(&dir);
+
+    int num = mObj->mSuccessionParent->getSuccessionItemNum();
+    f32 ratio = (f32)(num - mCount);
+    bool sameNum = false;
+    if (ratio == 0.0f)
+        sameNum = true;
+    if (RaceMgr::getManager()->getRaceMode() == BOMB_BATTLE)
+    {
+        if (mCount >= 2)
+            ratio = 2.0f;
+        else if (sameNum)
+            ratio = 0.5f;
+    }
+    dir.scale(0.4f * ratio);
+    _18.add(dir);
+
+    f32 mag = PSVECMag((Vec *)&_18);
+    f32 limit = (f32)mCount;
+    if (RaceMgr::getManager()->getRaceMode() == BOMB_BATTLE)
+    {
+        if (mCount == 1 && sameNum)
+            limit = 0.5f;
+        else if (mCount > 2 && limit > 2.0f)
+            limit = 2.0f;
+    }
+    f32 max = 3.0f * limit * scale;
+    if (mag > max)
+    {
+        stVecNormalize((JGeometry::TVec3f *)&_18);
+        _18 *= max;
+    }
+}
+
+void ItemBuild::setPos(JGeometry::TVec3f *pos, f32 scale)
+{
+    f32 s = scale;
+    JGeometry::TVec3f inc(_18);
+    inc.scale(s);
+    mOffset.add(inc);
+    mOffset.y = 0.0f;
+    setHeight(s);
+
+    mObj->mPos.add(*pos, mOffset);
+}
+
 void ItemBuild::setHeight(f32 height)
 {
     if (!_34)
@@ -159,6 +302,117 @@ void ItemBuild::setHeight(f32 height)
         _36 = 0;
     }
     mOffset.y = mHeight;
+}
+
+void ItemBuild::setRotate(Mtx mtx)
+{
+    Mtx rmtx;
+    JGeometry::TVec3f right;
+    JGeometry::TVec3f up;
+    JGeometry::TVec3f zdir;
+
+    ObjUtility::getKartZdir(mObj->mOwnerNum, &zdir);
+    up.sub(mOffset, mPrev->mOffset);
+    stVecNormalize(&up);
+    PSVECCrossProduct(&up, &zdir, &right);
+    stVecNormalize(&right);
+    PSVECCrossProduct(&right, &up, &zdir);
+    stVecNormalize(&zdir);
+    stMakeRMtx(rmtx, right, up, zdir);
+    if (mtx != nullptr)
+        PSMTXConcat(rmtx, mtx, rmtx);
+    PSMTXConcat(rmtx, _38, rmtx);
+    mObj->setModelMatrixAndScale(rmtx);
+}
+
+void ItemBuild::setFirstRotate(Mtx mtx)
+{
+    if (mFirstPos && RaceMgr::getManager()->getRaceMode() != BOMB_BATTLE)
+    {
+        Mtx work;
+        if (mtx != nullptr)
+            PSMTXConcat(mObj->mpHandAnmMtx, mtx, work);
+        else
+            PSMTXCopy(mObj->mpHandAnmMtx, work);
+        PSMTXConcat(work, _38, work);
+        mObj->setModelMatrixAndScale(work);
+        return;
+    }
+
+    Mtx rmtx;
+    JGeometry::TVec3f right;
+    JGeometry::TVec3f up;
+    JGeometry::TVec3f zdir;
+
+    ObjUtility::getKartZdir(mObj->mOwnerNum, &zdir);
+    JGeometry::setTVec3f(&mOffset.x, &up.x);
+    up.x += 90.0f;
+    up.y = zdir.y + 90.0f;
+    stVecNormalize(&up);
+    PSVECCrossProduct(&up, &zdir, &right);
+    stVecNormalize(&right);
+    PSVECCrossProduct(&right, &up, &zdir);
+    stVecNormalize(&zdir);
+    stMakeRMtx(rmtx, right, up, zdir);
+    if (mtx != nullptr)
+        PSMTXConcat(rmtx, mtx, rmtx);
+    PSMTXConcat(rmtx, _38, rmtx);
+    mObj->setModelMatrixAndScale(rmtx);
+}
+
+void ItemBuild::InitMoveDivested()
+{
+    JGeometry::TVec3f pos;
+    pos.sub(mObj->mPos, mOffset);
+    JGeometry::TVec3f kartPos;
+    ObjUtility::getKartPos(mObj->mOwnerNum, &kartPos);
+    mObj->mDivestedPos.sub(pos, kartPos);
+    mObj->mpHandAnmMtx = mObj->getJuggleHandAnmMtx();
+    stMtx2Qt(&mObj->_44, mObj->mModel.getBaseTRMtx());
+    stMtx2Qt(&mObj->_1d8, mObj->mpHandAnmMtx);
+    mObj->initMaxDivestedFrame();
+}
+
+void ItemBuild::MoveDivested()
+{
+    f32 ratio = (f32)mObj->mWaitFrame / (f32)mObj->mDivestedMaxFrame;
+
+    if (mObj->mSuccessionItemLink.getList() == nullptr)
+    {
+        mObj->doHandOneEquip(true, ratio);
+    }
+    else
+    {
+        JGeometry::TVec3f pos;
+        PSMTXMultVec(mObj->mpHandAnmMtx, &mObj->mHandOffset, &pos);
+
+        JGeometry::TVec3f equipPos;
+        mObj->doPosLerp(&equipPos, pos, ratio);
+
+        f32 scale = 1.0f;
+        if (mObj->mState == 1)
+        {
+            if (mObj->getDriverNum() != GetItemObjMgr()->getNowTandemDriverNum(mObj->mOwnerNum))
+                scale = ItemObj::sFrontEquipScaleRatio;
+        }
+        scale *= mObj->getThunderScale();
+
+        MtxPtr mtx = mObj->_210;
+        if (mCount)
+        {
+            setVel(scale);
+            setPos(&equipPos, scale);
+            setRotate(mtx);
+        }
+        else
+        {
+            setFirstPos(&equipPos, scale);
+            setFirstRotate(mtx);
+        }
+    }
+
+    if (mObj->mWaitFrame >= mObj->mDivestedMaxFrame)
+        mObj->setStateEquip(false, false);
 }
 
 void ItemObjSuc::reset()

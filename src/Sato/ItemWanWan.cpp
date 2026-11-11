@@ -586,80 +586,73 @@ void ItemWanWanObj::moveNormal(CrsGround &ground)
 {
     if (ground.getAttribute() == CrsGround::Attr_18)
     {
-        moveCenterLine();
+        moveColWall(ground);
         return;
     }
 
     f32 groundH = ground.getHeight() + mDisScaleAnm.y * mHeightOffset;
-    mGroundHeight = mPos.y - groundH;
-    if (mPos.y >= groundH)
+    _2d0 = mPos.y - groundH;
+    if (mPos.y < groundH)
+    {
+        if (mMoveState == 0)
+        {
+            initmoveCenterLine();
+            mMoveState = 1;
+        }
+
+        mTransferFlags |= 2;
+        mTransferFlags |= 0x100;
+        mPos.y = groundH;
+
+        f32 velMag = mVel.length();
+        JGeometry::TVec3f normal;
+        ground.getNormal(&normal);
+
+        mVel.y = -mVel.y * _28;
+        if (mVel.y > sBoundVelMaxY)
+            mVel.y = sBoundVelMaxY;
+
+        if (_2c0 && velMag > 0.0f)
+        {
+            JGeometry::TVec3f side;
+            JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
+            JGeometry::TVec3f nvel;
+            side.cross(up, mVel);
+            if (side.length() > 0.0f)
+            {
+                side.normalize();
+                nvel.cross(side, normal);
+                if (nvel.length() > 0.0f)
+                {
+                    nvel.normalize();
+                    nvel.scale(velMag);
+                    mVel = nvel;
+                }
+            }
+        }
+
+        _2c0 = 1;
+
+        JGeometry::TVec3f side;
+        JGeometry::TVec3f velDir;
+        JGeometry::setTVec3f(&mVel.x, &velDir.x);
+        stVecNormalize(velDir);
+        velDir.y = 0.0f;
+
+        side.cross(normal, velDir);
+        stVecNormalize(side);
+        velDir.cross(side, normal);
+        stVecNormalize(velDir);
+
+        Mtx mtx;
+        stMakeRMtx(mtx, side, normal, velDir);
+        stMtx2Qt(&_44, mtx);
+    }
+    else
     {
         calcBalanceFlying();
         _2c0 = 0;
-        return;
     }
-
-    if (mMoveState == 0)
-    {
-        initmoveCenterLine();
-        mMoveState = 1;
-    }
-
-    mTransferFlags |= 2;
-    mTransferFlags |= 0x100;
-    mPos.y = groundH;
-
-    f32 velMag = mVel.length();
-    JGeometry::TVec3f normal;
-    ground.getNormal(&normal);
-
-    mVel.y = -mVel.y * _28;
-    if (mVel.y > sBoundVelMaxY)
-        mVel.y = sBoundVelMaxY;
-
-    if (_2c0 && velMag > 0.0f)
-    {
-        JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
-        JGeometry::TVec3f side;
-        side.cross(up, mVel);
-        if (side.length() > 0.0f)
-        {
-            side.normalize();
-            JGeometry::TVec3f up2;
-            up2.cross(side, normal);
-            if (up2.length() > 0.0f)
-            {
-                up2.normalize();
-                JGeometry::TVec3f fr;
-                fr.cross(up2, normal);
-                fr.normalize();
-                JGeometry::TVec3f velDir(mVel);
-                velDir.y = 0.0f;
-                velDir.normalize();
-                Mtx mtx;
-                stMakeRMtx(mtx, up2, normal, fr);
-                stMtx2Qt(&_44, mtx);
-            }
-        }
-    }
-
-    _2c0 = 1;
-
-    JGeometry::TVec3f velDir(mVel);
-    velDir.y = 0.0f;
-    velDir.normalize();
-
-    JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
-    JGeometry::TVec3f side;
-    side.cross(velDir, up);
-    side.normalize();
-    JGeometry::TVec3f fr;
-    fr.cross(side, up);
-    fr.normalize();
-
-    Mtx mtx;
-    stMakeRMtx(mtx, side, up, fr);
-    stMtx2Qt(&_44, mtx);
 }
 
 void ItemWanWanObj::calcBalanceFlying()
@@ -706,15 +699,12 @@ void ItemWanWanObj::setCLPoint()
 
 void ItemWanWanObj::moveCenterLine()
 {
-    if (mCLPointController->mNext == nullptr)
-        mCLPointController->init_ByKartIndex(mOwnerNum);
-
     JGeometry::TVec3f point;
     mCLPointController->mNext->getPosition(&point);
-    JGeometry::TVec3f delta;
-    delta.sub(mPos, point);
+    JGeometry::TVec3f delta(point);
+    delta.sub(mPos);
     delta.y = 0.0f;
-    if (delta.length() >= sTargetR || mCLPointController->chkIsOverFwPoint(mPos))
+    if (delta.length() < sTargetR || mCLPointController->chkIsOverFwPoint(mPos))
         mCLPointController->changeNextPoint();
 
     JGeometry::TVec3f prevPos;
@@ -724,7 +714,7 @@ void ItemWanWanObj::moveCenterLine()
 
     JGeometry::TVec3f dir;
     dir.sub(nextPos, prevPos);
-    dir.normalize();
+    stVecNormalize(dir);
 
     JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
     JGeometry::TVec3f side;
@@ -735,28 +725,39 @@ void ItemWanWanObj::moveCenterLine()
         width = sMaxRoadWidth;
 
     f32 lateral = width * JMASinShort(_328) * sRoadWidthRatio;
-    JGeometry::TVec3f target(nextPos.x + side.x * lateral, nextPos.y + side.y * lateral, nextPos.z + side.z * lateral);
+    side.scale(lateral);
+    JGeometry::TVec3f target;
+    target.add(side, nextPos);
+
+    f32 vely = mVel.y;
+    mVel.y = 0.0f;
 
     JGeometry::TVec3f toTarget;
     toTarget.sub(target, mPos);
     toTarget.y = 0.0f;
+    stVecNormalize(toTarget);
 
-    f32 vely = mVel.y;
-    mVel.y = 0.0f;
+    toTarget.scale(sNormalAddVel);
     mVel.scale(sMoveVelDownRatio);
-    toTarget.normalize();
-    mVel.scaleAdd(sNormalAddVel, toTarget);
+    mVel.add(toTarget);
+    JGeometry::TVec3f vel(mVel);
     mVel.y = vely;
 
+    JGeometry::TVec3f clDir(mCLPointController->_c);
+    stVecNormalize(clDir);
+
     _328 = _328 + (s16)(width / sMaxRoadWidth * sAddCnt);
+
+    _338.sub(mVel, _32c);
 }
 
 void ItemWanWanObj::moveStraight()
 {
     JGeometry::TVec3f dir(mVel);
     dir.y = 0.0f;
-    dir.normalize();
-    mVel.scaleAdd(sStraightAddVel, dir);
+    stVecNormalize(dir);
+    dir.scale(sStraightAddVel);
+    mVel.add(dir);
 }
 
 

@@ -98,6 +98,7 @@ public:
 
     int getBalloonNumber() const { return mBalloonNum; };    
     int getBombPoint() const { return mBombPoint; };
+    int getPlayerKartColor() const { return mPlayerKartColor; }
     int getRabbitTimer() const { return mRabbitWinFrame; }
     int getGoalFrame() const { return mGoalFrame; };
     f32 getTotalUnitDist() const { return mRaceProgression; };

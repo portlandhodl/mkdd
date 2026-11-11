@@ -3,6 +3,10 @@
 #include "Sato/stMath.h"
 #include "dolphin/mtx.h"
 #include "dolphin/gx/GXEnum.h"
+#include "dolphin/gx/GXTev.h"
+#include "dolphin/gx/GXPixel.h"
+#include "dolphin/gx/GXTransform.h"
+#include "dolphin/gx/GXGeometry.h"
 
 namespace
 {
@@ -53,8 +57,13 @@ DrawIterFunc sDrawParentDirectional = &stParticleDraw::drawParentDirectional;
 DrawIterFunc sDrawParentLine = &stParticleDraw::drawParentLine;
 DrawIterFunc sChildFunc = &stParticleDraw::drawChild;
 
-u8 sDirRotY;
+u8 sPrim[4];
+u8 sEnv[4];
 u8 sUseColor;
+u8 sDirRotY;
+f32 sParentSizeX;
+f32 sParentSizeY;
+u8 sParentAlpha;
 u8 sDrawNum;
 DrawIterFunc sFunc[2];
 DrawIterFunc sParentFunc;
@@ -342,6 +351,139 @@ void stParticleDraw::drawRev()
     while (it.mLink) {
         drawEachParticle(it);
         it.mLink = (JSULink<stParticle> *)it.mLink->mPrev;
+    }
+}
+
+static inline void stSetParentColor(JSUListIterator<stParticle> &it, stEmitter *e)
+{
+    if (!sUseColor)
+        return;
+    stParticle *p = it.getObject();
+    f32 rate = 0.0f;
+    if (it.getObject()->mLifeEnd != 0)
+        rate = (f32)it.getObject()->mLife / (f32)it.getObject()->mLifeEnd;
+    p->mColor0[0] = e->mColor0Start[0] +
+        (int)((f32)(e->mColor0End[0] - e->mColor0Start[0]) * rate);
+    it.getObject()->mColor0[1] = e->mColor0Start[1] +
+        (int)((f32)(e->mColor0End[1] - e->mColor0Start[1]) * rate);
+    it.getObject()->mColor0[2] = e->mColor0Start[2] +
+        (int)((f32)(e->mColor0End[2] - e->mColor0Start[2]) * rate);
+    it.getObject()->mColor1[0] = e->mColor1Start[0] +
+        (int)((f32)(e->mColor1End[0] - e->mColor1Start[0]) * rate);
+    it.getObject()->mColor1[1] = e->mColor1Start[1] +
+        (int)((f32)(e->mColor1End[1] - e->mColor1Start[1]) * rate);
+    it.getObject()->mColor1[2] = e->mColor1Start[2] +
+        (int)((f32)(e->mColor1End[2] - e->mColor1Start[2]) * rate);
+    sPrim[0] = it.getObject()->mColor0[0];
+    sPrim[1] = it.getObject()->mColor0[1];
+    sPrim[2] = it.getObject()->mColor0[2];
+    sEnv[0] = it.getObject()->mColor1[0];
+    sEnv[1] = it.getObject()->mColor1[1];
+    sEnv[2] = it.getObject()->mColor1[2];
+    GXSetTevColor(GX_TEVREG2, *(GXColor *)sEnv);
+    sPrim[3] = sParentAlpha;
+    GXSetTevColor(GX_TEVREG1, *(GXColor *)sPrim);
+}
+
+void stParticleDraw::drawParentBillBoard(JSUListIterator<stParticle> &it)
+{
+    Mtx out;
+    drawParentBillBoardCommon(it, out);
+    stParticle *particle = (stParticle *)it.mLink->mData;
+    Mtx rot;
+    stMTXRotRad(rot, 'Z', particle->mRotX);
+    out[0][0] = rot[0][0] * sParentSizeX;
+    out[1][0] = rot[1][0] * sParentSizeX;
+    out[2][0] = rot[2][0] * sParentSizeX;
+    out[0][1] = rot[0][1] * sParentSizeY;
+    out[1][1] = rot[1][1] * sParentSizeY;
+    out[2][1] = rot[2][1] * sParentSizeY;
+    out[2][2] = 0.0f;
+    out[1][2] = 0.0f;
+    out[0][2] = 0.0f;
+    GXLoadPosMtxImm(out, 0);
+    GXCallDisplayList(sParticleDisplayList, 0x20);
+}
+
+void stParticleDraw::drawParentBillBoardXZ(JSUListIterator<stParticle> &it)
+{
+    Mtx out;
+    drawParentBillBoardCommon(it, out);
+    stParticle *particle = (stParticle *)it.mLink->mData;
+    Mtx rot;
+    stMTXRotRad(rot, 'Y', particle->mRotX);
+    rot[0][0] *= sParentSizeX;
+    rot[1][0] *= sParentSizeX;
+    rot[2][0] *= sParentSizeX;
+    rot[0][2] *= sParentSizeY;
+    rot[1][2] *= sParentSizeY;
+    rot[2][2] *= sParentSizeY;
+    PSMTXConcat(out, rot, out);
+    GXLoadPosMtxImm(out, 0);
+    GXCallDisplayList(sParticleDisplayList, 0x20);
+}
+
+void stParticleDraw::drawParentBillBoardCommon(JSUListIterator<stParticle> &it, Mtx out)
+{
+    if (sUseColor) {
+        stEmitter *e = mDynamics->mEmitter;
+        f32 rate = 0.0f;
+        if (it.getObject()->mLifeEnd != 0)
+            rate = (f32)it.getObject()->mLife / (f32)it.getObject()->mLifeEnd;
+        it.getObject()->mColor0[0] = e->mColor0Start[0] +
+            (int)((f32)(e->mColor0End[0] - e->mColor0Start[0]) * rate);
+        it.getObject()->mColor0[1] = e->mColor0Start[1] +
+            (int)((f32)(e->mColor0End[1] - e->mColor0Start[1]) * rate);
+        it.getObject()->mColor0[2] = e->mColor0Start[2] +
+            (int)((f32)(e->mColor0End[2] - e->mColor0Start[2]) * rate);
+        it.getObject()->mColor1[0] = e->mColor1Start[0] +
+            (int)((f32)(e->mColor1End[0] - e->mColor1Start[0]) * rate);
+        it.getObject()->mColor1[1] = e->mColor1Start[1] +
+            (int)((f32)(e->mColor1End[1] - e->mColor1Start[1]) * rate);
+        it.getObject()->mColor1[2] = e->mColor1Start[2] +
+            (int)((f32)(e->mColor1End[2] - e->mColor1Start[2]) * rate);
+        sPrim[0] = it.getObject()->mColor0[0];
+        sPrim[1] = it.getObject()->mColor0[1];
+        sPrim[2] = it.getObject()->mColor0[2];
+        sEnv[0] = it.getObject()->mColor1[0];
+        sEnv[1] = it.getObject()->mColor1[1];
+        sEnv[2] = it.getObject()->mColor1[2];
+        GXSetTevColor(GX_TEVREG2, *(GXColor *)sEnv);
+        sPrim[3] = sParentAlpha;
+        GXSetTevColor(GX_TEVREG1, *(GXColor *)sPrim);
+    }
+    Mtx trans;
+    PSMTXTrans(trans, it.getObject()->mPos.x, it.getObject()->mPos.y, it.getObject()->mPos.z);
+    PSMTXConcat(*mCamMtx, trans, out);
+}
+
+void stParticleDraw::drawOrder()
+{
+    if (mDynamics->mEmitter->mFlags & 0x4000) {
+        GXSetTevColor((GXTevRegID)3, mDynamics->mEmitter->mOrderColor);
+        GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_C2);
+        GXSetBlendMode(GX_BM_BLEND, (GXBlendFactor)4, (GXBlendFactor)5, GX_LO_SET);
+        JSUListIterator<stParticle> it((JSULink<stParticle> *)mDynamics->mList.getFirstLink());
+        while (it.mLink) {
+            drawEachParticle(it);
+            it.mLink = (JSULink<stParticle> *)it.mLink->mNext;
+        }
+        GXSetTevColorIn(GX_TEVSTAGE0, (GXTevColorArg)mTevColorIn[0],
+                        (GXTevColorArg)mTevColorIn[1], (GXTevColorArg)mTevColorIn[2],
+                        (GXTevColorArg)mTevColorIn[3]);
+        GXSetBlendMode(GX_BM_BLEND, (GXBlendFactor)mBlendType, (GXBlendFactor)mBlendSrc,
+                       GX_LO_SET);
+        JSUListIterator<stParticle> it2((JSULink<stParticle> *)mDynamics->mList.getFirstLink());
+        while (it2.mLink) {
+            drawEachParticle(it2);
+            it2.mLink = (JSULink<stParticle> *)it2.mLink->mNext;
+        }
+    } else {
+        JSUListIterator<stParticle> it3((JSULink<stParticle> *)mDynamics->mList.getFirstLink());
+        while (it3.mLink) {
+            drawEachParticle(it3);
+            it3.mLink = (JSULink<stParticle> *)it3.mLink->mNext;
+        }
     }
 }
 

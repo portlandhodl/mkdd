@@ -174,9 +174,10 @@ void ObjUtility::getKartPos(int kart_index, JGeometry::TVec3f *kartPos)
 
 
 #line 134 "ObjUtility.cpp"
-    JUT_MINMAX_ASSERT(0, kart_index, 8);
+    int kart = kart_index;
+    JUT_MINMAX_ASSERT(0, kart, 8);
     JGeometry::TVec3f *p = kartPos;
-    Mtx &mtx = getKartBodyMtx(kart_index);
+    Mtx &mtx = getKartBodyMtx(kart);
     p->set(mtx[0][3], mtx[1][3], mtx[2][3]);
 }
 

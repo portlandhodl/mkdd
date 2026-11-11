@@ -5,6 +5,7 @@
 #include <JSystem/JSupport/JSUList.h>
 #include <JSystem/JGeometry.h>
 #include "Sato/stParticle.h"
+#include "dolphin/gx/GXStruct.h"
 
 struct stEmitter
 {
@@ -23,24 +24,47 @@ struct stEmitter
     JGeometry::TVec3f mFirstVelDir; // 0x28
     f32 mFirstVelRndAngle; // 0x34
     f32 mFirstVel; // 0x38
-    u8 _3c[4];
+    f32 mVelRndRate; // 0x3c
     f32 mGravity; // 0x40
     f32 mAirFric; // 0x44
-    u8 _48[0x18];
+    f32 mAirFricRnd; // 0x48
+    f32 mRotBase; // 0x4c
+    f32 mRotRnd; // 0x50
+    f32 mRotXBase; // 0x54
+    f32 mRotXRnd; // 0x58
+    f32 mRotSpeedThresh; // 0x5c
     f32 mSizeX; // 0x60
     f32 mSizeY; // 0x64
-    u8 _68[4];
+    f32 mSizeRnd; // 0x68
     f32 mSizeFirst; // 0x6c
     f32 mSizeLast; // 0x70
-    u8 _74[8];
+    f32 mSizeFirstRate; // 0x74
+    f32 mSizeLastRate; // 0x78
     f32 mAlphaStdRate; // 0x7c
-    u8 _80[0x36];
+    f32 mAlphaFirst; // 0x80
+    f32 mAlphaLast; // 0x84
+    f32 mAlphaFirstRate; // 0x88
+    f32 mAlphaLastRate; // 0x8c
+    f32 mChildSize; // 0x90
+    f32 mChildAlpha; // 0x94
+    u8 _98[0x10]; // 0x98
+    u8 mColor0Start[3]; // 0xa8
+    u8 mColor0End[3]; // 0xab
+    u8 mColor1Start[3]; // 0xae
+    u8 mColor1End[3]; // 0xb1
+    u8 _b4[2];
     u16 mFlags;   // 0xb6
     u8 mTevMode;  // 0xb8
     u8 mKind;     // 0xb9
     u8 mDrawType; // 0xba
     u8 _bb;       // 0xbb
-    u8 _bc[0x1c];
+    u8 _bc[4];    // 0xbc
+    GXColor mOrderColor; // 0xc0
+    u8 _c4[4];    // 0xc4
+    f32 mSizeYFirst; // 0xc8
+    f32 mSizeYLast; // 0xcc
+    f32 mSizeYFirstRate; // 0xd0
+    f32 mSizeYLastRate; // 0xd4
 }; // Size: 0xd8
 
 struct stEmitterParamLineIP

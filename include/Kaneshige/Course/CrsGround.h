@@ -62,7 +62,8 @@ public:
     bool isInsideGrid(const JGeometry::TVec3f &, f32, f32, f32, f32);                                                                             // 0x801a2ec0
     static void searchGridIndex(int *, int *, Course *, const JGeometry::TVec3f &, f32, f32, f32, f32, int, int);                                        // 0x801a3004
     f32 getHeight() const;                                                                                                                        // 0x801a3168
-    void getNormal(JGeometry::TVec3f *) const;                                                                                                    // 0x801a3170
+    void getNormal(JGeometry::TVec3f *) const;
+    const JGeometry::TVec3f &getNormalVec() const { return mNormal; }                                                                                                    // 0x801a3170
     u8 getCameraCode() const;                                                                                                                     // 0x801a319c
     bool isItemInvalGround() const;                                                                                                               // 0x801a3204
     u8 getAddThickness() const;                                                                                                                   // 0x801a3268

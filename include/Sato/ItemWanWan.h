@@ -82,7 +82,7 @@ public:
     int _2ec;                                // 2ec
     AnmController mController;               // 2f0
     J3DAnmObjCluster mAnmObjCluster;         // 304
-    u16 _328;                                // 328
+    s16 _328;                                // 328
     JGeometry::TVec3f _32c;                  // 32c
     JGeometry::TVec3f _338;                  // 338
     f32 mGravity;                            // 344

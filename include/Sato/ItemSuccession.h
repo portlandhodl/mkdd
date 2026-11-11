@@ -80,9 +80,7 @@ public:
 
     JGeometry::TVec3f mOffset; // 8
     f32 mHeight;               // 14
-    f32 _18;                   // 18
-    f32 _1c;                   // 1c
-    f32 _20;                   // 20
+    JGeometry::TVec3f _18;     // 18
     s16 mAngle;                // 24
     f32 mRadAngle;             // 28
     u8 mCount;                 // 2c

@@ -1296,15 +1296,15 @@ LTCPIn_644:
 LTCPIn_648:
     stw     r0,56(r1)
 LTCPIn_64c:
-    bl LTCPIn_64c
+    bl TCPCheckSum
 LTCPIn_650:
     clrlwi. r0,r3,16
 LTCPIn_654:
     bne LTCPIn_1178
 LTCPIn_658:
-    lis     r3,0
+    lis     r3,TCPStat@ha
 LTCPIn_65c:
-    addi    r6,r3,0
+    addi    r6,r3,TCPStat@l
 LTCPIn_660:
     lwz     r5,4(r6)
 LTCPIn_664:
@@ -1316,7 +1316,7 @@ LTCPIn_66c:
 LTCPIn_670:
     stw     r0,4(r6)
 LTCPIn_674:
-    bl LTCPIn_674
+    bl TCPLookupInfo
 LTCPIn_678:
     mr.     r29,r3
 LTCPIn_67c:
@@ -1334,7 +1334,7 @@ LTCPIn_690:
 LTCPIn_694:
     addi    r5,r31,0
 LTCPIn_698:
-    bl LTCPIn_698
+    bl TCPTestTimeWait
 LTCPIn_69c:
     cmpwi   r3,0
 LTCPIn_6a0:
@@ -1412,7 +1412,7 @@ LTCPIn_72c:
 LTCPIn_730:
     lhz     r8,2(r31)
 LTCPIn_734:
-    bl LTCPIn_734
+    bl TCPRespond
 LTCPIn_738:
     b LTCPIn_1178
 LTCPIn_73c:
@@ -1488,7 +1488,7 @@ LTCPIn_7c4:
 LTCPIn_7c8:
     addi    r6,r31,0
 LTCPIn_7cc:
-    bl LTCPIn_7cc
+    bl DoListen
 LTCPIn_7d0:
     mr.     r25,r3
 LTCPIn_7d4:
@@ -1500,7 +1500,7 @@ LTCPIn_7dc:
 LTCPIn_7e0:
     addi    r5,r1,48
 LTCPIn_7e4:
-    bl LTCPIn_7e4
+    bl TCPTrimSegment
 LTCPIn_7e8:
     lhz     r3,12(r31)
 LTCPIn_7ec:
@@ -1528,7 +1528,7 @@ LTCPIn_814:
 LTCPIn_818:
     li      r7,0
 LTCPIn_81c:
-    bl LTCPIn_81c
+    bl DoData
 LTCPIn_820:
     b LTCPIn_1178
 LTCPIn_824:
@@ -1540,7 +1540,7 @@ LTCPIn_82c:
 LTCPIn_830:
     addi    r6,r31,0
 LTCPIn_834:
-    bl LTCPIn_834
+    bl DoSynSent
 LTCPIn_838:
     cmplwi  r3,0
 LTCPIn_83c:
@@ -1552,7 +1552,7 @@ LTCPIn_844:
 LTCPIn_848:
     addi    r5,r1,48
 LTCPIn_84c:
-    bl LTCPIn_84c
+    bl TCPTrimSegment
 LTCPIn_850:
     lhz     r3,12(r31)
 LTCPIn_854:
@@ -1580,7 +1580,7 @@ LTCPIn_87c:
 LTCPIn_880:
     li      r7,0
 LTCPIn_884:
-    bl LTCPIn_884
+    bl DoData
 LTCPIn_888:
     b LTCPIn_1178
 LTCPIn_88c:
@@ -1668,7 +1668,7 @@ LTCPIn_92c:
 LTCPIn_930:
     lhz     r8,2(r31)
 LTCPIn_934:
-    bl LTCPIn_934
+    bl TCPRespond
 LTCPIn_938:
     b LTCPIn_1178
 LTCPIn_93c:
@@ -1744,7 +1744,7 @@ LTCPIn_9c4:
 LTCPIn_9c8:
     lhz     r8,2(r31)
 LTCPIn_9cc:
-    bl LTCPIn_9cc
+    bl TCPRespond
 LTCPIn_9d0:
     b LTCPIn_1178
 LTCPIn_9d4:
@@ -1796,7 +1796,7 @@ LTCPIn_a2c:
 LTCPIn_a30:
     mr      r3,r29
 LTCPIn_a34:
-    bl LTCPIn_a34
+    bl TCPAbort
 LTCPIn_a38:
     b LTCPIn_1178
 LTCPIn_a3c:
@@ -1806,13 +1806,13 @@ LTCPIn_a40:
 LTCPIn_a44:
     mr      r3,r29
 LTCPIn_a48:
-    bl LTCPIn_a48
+    bl TCPAbort
 LTCPIn_a4c:
     b LTCPIn_1178
 LTCPIn_a50:
     mr      r3,r29
 LTCPIn_a54:
-    bl LTCPIn_a54
+    bl TCPAbort
 LTCPIn_a58:
     b LTCPIn_1178
 LTCPIn_a5c:
@@ -1826,7 +1826,7 @@ LTCPIn_a68:
 LTCPIn_a6c:
     addi    r5,r1,48
 LTCPIn_a70:
-    bl LTCPIn_a70
+    bl TCPTrimSegment
 LTCPIn_a74:
     cmpwi   r3,0
 LTCPIn_a78:
@@ -1864,7 +1864,7 @@ LTCPIn_ab4:
 LTCPIn_ab8:
     lwz     r10,84(r29)
 LTCPIn_abc:
-    bl LTCPIn_abc
+    bl TCPRespond
 LTCPIn_ac0:
     b LTCPIn_1178
 LTCPIn_ac4:
@@ -1946,11 +1946,11 @@ LTCPIn_b58:
 LTCPIn_b5c:
     lhz     r8,2(r31)
 LTCPIn_b60:
-    bl LTCPIn_b60
+    bl TCPRespond
 LTCPIn_b64:
     mr      r3,r29
 LTCPIn_b68:
-    bl LTCPIn_b68
+    bl TCPAbort
 LTCPIn_b6c:
     b LTCPIn_1178
 LTCPIn_b70:
@@ -1968,7 +1968,7 @@ LTCPIn_b84:
 LTCPIn_b88:
     addi    r4,r31,0
 LTCPIn_b8c:
-    bl LTCPIn_b8c
+    bl TCPDeleteSackHoles
 LTCPIn_b90:
     addi    r3,r29,0
 LTCPIn_b94:
@@ -1976,7 +1976,7 @@ LTCPIn_b94:
 LTCPIn_b98:
     addi    r5,r31,0
 LTCPIn_b9c:
-    bl LTCPIn_b9c
+    bl DoOption
 LTCPIn_ba0:
     lwz     r0,228(r29)
 LTCPIn_ba4:
@@ -2098,7 +2098,7 @@ LTCPIn_c88:
 LTCPIn_c8c:
     lwz     r10,84(r29)
 LTCPIn_c90:
-    bl LTCPIn_c90
+    bl TCPRespond
 LTCPIn_c94:
     b LTCPIn_1178
 LTCPIn_c98:
@@ -2226,7 +2226,7 @@ LTCPIn_d88:
 LTCPIn_d8c:
     stw     r0,648(r29)
 LTCPIn_d90:
-    bl LTCPIn_d90
+    bl OSCancelAlarm
 LTCPIn_d94:
     li      r0,3
 LTCPIn_d98:
@@ -2272,7 +2272,7 @@ LTCPIn_de4:
 LTCPIn_de8:
     addi    r3,r29,600
 LTCPIn_dec:
-    bl LTCPIn_dec
+    bl OSCancelAlarm
 LTCPIn_df0:
     li      r0,0
 LTCPIn_df4:
@@ -2322,7 +2322,7 @@ LTCPIn_e48:
 LTCPIn_e4c:
     addi    r3,r29,600
 LTCPIn_e50:
-    bl LTCPIn_e50
+    bl OSCancelAlarm
 LTCPIn_e54:
     lwz     r0,524(r29)
 LTCPIn_e58:
@@ -2460,7 +2460,7 @@ LTCPIn_f5c:
 LTCPIn_f60:
     lwz     r5,380(r29)
 LTCPIn_f64:
-    bl LTCPIn_f64
+    bl IFRingPut
 LTCPIn_f68:
     stw     r3,380(r29)
 LTCPIn_f6c:
@@ -2510,7 +2510,7 @@ LTCPIn_fc0:
 LTCPIn_fc4:
     li      r4,0
 LTCPIn_fc8:
-    bl LTCPIn_fc8
+    bl TCPSendIn
 LTCPIn_fcc:
     lha     r0,4(r29)
 LTCPIn_fd0:
@@ -2518,7 +2518,7 @@ LTCPIn_fd0:
 LTCPIn_fd4:
     ble LTCPIn_fdc
 LTCPIn_fd8:
-    bl LTCPIn_fd8
+    bl __IPWakeupPollingThreads
 LTCPIn_fdc:
     lwz     r12,472(r29)
 LTCPIn_fe0:
@@ -2600,7 +2600,7 @@ LTCPIn_1074:
 LTCPIn_1078:
     addi    r4,r29,0
 LTCPIn_107c:
-    bl LTCPIn_107c
+    bl TCPStartTimeWait
 LTCPIn_1080:
     b LTCPIn_1178
 LTCPIn_1084:
@@ -2614,7 +2614,7 @@ LTCPIn_1090:
 LTCPIn_1094:
     mr      r3,r29
 LTCPIn_1098:
-    bl LTCPIn_1098
+    bl TCPAbort
 LTCPIn_109c:
     b LTCPIn_1178
 LTCPIn_10a0:
@@ -2636,7 +2636,7 @@ LTCPIn_10bc:
 LTCPIn_10c0:
     stw     r0,648(r29)
 LTCPIn_10c4:
-    bl LTCPIn_10c4
+    bl OSGetTime
 LTCPIn_10c8:
     lwz     r5,660(r29)
 LTCPIn_10cc:
@@ -2648,7 +2648,7 @@ LTCPIn_10d4:
 LTCPIn_10d8:
     addi    r3,r29,0
 LTCPIn_10dc:
-    bl LTCPIn_10dc
+    bl TCPUpdateRtt
 LTCPIn_10e0:
     lwz     r4,64(r29)
 LTCPIn_10e4:
@@ -2712,7 +2712,7 @@ LTCPIn_1154:
 LTCPIn_1158:
     addi    r4,r31,0
 LTCPIn_115c:
-    bl LTCPIn_115c
+    bl TCPStopRxmitTimer
 LTCPIn_1160:
     lhz     r7,48(r1)
 LTCPIn_1164:
@@ -2724,7 +2724,7 @@ LTCPIn_116c:
 LTCPIn_1170:
     addi    r6,r31,0
 LTCPIn_1174:
-    bl LTCPIn_1174
+    bl DoData
 LTCPIn_1178:
     lmw     r25,68(r1)
 LTCPIn_117c:
@@ -2762,7 +2762,7 @@ LDoListen_11ac:
 LDoListen_11b0:
     addi    r4,r28,12
 LDoListen_11b4:
-    bl LDoListen_11b4
+    bl IPIsBroadcastAddr
 LDoListen_11b8:
     cmpwi   r3,0
 LDoListen_11bc:
@@ -2860,7 +2860,7 @@ LDoListen_1270:
 LDoListen_1274:
     lhz     r8,2(r29)
 LDoListen_1278:
-    bl LDoListen_1278
+    bl TCPRespond
 LDoListen_127c:
     li      r3,0
 LDoListen_1280:
@@ -2886,7 +2886,7 @@ LDoListen_12a4:
 LDoListen_12a8:
     li      r5,4
 LDoListen_12ac:
-    bl LDoListen_12ac
+    bl memmove
 LDoListen_12b0:
     lhz     r0,2(r29)
 LDoListen_12b4:
@@ -2906,7 +2906,7 @@ LDoListen_12cc:
 LDoListen_12d0:
     li      r5,4
 LDoListen_12d4:
-    bl LDoListen_12d4
+    bl memmove
 LDoListen_12d8:
     lhz     r0,0(r29)
 LDoListen_12dc:
@@ -2988,7 +2988,7 @@ LDoListen_1370:
 LDoListen_1374:
     stw     r31,44(r30)
 LDoListen_1378:
-    bl LDoListen_1378
+    bl TCPInitRtt
 LDoListen_137c:
     lis     r3,-3
 LDoListen_1380:
@@ -3056,7 +3056,7 @@ LDoListen_13f8:
 LDoListen_13fc:
     stw     r31,544(r30)
 LDoListen_1400:
-    bl LDoListen_1400
+    bl memmove
 LDoListen_1404:
     addi    r3,r30,12
 LDoListen_1408:
@@ -3064,7 +3064,7 @@ LDoListen_1408:
 LDoListen_140c:
     li      r5,4
 LDoListen_1410:
-    bl LDoListen_1410
+    bl memmove
 LDoListen_1414:
     lhz     r0,0(r29)
 LDoListen_1418:
@@ -3082,7 +3082,7 @@ LDoListen_142c:
 LDoListen_1430:
     sth     r0,10(r30)
 LDoListen_1434:
-    bl LDoListen_1434
+    bl memmove
 LDoListen_1438:
     addi    r3,r31,12
 LDoListen_143c:
@@ -3090,7 +3090,7 @@ LDoListen_143c:
 LDoListen_1440:
     li      r5,4
 LDoListen_1444:
-    bl LDoListen_1444
+    bl memmove
 LDoListen_1448:
     lwz     r4,64(r26)
 LDoListen_144c:
@@ -3190,13 +3190,13 @@ LDoListen_1504:
 LDoListen_1508:
     srwi    r26,r0,16
 LDoListen_150c:
-    bl LDoListen_150c
+    bl OSGetTime
 LDoListen_1510:
     addi    r6,r26,0
 LDoListen_1514:
     li      r5,0
 LDoListen_1518:
-    bl LDoListen_1518
+    bl __div2i
 LDoListen_151c:
     add     r31,r31,r4
 LDoListen_1520:
@@ -3272,13 +3272,13 @@ LDoListen_15a8:
 LDoListen_15ac:
     stw     r6,212(r30)
 LDoListen_15b0:
-    bl LDoListen_15b0
+    bl DoOption
 LDoListen_15b4:
     li      r0,3
 LDoListen_15b8:
     stw     r0,228(r30)
 LDoListen_15bc:
-    li      r4,0
+    li      r4,TCPInfoQueue@sda21
 LDoListen_15c0:
     lwzu    r3,4(r4)
 LDoListen_15c4:
@@ -3286,7 +3286,7 @@ LDoListen_15c4:
 LDoListen_15c8:
     bne LDoListen_15d4
 LDoListen_15cc:
-    stw r30, TCPInfoQueue(r0)
+    stw r30, TCPInfoQueue@sda21(r0)
 LDoListen_15d0:
     b LDoListen_15d8
 LDoListen_15d4:
