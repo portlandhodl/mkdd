@@ -11,6 +11,7 @@
 #include "Shiraiwa/SiUtil.h"
 #include "Shiraiwa/Objects/MapObjGeyser.h"
 
+static const f32 sDummy[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 const char *TMapObjGeyser::scEffectName[6] = {
     "mk_kanketsusen_a",
     "mk_kanketsusen_b",
@@ -27,14 +28,14 @@ TAnmInfo TMapObjGeyser::sAnmInfos[4] = {
     { "/Objects/Geyser14.bca", nullptr, nullptr, 0, 0, 1, -1, 0 },
 };
 
-const u8 TMapObjGeyser::sAnmTable[6] = { 5, 5, 0, 1, 2, 3 };
 
 s16 TMapObjGeyser::sActTime = 120;
 f32 TMapObjGeyser::sJumpUpStartVel = 100.0f;
 u16 TMapObjGeyser::sCheckCycle = 30;
 s16 TMapObjGeyser::sEfctABCDEndFrame = 25;
 f32 TMapObjGeyser::sBoundHeight = 2900.0f;
-const char *TMapObjGeyser::scJointName = "ef_set";
+const char *scJointName = "ef_set";
+const u8 TMapObjGeyser::sAnmTable[6] = { 5, 5, 0, 1, 2, 3 };
 
 s16 TMapObjGeyser::sEfctEFEndFrame = sActTime - 25;
 int TMapObjGeyser::sJointNum;
@@ -51,7 +52,6 @@ const StateObserver::StateFuncSet<TMapObjGeyser> TMapObjGeyser::sTable[6] = {
     { 5, &TMapObjGeyser::initFunc_JumpDown, &TMapObjGeyser::doFunc_JumpDown },
 };
 
-static const f32 sDummy[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 #include <JSystem/JAudio/JASFakeMatch2.h>
 
 
@@ -247,7 +247,7 @@ void TMapObjGeyser::reset()
     mAnmPlayer.init(getAnmCtrl(), sAnmInfos, 4);
 
     mBtk.mFrameCtrl.setFrame((f32)mBtk.mFrameCtrl.mStartFrame);
-    mBtk.mFrameCtrl.setRate(0.0f);
+    mBtk.mFrameCtrl.setRate(1.0f);
     mBtk.mFrameCtrl.mState = 0;
 
     mActTime = mObjData->mParam1;

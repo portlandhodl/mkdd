@@ -231,7 +231,7 @@ public:
     f32 getGroundThickness() const { return sGndThickness; }
 
 private: // add all documented stuff from Ghidra
-    friend class TMapObjPool;
+    friend class TMapObjPool; friend class TSMABird;
     static u16 sDrawAreaModel;
     static bool sForceDebugFogSetting;
     static bool sConfigFog;

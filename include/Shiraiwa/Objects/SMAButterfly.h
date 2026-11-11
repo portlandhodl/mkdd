@@ -16,8 +16,12 @@ public:
     TSmallAnimal(u32 id);
     virtual ~TSmallAnimal();
     virtual void reset();
-    virtual const char *getBmdFileName();
-    virtual void setOrigin(JGeometry::TVec3f *);
+    virtual const char *getBmdFileName() { return nullptr; }
+    virtual void setOrigin(JGeometry::TVec3f *origin)
+    {
+        mOrigin = origin;
+        mPos.set(*mOrigin);
+    }
 
     JGeometry::TVec3f *mOrigin; // 0x14c
 }; // Size: 0x150
@@ -28,16 +32,17 @@ public:
     TSmallAnimalGen(const CrsData::SObject &, u32 id);
     virtual ~TSmallAnimalGen();
     virtual void reset();
-    virtual void calc();
+    virtual void calc() {}
 
+    TSmallAnimal *getNthObject(u16);
     void makeObjects(u16);
 
-    void **mObjects; // 0x14c
+    TSmallAnimal **mObjects; // 0x14c
     u16 mCount;      // 0x150
     u32 mId;         // 0x154
 }; // Size: 0x158
 
-class TSMAButterfly : public TSmallAnimal, public J3DAnmObjMaterial
+class TSMAButterfly : public TSmallAnimal
 {
 public:
     TSMAButterfly();
@@ -59,6 +64,7 @@ public:
     static J3DMtxCalc *sButterflyBckMtxCalc;
     static J3DAnmTexPattern *sButterflyBtpAnm;
 
+    J3DAnmObjMaterial mBtp;    // 0x150
     JGeometry::TVec3f mTarget; // 0x170
 }; // Size: 0x17c
 

@@ -1,11 +1,12 @@
 #include "Shiraiwa/Objects/SMAButterfly.h"
 
+#include "JSystem/JMath/JMath.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Sato/ObjUtility.h"
 #include "Sato/GeographyObjMgr.h"
 
-s16 TSMAButterfly::sMoveHeight = 100;
-s16 TSMAButterfly::sMoveWidth = 500;
+s16 TSMAButterfly::sMoveHeight = 200;
+s16 TSMAButterfly::sMoveWidth = 200;
 J3DAnmTransform *TSMAButterfly::sButterflyBckAnmTrans;
 J3DMtxCalc *TSMAButterfly::sButterflyBckMtxCalc;
 J3DAnmTexPattern *TSMAButterfly::sButterflyBtpAnm;
@@ -31,16 +32,11 @@ void TSMAButterfly::reset() {
     mGeoObjFlag &= ~1;
     mCheckKartHitFlags = 0;
     mGeoObjFlag &= ~2;
-    mPos.x = mOrigin->x;
-    mPos.y = mOrigin->y;
-    mPos.z = mOrigin->z;
-    mTarget.x = mOrigin->x;
-    mTarget.y = mOrigin->y;
-    mTarget.z = mOrigin->z;
-    f32 rate = 0.5f * (getGeoRnd()->get_ufloat_1() - 1.0f) + 0.75f;
-    AnmControlTrans *trans = mAnmCtrl->mTrans;
-    trans->getObj(0)->mFrameCtrl.setRate(rate);
-    J3DAnmObjMaterial::mFrameCtrl.mFrame = (u16)getGeoRnd()->getRandomMax((s16)(J3DAnmObjMaterial::mFrameCtrl.mEndFrame - 1));
+    mPos.set(*mOrigin);
+    mTarget.set(*mOrigin);
+    f32 rate = 0.5f * getGeoRnd()->get_ufloat_1() + 0.75f;
+    mAnmCtrl->mTrans->getObj(0)->getFrameCtrl()->setRate(rate);
+    mBtp.mFrameCtrl.mFrame = (u16)getGeoRnd()->getRandomMax((s16)(mBtp.mFrameCtrl.mEndFrame - 1));
 }
 
 void TSMAButterfly::setOrigin(JGeometry::TVec3f *origin) {
@@ -48,7 +44,7 @@ void TSMAButterfly::setOrigin(JGeometry::TVec3f *origin) {
 }
 
 void TSMAButterfly::loadAnimation() {
-    J3DModelData *modelData = this->TSmallAnimal::mModel.getModelData();
+    J3DModelData *modelData = mModel.getModelData();
     void *bck = ObjUtility::getPtrCourseArc("/Objects/butterfly1.bca");
     J3DAnmObjTrans::setupTransAnmData(&sButterflyBckAnmTrans, &sButterflyBckMtxCalc, modelData, bck);
     void *btp = ObjUtility::getPtrCourseArc("/Objects/butterfly1.btp");
@@ -56,31 +52,64 @@ void TSMAButterfly::loadAnimation() {
 }
 
 void TSMAButterfly::createModel(JKRSolidHeap *heap, u32 viewNo) {
-    this->TSmallAnimal::mModel.createDifferedModel(heap, viewNo, 0x80000, false);
+    mModel.createDifferedModel(heap, viewNo, 0x80000, false);
     AnmController *ctrl = mAnmCtrl;
     ctrl->mTrans = new AnmControlTrans();
-    ctrl->mTrans->initAnm(1, &this->TSmallAnimal::mModel);
+    ctrl->mTrans->initAnm(1, &mModel);
     mAnmCtrl->mTrans->registration(0, sButterflyBckAnmTrans, sButterflyBckMtxCalc);
     mAnmCtrl->mTrans->getObj(0)->mFrameCtrl.mAttr = 2;
-    J3DAnmObjMaterial::mModel = &this->TSmallAnimal::mModel;
-    J3DAnmObjMaterial::mAnmBase = sButterflyBtpAnm;
-    J3DAnmObjMaterial::initFrameCtrl(J3DAnmObjMaterial::mAnmBase);
+    mBtp.mModel = &mModel;
+    mBtp.mAnmBase = sButterflyBtpAnm;
+    mBtp.initFrameCtrl(mBtp.mAnmBase);
 }
 
-void TSMAButterfly::calc() {}
+void TSMAButterfly::calc() {
+    if (checkReachTarget()) {
+        s16 pitch = getRandomDeg(60, -60);
+        s16 yaw = getRandomDeg(180, -180);
+        mTarget.x = sMoveWidth * JMASCos(yaw);
+        mTarget.z = sMoveWidth * JMASSin(yaw);
+        mTarget.y = sMoveHeight * JMASSin(pitch);
+        mTarget.scale(getGeoRnd()->get_ufloat_1() + 0.5f);
+        mTarget.add(*mOrigin);
+        JGeometry::TVec3f zDir;
+        zDir.sub(mTarget, mPos);
+        zDir.normalize();
+        mVel.set(zDir);
+        mVel.scale(2.5f);
+        JGeometry::TVec3f yDir(0.0f, 1.0f, 0.0f);
+        JGeometry::TVec3f xDir;
+        if (zDir.y >= -0.4f) {
+            xDir.cross(yDir, zDir);
+            xDir.normalize();
+            yDir.cross(zDir, xDir);
+            yDir.normalize();
+            mRotMtx.setXYZDir(xDir, yDir, zDir);
+        } else {
+            zDir.negate();
+            yDir.set(zDir);
+            mRotMtx.getZDir(zDir);
+            xDir.cross(yDir, zDir);
+            xDir.normalize();
+            zDir.cross(xDir, yDir);
+            zDir.normalize();
+            mRotMtx.setXYZDir(xDir, yDir, zDir);
+        }
+    }
+    mPos.add(mVel);
+}
 
 void TSMAButterfly::update() {
-    J3DAnmObjMaterial &mat = *this;
-    mat.anmFrameProc();
+    mBtp.anmFrameProc();
     setModelMatrixAndScale();
-    this->TSmallAnimal::mModel.update(0);
+    mModel.update(0);
 }
 
 bool TSMAButterfly::checkReachTarget() {
     bool ret = false;
     JGeometry::TVec3f delta;
     delta.sub(mTarget, mPos);
-    if (delta.squared() < 1.0f) {
+    if (delta.squared() < 2500.0f) {
         ret = true;
     }
     return ret;
@@ -89,14 +118,14 @@ bool TSMAButterfly::checkReachTarget() {
 s16 TSMAButterfly::getRandomDeg(s16 min, s16 max) {
     s16 d = min - max;
     int deg = max + getGeoRnd()->getRandomMax(d);
-    return (s16)(deg * 0.01f);
+    return (s16)(182.04445f * deg);
 }
 
 StateObserver::StateFuncSet<TSMAButterflyGen> TSMAButterflyGen::sTable[2] = {
     {0, &TSMAButterflyGen::initFunc_Fly, &TSMAButterflyGen::doFunc_Fly},
     {1, &TSMAButterflyGen::initFunc_Rest, &TSMAButterflyGen::doFunc_Rest},
 };
-s16 TSMAButterflyGen::sButterflyRestFrame = 100;
+s16 TSMAButterflyGen::sButterflyRestFrame = 600;
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
@@ -119,9 +148,9 @@ void TSMAButterflyGen::reset() {
     mPathMove->reset();
     if (mObjData->pathID != 0xffff) {
         TPathMove *path = mPathMove;
-        path->_14 = 0.0f;
-        path->_18 = 30.0f;
-        path->_20 = 0.2f;
+        path->_14 = 0.5f;
+        path->_18 = 2.5f;
+        path->_20 = 1.5625f;
     }
 }
 

@@ -70,7 +70,6 @@ public:
     static u16 sCheckCycle;                                // 0x80415260
     static s16 sEfctABCDEndFrame;                          // 0x80415262
     static f32 sBoundHeight;                               // 0x80415264
-    static const char *scJointName;                        // 0x80415268
     static s16 sEfctEFEndFrame;                            // 0x80416F00
     static int sJointNum;                                  // 0x80416F04
     static J3DAnmTextureSRTKey *sGeyserBtkAnm;             // 0x80416F08

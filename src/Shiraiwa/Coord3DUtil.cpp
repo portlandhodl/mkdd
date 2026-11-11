@@ -543,8 +543,8 @@ void TFreeFallShakeSky::reflect(const JGeometry::TVec3f &vec) {
         normal.normalize();
         JGeometry::TVec3f push;
         JGeometry::TVec3f tmp;
-        tmp.scale(normal.dot(*mVel), normal);
-        tmp.scale(-(1.0f + _10));
+        push.scale(normal.dot(*mVel), normal);
+        tmp.scale(-(1.0f + _10), push);
         mVel->add(tmp);
         push.scale(d, normal);
         mPos->add(push);

@@ -45,7 +45,6 @@ public:
 
     static TBoidParam sParams[3];
 
-private:
     TBoidParam *mParam;              // 0x04
     TBoid **mBoids;                  // 0x08
     u32 mNum;                        // 0x0c

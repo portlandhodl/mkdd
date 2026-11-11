@@ -159,7 +159,6 @@ public:
     }
     virtual ~TFreeFallShakeSky() {}
     virtual void reset();
-    virtual void roll();
     virtual void reflect(const JGeometry::TVec3f &);
     virtual void rotate();
     virtual void getGravity(JGeometry::TVec3f *);

@@ -55,11 +55,8 @@ void TMapObjMoveItemBox::reset() {
     mFreeFall->_2C = getGeoRnd();
     mFreeFall->_34 = sJumpPow;
     mFreeFall->_1C = 1;
-    const CrsData::SObject *data = mObjData;
-    mVel.x = data->zNorm.x;
-    mVel.y = data->zNorm.y;
-    mVel.z = data->zNorm.z;
-    mVel.normalize();
+    mVel.set(mObjData->zNorm);
+    mVel.scale(10.0f);
 }
 
 void TMapObjMoveItemBox::InitExec() {
@@ -96,7 +93,7 @@ void TMapObjMoveItemBox::move() {
         ground.search(pos);
         if (ground.getAttribute() == CrsGround::Attr_10) {
             f32 h = ground.getHeight() + sHeight;
-            if (pos.y - h > 0.01f && mPos.y - h < 0.01f) {
+            if (pos.y - h > 0.0f && mPos.y - h < 0.0f) {
                 land = true;
             }
         }
@@ -130,10 +127,10 @@ void TMapObjMoveItemBox::resetPosition() {
 }
 
 void TMapObjMoveItemBox::doFunc_Appear() {
-    f32 range = SiUtil::getNormalRange((f32)getStateCount(), 0.01f, (f32)sAppearFrame);
-    f32 scale = 1.0f + range;
-    if (scale >= 0.0f) {
-        scale = 0.0f;
+    f32 range = SiUtil::getNormalRange((f32)getStateCount(), 0.0f, (f32)sAppearFrame);
+    f32 scale = 0.01f + range;
+    if (scale >= 1.0f) {
+        scale = 1.0f;
         setState(1);
     }
     f32 s = mObjData->scale.y * scale;
@@ -170,11 +167,11 @@ void TMapObjMoveItemBox::initFunc_Disappear() {
 }
 
 void TMapObjMoveItemBox::doFunc_Disappear() {
-    f32 range = SiUtil::getNormalRange((f32)getStateCount(), 0.01f, (f32)sDisappearFrame);
-    f32 zero = 0.0f;
-    f32 scale = zero - range;
-    if (scale <= 0.01f) {
-        scale = zero;
+    f32 range = SiUtil::getNormalRange((f32)getStateCount(), 0.0f, (f32)sDisappearFrame);
+    f32 one = 1.0f;
+    f32 scale = one - range;
+    if (scale <= 0.0f) {
+        scale = one;
         mGeoObjFlag |= 0x20;
         setState(3);
     }
@@ -208,11 +205,11 @@ void TMapObjMoveItemBox::initFunc_RaceEnd() {
 }
 
 void TMapObjMoveItemBox::doFunc_RaceEnd() {
-    f32 range = SiUtil::getNormalRange((f32)getStateCount(), 0.01f, (f32)sDisappearFrame);
-    f32 zero = 0.0f;
-    f32 scale = zero - range;
-    if (scale <= 0.01f) {
-        scale = zero;
+    f32 range = SiUtil::getNormalRange((f32)getStateCount(), 0.0f, (f32)sDisappearFrame);
+    f32 one = 1.0f;
+    f32 scale = one - range;
+    if (scale <= 0.0f) {
+        scale = one;
         mGeoObjFlag |= 0x20;
         setState(3);
     }
@@ -223,59 +220,30 @@ void TMapObjMoveItemBox::doFunc_RaceEnd() {
 }
 
 void TMapObjMoveItemBoxLimit::reset() {
-    GeoItemBox::reset();
-    resetObject();
-    ResetState();
-    mGeoObjFlag &= ~0x20;
-    mGeoObjFlag &= ~2;
-    mCheckKartHitFlags = -1;
-    for (int i = 0; i < 2; i++) {
-        mEmitter[i] = nullptr;
-    }
-    mFreeFall->reset();
-    mFreeFall->_18 = sHeight * mScale.y;
-    mFreeFall->_14 = sRollSpeed / mScale.y;
-    mFreeFall->_0C = sGravitySize;
-    mFreeFall->_10 = sReflectRate;
-    mFreeFall->_04 = sAirFriction;
-    mFreeFall->_08 = sFriction;
-    mFreeFall->_38 = 1;
-    mFreeFall->_2C = getGeoRnd();
-    mFreeFall->_34 = sJumpPow;
-    mFreeFall->_1C = 1;
-    const CrsData::SObject *data = mObjData;
-    mVel.x = data->zNorm.x;
-    mVel.y = data->zNorm.y;
-    mVel.z = data->zNorm.z;
-    mVel.normalize();
-    if (mObjData->pathID == 0xffff) {
+    TMapObjMoveItemBox::reset();
 #line 330
-        JUT_ASSERT(mObjData->pathID != 0xffff);
-        OSPanic("MapObjMoveItemBox.cpp", 330, "MoveItemBoxLimit: Illegal Path ID");
-    }
-    CrsData::PointData *p0 = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(0, mObjData->pathID);
-    CrsData::PointData *p1 = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(1, mObjData->pathID);
-    mMin.x = p0->pos.x;
-    mMin.y = p0->pos.y;
-    mMin.z = p0->pos.z;
-    if (mMin.x > p1->pos.x) mMin.x = p1->pos.x;
-    if (mMin.y > p1->pos.y) mMin.y = p1->pos.y;
-    if (mMin.z > p1->pos.z) mMin.z = p1->pos.z;
-    mMax.x = p0->pos.x;
-    mMax.y = p0->pos.y;
-    mMax.z = p0->pos.z;
-    if (mMax.x < p1->pos.x) mMax.x = p1->pos.x;
-    if (mMax.y < p1->pos.y) mMax.y = p1->pos.y;
-    if (mMax.z < p1->pos.z) mMax.z = p1->pos.z;
-    f32 g = sGravitySize;
-    mFreeFall->_0C = g;
-    mFreeFall->_08 = 0.0f;
-    mPos.x = p0->pos.x;
-    mPos.y = p0->pos.y;
-    mPos.z = p0->pos.z;
+    JUT_ASSERT_MSG(mObjData->pathID != 0xffff, "MoveItemBoxLimit: Illegal Path ID");
+    CrsData::PointData *point = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(mObjData->pathID, 0);
+    f32 x0 = point->pos.x;
+    f32 y0 = point->pos.y;
+    f32 z0 = point->pos.z;
+    point = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(mObjData->pathID, 1);
+    f32 x1 = point->pos.x;
+    f32 y1 = point->pos.y;
+    f32 z1 = point->pos.z;
+    mMin.set(x0, y0, z0);
+    if (mMin.x >= x1) mMin.x = x1;
+    if (mMin.y >= y1) mMin.y = y1;
+    if (mMin.z >= z1) mMin.z = z1;
+    mMax.set(x0, y0, z0);
+    if (mMax.x <= x1) mMax.x = x1;
+    if (mMax.y <= y1) mMax.y = y1;
+    if (mMax.z <= z1) mMax.z = z1;
+    mFreeFall->_0C = sGravitySize;
+    mFreeFall->_08 = 1.0f;
+    mPos.set(x0, y0, z0);
     mPos.y += sHeight;
 }
-
 void TMapObjMoveItemBoxLimit::move() {
     mFreeFall->update();
     fixMoveSphere();
@@ -305,6 +273,7 @@ void TMapObjMoveItemBoxLimit::doKartColCallBack(int kart) {
         setState(2);
     }
 }
+
 
 inline void TMapObjMoveItemBoxLimit::resetPosition() {}
 

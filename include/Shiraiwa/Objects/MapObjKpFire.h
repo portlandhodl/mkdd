@@ -25,8 +25,9 @@ public:
     virtual void doKartColCallBack(int);
     virtual const char *getBmdFileName();
 
-    void InitExec();
     void MoveExec();
+
+    void InitExec();
     void setVelDir(const JGeometry::TVec3f &);
     void checkItemHitting();
     void fire(const JGeometry::TVec3f &);
@@ -86,8 +87,8 @@ public:
     void getFirePos(JGeometry::TVec3f *);
     void initFunc_FireClose();
     void doFunc_FireClose();
-    void InitExec();
     void MoveExec();
+    void InitExec();
 
     static const StateObserver::StateFuncSet<TMapObjKpFire> sTable[6];
 

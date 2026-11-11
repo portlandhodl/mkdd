@@ -66,12 +66,12 @@ TMapObjPoihana::TMapObjPoihana(const CrsData::SObject &obj)
     mWalkRotSpeed = 0.015f;
     mWalkParam = 0.3f;
     mThrowPow = 50;
-    JUT_ASSERT(mObjData->pathID != 0xffff);
+    JUT_ASSERT_MSG(mObjData->pathID != 0xffff, "TMapObjPoihana: Illegal Path ID");
     NewAnmCtrl();
     createSoundMgr();
     mpGround = new CrsGround(RaceMgr::sRaceManager->getCourse());
     TAnmPlayer::resetAnimations(sAnmInfos, 3);
-    mPathWalk = new TPathWalk(obj);
+    mPathWalk = new TPathWalk(&obj);
     mPathParam = mObjData->mParam4;
     if (mPathParam <= 0) {
         mPathParam = 4000;

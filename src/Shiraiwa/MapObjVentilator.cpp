@@ -5,8 +5,6 @@
 #include "Inagaki/GameSoundMgr.h"
 #include "Kaneshige/RaceMgr.h"
 
-extern void setSeWithVelocityP__Q29GameAudio14ObjectSoundMgrFUlf(GameAudio::ObjectSoundMgr *, u32, f32);
-extern void ExecuteState__13StateObserverFv(StateObserver *);
 
 StateObserver::StateFuncSet<TMapObjVentilator> TMapObjVentilator::sTable[4] = {
     { 0, &TMapObjVentilator::initFunc_Slow, &TMapObjVentilator::doFunc_Slow },
@@ -23,7 +21,7 @@ TMapObjVentilator::TMapObjVentilator(const CrsData::SObject &obj) : TMapObjHioNo
 TMapObjVentilator::~TMapObjVentilator() {}
 
 const char *TMapObjVentilator::getBmdFileName() {
-    static const char *cBmdName = "/ObjFcts/Fan1.bmd";
+    static const char *cBmdName = "/Objects/Fan1.bmd";
     return cBmdName;
 }
 
@@ -33,6 +31,13 @@ void TMapObjVentilator::InitExec() {
 
 void TMapObjVentilator::MoveExec() {
     Observer_FindAndExec(TMapObjVentilator, 4);
+}
+
+static inline void setRotQuat(JGeometry::TQuat4f &q, f32 halfAngle)
+{
+    f32 s = sin(halfAngle);
+    f32 c = cos(halfAngle);
+    q.set<f32>(s, 0.0f, 0.0f, c);
 }
 
 void TMapObjVentilator::reset() {
@@ -46,58 +51,30 @@ void TMapObjVentilator::reset() {
     mRotMtx.setQuat(mCurQuat);
 
     mFastQuat.set(0.0f, 0.0f, 0.0f, 1.0f);
-    register f32 fastSin = (f32)sin(0.05);
-    register f32 fastCos = (f32)cos(0.05);
-    mFastQuat.set<f32>(fastSin, 0.0f, 0.0f, fastCos);
+    setRotQuat(mFastQuat, 0.05f);
 
     mSlowQuat.set(0.0f, 0.0f, 0.0f, 1.0f);
-    register f32 slowSin = (f32)sin(0.015);
-    register f32 slowCos = (f32)cos(0.015);
-    mSlowQuat.set<f32>(slowSin, 0.0f, 0.0f, slowCos);
+    setRotQuat(mSlowQuat, 0.015f);
 }
 
-static const f32 cVentCalc03 = 0.3f;
-static const f32 cVentCalc07 = 0.7f;
-static const f32 cVentCalc10 = 1.0f;
 
 void TMapObjVentilator::calc() {
-    __asm__ volatile {
-        mr r31,r3
-        addi r3,r31,332
-        bl ExecuteState__13StateObserverFv
-        lhz r0,338(r31)
-        lfs f1, cVentCalc03
-        cmpwi r0,2
-        beq lcase2
-        bge lge
-        cmpwi r0,0
-        beq lend
-        bge lcase1
-        b lend
-    lge:
-        cmpwi r0,4
-        bge lend
-        b lcase3
-    lcase2:
-        lfs f1, cVentCalc10
-        b lend
-    lcase3:
-        lfs f1, cVentCalc10
-        lfs f0,392(r31)
-        lfs f2, cVentCalc07
-        fsubs f0,f1,f0
-        fmuls f1,f2,f0
-        b lend
-    lcase1:
-        lfs f1, cVentCalc07
-        lfs f0,392(r31)
-        fmuls f1,f1,f0
-    lend:
-        lis r4,4
-        lwz r3,324(r31)
-        addi r4,r4,127
-        bl setSeWithVelocityP__Q29GameAudio14ObjectSoundMgrFUlf
+    ExecuteState();
+    f32 vel = 0.3f;
+    switch (getState()) {
+    case 0:
+        break;
+    case 2:
+        vel = 1.0f;
+        break;
+    case 3:
+        vel = 0.7f * (1.0f - mSpeed);
+        break;
+    case 1:
+        vel = 0.7f * mSpeed;
+        break;
     }
+    mSoundMgr->setSeWithVelocityP(0x4007f, vel);
 }
 
 void TMapObjVentilator::doRotate(const JGeometry::TQuat4f &rQ) {

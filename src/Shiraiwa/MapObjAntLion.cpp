@@ -13,11 +13,6 @@ J3DAnmTransform *TMapObjAntLion::sAntLionBckAnmTrans;
 J3DMtxCalc *TMapObjAntLion::sAntLionBckMtxCalc;
 int TMapObjAntLion::sJointNo;
 
-static const char *emtName[2] = {
-    "mk_arijigoku_paku_a",
-    "mk_arijigoku_paku_b",
-};
-
 StateObserver::StateFuncSet<TMapObjAntLion> TMapObjAntLion::sTable[3] = {
     {0, &TMapObjAntLion::initFunc_Start, &TMapObjAntLion::doFunc_Start},
     {1, &TMapObjAntLion::initFunc_Wait, &TMapObjAntLion::doFunc_Wait},
@@ -133,7 +128,7 @@ void TMapObjAntLion::initFunc_Eat()
     int i;
     J3DAnmObjTrans *obj = mAnmCtrl->mTrans->getObjAnt(0);
     obj->setFrame((f32)obj->mFrameCtrl.mStartFrame);
-    obj->mFrameCtrl.setRate(0.0f);
+    obj->mFrameCtrl.setRate(1.0f);
     obj->mFrameCtrl.mState = 0;
     if (mAnmCtrl->IsAvailableTrans())
         mAnmCtrl->mTrans->resetFlag();
@@ -157,6 +152,10 @@ void TMapObjAntLion::initFunc_Eat()
     x = *(f32 *)(jointMtx + 0x0c);
     pos.set(x, y, z);
 
+    static const char *emtName[2] = {
+        "mk_arijigoku_paku_a",
+        "mk_arijigoku_paku_b",
+    };
     for (i = 0; i < 2; i++)
     {
         JPABaseEmitter *emt = GetJPAMgr()->createEmt(emtName[i], pos);

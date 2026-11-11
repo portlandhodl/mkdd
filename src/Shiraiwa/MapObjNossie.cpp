@@ -10,6 +10,7 @@
 #include "Yamamoto/kartCtrl.h"
 #include "mathHelper.h"
 
+const char *TMapObjNossie::sHeadJointName = "head";
 const f32 TMapObjNossie::sOffsetY[4] = { 540.0f, 540.0f, 362.5f, 362.5f };
 const char *TMapObjNossie::sNossieLegJointName[4] = { "wrist_l", "wrist_r", "ankle_l", "ankle_r" };
 int TMapObjNossie::sNossieLegJointNo[4] = { 0, 0, 0, 0 };
@@ -41,20 +42,19 @@ const u32 TMapObjNossie::scNossieEffectAppearPos[16] = {
     2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3
 };
 
-const char *TMapObjNossie::sHeadJointName = "head";
 int TMapObjNossie::sHeadJointNo;
 JGeometry::TVec3f TMapObjNossie::sHeadOffset(0.0f, -460.0f, 550.0f);
 JGeometry::TVec3f TMapObjNossie::sBodyOffset(0.0f, 2400.0f, 500.0f);
 f32 TMapObjNossieColFoot::sShakeRadius = 10000.0f;
 
 
-f32 TMapObjPtera::sMoveMaxSpeed = 30.0f;
-f32 TMapObjPtera::sMoveAccel = 0.5f;
-f32 TMapObjPtera::sReachLength = 2000.0f;
-
 f32 TMapObjSwimNossie::sMoveMaxSpeed = 5.0f;
 f32 TMapObjSwimNossie::sMoveAccel = 0.02f;
 f32 TMapObjSwimNossie::sReachLength = 500.0f;
+
+f32 TMapObjPtera::sMoveMaxSpeed = 30.0f;
+f32 TMapObjPtera::sMoveAccel = 0.5f;
+f32 TMapObjPtera::sReachLength = 2000.0f;
 
 #include <JSystem/JAudio/JASFakeMatch2.h>
 
@@ -253,7 +253,7 @@ __declspec(weak) u32 TMapObjNossieColBase::getReaction() {
 void TMapObjNossieColBase::calc() {}
 
 void TMapObjNossieColHead::createColModel(J3DModelData *) {
-    createBoundsSphere(1500.0f, mScale.y);
+    createBoundsSphere(620.0f, mScale.y);
 }
 
 void TMapObjNossieColHead::calc() {
@@ -261,7 +261,7 @@ void TMapObjNossieColHead::calc() {
 }
 
 void TMapObjNossieColBody::createColModel(J3DModelData *) {
-    createBoundsCylinder(1900.0f, 500.0f, mScale.y);
+    createBoundsCylinder(1500.0f, 1900.0f, mScale.y);
 }
 
 u32 TMapObjNossieColFoot::getReleaseFrame() {
@@ -281,7 +281,7 @@ void TMapObjNossieColFoot::reset() {
 }
 
 void TMapObjNossieColFoot::createColModel(J3DModelData *) {
-    createBoundsCylinder(1800.0f, 32.0f, 1500.0f);
+    createBoundsCylinder(500.0f, 1800.0f, 1.0f);
 }
 
 bool TMapObjNossieColFoot::isStepped(int kartNo) {
@@ -487,31 +487,34 @@ void TMapObjPtera::reset() {
     mRotMtx.setXYZDir(xDir, yDir, zDir);
 }
 
+static inline void goNextNode(TPathUtil *path)
+{
+    path->mDistanceDirty = true;
+    path->mNode = path->getNextNode();
+}
+
+static inline f32 getNextNodeY(TPathUtil *path)
+{
+    u16 next = path->getNextNode();
+    return RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)next)->pos.y;
+}
+
 void TMapObjPtera::calc() {
     mAnmPlayer.update();
     if (moveToNextNode() < sReachLength) {
-        TPathUtil *path = mPath;
-        path->mDistanceDirty = true;
-        path->mNode = path->getNextNode();
-        path = mPath;
-        u16 next = path->getNextNode();
-        f32 nextY = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)next)->pos.y;
-        if (mAnmPlayer.getCurAnmNumber() == 0) {
-            if (mPos.y > nextY) {
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 2;
-            }
-        } else if (mAnmPlayer.getCurAnmNumber() == 1) {
-            if (mPos.y <= nextY) {
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 2;
-            }
+        goNextNode(mPath);
+        f32 nextY = getNextNodeY(mPath);
+        if (mAnmPlayer.getCurAnmNumber() == 0 && mPos.y > nextY) {
+            mAnmPlayer._10 = 1;
+            mAnmPlayer._e |= 2;
+        } else if (mAnmPlayer.getCurAnmNumber() == 1 && mPos.y <= nextY) {
+            mAnmPlayer._10 = 1;
+            mAnmPlayer._e |= 2;
         }
     }
     getSoundMgr()->setSe(0x4005e);
-    u8 anm = mAnmPlayer.getCurAnmNumber();
-    if (anm == 0) {
-        J3DFrameCtrl *ctrl = mAnmPlayer.mController->getFrameCtrl(anm);
+    if (mAnmPlayer.getCurAnmNumber() == 0) {
+        J3DFrameCtrl *ctrl = mAnmPlayer.mController->getFrameCtrl(mAnmPlayer.getCurAnmNumber());
         if (SiUtil::checkPassFrame(2.0f, ctrl->getFrame(), ctrl->getRate())) {
             getSoundMgr()->setSe(0x4005c);
         }

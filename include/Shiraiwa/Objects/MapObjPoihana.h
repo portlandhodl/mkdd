@@ -38,7 +38,7 @@ public:
 class TPathWalk
 {
 public:
-    TPathWalk(const CrsData::SObject &);
+    TPathWalk(const CrsData::SObject *);
     virtual ~TPathWalk();
 
     void init(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);

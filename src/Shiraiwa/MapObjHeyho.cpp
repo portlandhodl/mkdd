@@ -166,46 +166,30 @@ bool TMapObjHeyho::checkItemHitting() {
     bool ret = false;
     if (mGeoObjFlag & 4) {
         ItemObj *item = mColItemObj;
-        int kind = item->mItemKind;
-        if (kind == 2) {
-            goto slide;
+        switch (item->mItemKind) {
+        case 1:
+        case 7:
+        case 8:
+            mBombVelH = sBombVelH;
+            mBombVelV = sBombVelV;
+            ret = true;
+            mImpulse.x = item->mPos.x;
+            mImpulse.y = item->mPos.y;
+            mImpulse.z = item->mPos.z;
+            break;
+        case 0:
+        case 2:
+        case 9:
+            mBombVelH = sSlideVelH;
+            mBombVelV = sSlideVelV;
+            ret = true;
+            mImpulse.x = item->mPos.x;
+            mImpulse.y = item->mPos.y;
+            mImpulse.z = item->mPos.z;
+            break;
         }
-        if (kind < 2) {
-            if (kind == 0) {
-                goto slide;
-            }
-            if (kind >= 0) {
-                goto bomb;
-            }
-            goto end;
-        } else if (kind == 9) {
-            goto slide;
-        } else if (kind < 9) {
-            if (kind >= 7) {
-                goto bomb;
-            }
-        }
-        goto end;
-
-    slide:
-        mBombVelH = sSlideVelH;
-        mBombVelV = sSlideVelV;
-        ret = true;
-        mImpulse.x = item->mPos.x;
-        mImpulse.y = item->mPos.y;
-        mImpulse.z = item->mPos.z;
-        goto end;
-
-    bomb:
-        mBombVelH = sBombVelH;
-        mBombVelV = sBombVelV;
-        ret = true;
-        mImpulse.x = item->mPos.x;
-        mImpulse.y = item->mPos.y;
-        mImpulse.z = item->mPos.z;
     }
 
-end:
     if (!ret && mpSub != nullptr && mpSub->checkItemHitting()) {
         ret = true;
     }

@@ -204,34 +204,22 @@ void TMapObjMeteor::doFunc_Appear()
 
 void TMapObjMeteor::initFunc_Move()
 {
-    mVel.x = mAxisY.x;
-    mVel.y = mAxisY.y;
-    mVel.z = mAxisY.z;
-
-    f32 lenSq = mScale.squared() + mVel.z * mVel.z;
-
-    if (lenSq > 32.0f * FLT_EPSILON) {
-        f32 inv = JGeometry::TUtilf::inv_sqrt(lenSq);
-        mVel.scaleAdd(mLife * inv, mScale);
-    }
-
-    mScale.zero();
+    mVel.set(mAxisY);
+    mVel.setLength(mLife);
+    mScale.set(1.0f, 1.0f, 1.0f);
 }
 
 void TMapObjMeteor::doFunc_Move()
 {
     moveMainProc();
-
-    JGeometry::TVec3f v = mItemVel;
-    v.add(mAxisX);
-    v.add(mAxisY);
-
-    f32 dot = v.dot(mItemVel);
-
+    JGeometry::TVec3f target;
+    JGeometry::TVec3f diff;
+    target.add(mItemVel, mAxisY);
+    diff.sub(target, mPos);
     if (checkGroundHitting()) {
         showItem();
         setState(3);
-    } else if (dot < 0.0f) {
+    } else if (diff.dot(mAxisY) < 0.0f) {
         setState(3);
     }
 }
@@ -278,18 +266,16 @@ void TMapObjMeteor::moveMainProc()
 
 void TMapObjMeteor::initFunc_Crush()
 {
-    GetJPAMgr()->createEmt("mk_rbStarBreak_b", mPos);
+    GetJPAMgr()->createEmt("mk_rbStarBreak_a", mPos);
     if (mEmitter != nullptr) {
         GetJPAMgr()->deleteEmt(mEmitter);
     }
-    mScale.set(0.0f, 0.0f, 0.0f);
+    mScale.set(1.0f, 1.0f, 1.0f);
 }
 
 void TMapObjMeteor::doFunc_Crush()
 {
-    f32 scale = SiUtil::getNormalRange(getStateCount(), 0.0f, sAppearFrame);
-    scale = 1.0f - scale;
-    scale += 0.0001f;
+    f32 scale = 0.0001f + (1.0f - SiUtil::getNormalRange(getStateCount(), 0.0f, sAppearFrame));
 
     if (scale <= 0.0001f) {
         setObjFlagHidding();
@@ -335,7 +321,7 @@ void TMapObjMeteor::showItem()
     if (random <= 0.3f) {
         ItemObjMgr::gItemMgr->occurItem(6, mPos, *(JGeometry::TVec3f *)&sItemVel[0]);
         getSoundMgr()->setSe(0x40051);
-        GetJPAMgr()->createEmt("mk_rbStarBreak_a", mPos);
+        GetJPAMgr()->createEmt("mk_rbStarBreak_b", mPos);
     }
 }
 

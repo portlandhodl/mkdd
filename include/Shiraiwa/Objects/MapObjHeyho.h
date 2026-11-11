@@ -27,8 +27,8 @@ public:
     virtual void createColModel(J3DModelData *);
     virtual const char *getBmdFileName();
     bool checkItemHitting();
-    virtual void InitExec();
     virtual void MoveExec();
+    virtual void InitExec();
     virtual void calc();
     void doFunc_Skate();
     void initFunc_Skate();
@@ -84,8 +84,8 @@ public:
     virtual void loadAnimation();
     virtual void createModel(JKRSolidHeap *, u32);
     virtual void createColModel(J3DModelData *);
-    virtual void InitExec();
     virtual void MoveExec();
+    virtual void InitExec();
     virtual void update();
     void changeAllState(u16);
     virtual void doKartColCallBack(int);
