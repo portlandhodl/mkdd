@@ -13,12 +13,12 @@ struct J3DMtxBuffer;
 
 struct J3DMtxCalc {
     virtual ~J3DMtxCalc() { }                                        // _08
-    virtual void setAnmTransform(J3DAnmTransform*);                  // _0C
-    virtual J3DAnmTransform* getAnmTransform();                      // _10
-    virtual void setAnmTransform(u8, J3DAnmTransform*);              // _14
-    virtual J3DAnmTransform* getAnmTransform(u8);                    // _18
-    virtual void setWeight(u8 index, f32 weight);                    // _1C
-    virtual f32 getWeight(u8) const;                                 // _20
+    virtual void setAnmTransform(J3DAnmTransform*) { }               // _0C
+    virtual J3DAnmTransform* getAnmTransform() { return nullptr; }   // _10
+    virtual void setAnmTransform(u8, J3DAnmTransform*) { }           // _14
+    virtual J3DAnmTransform* getAnmTransform(u8) { return nullptr; } // _18
+    virtual void setWeight(u8 index, f32 weight) { }                 // _1C
+    virtual f32 getWeight(u8) const { return 0.0f; }                 // _20
     virtual void init(const Vec&, const Mtx&) = 0;                   // _24
     virtual void calc()                       = 0;                   // _28
 
@@ -124,7 +124,8 @@ struct J3DMtxCalcAnimationAdaptorDefault {
         J3DTransformInfo* pInfo;
         if (p1->getAnmTransform() != nullptr) {
             J3DTransformInfo v1;
-            p1->getAnmTransform()->getTransform(J3DMtxCalc::mJoint->getJntNo(), &v1);
+            u16 jntNo = J3DMtxCalc::mJoint->mJointIdx;
+            p1->getAnmTransform()->getTransform(jntNo, &v1);
             pInfo = &v1;
         } else {
             pInfo = &J3DMtxCalc::mJoint->mTransformInfo;
@@ -134,36 +135,19 @@ struct J3DMtxCalcAnimationAdaptorDefault {
 };
 
 struct J3DMtxCalcBlendAnmBase : public J3DMtxCalc {
-    inline J3DMtxCalcBlendAnmBase()
-    {
-        for (int i = 0; i < 4; i++) {
-            mAnims[i]   = nullptr;
-            mWeights[i] = 0.0f;
-        }
-    }
+    J3DMtxCalcBlendAnmBase();
 
     virtual ~J3DMtxCalcBlendAnmBase() { }                                               // _08 (weak)
-    virtual void setAnmTransform(J3DAnmTransform* anim);                          // _0C (weak)
-    virtual J3DAnmTransform* getAnmTransform();                                   // _10 (weak)
-    virtual void setAnmTransform(u8 idx, J3DAnmTransform* anim);                  // _14 (weak)
-    virtual J3DAnmTransform* getAnmTransform(u8 idx);                             // _18 (weak)
-    virtual void setWeight(u8 idx, f32 weight);                                   // _1C (weak)
-    virtual f32 getWeight(u8 idx) const;                                          // _20 (weak)
+    virtual void setAnmTransform(J3DAnmTransform* anim) { mAnims[0] = anim; }            // _0C (weak)
+    virtual J3DAnmTransform* getAnmTransform() { return mAnims[0]; }                     // _10 (weak)
+    virtual void setAnmTransform(u8 idx, J3DAnmTransform* anim) { mAnims[idx] = anim; } // _14 (weak)
+    virtual J3DAnmTransform* getAnmTransform(u8 idx) { return mAnims[idx]; }             // _18 (weak)
+    virtual void setWeight(u8 idx, f32 weight) { mWeights[idx] = weight; }               // _1C (weak)
+    virtual f32 getWeight(u8 idx) const { return mWeights[idx]; }                        // _20 (weak)
 
     // _00 = VTBL
     J3DAnmTransform* mAnims[4]; // _04
     f32 mWeights[4];            // _14
-};
-
-struct J3DMtxCalcMayaAdditiveAnm : public J3DMtxCalcBlendAnmBase {
-    J3DMtxCalcMayaAdditiveAnm(J3DAnmTransform *);
-    void calcTransform(const J3DTransformInfo &);
-
-    virtual void init(const Vec &, const Mtx &);
-    virtual void calc();
-
-    int _24;
-    f32 _28;
 };
 
 // not sure how these structs are used or if they inherit anything
@@ -205,12 +189,26 @@ struct J3DMtxCalcJ3DSysInitBasic {
 struct J3DMtxCalcJ3DSysInitSoftimage {
     static void init(const Vec& s, const Mtx& mtx)
     {
-        J3DSys::mCurrentS = s;
+        J3DSys::mCurrentS.x = s.x;
+        J3DSys::mCurrentS.y = s.y;
+        J3DSys::mCurrentS.z = s.z;
         PSMTXCopy(mtx, J3DSys::mCurrentMtx);
     }
 };
 struct J3DMtxCalcJ3DSysInitMaya {
     static void init(const Vec& s, const Mtx& mtx);
+};
+
+struct J3DMtxCalcMayaAdditiveAnm : public J3DMtxCalcBlendAnmBase {
+    J3DMtxCalcMayaAdditiveAnm(J3DAnmTransform *);
+    void calcTransform(const J3DTransformInfo &);
+
+    virtual ~J3DMtxCalcMayaAdditiveAnm() { }
+    virtual void init(const Vec& vec, const Mtx& mtx) { J3DMtxCalcJ3DSysInitMaya::init(vec, mtx); }
+    virtual void calc();
+
+    int _24;
+    f32 _28;
 };
 
 template <typename Adaptor, typename Init>
@@ -230,8 +228,8 @@ struct J3DMtxCalcBlendAnm : public J3DMtxCalcBlendAnmBase {
 
     virtual ~J3DMtxCalcBlendAnm() { }                                                   // _08 (weak)
     virtual void init(const Vec& vec, const Mtx& mtx) { Init::init(vec, mtx); }         // _24 (weak)
-    virtual void setWeight(u8 idx, f32 weight);                                   // _1C (weak)
-    virtual void setAnmTransform(u8 idx, J3DAnmTransform* anim);                  // _14 (weak)
+    virtual void setWeight(u8 idx, f32 weight) { mWeights[idx] = weight; }               // _1C (weak)
+    virtual void setAnmTransform(u8 idx, J3DAnmTransform* anim) { mAnims[idx] = anim; } // _14 (weak)
     virtual void calc() { Adaptor::calc(this); }                                        // _28 (weak)
 
     // _00     = VTBL

@@ -467,7 +467,6 @@ void J3DLockedMaterial::reset() { }
 
 void J3DLockedMaterial::change() { }
 
-DECL_WEAK J3DFog::~J3DFog() { }
 
 DECL_WEAK void J3DPEBlock::patch() { }
 

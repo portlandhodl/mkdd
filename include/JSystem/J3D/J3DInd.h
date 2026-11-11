@@ -37,6 +37,7 @@ struct J3DIndTexCoordScale : public J3DIndTexCoordScaleInfo {
 };
 
 struct J3DIndTexMtxInfo {
+    bool operator==(J3DIndTexMtxInfo& other) const;
     void operator=(const J3DIndTexMtxInfo& other);
 
     f32 _00;

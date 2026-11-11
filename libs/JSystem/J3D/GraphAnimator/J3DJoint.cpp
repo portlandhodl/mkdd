@@ -45,8 +45,8 @@ inline f32 fastReciprocal(register f32 value)
 void J3DMtxCalcCalcTransformBasic::calcTransform(const J3DTransformInfo& transInfo)
 {
     J3DMtxBuffer* mtxBuf = J3DMtxCalc::getMtxBuffer();
-    u16 jntNo = J3DMtxCalc::getJoint()->getJntNo();
-    MtxPtr anmMtx = mtxBuf->mWorldMatrices[(int)jntNo];
+    u16 jntNo = J3DMtxCalc::getJoint()->mJointIdx;
+    Mtx& anmMtx = mtxBuf->getAnmMtx(jntNo);
 
     J3DSys::mCurrentS.x *= transInfo.mScale.x;
     J3DSys::mCurrentS.y *= transInfo.mScale.y;
@@ -67,8 +67,8 @@ void J3DMtxCalcCalcTransformBasic::calcTransform(const J3DTransformInfo& transIn
 void J3DMtxCalcCalcTransformSoftimage::calcTransform(const J3DTransformInfo& transInfo)
 {
     J3DMtxBuffer* mtxBuf = J3DMtxCalc::getMtxBuffer();
-    u16 jntNo = J3DMtxCalc::getJoint()->getJntNo();
-    MtxPtr anmMtx = mtxBuf->mWorldMatrices[(int)jntNo];
+    u16 jntNo = J3DMtxCalc::getJoint()->mJointIdx;
+    Mtx& anmMtx = mtxBuf->getAnmMtx(jntNo);
 
     J3DGetTranslateRotateMtx(transInfo.mRotation.x, transInfo.mRotation.y, transInfo.mRotation.z,
                              transInfo.mTranslation.x * J3DSys::mCurrentS.x,
@@ -97,8 +97,8 @@ void J3DMtxCalcCalcTransformMaya::calcTransform(const J3DTransformInfo& transInf
 {
     J3DJoint* joint = J3DMtxCalc::getJoint();
     J3DMtxBuffer* mtxBuf = J3DMtxCalc::getMtxBuffer();
-    u16 jntNo = joint->getJntNo();
-    MtxPtr anmMtx = mtxBuf->mWorldMatrices[(int)jntNo];
+    u16 jntNo = joint->mJointIdx;
+    Mtx& anmMtx = mtxBuf->getAnmMtx(jntNo);
 
     J3DGetTranslateRotateMtx(transInfo, anmMtx);
 

@@ -5,6 +5,7 @@
 #include "types.h"
 
 struct J3DFogInfo {
+    bool operator==(J3DFogInfo& other) const;
     J3DFogInfo& operator=(const J3DFogInfo& other);
     J3DFogInfo& operator=(const J3DFogInfo* other)
     {
@@ -27,11 +28,11 @@ extern const J3DFogInfo j3dDefaultFogInfo;
 
 struct J3DFog : J3DFogInfo {
     J3DFog() { *(J3DFogInfo*)this = j3dDefaultFogInfo; }
+    ~J3DFog() { }
     J3DFog(const J3DFog& other)
         : J3DFogInfo(other)
     {
     }
-    ~J3DFog();
 
     void setFogInfo(J3DFogInfo info) { *(J3DFogInfo*)this = info; }
     void setFogInfo(const J3DFogInfo* info) { *(J3DFogInfo*)this = *info; }

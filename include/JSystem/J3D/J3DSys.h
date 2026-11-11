@@ -71,8 +71,9 @@ struct J3DSys
     u32 _54;                       // _054
     J3DTexture *_58;               // _058
     u8 _5C[4];                     // _05C
-    u32 _60;                       // _060
-    u8 _64[0xA0];                  // _064
+    u32 mTexCacheRegionNum;        // _060
+    GXTexRegion mTexCacheRegion[8]; // _064
+    u8 _E4[0x20];                  // _0E4
     Mtx *_104;                     // _104
     Mtx *_108;                     // _108
     /*

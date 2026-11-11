@@ -545,6 +545,8 @@ struct J3DTevSwapModeTable {
 };
 
 struct J3DTevStageInfo {
+    bool operator==(J3DTevStageInfo& other) const;
+
     u8 mTevStageMode; // _00
     u8 mColorInA;     // _01
     u8 mColorInB;     // _02
@@ -712,6 +714,9 @@ struct J3DTexCoord : public J3DTexCoordInfo {
 extern u8 j3dTexCoordTable[7623];
 
 struct J3DTextureSRTInfo {
+    bool isIdentity() const;
+    bool operator==(J3DTextureSRTInfo& other) const;
+
     f32 mScaleX;       // _00
     f32 mScaleY;       // _04
     s16 mRotation;     // _08
@@ -721,6 +726,7 @@ struct J3DTextureSRTInfo {
 
 // hate this but whatever's in here can't have constructors bc of J3DTransform
 struct J3DTransformInfo {
+    bool operator==(J3DTransformInfo& other) const;
     inline J3DTransformInfo& operator=(const J3DTransformInfo& b)
     {
         mScale       = b.mScale;
@@ -737,11 +743,8 @@ struct J3DTransformInfo {
 extern const J3DTransformInfo j3dDefaultTransformInfo;
 
 struct J3DNBTScaleInfo {
-    void operator=(const J3DNBTScaleInfo& other)
-    {
-        mHasScale = other.mHasScale;
-        mScale    = other.mScale;
-    }
+    bool operator==(const J3DNBTScaleInfo& other) const;
+    void operator=(const J3DNBTScaleInfo& other);
 
     u8 mHasScale; // _00
     Vec mScale;   // _04
@@ -750,9 +753,17 @@ struct J3DNBTScaleInfo {
 extern const J3DNBTScaleInfo j3dDefaultNBTScaleInfo;
 
 struct J3DNBTScale : public J3DNBTScaleInfo {
-    J3DNBTScale() { *(J3DNBTScaleInfo*)this = j3dDefaultNBTScaleInfo; }
+    J3DNBTScale()
+    {
+        mHasScale = j3dDefaultNBTScaleInfo.mHasScale;
+        mScale    = j3dDefaultNBTScaleInfo.mScale;
+    }
 
-    J3DNBTScale(const J3DNBTScaleInfo& info) { *(J3DNBTScaleInfo*)this = info; }
+    J3DNBTScale(const J3DNBTScaleInfo& info)
+    {
+        mHasScale = info.mHasScale;
+        mScale    = info.mScale;
+    }
 
     Vec* getScale() { return &mScale; }
 };

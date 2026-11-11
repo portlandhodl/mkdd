@@ -237,16 +237,33 @@ struct J3DMaterialFactory_v21 {
     J3DMaterialFactory_v21(const J3DMaterialBlock_v21&);
 
     u16 countUniqueMaterials();
+    u32 countTexGens(int) const;
+    u32 countStages(int) const;
     J3DMaterial* create(J3DMaterial*, int, u32) const;
+    J3DGXColor newMatColor(int, int) const;
     u8 newColorChanNum(int) const;
+    J3DColorChan newColorChan(int, int) const;
     u32 newTexGenNum(int) const;
+    J3DTexCoord newTexCoord(int, int) const;
+    J3DTexMtx* newTexMtx(int, int) const;
     u8 newCullMode(int) const;
     u16 newTexNo(int, int) const;
     J3DTevOrder newTevOrder(int, int) const;
+    J3DGXColorS10 newTevColor(int, int) const;
+    J3DGXColor newTevKColor(int, int) const;
     u8 newTevStageNum(int) const;
+    J3DTevStage newTevStage(int, int) const;
+    J3DTevSwapModeTable newTevSwapModeTable(int, int) const;
+    J3DMaterialInitData_v21& getMaterialInitData_v21(u16) const;
+    J3DFog newFog(int) const;
+    J3DAlphaComp newAlphaComp(int) const;
     J3DBlend newBlend(int) const;
+    J3DZMode newZMode(int) const;
     u8 newZCompLoc(int) const;
     u8 newDither(int) const;
+    J3DNBTScale newNBTScale(int) const;
+
+    inline u8 getMaterialMode(int matID) const { return mpMaterialInitData[mpMaterialID[matID]].mMaterialMode; }
 
     u16 mMaterialNum;                         // _00
     J3DMaterialInitData_v21* mpMaterialInitData; // _04
