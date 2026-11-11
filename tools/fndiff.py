@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Diff a single function between our compiled object and the orig object.
 
-Usage: python tools/fndiff.py <objfile> <symbol> [orig-obj]
+Usage: python tools/fndiff.py [--loose] <objfile> <symbol> [orig-obj]
 Compares normalized PPC disassembly of <symbol> in our object (src/...)
-against the orig object (obj/... by default, derived from path).
+against the orig object (obj/... by default, derived from path). The
+normalized ("loose") text ignores branch targets, hex immediates and
+relocations; unless --loose is given, a loose match is then verified with
+strictdiff.py (raw words, branch targets, relocation targets, literal and
+jump-table contents).
 """
 import os
 import re
@@ -67,8 +71,27 @@ def _uniquify_code_sections(objfile):
     return tmp
 
 
+_OBJDUMP_CACHE = {}
+
+
 def objdump_code(objfile, check=True):
-    """objdump -dr of every code section, as a list of lines."""
+    """objdump -dr of every code section, as a list of lines (cached)."""
+    try:
+        st = os.stat(objfile)
+        key = (os.path.abspath(objfile), st.st_mtime_ns, st.st_size)
+    except OSError:
+        key = None
+    if key is not None and key in _OBJDUMP_CACHE:
+        return _OBJDUMP_CACHE[key]
+    lines = _objdump_code(objfile, check)
+    if key is not None:
+        if len(_OBJDUMP_CACHE) > 8:
+            _OBJDUMP_CACHE.clear()
+        _OBJDUMP_CACHE[key] = lines
+    return lines
+
+
+def _objdump_code(objfile, check=True):
     tmp = _uniquify_code_sections(objfile)
     try:
         if tmp is None:
@@ -126,15 +149,27 @@ def disasm(objfile, symbol):
 
 
 def main():
-    ours = sys.argv[1]
-    symbol = sys.argv[2]
-    if len(sys.argv) > 3:
-        orig = sys.argv[3]
+    argv = sys.argv[1:]
+    loose = "--loose" in argv
+    argv = [a for a in argv if a != "--loose"]
+    ours = argv[0]
+    symbol = argv[1]
+    if len(argv) > 2:
+        orig = argv[2]
     else:
         orig = ours.replace("/src/", "/obj/")
     a = disasm(ours, symbol)
     b = disasm(orig, symbol)
     if a == b:
+        if not loose:
+            import strictdiff
+            issues, _ = strictdiff.compare_symbol(ours, orig, symbol, b)
+            if issues:
+                print(f"{symbol}: MATCH (loose) but "
+                      + strictdiff.summarize(issues))
+                for i in issues[3:20]:
+                    print(f"  ! [{i['kind']}] {i['message']}")
+                sys.exit(1)
         print(f"{symbol}: MATCH ({len(a)} instrs)")
         return
     import difflib

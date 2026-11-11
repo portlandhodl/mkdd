@@ -11,7 +11,13 @@ ad-hoc shell. They wrap the project's data sources and keep compiles isolated.
 
 - `decomp_next` / `decomp_units` / `decomp_functions` — pick work
 - `decomp_asm` — target assembly with relocations (`--orig` is the default)
-- `decomp_diff` / `decomp_diff_unit` — compile one TU in isolation, score diffs
+- `decomp_diff` / `decomp_diff_unit` — compile one TU in isolation, score diffs.
+  Strict by default (`tools/strictdiff.py`): branch targets, immediates,
+  call/relocation targets, float/string literal values and jump-table entries
+  must match too. A function that only passes the old text check is reported
+  as `MATCH (loose) but <reason>`; `--loose` (MCP `loose: true`) restores the
+  text-only check. `~ note:` lines are naming-only differences (e.g. `@123` vs
+  a named local with the same bytes) and do not fail the match.
 - `decomp_check`, `decomp_context`, `decomp_symbols`, `decomp_callers`,
   `decomp_callees`, `decomp_regress`, `decomp_progress`
 - `decomp_port` — search sibling decomp checkouts under `references/` for an
