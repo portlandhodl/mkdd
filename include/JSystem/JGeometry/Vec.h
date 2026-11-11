@@ -102,10 +102,38 @@ namespace JGeometry {
             y += other.y;
         }
 
+        void sub(const TVec2<T> &other)
+        {
+            x -= other.x;
+            y -= other.y;
+        }
+
         void scale(T scalar) {
             x *= scalar;
             y *= scalar;
         }
+
+        TVec2<T> &operator+=(const TVec2<T> &other)
+        {
+            add(other);
+            return *this;
+        }
+
+        TVec2<T> &operator-=(const TVec2<T> &other)
+        {
+            sub(other);
+            return *this;
+        }
+
+        TVec2<T> &operator*=(T scalar)
+        {
+            scale(scalar);
+            return *this;
+        }
+
+        TVec2<T> operator+(const TVec2<T> &other) const { return TVec2<T>(*this) += other; }
+        TVec2<T> operator-(const TVec2<T> &other) const { return TVec2<T>(*this) -= other; }
+        TVec2<T> operator*(T scalar) const { return TVec2<T>(*this) *= scalar; }
 
         void zero() { x = y = 0; }
 

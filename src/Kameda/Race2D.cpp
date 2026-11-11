@@ -328,29 +328,6 @@ static int sRankAnm[4];
 static int sThunderAnm[8];
 
 
-// Stand-ins for JGeometry::TVec2 operator-, operator* and operator+ (not yet in Vec.h);
-// the temporaries they create are what the original code generates.
-static inline JGeometry::TVec2f vec2Sub(const JGeometry::TVec2f &a, const JGeometry::TVec2f &b)
-{
-    JGeometry::TVec2f r(a);
-    r.x -= b.x;
-    r.y -= b.y;
-    return r;
-}
-
-static inline JGeometry::TVec2f vec2Add(const JGeometry::TVec2f &a, const JGeometry::TVec2f &b)
-{
-    JGeometry::TVec2f r(a);
-    r.add(b);
-    return r;
-}
-
-static inline JGeometry::TVec2f vec2Scale(const JGeometry::TVec2f &a, f32 s)
-{
-    JGeometry::TVec2f r(a.x, a.y);
-    r.scale(s);
-    return r;
-}
 static int sChangeFrame;
 static int sColorIndex;
 static u8 sPreWhichDriver[4];
@@ -3458,13 +3435,7 @@ void Race2D::setLayoutData()
                 mKartSlot[i]._0 = 38;
 
             if (_4e9c[1] < 11) {
-                JGeometry::TVec2f diff;
-                diff.x = mCharWindow[i].mPos.x - mCharWindow[i]._1c.x;
-                diff.y = mCharWindow[i].mPos.y - mCharWindow[i]._1c.y;
-                diff.scale((f32)_4e9c[1]);
-                diff.scale(0.09090909f);
-                mCharWindow[i]._2c.x = mCharWindow[i]._1c.x + diff.x;
-                mCharWindow[i]._2c.y = mCharWindow[i]._1c.y + diff.y;
+                mCharWindow[i]._2c = mCharWindow[i]._1c + (mCharWindow[i].mPos - mCharWindow[i]._1c) * (f32)_4e9c[1] * 0.09090909f;
                 mCharWindow[i]._34[2] = mCharWindow[i]._34[0] + _4e9c[1] * (mCharWindow[i]._34[1] - mCharWindow[i]._34[0]) / 11;
             } else {
                 mCharWindow[i]._1c.x = mCharWindow[i].mPos.x;
@@ -3611,9 +3582,7 @@ void Race2D::calcBomb()
                             idx = 3;
                     }
                     JGeometry::TVec3f pos(_dc0[status][i].x, _dc0[status][i].y, 0.0f);
-                    JGeometry::TVec2f dir;
-                    dir.set(mMiniPos[status][0][i]);
-                    dir.set(dir.x - _dc0[status][i].x, dir.y - _dc0[status][i].y);
+                    JGeometry::TVec2f dir = mMiniPos[status][0][i] - _dc0[status][i];
                     s16 angle = 36863.0f * (f32)atan2(-dir.x, dir.y) / 3.1415927f;
                     char suffix[3] = {'a', 'b', 'c'};
                     JGeometry::TVec3s rot((s16)0, (s16)0, angle);
@@ -4679,7 +4648,7 @@ void Race2D::itemStart()
         if (frame < 15) {
             JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
             JGeometry::TVec2f start = mThis->getItemPos2(status, driver);
-            mThis->setItemPos3(status, driver, vec2Add(start, vec2Scale(vec2Scale(vec2Sub(pos, start), frame), 0.06666667f)));
+            mThis->setItemPos3(status, driver, start + (pos - start) * frame * 0.06666667f);
         } else {
             JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
             mThis->setItemPos3(status, driver, pos);
@@ -4775,7 +4744,7 @@ void Race2D::itemGetMain()
     if (frame < 15) {
         JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
         JGeometry::TVec2f start = mThis->getItemPos2(status, driver);
-        mThis->setItemPos3(status, driver, vec2Add(start, vec2Scale(vec2Scale(vec2Sub(pos, start), frame), 0.06666667f)));
+        mThis->setItemPos3(status, driver, start + (pos - start) * frame * 0.06666667f);
     } else {
         JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
         mThis->setItemPos3(status, driver, pos);
