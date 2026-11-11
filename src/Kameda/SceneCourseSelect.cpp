@@ -430,14 +430,9 @@ void SceneCourseSelect::calc() {
 
     mScreens[1]->animation();
 
-    register f32 frame0 = mBck[0].mFrame;
-    register f32 resetFrame = 10.0f;
-    if (resetFrame != frame0) {
-        f32 frame = 1.0f + frame0;
-        mBck[0].mFrame = frame;
-        f32 maxFrame = 16.0f;
-        if (maxFrame == frame)
-            mBck[0].mFrame = resetFrame;
+    if (mBck[0].mFrame != 10.0f) {
+        if ((mBck[0].mFrame += 1.0f) == 16.0f)
+            mBck[0].mFrame = 10.0f;
     }
 
     if (mTimer2 < 21)
@@ -766,12 +761,11 @@ void SceneCourseSelect::calcAnm() {
         for (int i = 0; i < 4; i++) {
             mCupIcon[i]->setWhite(mCupColor[mCourse == i ? 1 : 0]);
         }
+        mBck[3].mFrame = mCourse;
     }
-    mBck[3].mFrame = mCourse;
 
-    int timer = mField388;
-    if (timer != 0) {
-        mField388 = timer + 1;
+    if (mField388 != 0) {
+        int timer = mField388++;
         if (mField38c == 0) {
             switch (mState) {
             case 0:
@@ -780,9 +774,11 @@ void SceneCourseSelect::calcAnm() {
                         mState = 2;
                         mField388 = 0;
                     }
-                } else if ((f32)timer > 15.0f) {
-                    mState = 1;
-                    mField388 = 0;
+                } else {
+                    if ((f32)timer > 15.0f) {
+                        mState = 1;
+                        mField388 = 0;
+                    }
                 }
                 break;
             case 1:
@@ -794,6 +790,7 @@ void SceneCourseSelect::calcAnm() {
                     mField388 = 0;
                 }
                 break;
+            case 2:
             default:
 #line 1047
                 JUT_ASSERT(0);
@@ -801,6 +798,7 @@ void SceneCourseSelect::calcAnm() {
             }
         } else {
             switch (mState) {
+            case 0:
             default:
 #line 1054
                 JUT_ASSERT(0);
@@ -836,10 +834,11 @@ void SceneCourseSelect::calcAnm() {
                 t = (f32)timer / 15.0f;
 
             for (int i = 0; i < mCupCount; i++) {
-                if (i != mCup) {
-                    mScreens[2 + i]->mScale.x = t;
-                    mScreens[2 + i]->mScale.y = t;
-                    mScreens[2 + i]->calcMtx();
+                if (mCup != i) {
+                    J2DScreen *screen = mScreens[2 + i];
+                    screen->mScale.x = t;
+                    screen->mScale.y = t;
+                    screen->calcMtx();
                 } else {
                     JGeometry::TVec2f center(301.0f, 140.0f);
                     mPos[i] = center + (mCupPos[i] - center) * t;
@@ -873,15 +872,11 @@ void SceneCourseSelect::calcAnm() {
     }
     else if (mState == 2) {
         mBck[4].mPane->show();
-        f32 f = mBck[4].mFrame + 1.0f;
-        mBck[4].mFrame = f;
-        if (f > 9.0f)
+        if ((mBck[4].mFrame += 1.0f) > 9.0f)
             mBck[4].mFrame = 9.0f;
     }
     else {
-        f32 f = mBck[4].mFrame - 1.0f;
-        mBck[4].mFrame = f;
-        if (f < 0.0f)
+        if ((mBck[4].mFrame -= 1.0f) < 0.0f)
             mBck[4].mFrame = 0.0f;
         if (mBck[4].mFrame == 0.0f)
             mBck[4].mPane->hide();
@@ -982,7 +977,7 @@ void SceneCourseSelect::setRivalKart() {
         {0, 1, 2},
         {0, 1, 2},
     };
-    int *prank = rank[gRaceInfo.getRaceLevel()];
+    int level = gRaceInfo.getRaceLevel();
 
     for (int i = 0; i < 7 - num; i++) {
         for (int j = 7 - num; j > i; j--) {
@@ -990,7 +985,7 @@ void SceneCourseSelect::setRivalKart() {
             EKartID id2 = gRaceInfo.getKartInfo(order[j] + num)->getKartID();
             int weight1 = KartInfo::getKartWeight(id1);
             int weight2 = KartInfo::getKartWeight(id2);
-            if (prank[weight1] < prank[weight2]) {
+            if (rank[level][weight1] < rank[level][weight2]) {
                 u32 tmp = order[i];
                 order[i] = order[j];
                 order[j] = tmp;
