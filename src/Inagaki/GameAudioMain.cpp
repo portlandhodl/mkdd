@@ -621,9 +621,8 @@ void Main::setInvincibleBgm(u8 kartNo, u8 type) {
     }
     startInvincibleBgm(type, true);
     {
-        u8 count = _4b;
         u8 i;
-        for (i = 0; i < count; i++) {
+        for (i = 0; i < _4b; i++) {
             if (_54[i].kartNo == kartNo && _54[i].type == type) {
                 for (; _4b != 0 && i < _4b - 1; i++) {
                     _54[i].kartNo = _54[i + 1].kartNo;
@@ -812,7 +811,7 @@ void Main::startBombPointSe(u8 kartNo, u8 type) {
         startRaceSystemSe(0x20029);
         return;
     }
-    if ((u8)(kartNo & 1) != (u8)(type & 1)) {
+    if ((kartNo & 1U) != (type & 1U)) {
         if ((u8)(kartNo & 1) < (u8)(type & 1)) {
             startRaceSystemSe(0x2002a);
         }
@@ -833,7 +832,7 @@ void Main::startBombReachSe(u8 kartNo, u8 type) {
         startRaceSystemSe(0x2002e);
         return;
     }
-    if ((u8)(kartNo & 1) != (u8)(type & 1)) {
+    if ((kartNo & 1U) != (type & 1U)) {
         if ((u8)(kartNo & 1) < (u8)(type & 1)) {
             startRaceSystemSe(0x2002f);
         }
@@ -895,7 +894,7 @@ void Main::fadeOutAll(u32 frames) {
     JAISoundParamsMove *streamParams = ((JAIStreamMgr *)((u8 *)mMgr + 0x79c))->getParams();
     if (streamParams->mTransition.mVolume.mCount != 0) {
         if (_68.isSoundAttached()) {
-            _68->getAuxiliary().moveVolume(_68->getAuxiliary().mVolume * streamParams->mVolume, 0);
+            _68->getAuxiliary().moveVolume(_68->getAuxiliary().mVolume * ((JAIStreamMgr *)((u8 *)mMgr + 0x79c))->getParams()->mVolume, 0);
         }
     }
     *streamParams = *((JAISeqMgr *)((u8 *)mMgr + 0x728))->getParams();

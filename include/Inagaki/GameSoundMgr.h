@@ -30,7 +30,6 @@ public:
 
     void setEcho(JAISoundHandle *handlePtr, f32 mix);
     JAISoundHandle *startSoundCustom(u32 soundID, u32 p2);
-    virtual void loop();
 
     static void setKillSwAll(bool killSw);
 
@@ -38,6 +37,8 @@ public:
     static void frameWorkAll();
     static void pauseAll(bool doPause);
     static void stopAll();
+
+    virtual void loop();
 
     static T *smStart;
     static T *smEnd;
@@ -233,6 +234,7 @@ public:
     ~KartSoundMgr();                                                  // 0x80123328
     virtual void startSoundHandleNumber(u8, u32, u32);                // 0x801233fc
     virtual void dispose();                                           // 0x801236d0
+    void startSoundEngine(u8, u32);
     virtual void init();                                              // 0x80123708
     void changeDriver(bool);                                          // 0x80123ad4
     void frameWork(u8 rank);                                          // 0x80123ad8
