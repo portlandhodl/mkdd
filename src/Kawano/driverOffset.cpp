@@ -22,53 +22,40 @@ void DriverModel::InitDriverOffsetPosition()
 
 void DriverModel::SetDriverOffsetPosition_Func1(JGeometry::TVec3<f32> *vec)
 {
-    switch (mOffsetMode) {
-    case 0: {
-        switch (mKartLoader->mKartInfo->getKartID()) {
-        case 5:
-        case 9:
-        case 13:
-        case 15:
-            vec->y = DriverData::msDriverData[mDataID].data[18];
-            vec->z = DriverData::msDriverData[mDataID].data[19];
-            break;
-        case 6:
-            vec->y = DriverData::msDriverData[mDataID].data[24];
-            vec->z = DriverData::msDriverData[mDataID].data[25];
-            break;
-        default:
-            switch (mKartLoader->mKartInfo->getKartWeight()) {
-            case 0:
-                vec->y = DriverData::msDriverData[mDataID].data[0];
-                vec->z = DriverData::msDriverData[mDataID].data[1];
-                break;
-            case 1:
-                vec->y = DriverData::msDriverData[mDataID].data[6];
-                vec->z = DriverData::msDriverData[mDataID].data[7];
-                break;
-            case 2:
-                vec->y = DriverData::msDriverData[mDataID].data[12];
-                vec->z = DriverData::msDriverData[mDataID].data[13];
-                break;
-            }
-            break;
-        }
+    switch (mKartLoader->mKartInfo->getKartID()) {
+    case 3:
+    case 5:
+    case 9:
+    case 13:
+    case 15:
+        vec->y += 50.0f;
+        break;
+    case 20:
+        vec->z -= 25.0f;
+        break;
+    case 16:
+    case 17:
+        vec->y += 25.0f;
+        vec->z -= 10.0f;
+        break;
+    case 11:
+        vec->y += 25.0f;
         break;
     }
-    }
-    vec->x = 0.0f;
 }
+
 void DriverModel::SetDriverOffsetPosition_Change(DriverData *data)
 {
     Mtx &mtx = getModel()->getBaseTRMtx();
-    register f32 f31;
-    register f32 f30;
+    f32 y;
+    f32 z;
     Vec out;
-    Vec vec;
+    JGeometry::TVec3<f32> vec;
     vec.z = 0.0f;
     vec.y = 0.0f;
     vec.x = 0.0f;
 
+#line 72
     JUT_MINMAX_ASSERT(0, mState, 152);
 
     mAnmID = msAnmBlendList[mState][0];
@@ -92,74 +79,68 @@ void DriverModel::SetDriverOffsetPosition_Change(DriverData *data)
             case 9:
             case 13:
             case 15:
-                f31 = DriverData::msDriverData[mDataID].data[20];
-                f30 = DriverData::msDriverData[mDataID].data[21];
+                y = DriverData::msDriverData[mDataID].data[20];
+                z = DriverData::msDriverData[mDataID].data[21];
                 break;
             case 6:
-                f31 = DriverData::msDriverData[mDataID].data[26];
-                f30 = DriverData::msDriverData[mDataID].data[27];
+                y = DriverData::msDriverData[mDataID].data[26];
+                z = DriverData::msDriverData[mDataID].data[27];
                 break;
             default:
                 switch (mKartLoader->mKartInfo->getKartWeight()) {
                 case 0:
-                    f31 = DriverData::msDriverData[mDataID].data[2];
-                    f30 = DriverData::msDriverData[mDataID].data[3];
+                    y = DriverData::msDriverData[mDataID].data[2];
+                    z = DriverData::msDriverData[mDataID].data[3];
                     break;
                 case 1:
-                    f31 = DriverData::msDriverData[mDataID].data[8];
-                    f30 = DriverData::msDriverData[mDataID].data[9];
+                    y = DriverData::msDriverData[mDataID].data[8];
+                    z = DriverData::msDriverData[mDataID].data[9];
                     break;
                 case 2:
-                    f31 = DriverData::msDriverData[mDataID].data[14];
-                    f30 = DriverData::msDriverData[mDataID].data[15];
-                    break;
-                default:
-                    f31 = DriverData::msDriverData[mDataID].data[14];
-                    f30 = DriverData::msDriverData[mDataID].data[15];
+                    y = DriverData::msDriverData[mDataID].data[14];
+                    z = DriverData::msDriverData[mDataID].data[15];
                     break;
                 }
                 break;
             }
-            s16 d = (s16)(cur + maxBlend - max);
-            vec.x = f31 * d / maxBlend;
-            vec.z = f30 * d / maxBlend;
+            s16 d = (s16)(cur - (max - maxBlend));
+            vec.x = 0.0f;
+            vec.y = y * d / maxBlend;
+            vec.z = z * d / maxBlend;
         } else if (cur <= min) {
             switch (mKartLoader->mKartInfo->getKartID()) {
             case 5:
             case 9:
             case 13:
             case 15:
-                f31 = DriverData::msDriverData[mDataID].data[18];
-                f30 = DriverData::msDriverData[mDataID].data[19];
+                y = DriverData::msDriverData[mDataID].data[18];
+                z = DriverData::msDriverData[mDataID].data[19];
                 break;
             case 6:
-                f31 = DriverData::msDriverData[mDataID].data[24];
-                f30 = DriverData::msDriverData[mDataID].data[25];
+                y = DriverData::msDriverData[mDataID].data[24];
+                z = DriverData::msDriverData[mDataID].data[25];
                 break;
             default:
                 switch (mKartLoader->mKartInfo->getKartWeight()) {
                 case 0:
-                    f31 = DriverData::msDriverData[mDataID].data[0];
-                    f30 = DriverData::msDriverData[mDataID].data[1];
+                    y = DriverData::msDriverData[mDataID].data[0];
+                    z = DriverData::msDriverData[mDataID].data[1];
                     break;
                 case 1:
-                    f31 = DriverData::msDriverData[mDataID].data[6];
-                    f30 = DriverData::msDriverData[mDataID].data[7];
+                    y = DriverData::msDriverData[mDataID].data[6];
+                    z = DriverData::msDriverData[mDataID].data[7];
                     break;
                 case 2:
-                    f31 = DriverData::msDriverData[mDataID].data[12];
-                    f30 = DriverData::msDriverData[mDataID].data[13];
-                    break;
-                default:
-                    f31 = DriverData::msDriverData[mDataID].data[14];
-                    f30 = DriverData::msDriverData[mDataID].data[15];
+                    y = DriverData::msDriverData[mDataID].data[12];
+                    z = DriverData::msDriverData[mDataID].data[13];
                     break;
                 }
                 break;
             }
             s16 d = (s16)(min - cur);
-            vec.x = f31 * d / min;
-            vec.z = f30 * d / min;
+            vec.x = 0.0f;
+            vec.y = y * d / min;
+            vec.z = z * d / min;
         }
         break;
     }
@@ -173,37 +154,34 @@ void DriverModel::SetDriverOffsetPosition_Change(DriverData *data)
             case 9:
             case 13:
             case 15:
-                f31 = DriverData::msDriverData[mDataID].data[20];
-                f30 = DriverData::msDriverData[mDataID].data[21];
+                y = DriverData::msDriverData[mDataID].data[20];
+                z = DriverData::msDriverData[mDataID].data[21];
                 break;
             case 6:
-                f31 = DriverData::msDriverData[mDataID].data[26];
-                f30 = DriverData::msDriverData[mDataID].data[27];
+                y = DriverData::msDriverData[mDataID].data[26];
+                z = DriverData::msDriverData[mDataID].data[27];
                 break;
             default:
                 switch (mKartLoader->mKartInfo->getKartWeight()) {
                 case 0:
-                    f31 = DriverData::msDriverData[mDataID].data[2];
-                    f30 = DriverData::msDriverData[mDataID].data[3];
+                    y = DriverData::msDriverData[mDataID].data[2];
+                    z = DriverData::msDriverData[mDataID].data[3];
                     break;
                 case 1:
-                    f31 = DriverData::msDriverData[mDataID].data[8];
-                    f30 = DriverData::msDriverData[mDataID].data[9];
+                    y = DriverData::msDriverData[mDataID].data[8];
+                    z = DriverData::msDriverData[mDataID].data[9];
                     break;
                 case 2:
-                    f31 = DriverData::msDriverData[mDataID].data[14];
-                    f30 = DriverData::msDriverData[mDataID].data[15];
-                    break;
-                default:
-                    f31 = DriverData::msDriverData[mDataID].data[14];
-                    f30 = DriverData::msDriverData[mDataID].data[15];
+                    y = DriverData::msDriverData[mDataID].data[14];
+                    z = DriverData::msDriverData[mDataID].data[15];
                     break;
                 }
                 break;
             }
             s16 d = (s16)(maxBlend - cur);
-            vec.x = f31 * d / maxBlend;
-            vec.z = f30 * d / maxBlend;
+            vec.x = 0.0f;
+            vec.y = y * d / maxBlend;
+            vec.z = z * d / maxBlend;
         }
         break;
     }
@@ -211,28 +189,7 @@ void DriverModel::SetDriverOffsetPosition_Change(DriverData *data)
         break;
     }
 
-    switch (mKartLoader->mKartInfo->getKartID()) {
-    case 3:
-    case 5:
-    case 9:
-    case 13:
-    case 15:
-        vec.y += 50.0f;
-        break;
-    case 20:
-        vec.z -= 25.0f;
-        break;
-    case 16:
-    case 17:
-        vec.y += 25.0f;
-        vec.z -= 10.0f;
-        break;
-    case 11:
-        vec.y += 25.0f;
-        break;
-    default:
-        break;
-    }
+    SetDriverOffsetPosition_Func1(&vec);
 
     PSMTXMultVec(mtx, &vec, &out);
     mtx[0][3] = out.x;
@@ -284,7 +241,7 @@ void DriverModel::SetDriverOffsetPosition()
     DriverData *data = DriverData::mspDriverData;
     Mtx &mtx = getModel()->getBaseTRMtx();
     Vec out;
-    Vec vec;
+    JGeometry::TVec3<f32> vec;
     f32 f31;
     f32 f30;
     f32 f29;
@@ -389,7 +346,8 @@ void DriverModel::SetDriverOffsetPosition()
         }
     }
 
-    switch (mOffsetMode) {
+    int mode = mOffsetMode;
+    switch (mode) {
     case 0:
         switch (mKartLoader->mKartInfo->getKartID()) {
         case 5:
@@ -458,32 +416,32 @@ void DriverModel::SetDriverOffsetPosition()
         case 9:
         case 13:
         case 15:
-            f30 = DriverData::msDriverData[mDataID].getData(20);
-            f29 = DriverData::msDriverData[mDataID].getData(21);
+            f30 = DriverData::msDriverData[mDataID].data[20];
+            f29 = DriverData::msDriverData[mDataID].data[21];
             break;
         case 6:
-            f30 = DriverData::msDriverData[mDataID].getData(26);
-            f29 = DriverData::msDriverData[mDataID].getData(27);
+            f30 = DriverData::msDriverData[mDataID].data[26];
+            f29 = DriverData::msDriverData[mDataID].data[27];
             break;
         default:
             switch (mKartLoader->mKartInfo->getKartWeight()) {
             case 0:
-                f30 = DriverData::msDriverData[mDataID].getData(2);
-                f29 = DriverData::msDriverData[mDataID].getData(3);
+                f30 = DriverData::msDriverData[mDataID].data[2];
+                f29 = DriverData::msDriverData[mDataID].data[3];
                 break;
             case 1:
-                f30 = DriverData::msDriverData[mDataID].getData(8);
-                f29 = DriverData::msDriverData[mDataID].getData(9);
+                f30 = DriverData::msDriverData[mDataID].data[8];
+                f29 = DriverData::msDriverData[mDataID].data[9];
                 break;
             case 2:
-                f30 = DriverData::msDriverData[mDataID].getData(14);
-                f29 = DriverData::msDriverData[mDataID].getData(15);
+                f30 = DriverData::msDriverData[mDataID].data[14];
+                f29 = DriverData::msDriverData[mDataID].data[15];
                 break;
             }
             break;
         }
 
-        if (mOffsetMode == 4 || mOffsetDir == 4) {
+        if (mode == 4 || mOffsetDir == 4) {
             s32 id = mDataID;
             switch (id) {
             case 0:
@@ -532,9 +490,9 @@ void DriverModel::SetDriverOffsetPosition()
             case 20: f31 = DriverData::msDriverData[mDataID].data[52]; f28 = DriverData::msDriverData[mDataID].data[53]; break;
             default:
                 switch (mKartLoader->mKartInfo->getKartWeight()) {
-                case 0: f31 = DriverData::msDriverData[mDataID].data[16]; f28 = DriverData::msDriverData[mDataID].data[20]; break;
-                case 1: f31 = DriverData::msDriverData[mDataID].data[40]; f28 = DriverData::msDriverData[mDataID].data[44]; break;
-                case 2: f31 = DriverData::msDriverData[mDataID].data[64]; f28 = DriverData::msDriverData[mDataID].data[68]; break;
+                case 0: f31 = DriverData::msDriverData[mDataID].data[4]; f28 = DriverData::msDriverData[mDataID].data[5]; break;
+                case 1: f31 = DriverData::msDriverData[mDataID].data[10]; f28 = DriverData::msDriverData[mDataID].data[11]; break;
+                case 2: f31 = DriverData::msDriverData[mDataID].data[16]; f28 = DriverData::msDriverData[mDataID].data[17]; break;
                 }
                 break;
             }
@@ -550,26 +508,7 @@ void DriverModel::SetDriverOffsetPosition()
     vec.y = f31;
     vec.z = f30;
 
-    switch (mKartLoader->mKartInfo->getKartID()) {
-    case 3:
-    case 5:
-    case 9:
-    case 13:
-    case 15:
-        vec.y += 50.0f;
-        break;
-    case 20:
-        vec.z -= 25.0f;
-        break;
-    case 16:
-    case 17:
-        vec.y += 25.0f;
-        vec.z -= 10.0f;
-        break;
-    case 11:
-        vec.y += 25.0f;
-        break;
-    }
+    SetDriverOffsetPosition_Func1(&vec);
 
     PSMTXMultVec(mtx, &vec, &out);
     mtx[0][3] = out.x;

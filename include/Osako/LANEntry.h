@@ -52,8 +52,7 @@ private:
     int mTimerState;                   // 0x030
     int _34;                           // 0x034
     int _38;                           // 0x038
-    J2DPicture *mNumber1;              // 0x03C
-    J2DPicture *mNumber2;              // 0x040
+    J2DPicture *mNumber[2];            // 0x03C
     J2DPicture *mNumber3;              // 0x044
     J2DPicture *mCarPic;               // 0x048
     J2DPicture *mEntryNumPic;          // 0x04C

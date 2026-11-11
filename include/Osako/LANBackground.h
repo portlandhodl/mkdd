@@ -8,14 +8,17 @@ class J2DAnmTransform;
 class J2DAnmTextureSRTKey;
 class J2DAnmColor;
 
-class LANBackground : public J2DScreen
+class LANBackground
 {
 public:
+    LANBackground() : mTransformFrame(0), mColorFrame(0) {}
+
     void setup(JKRArchive*);
     void calc();
     void entry();
     void unentry();
 
+    J2DScreen mScreen;                // 0x000
     J2DAnmTransform* mTransform;      // 0x118
     J2DAnmTextureSRTKey* mTexSRTKey;  // 0x11c
     J2DAnmColor* mColor;              // 0x120

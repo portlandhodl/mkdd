@@ -36,9 +36,8 @@ Award2D::Award2D(JKRHeap *heap) {
     }
     int rank = gSequenceInfo.get_318_14(kart);
     _2c = (u8 *)gSequenceInfo.get_318_Pad(kart);
-    RaceTime time = gSequenceInfo.get_318_RaceTime(kart);
     _14.set(gSequenceInfo.get_318_charId0(kart), gSequenceInfo.get_318_charId1(kart), gSequenceInfo.get_318_kartId(kart), _28, rank,
-            gSequenceInfo.get_318_rankPoint(kart), gSequenceInfo.get_318_coop(kart), NULL, time);
+            gSequenceInfo.getRankPoint(kart), gSequenceInfo.get_318_coop(kart), "OSK", gSequenceInfo.get_318_RaceTime(kart));
     bool noTime = !gSequenceInfo.get_318_RaceTime(kart).isAvailable();
 
     if (gSystemRecord.getGPRecord((ERaceGpCup)_24, (ERaceLevel)_28).less(_14) && rank < 3) {
@@ -52,9 +51,11 @@ Award2D::Award2D(JKRHeap *heap) {
     JKRArchive *arc = ResMgr::getArchive(ResMgr::mcArcAward2D);
     mScreen->setPriority("Award2d.blo", 0x20000, arc);
 
+    void *brk;
     void *bck = JKRFileLoader::getGlbResource("Award2d.bck", arc);
-    void *btk = JKRFileLoader::getGlbResource("Award2d.btk", arc);
-    void *brk = JKRFileLoader::getGlbResource("Award2d.brk", arc);
+    void *btk;
+    btk = (btk, JKRFileLoader::getGlbResource("Award2d.btk", arc));
+    brk = (brk, JKRFileLoader::getGlbResource("Award2d.brk", arc));
 
     _48 = (u8 *)J2DAnmLoaderDataBase::load(bck);
     _4c = (u8 *)J2DAnmLoaderDataBase::load(bck);
@@ -91,13 +92,14 @@ Award2D::Award2D(JKRHeap *heap) {
         if (i == rank) {
 #line 156
             JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
+            J2DPicture *pos = pPane;
             pPane->changeTexture(common->getPosImg(rank), 0);
             pPane->show();
-            J2DPicture *posB0 = (J2DPicture *)mScreen->search(0x706f734230ull);
+            pPane = (J2DPicture *)mScreen->search(0x706f734230ull);
 #line 162
-            JUT_ASSERT(posB0->getTypeID() == J2DPaneType_Picture)
-            posB0->setWhite(pPane->getWhite());
-            posB0->setBlack(pPane->getBlack());
+            JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
+            pPane->setWhite(pos->getWhite());
+            pPane->setBlack(pos->getBlack());
         } else {
             pPane->hide();
         }
@@ -118,37 +120,42 @@ Award2D::Award2D(JKRHeap *heap) {
     JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
     pPane->changeTexture(common->getCharIconTexture(gSequenceInfo.get_318_charId0(kart)), 0);
 
+    RaceTime raceTime = gSequenceInfo.get_318_RaceTime(kart);
     int minutes, seconds, milliseconds;
-    gSequenceInfo.get_318_RaceTime(kart).get(&minutes, &seconds, &milliseconds);
+    raceTime.get(&minutes, &seconds, &milliseconds);
 
     J2DPicture *pics[3];
     for (int i = 0; i < 2; i++) {
-        pics[i] = (J2DPicture *)mScreen->search(0x74696d654e35ull + i);
+        pPane = (J2DPicture *)mScreen->search(0x74696d654e35ull + i);
 #line 199
-        JUT_ASSERT(pics[i]->getTypeID() == J2DPaneType_Picture)
+        JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
+        pics[i] = pPane;
     }
     common->changeNumberTexture(minutes, pics, 2, false, noTime);
 
     for (int i = 0; i < 2; i++) {
-        pics[i] = (J2DPicture *)mScreen->search(0x74696d654e33ull + i);
+        pPane = (J2DPicture *)mScreen->search(0x74696d654e33ull + i);
 #line 208
-        JUT_ASSERT(pics[i]->getTypeID() == J2DPaneType_Picture)
+        JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
+        pics[i] = pPane;
     }
     common->changeNumberTexture(seconds, pics, 2, true, noTime);
 
     for (int i = 0; i < 3; i++) {
-        pics[i] = (J2DPicture *)mScreen->search(0x74696d654e30ull + i);
+        pPane = (J2DPicture *)mScreen->search(0x74696d654e30ull + i);
 #line 217
-        JUT_ASSERT(pics[i]->getTypeID() == J2DPaneType_Picture)
+        JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
+        pics[i] = pPane;
     }
     common->changeNumberTexture(milliseconds, pics, 3, true, noTime);
 
-    pPane = (J2DPicture *)mScreen->search(0x74696d657431ull);
+    u64 colonTag = 0x74696d657431ull;
+    pPane = (J2DPicture *)mScreen->search(colonTag++);
 #line 224
     JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
     pPane->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, "timg/MarioFontColon2.bti"), 0);
 
-    pPane = (J2DPicture *)mScreen->search(0x74696d657431ull);
+    pPane = (J2DPicture *)mScreen->search(colonTag);
 #line 229
     JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
     pPane->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, "timg/MarioFontColon1.bti"), 0);
@@ -164,9 +171,10 @@ Award2D::Award2D(JKRHeap *heap) {
     pPane->changeTexture(common->getCupIconTexture((ERaceGpCup)_24), 0);
 
     for (int i = 0; i < 3; i++) {
-        pics[i] = (J2DPicture *)mScreen->search(0x506f696e7431ull + i);
+        pPane = (J2DPicture *)mScreen->search(0x506f696e7431ull + i);
 #line 250
-        JUT_ASSERT(pics[i]->getTypeID() == J2DPaneType_Picture)
+        JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
+        pics[i] = pPane;
     }
     common->changeNumberTexture(gSequenceInfo.getRankPoint(kart), pics, 3, false, false);
 
@@ -182,13 +190,14 @@ Award2D::Award2D(JKRHeap *heap) {
 
     for (int i = 0; i < 9; i++) {
         pPane = (J2DPicture *)mScreen->search(0x456630ull + i);
+        pPane->setAnimation((J2DAnmTransform *)_4c);
 #line 272
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
         pPane->changeTexture(common->getPartName(2), 0);
     }
 
     for (int i = 0; i < 2; i++) {
-        pPane = (J2DPicture *)mScreen->search(0x4e4564657231ull + i);
+        pPane = (J2DPicture *)mScreen->search(0x4e45556e64657231ull + i);
 #line 282
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
         pPane->changeTexture(common->getPartName(3), 0);
@@ -205,8 +214,6 @@ Award2D::Award2D(JKRHeap *heap) {
         J2DPane *slots[3];
         for (int i = 0; i < 3; i++) {
             slots[i] = mScreen->search(0x4e536c6f7431ull + i);
-#line 272
-            JUT_ASSERT(slots[i]->getTypeID() == J2DPaneType_Picture)
         }
         _30 = new (heap, 0) NameEntryHelper((J2DPane **)slots, _9, heap, (JUTGamePad *)_2c, false);
     }
