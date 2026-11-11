@@ -1,6 +1,9 @@
 #include "Kameda/SceneGhostLoadSave.h"
 
 #include "Kameda/Scene.h"
+#include "Kameda/SceneFactory.h"
+#include "JSystem/J2D/J2DAnmLoader.h"
+#include "JSystem/JKernel/JKRFileLoader.h"
 #include "Osako/CardAgent.h"
 #include "Osako/MenuBackground.h"
 #include "Osako/MenuTitleLine.h"
@@ -13,11 +16,16 @@
 #include "Osako/kartPad.h"
 #include "Inagaki/GameAudioMain.h"
 #include "Kameda/ReadPrintMessage.h"
+#include "Kameda/CourseName2D.h"
+#include "Kaneshige/RaceTime.h"
+#include "kartLocale.h"
 #include "Osako/ResMgr.h"
 #include "JSystem/JUtility/JUTAssert.h"
 #include "Kameda/PrintMemoryCard.h"
 #include "kartEnums.h"
 #include "mathHelper.h"
+
+SceneGhostLoadSave *SceneGhostLoadSave::mspSceneGhostLoadSave;
 
 const char *scpaBaseFileName[] = {
     "GD_Title", "SelectMemoryCard", "GDIndexLayout", "GDIndexLine",
@@ -37,12 +45,6 @@ const u64 SceneGhostLoadSave::Card::mscaPaneTag[] = {
     'NMmEf_A', 
 };
 
-SceneGhostLoadSave::GhostFileInfo::GhostFileInfo()
-{
-    mKartID = 0xff;
-    mTime = 0x5C0000 + 0x8D7F;
-}
-
 s32 SceneGhostLoadSave::GhostFileInfoTable::append(s32 idx, u32 val, TARecord &record)
 {
     if (mCount >= 127)
@@ -59,6 +61,7 @@ s32 SceneGhostLoadSave::GhostFileInfoTable::append(s32 idx, u32 val, TARecord &r
     info->mTime = record.getRaceTime().get();
 
     s32 crsID = convCrsID(record.getCourseID());
+    u32 newTime = info->mTime;
     GhostFileInfo *cur = mHead;
     GhostFileInfo *prev = nullptr;
     GhostFileInfo **link = &mHead;
@@ -70,9 +73,9 @@ s32 SceneGhostLoadSave::GhostFileInfoTable::append(s32 idx, u32 val, TARecord &r
             break;
         if (curCrsID == crsID)
         {
-            if ((s32)cur->mTime > (s32)info->mTime)
+            if ((s32)cur->mTime > (s32)newTime)
                 break;
-            if (cur->mTime == info->mTime && cur->mValue > val)
+            if (cur->mTime == newTime && cur->mValue > val)
                 break;
         }
         prev = cur;
@@ -207,34 +210,259 @@ void SceneGhostLoadSave::Card::error()
     case 5: msgID = 28; break;
     case 6: msgID = 27; break;
     default:
-        JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "SceneGhostLoadSave.cpp", 847, (const char *)0, "Card");
-        OSPanic("SceneGhostLoadSave.cpp", 847, (const char *)0, "Card");
+        JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "SceneGhostLoadSave.cpp", 847, "%s", "Card");
+OSPanic("SceneGhostLoadSave.cpp", 847, "Halt");
         break;
     }
 
     void *bmg = ResMgr::getPtr(ResMgr::mcCard);
     int bmgID = ReadPrintMessage::getBmgMessageID((PrintMemoryCard::MessageID)msgID);
     char *message = ReadPrintMessage::getMessage(bmg, bmgID);
-    J2DTextBox *textBox = mInfoText;
-    u16 len = *(u16 *)&textBox->mStringLength;
-    char *str = textBox->getStringPtr();
+    u16 len = *(u16 *)&mInfoText->mStringLength;
+    char *str = mInfoText->getStringPtr();
     snprintf(str, len, message);
-    textBox->mIsVisible = true;
+    mInfoText->mIsVisible = true;
     mSelectState = 1;
 }
 
-void SceneGhostLoadSave::Card::calcAnm() {}
+void SceneGhostLoadSave::Card::calcAnm()
+{
+    switch (mState)
+    {
+    case 0:
+        if (mAnimState == 4)
+        {
+            mAnimState = 5;
+            mFrame0 = 25;
+        }
+        if (mSelectState != 0)
+        {
+            mPanes[4]->mIsVisible = false;
+            mPanes[5]->mIsVisible = false;
+            mPanes[7]->mIsVisible = false;
+            mPanes[8]->mIsVisible = false;
+            mCourseText->mIsVisible = false;
+            mInfoText->mIsVisible = false;
+            mAnm[2]->setFrame(0.0f);
+            mSelectState = 0;
+        }
+        break;
+    case 1:
+        if (mAnimState == 4)
+        {
+            mAnimState = 5;
+            mFrame0 = 25;
+        }
+        if (mSelectState != 1)
+        {
+            mPanes[4]->mIsVisible = false;
+            mPanes[5]->mIsVisible = false;
+            mPanes[7]->mIsVisible = false;
+            mPanes[8]->mIsVisible = false;
+            mCourseText->mIsVisible = false;
+            mAnm[2]->setFrame(0.0f);
+
+            u32 msgID;
+            switch (mError)
+            {
+            case 0: msgID = 21; break;
+            case 1: msgID = 22; break;
+            case 2: msgID = 32; break;
+            case 3: msgID = 23; break;
+            case 4: msgID = 24; break;
+            case 5: msgID = 28; break;
+            case 6: msgID = 27; break;
+            default:
+                JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "SceneGhostLoadSave.cpp", 847, "%s", "Card");
+OSPanic("SceneGhostLoadSave.cpp", 847, "Halt");
+                break;
+            }
+
+            void *bmg = ResMgr::getPtr(ResMgr::mcCard);
+            int bmgID = ReadPrintMessage::getBmgMessageID((PrintMemoryCard::MessageID)msgID);
+            char *message = ReadPrintMessage::getMessage(bmg, bmgID);
+            u16 len = *(u16 *)&mInfoText->mStringLength;
+            char *str = mInfoText->getStringPtr();
+            snprintf(str, len, message);
+            mInfoText->mIsVisible = true;
+            mSelectState = 1;
+        }
+        break;
+    case 2:
+    case 3:
+    case 5:
+        if (mAnimState == 6)
+        {
+            mAnimState = 3;
+            mFrame0 = 20;
+        }
+        if (mSelectState != 2)
+        {
+            mPanes[8]->mIsVisible = true;
+            mAnm[3]->setFrame(0.0f);
+            mAnm[2]->setFrame(-0.0f);
+            mSelectState = 2;
+            mFrame1 = -1;
+        }
+        break;
+    case 4:
+        if (mAnimState == 4)
+        {
+            mAnimState = 5;
+            mFrame0 = 25;
+        }
+        if (mSelectState != 3)
+        {
+            mPanes[8]->mIsVisible = false;
+            mAnm[3]->setFrame(1.0f);
+            mAnm[2]->setFrame(0.0f);
+            mSelectState = 3;
+        }
+        break;
+    }
+
+    switch (mAnimState)
+    {
+    case 1:
+        if (++mFrame0 >= 10)
+        {
+            mFrame0 = 20;
+            mAnimState = 6;
+        }
+        break;
+    case 2:
+        if (--mFrame0 < 0)
+        {
+            mFrame0 = 0;
+            mAnimState = 0;
+        }
+        break;
+    case 3:
+        if (++mFrame0 >= 25)
+        {
+            mFrame0 = 24;
+            mAnimState = 4;
+        }
+        break;
+    case 5:
+        if (--mFrame0 < 20)
+        {
+            mFrame0 = 20;
+            mAnimState = 6;
+        }
+        break;
+    }
+
+    mAnm[0]->setFrame((f32)mFrame0);
+
+    switch (mSelectState)
+    {
+    case 0:
+        mFrame2 = 0;
+        mAnm[5]->setFrame((f32)mFrame2);
+        break;
+    case 1:
+        if (++mFrame2 >= 360)
+            mFrame2 = 0;
+        mAnm[5]->setFrame((f32)mFrame2);
+        break;
+    case 2:
+        if (++mFrame1 >= 360)
+            mFrame1 = 0;
+        if (++mFrame2 >= 360)
+            mFrame2 = 0;
+        if (++mFrame3 >= 120)
+            mFrame3 = 0;
+        mAnm[4]->setFrame((f32)mFrame1);
+        mAnm[6]->setFrame((f32)mFrame3);
+        mAnm[5]->setFrame((f32)mFrame2);
+        break;
+    case 3:
+        if (++mFrame2 >= 360)
+            mFrame2 = 0;
+        mFrame1 = 30;
+        mFrame3 = 0;
+        mAnm[4]->setFrame((f32)mFrame1);
+        mAnm[6]->setFrame((f32)mFrame3);
+        mAnm[5]->setFrame((f32)mFrame2);
+        break;
+    }
+}
 
 const u64 SceneGhostLoadSave::QuitBtn::mscaPaneTag[] = {
     'NMemQuit', 'MemQuitB', 'MemQuitW', 'NMmEf_M', 
     'MemOK', 
 };
 
-void SceneGhostLoadSave::QuitBtn::calcAnm() {}
+void SceneGhostLoadSave::QuitBtn::calcAnm()
+{
+    switch (mAnimState)
+    {
+    case 0:
+        if (mSelect != 0)
+        {
+            mSelect = 0;
+            mFrame2 = -1;
+            mPanes[3]->mIsVisible = true;
+            mAnm[1]->setFrame(0.0f);
+        }
+        break;
+    case 1:
+        if (mSelect != 1)
+        {
+            mSelect = 1;
+            mPanes[3]->mIsVisible = false;
+            mAnm[1]->setFrame(1.0f);
+        }
+        break;
+    }
 
+    switch (mSelectState)
+    {
+    case 1:
+        if (++mFrame0 >= 5)
+        {
+            mFrame0 = 4;
+            mSelectState = 0;
+        }
+        break;
+    case 2:
+        if (--mFrame0 < 0)
+        {
+            mFrame0 = 0;
+            mSelectState = 0;
+        }
+        break;
+    }
+
+    mAnm[0]->setFrame((f32)mFrame0);
+
+    switch (mSelect)
+    {
+    case 0:
+        if (++mFrame2 >= 360)
+            mFrame2 = 0;
+        if (++mFrame1 >= 120)
+            mFrame1 = 0;
+        mAnm[3]->setFrame((f32)mFrame2);
+        mAnm[2]->setFrame((f32)mFrame1);
+        break;
+    case 1:
+        mFrame2 = 30;
+        mFrame1 = 0;
+        mAnm[3]->setFrame((f32)mFrame2);
+        mAnm[2]->setFrame((f32)mFrame1);
+        break;
+    }
+}
+
+#pragma dont_inline on
 void SceneGhostLoadSave::SelectSlot::setup(JKRArchive *, JKRHeap *) {}
+#pragma dont_inline off
 
+#pragma dont_inline on
 void SceneGhostLoadSave::SelectSlot::init() {}
+#pragma dont_inline off
 
 void SceneGhostLoadSave::SelectSlot::processCard()
 {
@@ -245,6 +473,8 @@ void SceneGhostLoadSave::SelectSlot::processCard()
 bool SceneGhostLoadSave::SelectSlot::watchCardState()
 {
     bool ok = false;
+    void *bmg;
+    u32 msgID;
 
     if (mQuitBtn.mSelecting == 0)
     {
@@ -258,9 +488,9 @@ bool SceneGhostLoadSave::SelectSlot::watchCardState()
                 card->mPanes[5]->mIsVisible = false;
                 card->mPanes[7]->mIsVisible = false;
                 card->mPanes[8]->mIsVisible = false;
-                card->mPanes[6]->mIsVisible = false;
+                card->mCourseText->mIsVisible = false;
                 card->mInfoText->mIsVisible = false;
-                card->mAnm[0]->setFrame(0.0f);
+                card->mAnm[2]->setFrame(0.0f);
                 card->mSelectState = 0;
                 break;
             case 1:
@@ -270,10 +500,8 @@ bool SceneGhostLoadSave::SelectSlot::watchCardState()
                 card->mPanes[7]->mIsVisible = false;
                 card->mPanes[8]->mIsVisible = false;
                 card->mCourseText->mIsVisible = false;
-                card->mAnm[0]->setFrame(0.0f);
+                card->mAnm[2]->setFrame(0.0f);
 
-                u32 msgID;
-                void *bmg;
                 int bmgID;
                 char *message;
                 switch (card->mError)
@@ -286,15 +514,17 @@ bool SceneGhostLoadSave::SelectSlot::watchCardState()
                 case 5: msgID = 28; break;
                 case 6: msgID = 27; break;
                 default:
-                    JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "SceneGhostLoadSave.cpp", 847, (const char *)0, "Card");
-                    OSPanic("SceneGhostLoadSave.cpp", 847, (const char *)0, "Card");
+                    JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "SceneGhostLoadSave.cpp", 847, "%s", "Card");
+OSPanic("SceneGhostLoadSave.cpp", 847, "Halt");
                     break;
                 }
 
                 bmg = ResMgr::getPtr(ResMgr::mcCard);
                 bmgID = ReadPrintMessage::getBmgMessageID((PrintMemoryCard::MessageID)msgID);
                 message = ReadPrintMessage::getMessage(bmg, bmgID);
-                snprintf(card->mInfoText->getStringPtr(), card->mInfoText->mStringLength, message);
+                u16 len = *(u16 *)&card->mInfoText->mStringLength;
+                char *str = card->mInfoText->getStringPtr();
+                snprintf(str, len, message);
                 card->mInfoText->mIsVisible = true;
                 card->mSelectState = 1;
                 break;
@@ -320,16 +550,169 @@ bool SceneGhostLoadSave::SelectSlot::watchCardState()
 
 void SceneGhostLoadSave::SelectSlot::selectSlot() {}
 
+#pragma dont_inline on
+void SceneGhostLoadSave::SelectSlot::frameIn()
+{
+    watchCardState();
+
+    mCards[0].mAnimState = 1;
+    mCards[0].mFrame0 = -1;
+    mCards[1].mAnimState = 1;
+    mCards[1].mFrame0 = -1;
+    mQuitBtn.mSelectState = 1;
+    mQuitBtn.mFrame0 = -1;
+    mQuitBtn.mState3c = 1;
+}
+#pragma dont_inline off
+
 
 const u64 SceneGhostLoadSave::GDInexLineVC::mscaPaneTag[] = {
     'NGDline', 'GDNew', 
 };
 
+#pragma dont_inline on
 void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *, JKRHeap *, bool) {}
+#pragma dont_inline off
 
-void SceneGhostLoadSave::GDInexLineVC::updateInfo() {}
+void SceneGhostLoadSave::GDInexLineVC::updateInfo()
+{
+    if (mInfo != nullptr)
+    {
+        mPane0->mIsVisible = true;
+        mPane1->mIsVisible = false;
 
-void SceneGhostLoadSave::GDIndexLayoutVC::setup(JKRArchive *, JKRHeap *) {}
+        Kart2DCommon *common = Kart2DCommon::ptr();
+        u8 num = *(u8 *)&mInfo->_0;
+        if (num)
+        {
+            if (num < 10)
+            {
+                common->changeNumberTexture(num, &mPictures[0], 1, false, false);
+                mPictures[1]->mIsVisible = false;
+                mPictures[2]->mIsVisible = false;
+                mPictures[3]->mIsVisible = false;
+                mPictures[4]->mIsVisible = false;
+                mPictures[5]->mIsVisible = false;
+            }
+            else if (num < 100)
+            {
+                common->changeNumberTexture(num, &mPictures[1], 2, false, false);
+                mPictures[0]->mIsVisible = false;
+                mPictures[3]->mIsVisible = false;
+                mPictures[4]->mIsVisible = false;
+                mPictures[5]->mIsVisible = false;
+            }
+            else
+            {
+                common->changeNumberTexture(num, &mPictures[3], 3, false, false);
+                mPictures[0]->mIsVisible = false;
+                mPictures[1]->mIsVisible = false;
+                mPictures[2]->mIsVisible = false;
+            }
+        }
+
+        mPictures[25]->changeTexture((ResTIMG *)CourseName2D::ptr()->getCourseNameTexture(
+                                         (ECourseID)mInfo->mCourseID),
+                                     0);
+
+        int minutes;
+        int seconds;
+        int miliseconds;
+        RaceTime raceTime(mInfo->mTime);
+        raceTime.get(&minutes, &seconds, &miliseconds);
+        common->changeNumberTexture(minutes, &mPictures[17], 2, false, false);
+        common->changeNumberTexture(seconds, &mPictures[15], 2, true, false);
+        common->changeNumberTexture(miliseconds, &mPictures[12], 3, true, false);
+        common->changeStringTexture((const char *)&mInfo->mName, &mPictures[19], 3);
+
+        u8 charID1 = ((u8 *)&mInfo->mCharIDs)[1];
+        mPictures[22]->changeTexture(common->getCharIconTextureChecked((ECharID)charID1), 0);
+        u8 charID0 = ((u8 *)&mInfo->mCharIDs)[0];
+        mPictures[23]->changeTexture(common->getCharIconTextureChecked((ECharID)charID0), 0);
+        mPictures[24]->changeTexture(common->getKartIconTexture((ECharID)mInfo->mKartID), 0);
+
+        OSCalendarTime cal;
+        OSTicksToCalendarTime((OSTime)mInfo->mValue * (OSTime)OS_TIMER_CLOCK, &cal);
+
+        int yearPic;
+        int monthPic;
+        int dayPic;
+        switch (KartLocale::getDatingMode())
+        {
+        case YYYY_MM_DD:
+            yearPic = 10;
+            monthPic = 8;
+            dayPic = 6;
+            break;
+        case MM_DD_YYYY:
+            monthPic = 10;
+            dayPic = 8;
+            yearPic = 6;
+            break;
+        case DD_MM_YYYY:
+            dayPic = 10;
+            monthPic = 8;
+            yearPic = 6;
+            break;
+        }
+        common->changeNumberTexture(cal.year, &mPictures[yearPic], 2, true, false);
+        common->changeNumberTexture(cal.mon + 1, &mPictures[monthPic], 2, true, false);
+        common->changeNumberTexture(cal.mday, &mPictures[dayPic], 2, true, false);
+    }
+    else
+    {
+        mPane0->mIsVisible = false;
+        mPane1->mIsVisible = true;
+    }
+}
+
+void SceneGhostLoadSave::GDIndexLayoutVC::setup(JKRArchive *archive, JKRHeap *heap)
+{
+    mScreen = new (heap, 0) J2DScreen();
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%s.blo", scpaBaseFileName[2]);
+    mScreen->set(buf, 0x20000, archive);
+
+    snprintf(buf, sizeof(buf), "%s.bck", scpaBaseFileName[2]);
+    void *bck = JKRFileLoader::getGlbResource(buf, archive);
+    snprintf(buf, sizeof(buf), "%s.brk", scpaBaseFileName[2]);
+    void *brk = JKRFileLoader::getGlbResource(buf, archive);
+
+    u64 tag = 0x0000004E756D3030ULL;
+    for (int i = 0; i <= 5; i++)
+    {
+        mPanes[i] = mScreen->search(tag);
+        tag++;
+    }
+    tag = 0x4D4172726F773031ULL;
+    for (int i = 6; i <= 7; i++)
+    {
+        mPanes[i] = mScreen->search(tag);
+        tag++;
+    }
+
+    mPane = mScreen->search(0x004E536176654744ULL);
+
+    mAnm[0] = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(bck);
+    mAnm[1] = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(bck);
+    mAnm[2] = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(brk);
+
+    mScreen->setAnimation(mAnm[0]);
+    mScreen->setAnimation((J2DAnmTevRegKey *)mAnm[2]);
+    mPanes[6]->setAnimation(mAnm[1]);
+    mPanes[7]->setAnimation(mAnm[1]);
+
+    for (int i = 0; i < 6; i++)
+    {
+        mLines[i].setup(archive, heap, false);
+        mPanes[i]->appendChild(mLines[i].mScreen);
+    }
+
+    mLines[6].setup(archive, heap, true);
+    J2DPane *savePane = mScreen->search(0x00004E5361766547ULL);
+    savePane->appendChild(mLines[6].mScreen);
+}
 
 void SceneGhostLoadSave::GDIndexLayoutVC::setCard(SceneGhostLoadSave::Card *card)
 {
@@ -497,7 +880,8 @@ void SceneGhostLoadSave::GDIndexLayoutVC::scrollDown()
 
 void SceneGhostLoadSave::GDIndexLayoutVC::shiftUp()
 {
-    for (int i = mLineCount - 1; i > 0; i--)
+    int i = mLineCount - 1;
+    for (; i > 0; i--)
     {
         mLines[i].mInfo = mLines[i - 1].mInfo;
         mLines[i].mAnimState = 3;
@@ -505,22 +889,150 @@ void SceneGhostLoadSave::GDIndexLayoutVC::shiftUp()
         mLines[i].updateInfo();
     }
 
-    mLines[0].mInfo = mLines[0].mInfo->mPrev;
-    mLines[0].mAnimState = 3;
-    mLines[0].mFrame = 0;
-    mLines[0].updateInfo();
+    mLines[i].mInfo = mLines[i].mInfo->mPrev;
+    mLines[i].mAnimState = 3;
+    mLines[i].mFrame = 0;
+    mLines[i].updateInfo();
 }
 
-void SceneGhostLoadSave::GDIndexLayoutVC::calcAnm() {}
+void SceneGhostLoadSave::GDIndexLayoutVC::calcAnm()
+{
+    if (++mFrame1 >= 35)
+        mFrame1 = 0;
+    mAnm[1]->setFrame((f32)(mFrame1 + _3af));
 
-SceneGhostLoadSave::SceneGhostLoadSave(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap) {
-    // SceneGhostLoadSave::Card::Card() {}
-    // SceneGhostLoadSave::GhostFileInfo::GhostFileInfo() {}
+    if (++mFrame2 >= 80)
+        mFrame2 = 0;
+    mAnm[2]->setFrame((f32)mFrame2);
+
+    switch (mAnimState)
+    {
+    case 1:
+        if (++mFrame0 >= _3ac)
+        {
+            mFrame0 = _3ac;
+            mAnimState = 2;
+        }
+        mAnm[0]->setFrame((f32)(mFrame0 + _3af));
+        break;
+    case 5:
+        if (--mFrame0 < 0)
+        {
+            mFrame0 = 0;
+            mAnimState = 0;
+        }
+        mAnm[0]->setFrame((f32)(mFrame0 + _3af));
+        break;
+    case 3:
+        if (mAlpha <= 224)
+        {
+            mPanes[0]->setAlpha(mAlpha);
+            mPanes[mSelectedLine]->setAlpha(255 - mAlpha);
+            mAlpha += 32;
+            if (mAlpha < 32)
+                mAlpha = 255;
+        }
+        if (--mFrame0 < 40)
+        {
+            mFrame0 = 39;
+            mAnimState = 2;
+            mPanes[mSelectedLine]->mIsVisible = false;
+            mPanes[0]->setAlpha(255);
+            if (_3a6 == 0)
+                mPanes[6]->mIsVisible = false;
+            mPanes[7]->mIsVisible = true;
+        }
+        mAnm[0]->setFrame((f32)(mFrame0 + _3af));
+        break;
+    case 4:
+        if (mAlpha <= 224)
+        {
+            mPanes[0]->setAlpha(255 - mAlpha);
+            mPanes[mSelectedLine]->setAlpha(mAlpha);
+            mAlpha += 32;
+            if (mAlpha < 32)
+                mAlpha = 255;
+        }
+        if (++mFrame0 > 46)
+        {
+            mFrame0 = 39;
+            mAnimState = 2;
+
+            int i = 0;
+            while (i < mLineCount - 1)
+            {
+                GDInexLineVC *line = &mLines[i];
+                GDInexLineVC *next = &mLines[i + 1];
+                line->mInfo = next->mInfo;
+                line->mAnimState = 3;
+                line->mFrame = 0;
+                line->updateInfo();
+                i++;
+            }
+
+            GDInexLineVC *tail = &mLines[i];
+            tail->mInfo = tail->mInfo->mNext;
+            tail->mAnimState = 3;
+            tail->mFrame = 0;
+            tail->updateInfo();
+
+            GDInexLineVC *prev = &mLines[mSelectedLine - 1];
+            prev->mAnimState = 1;
+            prev->mFrame = 7;
+            GDInexLineVC *cur = &mLines[mSelectedLine];
+            cur->mAnimState = 3;
+            cur->mFrame = 0;
+
+            mPanes[0]->setAlpha(255);
+            mPanes[mSelectedLine]->mIsVisible = false;
+            if (_3a6 == _3aa - 1)
+                mPanes[7]->mIsVisible = false;
+            mPanes[6]->mIsVisible = true;
+        }
+        mAnm[0]->setFrame((f32)(mFrame0 + _3af));
+        break;
+    default:
+        break;
+    }
+
+    for (u8 i = 0; i < 6; i++)
+    {
+        switch (mLines[i].mAnimState)
+        {
+        case 0:
+            if (++mLines[i].mFrame >= 7)
+                mLines[i].mFrame = 7;
+            break;
+        case 2:
+            if (--mLines[i].mFrame <= 0)
+                mLines[i].mFrame = 0;
+            break;
+        default:
+            break;
+        }
+        mLines[i].mAnim->setFrame((f32)mLines[i].mFrame);
+    }
+
+    mScreen->animation();
+}
+
+SceneGhostLoadSave::SceneGhostLoadSave(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap)
+{
+    _252a = 0xff;
+    _2530 = MAX_TIME;
+    mspSceneGhostLoadSave = this;
+    MenuBackground::create(SceneFactory::ptr()->getArchive(9));
+    MenuTitleLine::create(SceneFactory::ptr()->getArchive(8), nullptr);
+    mSelectSlot.setup(archive, heap);
+    mGDIndex.setup(archive, heap);
 }
 
 void SceneGhostLoadSave::init() {}
 
-SceneGhostLoadSave::~SceneGhostLoadSave() {}
+SceneGhostLoadSave::~SceneGhostLoadSave()
+{
+    mspSceneGhostLoadSave = nullptr;
+}
 
 void SceneGhostLoadSave::draw()
 {
@@ -629,6 +1141,8 @@ void SceneGhostLoadSave::frameInData() {
 
 void SceneGhostLoadSave::selectData()
 {
+    GhostFileInfo *info;
+    u8 chan;
     switch (mGDIndex.selectData())
     {
     case 2:
@@ -639,11 +1153,12 @@ void SceneGhostLoadSave::selectData()
         break;
     case 1:
     {
-        GhostFileInfo *info = mGDIndex.mLines[mGDIndex._3a8].mInfo;
-        u8 chan = mSelectSlot.mQuitBtn.mSelectedIndex;
+        info = mGDIndex.mLines[mGDIndex._3a8].mInfo;
+        chan = mSelectSlot.mQuitBtn.mSelectedIndex;
 
-        if (_253c == 2)
+        switch (_253c)
         {
+        case 2:
             if (info != nullptr)
             {
                 gGhostFile.mAccessWay = 0;
@@ -651,13 +1166,19 @@ void SceneGhostLoadSave::selectData()
                 gGhostFile.setup();
                 CardAgent::ask(CardAgent::mcCommand6, chan);
             }
+            else
+            {
+                gGhostFile.setup();
+                CardAgent::ask(CardAgent::mcCommand5, chan);
+            }
+            break;
+        case 1:
+            gGhostFile.mAccessWay = 0;
+            gGhostFile.mFileNo = info->mIndex;
+            CardAgent::ask(CardAgent::mcCommand4, chan);
+            _c = 8;
             break;
         }
-
-        gGhostFile.mAccessWay = 0;
-        gGhostFile.mFileNo = info->mIndex;
-        CardAgent::ask(CardAgent::mcCommand4, chan);
-        _c = 8;
         break;
     }
     }
@@ -699,13 +1220,8 @@ void SceneGhostLoadSave::ghostSaveLoad()
             _c = 6;
             _2519 = 1;
             mSelectSlot.init();
+            break;
         }
-        else
-        {
-            _c = 7;
-            _10 = 2;
-        }
-        break;
     default:
         _c = 7;
         _10 = 2;
@@ -787,30 +1303,15 @@ void SceneGhostLoadSave::prevScene()
         gSequenceInfo.mGhostFlags = 0;
         break;
     case 3:
-    {
-        Scene::SceneType next = Scene::SCENE_MENU;
         if (!SequenceApp::ptr()->ready(Scene::SCENE_MENU))
             return;
-        SequenceApp::msNextScene = next;
+        SequenceApp::msNextScene = Scene::SCENE_MENU;
         SequenceApp::ptr()->setState(0);
         gSequenceInfo.mGhostFlags = 0;
-        gSequenceInfo._30 = next;
+        gSequenceInfo._30 = Scene::SCENE_MENU;
         break;
     }
-    }
 }
 
-void SceneGhostLoadSave::SelectSlot::frameIn()
-{
-    watchCardState();
-
-    mCards[0].mAnimState = 1;
-    mCards[0].mFrame0 = -1;
-    mCards[1].mAnimState = 1;
-    mCards[1].mFrame0 = -1;
-    mQuitBtn.mSelectState = 1;
-    mQuitBtn.mFrame0 = -1;
-    mQuitBtn.mState3c = 1;
-}
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
