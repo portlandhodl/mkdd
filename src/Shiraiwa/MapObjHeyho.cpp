@@ -1,16 +1,31 @@
 #include "Shiraiwa/Objects/MapObjHeyho.h"
 #include "JSystem/JMath/JMath.h"
+#include "Kaneshige/Course/CrsGround.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Sato/GeographyObjMgr.h"
 #include "Sato/ObjUtility.h"
 #include "Shiraiwa/SiUtil.h"
 #include "Yamamoto/kartCtrl.h"
 
+template <>
+void JGeometry::TRotation3<JGeometry::TMtx34f>::getQuat(JGeometry::TQuat4f &rDest) const;
+
 #define HEYHO_STATE_MAX 7
 #define SUB_HEYHO_STATE_MAX 3
 
-TAnmInfo TMapObjHeyho::sAnmInfos[1];
-TAnmInfo TMapObjSubHeyho::sAnmInfos[1];
+TAnmInfo TMapObjHeyho::sAnmInfos[1] = {
+    { "/Objects/Heyho1.bca", nullptr, nullptr, 2, 0, 0, -1, 0 },
+};
+
+StateObserver::StateFuncSet<TMapObjHeyho> TMapObjHeyho::sTable[7] = {
+    { 0, &TMapObjHeyho::initFunc_Skate, &TMapObjHeyho::doFunc_Skate },
+    { 1, &TMapObjHeyho::initFunc_Jump, &TMapObjHeyho::doFunc_Jump },
+    { 2, &TMapObjHeyho::initFunc_Bomb, &TMapObjHeyho::doFunc_Bomb },
+    { 3, &TMapObjHeyho::initFunc_BombEnd, &TMapObjHeyho::doFunc_BombEnd },
+    { 4, &TMapObjHeyho::initFunc_Sink, &TMapObjHeyho::doFunc_Sink },
+    { 5, &TMapObjHeyho::initFunc_Recover, &TMapObjHeyho::doFunc_Recover },
+    { 6, &TMapObjHeyho::initFunc_Die, &TMapObjHeyho::doFunc_Die },
+};
 
 const u8 TMapObjHeyho::sAnmTable[7] = {};
 
@@ -27,11 +42,10 @@ f32 TMapObjHeyho::sSlideVelH = 100.0f;
 f32 TMapObjHeyho::sSlideVelV = 30.0f;
 f32 TMapObjHeyho::sBombRotSpeed = 0.3f;
 f32 TMapObjHeyho::sBombEndRotDecel = 0.005f;
-f32 TMapObjHeyho::sAirFriction = 0.99901f;
+f32 TMapObjHeyho::sAirFriction = 0.999f;
 
 THeyhoSupervisor *TMapObjHeyho::sSupervisor;
 J3DAnmTexPattern *TMapObjHeyho::sHeyhoBtpAnm;
-J3DAnmTexPattern *TMapObjSubHeyho::sHeyhoBtpAnm;
 
 
 void THeyhoSupervisor::calc() {
@@ -75,9 +89,7 @@ TMapObjHeyho::TMapObjHeyho(const CrsData::SObject &obj)
 
 TMapObjHeyho::~TMapObjHeyho() {
     sSupervisor = nullptr;
-    if (mpPathWalk != nullptr) {
-        delete mpPathWalk;
-    }
+    delete mpPathWalk;
 }
 
 void TMapObjHeyho::reset() {
@@ -95,6 +107,7 @@ void TMapObjHeyho::reset() {
     mJumpVel = 0.0f;
     mBombVelH = 0.0f;
     mBombVelV = 0.0f;
+    PSMTXIdentity(mExtraMtx);
 
     mBasePos.set(mPos);
     mBaseMtx.set(mRotMtx);
@@ -106,23 +119,22 @@ void TMapObjHeyho::reset() {
     mpPathWalk->init(&mBasePos, &mVel, &mBaseMtx);
     mpPathWalk->reset();
 
-    f32 depth = (f32)mObjData->mParam1;
-    if (depth == 0.0f) {
-        depth = 12.0f;
+    f32 speed = (f32)mObjData->mParam1;
+    if (speed == 0.0f) {
+        speed = 12.0f;
     }
-    mSinkDepth = depth;
+    mWalkSpeed = speed;
 
     u16 frame = mObjData->mParam3;
-    if (frame >= 3) {
+    if ((int)frame >= 3) {
         frame = 0;
     }
-    f32 frameF = (f32)frame;
-    mBtp.setFrame(frameF);
+    mBtp.setFrame(frame);
     if (mpSub != nullptr) {
-        mpSub->mBtp.setFrame(frameF);
+        mpSub->mBtp.setFrame(frame);
     }
 
-    mpPathWalk->setParameters(12.0f, 0.2f, 0.06f, 0.001f, 1.0f);
+    mpPathWalk->setParameters(speed, 0.2f, 0.06f, 0.001f, 0.01f);
 }
 
 void TMapObjHeyho::calc() {
@@ -140,7 +152,15 @@ void TMapObjHeyho::calc() {
     callWalkSound();
 }
 
-void TMapObjHeyho::callWalkSound() {}
+void TMapObjHeyho::callWalkSound() {
+    J3DFrameCtrl *ctrl = mAnmPlayer.mController->getCurFrameCtrl();
+    if (SiUtil::checkPassFrame(65.0f, ctrl->getFrame(), ctrl->getRate())) {
+        mSoundMgr->setSe(0x4004b);
+    }
+    if (SiUtil::checkPassFrame(0.0f, ctrl->getFrame(), ctrl->getRate())) {
+        mSoundMgr->setSe(0x4004a);
+    }
+}
 
 bool TMapObjHeyho::checkItemHitting() {
     bool ret = false;
@@ -248,7 +268,7 @@ void TMapObjHeyho::update() {
 void TMapObjHeyho::changeAllState(u16 state) {
     JUT_MINMAX_ASSERT(0, state, HEYHO_STATE_MAX);
 
-    setState(state & 0xffff);
+    setState((u16)state);
 
     u8 anm = sAnmTable[state];
     s8 anmS = anm;
@@ -286,26 +306,27 @@ void TMapObjHeyho::doFunc_Skate() {
     mRotMtx.set(mBaseMtx);
 }
 
+static inline void setRotateY(JGeometry::TPos3f &mtx, f32 rad) {
+    f32 s = sin(rad);
+    f32 c = cos(rad);
+    mtx.ref(1, 1) = 1.0f;
+    mtx.ref(0, 0) = c;
+    mtx.ref(0, 2) = s;
+    mtx.ref(2, 0) = -s;
+    mtx.ref(2, 2) = c;
+    mtx.ref(2, 1) = 0.0f;
+    mtx.ref(1, 2) = 0.0f;
+    mtx.ref(1, 0) = 0.0f;
+    mtx.ref(0, 1) = 0.0f;
+}
+
 void TMapObjHeyho::initFunc_Jump() {
     mJumpOffset = 0.0f;
     mJumpVel = sJumpVel;
-    mExtraMtx.set(mBaseMtx);
+    mRotMtx.set(mBaseMtx);
     PSMTXIdentity(mExtraMtx);
 
-    f32 s = sin(sRotSpeed);
-    f32 c = cos(sRotSpeed);
-    mExtraMtx.ref(0, 0) = c;
-    mExtraMtx.ref(0, 1) = 0.0f;
-    mExtraMtx.ref(0, 2) = s;
-    mExtraMtx.ref(0, 3) = 0.0f;
-    mExtraMtx.ref(1, 0) = 0.0f;
-    mExtraMtx.ref(1, 1) = 1.0f;
-    mExtraMtx.ref(1, 2) = 0.0f;
-    mExtraMtx.ref(1, 3) = 0.0f;
-    mExtraMtx.ref(2, 0) = -s;
-    mExtraMtx.ref(2, 1) = 0.0f;
-    mExtraMtx.ref(2, 2) = c;
-    mExtraMtx.ref(2, 3) = 0.0f;
+    setRotateY(mExtraMtx, sRotSpeed);
 
     if (mAnmCtrl->mTrans != nullptr) {
         mAnmCtrl->mTrans->setFlag();
@@ -316,24 +337,142 @@ void TMapObjHeyho::initFunc_Jump() {
     mSoundMgr->setSe(0x4004c);
 }
 
-void TMapObjHeyho::doFunc_Jump() {}
+void TMapObjHeyho::doFunc_Jump() {
+    mJumpVel -= sJumpGrv;
+    mJumpOffset += mJumpVel;
+    if (mJumpOffset < 0.0f) {
+        mJumpOffset = 0.0f;
+        mBaseMtx.set(mRotMtx);
+        if (mAnmCtrl->mTrans != nullptr) {
+            mAnmCtrl->mTrans->resetFlag();
+        }
+        mpPathWalk->_90 = 0.5f * mWalkSpeed;
+        if (mpSub != nullptr) {
+            mpSub->setState(2);
+        }
+        setState(4);
+        mAnmPlayer.setAnm(sAnmTable[4]);
+    }
+    mPos.set(mBasePos.x, mBasePos.y + mJumpOffset, mBasePos.z);
+    PSMTXConcat(mRotMtx, mExtraMtx, mRotMtx);
+}
 
-void TMapObjHeyho::initFunc_Bomb() {}
+void TMapObjHeyho::initFunc_Bomb() {
+    mpPathWalk->_94 = 0;
+    JGeometry::TVec3f dir;
+    dir.sub(mPos, mImpulse);
+    dir.normalize();
+    dir.y = 0.0f;
+    dir.setLength(mBombVelH);
+    dir.y = mBombVelV;
+    mVel.set(dir);
+    mRotMtx.set(mBaseMtx);
+    PSMTXIdentity(mExtraMtx);
+    setRotateY(mExtraMtx, sBombRotSpeed);
+    if (mAnmCtrl->mTrans != nullptr) {
+        mAnmCtrl->mTrans->setFlag();
+    }
+    if (mpSub != nullptr) {
+        mpSub->setState(1);
+    }
+}
 
-void TMapObjHeyho::doFunc_Bomb() {}
+void TMapObjHeyho::doFunc_Bomb() {
+    PSMTXConcat(mRotMtx, mExtraMtx, mRotMtx);
+    mVel.scale(sAirFriction);
+    mVel.y -= sGravity;
+    JGeometry::TVec3f prevPos(mPos);
+    mPos.add(mVel);
+    CrsGround ground(RaceMgr::sRaceManager->getCourse());
+    ground.search(mPos, prevPos);
+    JGeometry::TVec3f normal;
+    f32 depth = ground.getWallNormal(&normal, nullptr);
+    if (depth > -1.0f) {
+        mPos.scaleAdd(depth, normal, mPos);
+    }
+    f32 height = ground.getHeight();
+    if (mPos.y < height) {
+        ground.search(prevPos);
+        switch (ground.getAttribute()) {
+        case CrsGround::Attr_5:
+        case CrsGround::Attr_10:
+        case CrsGround::Attr_14:
+        case CrsGround::Attr_15:
+        case CrsGround::Attr_255:
+            setState(6);
+            mAnmPlayer.setAnm(sAnmTable[6]);
+            break;
+        default:
+            mPos.y = height;
+            mBasePos.set(mPos);
+            mBaseMtx.set(mRotMtx);
+            mVel.z = 0.0f;
+            mVel.y = 0.0f;
+            mVel.x = 0.0f;
+            mpPathWalk->_90 = 0.0f;
+            setState(3);
+            mAnmPlayer.setAnm(sAnmTable[3]);
+            break;
+        }
+    }
+}
 
 void TMapObjHeyho::initFunc_BombEnd() {
     mBombRotSpeed = sBombRotSpeed;
 }
 
-void TMapObjHeyho::doFunc_BombEnd() {}
+void TMapObjHeyho::doFunc_BombEnd() {
+    mBombRotSpeed -= sBombEndRotDecel;
+    if (mBombRotSpeed <= 0.0f) {
+        mBombRotSpeed = 0.0f;
+        JGeometry::TVec3f zDir;
+        mRotMtx.getZDir(zDir);
+        zDir.y = 0.0f;
+        zDir.normalize();
+        JGeometry::TVec3f yDir;
+        mRotMtx.getYDir(yDir);
+        yDir.x = 0.0f;
+        yDir.normalize();
+        mBaseMtx.set(mRotMtx);
+        mpPathWalk->_94 = 1;
+        mpPathWalk->forceTurn(yDir, zDir);
+        if (mpSub != nullptr) {
+            mpSub->setState(2);
+        }
+        setState(5);
+        mAnmPlayer.setAnm(sAnmTable[5]);
+    } else {
+        Mtx mtx;
+        PSMTXIdentity(mtx);
+        PSMTXRotRad(mtx, 'y', mBombRotSpeed);
+        PSMTXConcat(mRotMtx, mtx, mRotMtx);
+    }
+}
 
 void TMapObjHeyho::initFunc_Sink() {
     mSinkVel = sFirstSinkVel;
     mSoundMgr->setSe(0x4005a);
 }
 
-void TMapObjHeyho::doFunc_Sink() {}
+void TMapObjHeyho::doFunc_Sink() {
+    mSinkVel += sSinkAccel;
+    mScale.y += mSinkVel;
+    if (mScale.y > 1.0f) {
+        mScale.y = 1.0f;
+    }
+    f32 speed = mpPathWalk->_90;
+    speed += sAccel;
+    if (speed > mWalkSpeed) {
+        speed = mWalkSpeed;
+        if (mScale.y >= 1.0f) {
+            setState(0);
+            mAnmPlayer.setAnm(sAnmTable[0]);
+        }
+    }
+    mpPathWalk->_90 = speed;
+    mPos.set(mBasePos);
+    mRotMtx.set(mBaseMtx);
+}
 
 void TMapObjHeyho::initFunc_Recover() {
     mpPathWalk->_94 = 1;
@@ -342,10 +481,23 @@ void TMapObjHeyho::initFunc_Recover() {
     }
 }
 
-void TMapObjHeyho::doFunc_Recover() {}
+void TMapObjHeyho::doFunc_Recover() {
+    f32 speed = mpPathWalk->_90;
+    speed += sAccel;
+    if (speed > mWalkSpeed) {
+        speed = mWalkSpeed;
+        if (mScale.y >= 1.0f) {
+            setState(0);
+            mAnmPlayer.setAnm(sAnmTable[0]);
+        }
+    }
+    mpPathWalk->_90 = speed;
+    mPos.set(mBasePos);
+    mRotMtx.set(mBaseMtx);
+}
 
 void TMapObjHeyho::initFunc_Die() {
-    mpPathWalk->_94 = 1;
+    mpPathWalk->_94 = 0;
     if (mAnmCtrl->mTrans != nullptr) {
         mAnmCtrl->mTrans->setFlag();
     }
@@ -356,7 +508,31 @@ void TMapObjHeyho::initFunc_Die() {
 
 void TMapObjHeyho::doFunc_Die() {}
 
-void TMapObjHeyho::hitCheck(TMapObjHeyho *) {}
+void TMapObjHeyho::hitCheck(TMapObjHeyho *other) {
+    ObjColBase *bounds = *mBounds;
+    JGeometry::TVec3f otherPos;
+    other->getPosition(&otherPos);
+    if (bounds->IsHitCylinder(mPos, otherPos, *(ObjColCylinder *)*other->mBounds)) {
+        JGeometry::TVec3f dir;
+        dir.sub(mPos, otherPos);
+        dir.normalize();
+        dir.scale((*mBounds)->getBoundDepth());
+        mPos.add(dir);
+        mBasePos.set(mPos);
+    }
+}
+
+StateObserver::StateFuncSet<TMapObjSubHeyho> TMapObjSubHeyho::sTable[3] = {
+    { 0, &TMapObjSubHeyho::initFunc_Skate, &TMapObjSubHeyho::doFunc_Skate },
+    { 1, &TMapObjSubHeyho::initFunc_Spin, &TMapObjSubHeyho::doFunc_Spin },
+    { 2, &TMapObjSubHeyho::initFunc_Recover, &TMapObjSubHeyho::doFunc_Recover },
+};
+
+TAnmInfo TMapObjSubHeyho::sAnmInfos[1] = {
+    { "/Objects/Heyho1.bca", nullptr, nullptr, 2, 0, 0, -1, 0 },
+};
+
+J3DAnmTexPattern *TMapObjSubHeyho::sHeyhoBtpAnm;
 
 TMapObjSubHeyho::TMapObjSubHeyho() : GeographyObj(0x13ef), StateObserver(), mBtp() {
     NewAnmCtrl();
@@ -369,25 +545,24 @@ void TMapObjSubHeyho::reset() {
     _58 = 4;
     mAnmCtrl->Reset();
     mBtp.resetFrame();
-    mVel.x = 0.0f;
-    mVel.y = 0.0f;
-    mVel.z = 0.0f;
+    mOffset.x = 250.0f;
+    mOffset.y = 0.0f;
+    mOffset.z = 0.0f;
     ResetState();
 }
 
 bool TMapObjSubHeyho::checkItemHitting() {
     bool ret = false;
     if (mGeoObjFlag & 4) {
-        int kind = mColItemObj->mItemKind;
-        if (kind < 7) {
-            if (kind >= 3) {
-            } else if (kind >= 0) {
-                ret = true;
-            }
-        } else {
-            if (kind < 10) {
-                ret = true;
-            }
+        switch (mColItemObj->mItemKind) {
+        case 0:
+        case 1:
+        case 2:
+        case 7:
+        case 8:
+        case 9:
+            ret = true;
+            break;
         }
     }
     return ret;
@@ -416,32 +591,69 @@ void TMapObjSubHeyho::doFunc_Skate() {
     JGeometry::TPos3f mtx;
     makeFrontMtx(&mtx);
     JGeometry::TVec3f out;
-    PSMTXMultVecSR(mtx, &mVel, &out);
-    *mpPos += out;
+    PSMTXMultVecSR(mtx, &mOffset, &out);
+    mPos.add(*mpPos, out);
 }
 
-void TMapObjSubHeyho::makeFrontMtx(JGeometry::TPos3f *) {}
+void TMapObjSubHeyho::makeFrontMtx(JGeometry::TPos3f *mtx) {
+    JGeometry::TVec3f xDir, yDir, zDir;
+    if (mpVel->isZero()) {
+        mRotMtx.getZDir(zDir);
+        if (zDir.isZero()) {
+            zDir.set(0.0f, 0.0f, 1.0f);
+        }
+    } else {
+        zDir.set(*mpVel);
+    }
+    zDir.normalize();
+    yDir.set(0.0f, 1.0f, 0.0f);
+    xDir.cross(yDir, zDir);
+    xDir.normalize();
+    mtx->setXYZDir(xDir, yDir, zDir);
+}
 
 void TMapObjSubHeyho::initFunc_Spin() {
-    mRotMtx.set(*mpMtx);
+    mSpinMtx.set(*mpMtx);
     mCheckKartHitFlags = 0;
     mGeoObjFlag &= ~2;
 }
 
 void TMapObjSubHeyho::doFunc_Spin() {
     JGeometry::TVec3f out;
-    PSMTXMultVecSR(mRotMtx, &mVel, &out);
-    *mpPos += out;
+    PSMTXMultVecSR(mSpinMtx, &mOffset, &out);
+    mPos.add(*mpPos, out);
 }
 
 void TMapObjSubHeyho::initFunc_Recover() {
     mRecoverFrame = 0.0f;
-    mRotMtx.ref(0, 3) = 0.0f;
-    mRotMtx.ref(1, 3) = 0.0f;
-    mRotMtx.ref(2, 3) = 0.0f;
+    mSpinMtx.ref(0, 3) = 0.0f;
+    mSpinMtx.ref(1, 3) = 0.0f;
+    mSpinMtx.ref(2, 3) = 0.0f;
 }
 
-void TMapObjSubHeyho::doFunc_Recover() {}
+void TMapObjSubHeyho::doFunc_Recover() {
+    JGeometry::TQuat4f q1(0.0f, 0.0f, 0.0f, 1.0f);
+    mSpinMtx.getQuat(q1);
+    q1.normalize(q1);
+    JGeometry::TPos3f mtx;
+    makeFrontMtx(&mtx);
+    JGeometry::TQuat4f q2(0.0f, 0.0f, 0.0f, 1.0f);
+    mtx.getQuat(q2);
+    q2.normalize(q2);
+    q1.x = q1.x + (q2.x - q1.x) * mRecoverFrame;
+    q1.y = q1.y + (q2.y - q1.y) * mRecoverFrame;
+    q1.z = q1.z + (q2.z - q1.z) * mRecoverFrame;
+    q1.w = q1.w + (q2.w - q1.w) * mRecoverFrame;
+    q1.normalize(q1);
+    mtx.setQuat(q1);
+    JGeometry::TVec3f out;
+    PSMTXMultVecSR(mtx, &mOffset, &out);
+    mPos.add(*mpPos, out);
+    mRecoverFrame += 0.01f;
+    if (mRecoverFrame >= 1.0f) {
+        setState(0);
+    }
+}
 
 const char *TMapObjSubHeyho::getBmdFileName() {
     static const char *cBmdName = "/Objects/Heyho1.bmd";
@@ -480,4 +692,4 @@ void TMapObjSubHeyho::createColModel(J3DModelData *modelData) {
     createBoundsCylinder(modelData, a / max * 140.0f, b / max * 320.0f);
 }
 
-extern "C" static void __sinit_MapObjHeyho_cpp() {}
+#include "JSystem/JAudio/JASFakeMatch2.h"

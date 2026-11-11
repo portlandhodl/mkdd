@@ -12,23 +12,11 @@
 #include "Sato/StateObserver.h"
 #include "Shiraiwa/AnmPlayer.h"
 #include "Shiraiwa/Coord3D.h"
+#include "Shiraiwa/Coord3DUtil.h"
 #include "Shiraiwa/Objects/MapObjHioNode.h"
 
 class TMapObjHeyho;
 class TMapObjSubHeyho;
-
-class TPathWalk {
-public:
-    u8 _0[0x94];
-    u8 _94;
-    TPathWalk(const CrsData::SObject *);
-    virtual ~TPathWalk();
-    void init(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
-    void reset();
-    void setParameters(f32, f32, f32, f32, f32);
-    s16 update();
-    void forceTurn(const JGeometry::TVec3f &, const JGeometry::TVec3f &);
-};
 
 class TMapObjSubHeyho : public GeographyObj, public StateObserver {
 public:
@@ -63,8 +51,8 @@ public:
     JGeometry::TVec3f *mpVel;      // 17c
     u32 _180;                      // 180
     JGeometry::TPos3f *mpMtx;      // 184
-    JGeometry::TVec3f mVel;        // 188
-    JGeometry::TPos3f mRotMtx;     // 194
+    JGeometry::TVec3f mOffset;     // 188
+    JGeometry::TPos3f mSpinMtx;    // 194
     f32 mRecoverFrame;             // 1c4
 }; // Size: 0x1c8
 
@@ -150,7 +138,7 @@ public:
     f32 mJumpOffset;               // 238
     f32 mJumpVel;                  // 23c
     f32 mSinkVel;                  // 240
-    f32 mSinkDepth;                // 244
+    f32 mWalkSpeed;                // 244
     f32 mBombRotSpeed;             // 248
     f32 mBombVelH;                 // 24c
     f32 mBombVelV;                 // 250

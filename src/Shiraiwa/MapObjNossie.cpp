@@ -386,6 +386,32 @@ void TMapObjSwimNossie::update() {
     mModel.update(0);
 }
 
+void TMapObjSwimNossie::reset() {
+    resetObject();
+    mAnmCtrl->Reset();
+    mPath->reset();
+    TPathUtil *path = mPath;
+    JGeometry::TVec3f pos;
+    pos.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, path->mNode)->pos);
+    mPos.set(pos);
+    JGeometry::TVec3f xDir, yDir, zDir;
+    mPath->getDirection(zDir);
+    zDir.y = 0.0f;
+    zDir.normalize();
+    yDir.set(0.0f, 1.0f, 0.0f);
+    xDir.cross(yDir, zDir);
+    xDir.normalize();
+    mRotMtx.setXYZDir(xDir, yDir, zDir);
+    mGeoObjFlag &= ~2;
+    mCheckKartHitFlags = 0;
+    J3DFrameCtrl *ctrl = mMaterial.getFrameCtrl();
+    ctrl->reset();
+    u16 frame = mObjData->mParam2;
+    if (frame >= ctrl->getEnd())
+        frame = 0;
+    ctrl->setFrame(frame);
+}
+
 void TMapObjSwimNossie::calc() {
     if (moveToNextNode() < sReachLength) {
         TPathUtil *path = mPath;
@@ -393,6 +419,36 @@ void TMapObjSwimNossie::calc() {
         path->mNode = path->getNextNode();
     }
     getSoundMgr()->setSe(0x40063);
+}
+
+f32 TMapObjSwimNossie::moveToNextNode() {
+    TPathUtil *path = mPath;
+    int next = path->getNextNode();
+    JGeometry::TVec3f target;
+    target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, next)->pos);
+    JGeometry::TVec3f dir;
+    dir.sub(target, mPos);
+    f32 dist = dir.length();
+    dir.normalize();
+    JGeometry::TVec3f xDir, yDir, zDir;
+    mRotMtx.getZDir(zDir);
+    JGeometry::TVec3f acc;
+    acc.scale(sMoveAccel, dir);
+    mVel.add(acc);
+    if (mVel.length() > sMoveMaxSpeed)
+        mVel.setLength(sMoveMaxSpeed);
+    mPos.add(mVel);
+    if (0.0f == mVel.x && 0.0f == mVel.z)
+        mRotMtx.getZDir(zDir);
+    else
+        zDir.set(mVel);
+    zDir.y = 0.0f;
+    zDir.normalize();
+    yDir.set(0.0f, 1.0f, 0.0f);
+    xDir.cross(yDir, zDir);
+    xDir.normalize();
+    mRotMtx.setXYZDir(xDir, yDir, zDir);
+    return dist;
 }
 
 TAnmInfo TMapObjPtera::sAnmInfos[2] = {
@@ -409,6 +465,28 @@ TMapObjPtera::TMapObjPtera(const CrsData::SObject &obj) : TMapObjHioNode(obj) {
 
 TMapObjPtera::~TMapObjPtera() { delete mPath; }
 
+void TMapObjPtera::reset() {
+    resetObject();
+    mGeoObjFlag &= ~2;
+    mCheckKartHitFlags = 0;
+    _58 = 0;
+    mAnmPlayer.init(mAnmCtrl, sAnmInfos, 2);
+    SiUtil::setRandomStartFrame(mAnmCtrl->getFrameCtrl(0), getGeoRnd());
+    mPath->reset();
+    TPathUtil *path = mPath;
+    JGeometry::TVec3f pos;
+    pos.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, path->mNode)->pos);
+    mPos.set(pos);
+    JGeometry::TVec3f xDir, yDir, zDir;
+    mPath->getDirection(zDir);
+    zDir.y = 0.0f;
+    zDir.normalize();
+    yDir.set(0.0f, 1.0f, 0.0f);
+    xDir.cross(yDir, zDir);
+    xDir.normalize();
+    mRotMtx.setXYZDir(xDir, yDir, zDir);
+}
+
 void TMapObjPtera::calc() {
     mAnmPlayer.update();
     if (moveToNextNode() < sReachLength) {
@@ -418,22 +496,57 @@ void TMapObjPtera::calc() {
         path = mPath;
         int next = path->getNextNode();
         f32 nextY = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, next)->pos.y;
-        u8 anm = mAnmPlayer.getCurAnmNumber();
-        if (anm == 0 && mPos.y > nextY) {
-            mAnmPlayer._10 = 1;
-            mAnmPlayer._e |= 2;
-        } else if (anm == 1 && mPos.y <= nextY) {
-            mAnmPlayer._10 = 1;
-            mAnmPlayer._e |= 2;
+        if (mAnmPlayer.getCurAnmNumber() == 0) {
+            if (mPos.y > nextY) {
+                mAnmPlayer._10 = 1;
+                mAnmPlayer._e |= 2;
+            }
+        } else if (mAnmPlayer.getCurAnmNumber() == 1) {
+            if (mPos.y <= nextY) {
+                mAnmPlayer._10 = 1;
+                mAnmPlayer._e |= 2;
+            }
         }
     }
     getSoundMgr()->setSe(0x4005e);
-    if (mAnmPlayer.getCurAnmNumber() == 0) {
-        J3DFrameCtrl *ctrl = mAnmPlayer.mController->getCurFrameCtrl();
+    u8 anm = mAnmPlayer.getCurAnmNumber();
+    if (anm == 0) {
+        J3DFrameCtrl *ctrl = mAnmPlayer.mController->getFrameCtrl(anm);
         if (SiUtil::checkPassFrame(2.0f, ctrl->getFrame(), ctrl->getRate())) {
             getSoundMgr()->setSe(0x4005c);
         }
     }
+}
+
+f32 TMapObjPtera::moveToNextNode() {
+    TPathUtil *path = mPath;
+    int next = path->getNextNode();
+    JGeometry::TVec3f target;
+    target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, next)->pos);
+    JGeometry::TVec3f dir;
+    dir.sub(target, mPos);
+    f32 dist = dir.length();
+    dir.normalize();
+    JGeometry::TVec3f xDir, yDir, zDir;
+    mRotMtx.getZDir(zDir);
+    JGeometry::TVec3f acc;
+    acc.scale(sMoveAccel, dir);
+    mVel.add(acc);
+    if (mVel.length() > sMoveMaxSpeed)
+        mVel.setLength(sMoveMaxSpeed);
+    mPos.add(mVel);
+    if (mVel.isZero())
+        mRotMtx.getZDir(zDir);
+    else
+        zDir.set(mVel);
+    zDir.normalize();
+    yDir.set(0.0f, 1.0f, 0.0f);
+    xDir.cross(yDir, zDir);
+    xDir.normalize();
+    yDir.cross(zDir, xDir);
+    yDir.normalize();
+    mRotMtx.setXYZDir(xDir, yDir, zDir);
+    return dist;
 }
 
 void TMapObjPtera::loadAnimation() {
