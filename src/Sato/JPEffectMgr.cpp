@@ -299,10 +299,10 @@ JPABaseEmitter *JPEffectMgr::createEmtCam(const char *name, const JGeometry::TVe
     return mCamEmitterMgr[camNo]->createSimpleEmitter(pos, hash, nullptr, nullptr);
 }
 
-void JPEffectMgr::createEmtBefore2DMulti(const char *name, const JGeometry::TVec3f &pos, u8 idx)
+JPABaseEmitter *JPEffectMgr::createEmtBefore2DMulti(const char *name, const JGeometry::TVec3f &pos, u8 idx)
 {
     u16 hash = JGadget::getHashCode(name);
-    mPrev2DMultiEmitterMgr[idx]->createSimpleEmitter(pos, hash, nullptr, nullptr);
+    return mPrev2DMultiEmitterMgr[idx]->createSimpleEmitter(pos, hash, nullptr, nullptr);
 }
 
 void JPEffectMgr::deleteEmt(JPABaseEmitter *emt)

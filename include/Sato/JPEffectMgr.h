@@ -33,7 +33,7 @@ public:
     JPABaseEmitter *createEmt(const char *, const JGeometry::TVec3f &, Mtx);    // 0x8023064c
     JPABaseEmitter *createEmtThunder(const char *, const JGeometry::TVec3f &);  // 0x802306c0
     JPABaseEmitter *createEmtCam(const char *, const JGeometry::TVec3f &, u8);  // 0x8023070c
-    void createEmtBefore2DMulti(const char *, const JGeometry::TVec3f &, u8);   // 0x80230764
+    JPABaseEmitter *createEmtBefore2DMulti(const char *, const JGeometry::TVec3f &, u8);   // 0x80230764
     void deleteEmt(JPABaseEmitter *);                                           // 0x802307bc
     void deleteEmtThunder(JPABaseEmitter *);                                    // 0x802307e0
     void deleteEmt2D(JPABaseEmitter *);                                         // 0x80230804

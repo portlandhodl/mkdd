@@ -87,6 +87,15 @@ public:
         return mKartGamePads[driverNo];
     }
 
+    int getTargetKartNo() const { return mTargetKartNo; }
+
+    int getBombPointKart(int pointNo)
+    {
+#line 264
+        JUT_MINMAX_ASSERT(0, pointNo, 10);
+        return mBombPointTable[pointNo];
+    }
+
     void setGoal()
     {
         mIsInRace = false;

@@ -394,8 +394,7 @@ public:
         int mItemCount[2];                  // +0x834
         u8 _83c[0x848 - 0x83c];             // +0x83c
         int _848;                           // +0x848
-        int _84c;                           // +0x84c
-        int _850;                           // +0x850
+        int _84c[2];                        // +0x84c
         JGeometry::TVec2f mRankPos[8];      // +0x854
         JGeometry::TVec2f mRankPos2[8];     // +0x894
         u8 _8d4;                            // +0x8d4
