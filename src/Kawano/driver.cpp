@@ -291,7 +291,7 @@ void DriverModel::init(int driverNo)
     m_e4 = 0;
     m_e8 = 0;
 
-    mDriveAnim.mLoopAnim.reset();
+    mDriveAnim.reset();
     mTandemAnim.reset();
     mAdditiveAnim.reset();
     m_668.reset();
@@ -303,10 +303,9 @@ void DriverModel::init(int driverNo)
         setModelData(0, mDriverLoader->getMdlData(0));
         setModelData(1, mDriverLoader->getMdlData(1));
 
-        J3DJoint *jnt;
         for (u16 i = 0; i < 27; i++) {
+            J3DJoint *jnt = nullptr;
             u16 jntNo = mDriverLoader->getJntBindNo(i);
-            jnt = nullptr;
             if (jntNo != 0xffff)
                 jnt = getModelData()->getJointNodePointer(jntNo);
             if (jnt)
@@ -356,8 +355,11 @@ void DriverModel::init(int driverNo)
         mTPAnim = new DriverTPAnim(this, mDataID);
 
     initMtxCalc();
-    if (stt == 3)
+    switch (stt) {
+    case 3:
         StartDWait();
+        break;
+    }
 
     switch (m_9c) {
     case 1:
@@ -379,7 +381,7 @@ void DriverModel::init(int driverNo)
 
     init_ik(driverNo);
 
-    mBeforeState = mState;
+    m_4f4 = mState;
     m_4f8 = mState;
     mBeforeState = mState;
     m_500 = 3;
@@ -1771,7 +1773,7 @@ void DriverModel::updateBlendCount_Func1(u8 a, u8 b)
         s16 frame = getAnmTransformPtr(mAnmID)->getFrame() + 0.5f;
         s16 t0 = DriverManager::ptr()->mBlendTimes[a];
         s16 t1 = DriverManager::ptr()->mBlendTimes[b];
-        if (t1 >= frameMax - frame)
+        if (frameMax - frame <= t1)
             m_bb = frame - (frameMax - t1);
         else if (frame > t0)
             m_bb = 0;

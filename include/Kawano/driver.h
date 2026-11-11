@@ -522,7 +522,7 @@ public:
     void SetOffset2(DriverModel *, u16);
 
     static DriverModel *sCurDriver;
-    static const J3DJointCallBack mscaCallBackTbl[27];
+    static J3DJointCallBack mscaCallBackTbl[27];
 
     virtual void update(u16);                           // override
     virtual bool createModel(JKRSolidHeap *, u32, u32); // override

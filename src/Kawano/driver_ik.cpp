@@ -9,6 +9,7 @@
 #include "Kaneshige/RaceMgr.h"
 #include "Kawano/driverMgr.h"
 #include "Sato/NeckCtrl.h"
+#include "Sato/stMath.h"
 #include "dolphin/mtx.h"
 
 typedef JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > TPos;
@@ -23,6 +24,8 @@ public:
 
     u8 _40[0x70 - 0x40];
     u8 m_70; // 0x70
+    u8 _71[0xa8 - 0x71];
+    f32 mScale; // 0xa8
 };
 
 class FootCtrl : public IKCtrl
@@ -39,14 +42,11 @@ public:
     void update_HandR(const LumbarCtrl &, float (*)[4]);
 };
 
+static const f32 sZeroQuatset[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
 DriverModel *DriverModel::sCurDriver;
-void g();
-bool e1(int z) { if (__rlwinm(__cntlzw((u32)DriverData::mspDriverData->m_18), 27, 24, 31)) return true; g(); return true; }
-bool e2(int z) { if (((__cntlzw((u32)DriverData::mspDriverData->m_18) << 27) >> 24)) return true; g(); return true; }
-bool e3(int z) { if ((__cntlzw((u32)DriverData::mspDriverData->m_18) << 3) & 0xff) return true; g(); return true; }
 
-
-const J3DJointCallBack DriverModel::mscaCallBackTbl[27] = {
+J3DJointCallBack DriverModel::mscaCallBackTbl[27] = {
     koshiCallBack,
     spinCallBack,
     footL1CallBack,
@@ -76,34 +76,197 @@ const J3DJointCallBack DriverModel::mscaCallBackTbl[27] = {
     tie1CallBack,
 };
 
-void CheckMaxNeckAngle(float (*m1)[4], float (*m2)[4], char, float)
+void CheckMaxNeckAngle(float (*base)[4], float (*neck)[4], char axis, float maxCos)
 {
-    PSMTXIdentity((Mtx &)*m1);
-    PSMTXIdentity((Mtx &)*m2);
+    JGeometry::TVec3f baseDir(base[0][axis], base[1][axis], base[2][axis]);
+    JGeometry::TVec3f neckDir(neck[0][axis], neck[1][axis], neck[2][axis]);
+    if (PSVECMag(&baseDir) == 0.0f)
+        return;
+    if (neckDir.squared() <= JGeometry::TUtil<f32>::epsilon())
+        return;
+
+    stVecNormalize(baseDir);
+    stVecNormalize(neckDir);
+    if (baseDir.dot(neckDir) >= maxCos)
+        return;
+
+    JGeometry::TVec3f halfDir;
+    halfDir.add(baseDir, neckDir);
+    halfDir.scale(0.5f);
+    stVecNormalize(halfDir);
+    neckDir.scaleAdd(maxCos - 1.0f, halfDir, baseDir);
+    stVecNormalize(neckDir);
+
+    neck[0][axis] = neckDir.x;
+    neck[1][axis] = neckDir.y;
+    neck[2][axis] = neckDir.z;
 }
 
-void DriverModel::setDirMtx(JGeometry::TVec3f &v1, JGeometry::TVec3f &v2, JGeometry::TVec3f &v3, TPos *m)
+static inline f32 getBoneLength(DriverLoader *loader, LumbarCtrl *lumbar, u16 boneNo)
 {
-    v1.set(v2);
-    v3.zero();
-    PSMTXIdentity((Mtx &)*m);
+    return loader->getBoneLength(boneNo) * lumbar->mScale;
 }
 
-void DriverModel::calcMPos(JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TVec3f &, float, float, JGeometry::TVec3f *)
+static inline bool epsilonEqualsF(f32 a, f32 b, f32 eps)
 {
+    bool equal = false;
+    f32 d = a - b;
+    if (-eps <= d && d <= eps)
+        equal = true;
+    return equal;
 }
 
-void DriverModel::calc1stJnt(J3DModel *, u16, u16, u16, u16, u16)
+static inline bool epsilonEquals(const JGeometry::TVec3f &a, const JGeometry::TVec3f &b, f32 eps)
 {
+    bool ret = false;
+    bool xy = false;
+    if (epsilonEqualsF(a.x, b.x, eps) && epsilonEqualsF(a.y, b.y, eps))
+        xy = true;
+    if (xy && epsilonEqualsF(a.z, b.z, eps))
+        ret = true;
+    return ret;
 }
 
-void DriverModel::calc2ndJnt(J3DModel *, u16, u16, u16)
+void DriverModel::setDirMtx(JGeometry::TVec3f &pos, JGeometry::TVec3f &target, JGeometry::TVec3f &up, TPos *m)
 {
+    if (PSVECMag(&up) == 0.0f)
+        up.z = -1.0f;
+
+    JGeometry::TVec3f dir;
+    dir.sub(target, pos);
+    if (PSVECMag(&dir) == 0.0f)
+        dir.y = 1.0f;
+
+    JGeometry::TVec3f x, y, z;
+    PSVECNormalize(&dir, &x);
+    PSVECCrossProduct(&up, &x, &z);
+    PSVECNormalize(&z, &z);
+    PSVECCrossProduct(&z, &x, &y);
+
+    m->mMtx[0][0] = x.x;
+    m->mMtx[1][0] = x.y;
+    m->mMtx[2][0] = x.z;
+    m->mMtx[0][1] = y.x;
+    m->mMtx[1][1] = y.y;
+    m->mMtx[2][1] = y.z;
+    m->mMtx[0][2] = z.x;
+    m->mMtx[1][2] = z.y;
+    m->mMtx[2][2] = z.z;
+    m->mMtx[0][3] = pos.x;
+    m->mMtx[1][3] = pos.y;
+    m->mMtx[2][3] = pos.z;
 }
 
-void DriverModel::calc3rdJnt(J3DModel *model, u16, u16, bool)
+void DriverModel::calcMPos(JGeometry::TVec3f &pos, JGeometry::TVec3f &target, JGeometry::TVec3f &up, float len1, float len2, JGeometry::TVec3f *out)
 {
-    PSMTXIdentity(model->mMtxBuffer->mWorldMatrices[0]);
+    if (epsilonEquals(pos, target, JGeometry::TUtil<f32>::epsilon())) {
+        *out = pos;
+        return;
+    }
+
+    TPos m;
+    setDirMtx(pos, target, up, &m);
+    TPos inv;
+    PSMTXInverse((Mtx &)m, (Mtx &)inv);
+    JGeometry::TVec3f local;
+    PSMTXMultVec((Mtx &)inv, &target, &local);
+
+    JGeometry::TVec3f res;
+    if (local.x < len1 + len2) {
+        f32 len1Sq = len1 * len1;
+        res.x = (local.x * local.x + (len1Sq - len2 * len2)) / (2.0f * local.x);
+        f32 h = len1Sq - res.x * res.x;
+        res.y = h < 0.0f ? 0.0f : JMAFastSqrt(h);
+        res.z = 0.0f;
+    } else {
+        res.set(len1, 0.0f, 0.0f);
+    }
+    PSMTXMultVec((Mtx &)m, &res, out);
+}
+
+void DriverModel::calc1stJnt(J3DModel *model, u16 jnt1, u16 jnt2, u16 no, u16 bone1, u16 bone2)
+{
+    TPos m1, m2;
+    PSMTXCopy(model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt1)], m1);
+    PSMTXCopy(model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt2)], m2);
+
+    m_6c4[no].set(m1.mMtx[0][3], m1.mMtx[1][3], m1.mMtx[2][3]);
+    m_724[no].set(m1.mMtx[0][1], m1.mMtx[1][1], m1.mMtx[2][1]);
+
+    TPos scale;
+    IKCtrl::calcJointScaleMtx(&scale, m1);
+
+    JGeometry::TVec3f target;
+    if (mLumbarCtrl->m_70 & 4) {
+        JGeometry::TVec3f dir, p, side, z;
+        m2.getTrans(p);
+        dir.sub(m_6c4[no], p);
+        stVecNormalize(dir);
+        m1.getZDir(z);
+        PSVECCrossProduct(&z, &dir, &side);
+        stVecNormalize(side);
+        m_724[no] = side;
+    } else {
+        stVecNormalize(m_724[no]);
+        m_724[no].negate();
+    }
+
+    m2.getTrans(target);
+    f32 len1 = getBoneLength(mDriverLoader, mLumbarCtrl, bone1);
+    f32 len2 = getBoneLength(mDriverLoader, mLumbarCtrl, bone2);
+    calcMPos(m_6c4[no], target, m_724[no], len1, len2, &m_6f4[no]);
+    setDirMtx(m_6c4[no], m_6f4[no], m_724[no], &m1);
+    PSMTXConcat(m1, scale, m1);
+
+    MtxPtr src = m1;
+    PSMTXCopy(src, model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt1)]);
+    PSMTXCopy(m1, j3dSys.mCurrentMtx);
+}
+
+void DriverModel::calc2ndJnt(J3DModel *model, u16 jnt1, u16 no, u16 jnt2)
+{
+    TPos dirMtx;
+    Mtx m1, m2;
+    PSMTXCopy(model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt1)], m1);
+    PSMTXCopy(model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt2)], m2);
+
+    TPos scale;
+    IKCtrl::calcJointScaleMtx(&scale, m1);
+
+    JGeometry::TVec3f target(m2[0][3], m2[1][3], m2[2][3]);
+    m_724[no].negate();
+    m_724[no] += m_6f4[no] - m_6c4[no];
+    PSVECNormalize(&m_724[no], &m_724[no]);
+    setDirMtx(m_6f4[no], target, m_724[no], &dirMtx);
+    PSMTXConcat(dirMtx, scale, dirMtx);
+
+    MtxPtr src = dirMtx;
+    PSMTXCopy(src, model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt1)]);
+    PSMTXCopy(dirMtx, j3dSys.mCurrentMtx);
+}
+
+void DriverModel::calc3rdJnt(J3DModel *model, u16 jnt1, u16 jnt2, bool useJnt1)
+{
+    TPos tmp2;
+    TPos tmp;
+    Mtx m2, m1;
+    PSMTXCopy(model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt1)], m1);
+    PSMTXCopy(model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt2)], m2);
+
+    IKCtrl::calcJointScaleMtx(&tmp, m1);
+    PSMTXInverse(tmp, tmp);
+    PSMTXConcat(m1, tmp, m1);
+
+    IKCtrl::calcJointScaleMtx(&tmp2, m2);
+    PSMTXConcat(m1, tmp2, m1);
+
+    u16 jnt = jnt2;
+    if (useJnt1)
+        jnt = jnt1;
+
+    MtxPtr src = m1;
+    PSMTXCopy(src, model->mMtxBuffer->mWorldMatrices[mDriverLoader->getJntBindNo(jnt)]);
+    PSMTXCopy(m1, j3dSys.mCurrentMtx);
 }
 
 bool DriverModel::CheckNoIK()
@@ -122,6 +285,7 @@ bool DriverModel::koshiCallBack(J3DJoint *, int joint)
         return true;
     if (joint == 0) {
 
+    J3DModel *model = j3dSys.getModel();
     DriverModel *d = sCurDriver;
     if (d == nullptr)
         return true;
@@ -130,7 +294,7 @@ bool DriverModel::koshiCallBack(J3DJoint *, int joint)
     if (IsAllIKOff(d))
         return true;
 
-    Mtx *wm = j3dSys.getModel()->mMtxBuffer->mWorldMatrices;
+    Mtx *wm = model->mMtxBuffer->mWorldMatrices;
     Mtx *mtx = &wm[d->mDriverLoader->getJntBindNo(0)];
 
     if (d->mLumbarCtrl->m_70 & 4)
@@ -223,29 +387,28 @@ bool DriverModel::footL3CallBack(J3DJoint *, int joint)
     if (!IsFootLIKOn(d))
         return true;
 
-    Mtx *wm = model->mMtxBuffer->mWorldMatrices;
-    if (!(d->mLumbarCtrl->m_70 & 4))
-        return true;
+    if (!(d->mLumbarCtrl->m_70 & 4)) {
+        TPos tmp2;
+        TPos tmp;
+        Mtx m2, m1;
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(5)], m1);
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(4)], m2);
 
-    Mtx m1, m2;
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(5)], m1);
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(4)], m2);
+        IKCtrl::calcJointScaleMtx(&tmp, m1);
+        PSMTXInverse(tmp, tmp);
+        PSMTXConcat(m1, tmp, m1);
 
-    TPos tmp;
-    IKCtrl::calcJointScaleMtx(&tmp, m1);
-    PSMTXInverse((Mtx &)tmp, (Mtx &)tmp);
-    PSMTXConcat(m1, (Mtx &)tmp, m1);
+        IKCtrl::calcJointScaleMtx(&tmp2, m2);
+        PSMTXConcat(m1, tmp2, m1);
 
-    TPos tmp2;
-    IKCtrl::calcJointScaleMtx(&tmp2, m2);
-    PSMTXConcat(m1, (Mtx &)tmp2, m1);
+        u16 idx = 4;
+        if (d->IsDash2())
+            idx = 5;
 
-    int idx = 4;
-    if (d->IsDash2())
-        idx = 5;
-
-    PSMTXCopy(m1, wm[d->mDriverLoader->getJntBindNo(idx)]);
-    PSMTXCopy(m1, j3dSys.mCurrentMtx);
+        MtxPtr src = m1;
+        PSMTXCopy(src, model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(idx)]);
+        PSMTXCopy(m1, j3dSys.mCurrentMtx);
+    }
     }
     return true;
 }
@@ -256,8 +419,8 @@ bool DriverModel::footLPosCallBack(J3DJoint *, int joint)
         return true;
     if (joint == 0) {
 
-    DriverModel *d = sCurDriver;
     J3DModel *model = j3dSys.getModel();
+    DriverModel *d = sCurDriver;
     if (d == nullptr)
         return true;
     if (d->m_d8 != 0)
@@ -272,9 +435,10 @@ bool DriverModel::footLPosCallBack(J3DJoint *, int joint)
     if (d->mLumbarCtrl->m_70 & 4) {
         Mtx *a = &wm[d->mDriverLoader->getJntBindNo(13)];
         Mtx *b = &wm[d->mDriverLoader->getJntBindNo(17)];
-        JGeometry::TVec3f pos((*a)[0][3], (*a)[1][3], (*a)[2][3]);
-        JGeometry::TVec3f v((*b)[0][3], (*b)[1][3], (*b)[2][3]);
-        pos.add(v);
+        JGeometry::TVec3f pos;
+        JGeometry::TVec3f va((*a)[0][3], (*a)[1][3], (*a)[2][3]);
+        JGeometry::TVec3f vb((*b)[0][3], (*b)[1][3], (*b)[2][3]);
+        pos.add(va, vb);
         pos.scale(0.5f);
 
         d->mLumbarCtrl->calcString(pos);
@@ -347,29 +511,28 @@ bool DriverModel::footR3CallBack(J3DJoint *, int joint)
     if (!IsFootRIKOn(d))
         return true;
 
-    Mtx *wm = model->mMtxBuffer->mWorldMatrices;
-    if (!(d->mLumbarCtrl->m_70 & 4))
-        return true;
+    if (!(d->mLumbarCtrl->m_70 & 4)) {
+        TPos tmp2;
+        TPos tmp;
+        Mtx m2, m1;
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(9)], m1);
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(8)], m2);
 
-    Mtx m1, m2;
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(9)], m1);
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(8)], m2);
+        IKCtrl::calcJointScaleMtx(&tmp, m1);
+        PSMTXInverse(tmp, tmp);
+        PSMTXConcat(m1, tmp, m1);
 
-    TPos tmp;
-    IKCtrl::calcJointScaleMtx(&tmp, m1);
-    PSMTXInverse((Mtx &)tmp, (Mtx &)tmp);
-    PSMTXConcat(m1, (Mtx &)tmp, m1);
+        IKCtrl::calcJointScaleMtx(&tmp2, m2);
+        PSMTXConcat(m1, tmp2, m1);
 
-    TPos tmp2;
-    IKCtrl::calcJointScaleMtx(&tmp2, m2);
-    PSMTXConcat(m1, (Mtx &)tmp2, m1);
+        u16 idx = 8;
+        if (d->IsDash2())
+            idx = 9;
 
-    int idx = 8;
-    if (d->IsDash2())
-        idx = 9;
-
-    PSMTXCopy(m1, wm[d->mDriverLoader->getJntBindNo(idx)]);
-    PSMTXCopy(m1, j3dSys.mCurrentMtx);
+        MtxPtr src = m1;
+        PSMTXCopy(src, model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(idx)]);
+        PSMTXCopy(m1, j3dSys.mCurrentMtx);
+    }
     }
     return true;
 }
@@ -468,25 +631,23 @@ bool DriverModel::armL3CallBack(J3DJoint *, int joint)
         return true;
     if (d->IsHappy())
         return true;
-    if (!d->IsArmLIKOn(d))
-        return true;
+    if (d->IsArmLIKOn(d)) {
+        TPos tmp2;
+        TPos tmp;
+        Mtx m2, m1;
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(13)], m1);
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(12)], m2);
 
-    Mtx *wm = model->mMtxBuffer->mWorldMatrices;
-    Mtx m1, m2;
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(13)], m1);
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(12)], m2);
+        IKCtrl::calcJointScaleMtx(&tmp, m1);
+        PSMTXInverse(tmp, tmp);
+        PSMTXConcat(m1, tmp, m1);
 
-    TPos tmp;
-    IKCtrl::calcJointScaleMtx(&tmp, m1);
-    PSMTXInverse((Mtx &)tmp, (Mtx &)tmp);
-    PSMTXConcat(m1, (Mtx &)tmp, m1);
+        IKCtrl::calcJointScaleMtx(&tmp2, m2);
+        PSMTXConcat(m1, tmp2, m1);
 
-    TPos tmp2;
-    IKCtrl::calcJointScaleMtx(&tmp2, m2);
-    PSMTXConcat(m1, (Mtx &)tmp2, m1);
-
-    PSMTXCopy(m1, wm[d->mDriverLoader->getJntBindNo(12)]);
-    PSMTXCopy(m1, j3dSys.mCurrentMtx);
+        PSMTXCopy(m1, model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(12)]);
+        PSMTXCopy(m1, j3dSys.mCurrentMtx);
+    }
     }
     return true;
 }
@@ -503,11 +664,19 @@ bool DriverModel::armR1CallBack(J3DJoint *, int joint)
         return true;
     if (d->m_d8 != 0)
         return true;
+    if (d->IsThrow())
+        return true;
+    if (d->IsTire())
+        return true;
+    if (d->IsJuggle())
+        return true;
     if (IsAllIKOff(d))
         return true;
     if (d->IsGoal())
         return true;
     if (d->IsHappy())
+        return true;
+    if (d->IsAppeal())
         return true;
     if (d->IsArmRIKOn(d))
         d->calc1stJnt(model, 14, 17, 3, 0, 1);
@@ -527,11 +696,19 @@ bool DriverModel::armR2CallBack(J3DJoint *, int joint)
         return true;
     if (d->m_d8 != 0)
         return true;
+    if (d->IsThrow())
+        return true;
+    if (d->IsTire())
+        return true;
+    if (d->IsJuggle())
+        return true;
     if (IsAllIKOff(d))
         return true;
     if (d->IsGoal())
         return true;
     if (d->IsHappy())
+        return true;
+    if (d->IsAppeal())
         return true;
     if (d->IsArmRIKOn(d))
         d->calc2ndJnt(model, 15, 3, 17);
@@ -551,31 +728,37 @@ bool DriverModel::armR3CallBack(J3DJoint *, int joint)
         return true;
     if (d->m_d8 != 0)
         return true;
+    if (d->IsThrow())
+        return true;
+    if (d->IsTire())
+        return true;
+    if (d->IsJuggle())
+        return true;
     if (IsAllIKOff(d))
         return true;
     if (d->IsGoal())
         return true;
     if (d->IsHappy())
         return true;
-    if (!d->IsArmRIKOn(d))
+    if (d->IsAppeal())
         return true;
+    if (d->IsArmRIKOn(d)) {
+        TPos tmp2;
+        TPos tmp;
+        Mtx m2, m1;
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(17)], m1);
+        PSMTXCopy(model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(16)], m2);
 
-    Mtx *wm = model->mMtxBuffer->mWorldMatrices;
-    Mtx m1, m2;
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(17)], m1);
-    PSMTXCopy(wm[d->mDriverLoader->getJntBindNo(16)], m2);
+        IKCtrl::calcJointScaleMtx(&tmp, m1);
+        PSMTXInverse(tmp, tmp);
+        PSMTXConcat(m1, tmp, m1);
 
-    TPos tmp;
-    IKCtrl::calcJointScaleMtx(&tmp, m1);
-    PSMTXInverse((Mtx &)tmp, (Mtx &)tmp);
-    PSMTXConcat(m1, (Mtx &)tmp, m1);
+        IKCtrl::calcJointScaleMtx(&tmp2, m2);
+        PSMTXConcat(m1, tmp2, m1);
 
-    TPos tmp2;
-    IKCtrl::calcJointScaleMtx(&tmp2, m2);
-    PSMTXConcat(m1, (Mtx &)tmp2, m1);
-
-    PSMTXCopy(m1, wm[d->mDriverLoader->getJntBindNo(16)]);
-    PSMTXCopy(m1, j3dSys.mCurrentMtx);
+        PSMTXCopy(m1, model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(16)]);
+        PSMTXCopy(m1, j3dSys.mCurrentMtx);
+    }
     }
     return true;
 }
@@ -586,6 +769,7 @@ bool DriverModel::faceCallBack(J3DJoint *, int joint)
         return true;
     if (joint == 0) {
 
+    Mtx *a, *b;
     J3DModel *model = j3dSys.getModel();
     DriverModel *d = sCurDriver;
     if (d == nullptr)
@@ -596,8 +780,8 @@ bool DriverModel::faceCallBack(J3DJoint *, int joint)
         return true;
 
     Mtx *wm = model->mMtxBuffer->mWorldMatrices;
-    Mtx *a = &wm[d->mDriverLoader->getJntBindNo(18)];
-    Mtx *b = &wm[d->mDriverLoader->getJntBindNo(0)];
+    a = &wm[d->mDriverLoader->getJntBindNo(18)];
+    b = &wm[d->mDriverLoader->getJntBindNo(0)];
 
     int flag = 0;
     if (d->IsDemo() || d->IsAttack() || d->IsChange() || d->IsDanger() ||
@@ -609,8 +793,12 @@ bool DriverModel::faceCallBack(J3DJoint *, int joint)
     if (d->IsBeforeStart() || (IsAllIKOff(d) && !IsAllIKOffWithoutFace(d)))
         flag = 2;
 
-    if (d->mState >= 118 && d->mState < 120)
+    switch (d->mState) {
+    case 118:
+    case 119:
         flag = 2;
+        break;
+    }
 
     d->mNeckCtrl->update(*a, *b, d->mLumbarCtrl, flag);
     PSMTXCopy((Mtx &)d->mNeckCtrl->mMtx, *a);
@@ -625,6 +813,7 @@ bool DriverModel::handRCallBack(J3DJoint *, int joint)
         return true;
     if (joint == 0) {
 
+    Mtx *mtx;
     J3DModel *model = j3dSys.getModel();
     DriverModel *d = sCurDriver;
     if (d == nullptr)
@@ -645,8 +834,8 @@ bool DriverModel::handRCallBack(J3DJoint *, int joint)
         return true;
 
     Mtx *wm = model->mMtxBuffer->mWorldMatrices;
-    ArmCtrl *arm = sCurDriver->mArmCtrl;
-    Mtx *mtx = &wm[d->mDriverLoader->getJntBindNo(17)];
+    ArmCtrl *arm = d->mArmCtrl;
+    mtx = &wm[d->mDriverLoader->getJntBindNo(17)];
     arm->update_HandR(*d->mLumbarCtrl, *mtx);
     PSMTXCopy((Mtx &)arm->mMtx, *mtx);
     PSMTXCopy(*mtx, j3dSys.mCurrentMtx);
@@ -703,8 +892,8 @@ bool DriverModel::skirtCallBack(J3DJoint *, int joint)
     IKCtrl::calcJointScaleMtx(&tmp2, m2);
     PSMTXConcat(m1, (Mtx &)tmp2, m1);
 
-    u16 jnt = d->mDriverLoader->getJntBindNo(20);
-    PSMTXCopy(m1, model->mMtxBuffer->mWorldMatrices[jnt]);
+    MtxPtr src = m1;
+    PSMTXCopy(src, model->mMtxBuffer->mWorldMatrices[d->mDriverLoader->getJntBindNo(20)]);
     PSMTXCopy(m1, j3dSys.mCurrentMtx);
     }
     return true;

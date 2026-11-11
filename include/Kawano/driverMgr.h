@@ -48,6 +48,12 @@ public:
 
     u16 getJntNo(u16 i) const { return _c[i]; }
 
+    f32 getBoneLength(u16 boneNo) {
+#line 185
+        JUT_MINMAX_ASSERT(0, boneNo, 4);
+        return _44[boneNo];
+    }
+
     static void checkAnmID(u8 anmID)
     {
 #line 231
