@@ -10,6 +10,7 @@ class KartBody;
 
 class KartPerCam
 {
+    friend class KartDemoCam;
 public:
     KartPerCam() {}
 

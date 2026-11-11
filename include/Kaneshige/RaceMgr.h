@@ -171,6 +171,7 @@ public:
 #endif
     }
 
+    int requestDemoCameraID() const { return mRaceDirector->requestDemoCameraID(); }
     bool isRaceEnd() const { return mRaceDirector->isRaceEnd(); };
     bool checkRaceEnd() { return mRaceDirector->checkRaceEnd(); }
     bool isPlayingWinnerAnm() const { return mRaceDirector->isPlayingWinnerAnm(); }

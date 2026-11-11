@@ -48,7 +48,7 @@ public:
     void DoDemoView();                          // 0x8030d93c
     void LiveViewChange();                      // 0x8030da9c
     void DemoView();                            // 0x8030db6c
-    void DoPathEnd(JGeometry::TVec3f *, f32 *); // 0x8030dd34
+    bool DoPathEnd(JGeometry::TVec3f *, f32 *); // 0x8030dd34
     void InitStartFixPathCam();                 // 0x8030de9c
     void DoStartFixPathCam();                   // 0x8030df74
     void InitStartPathCam();                    // 0x8030e07c
@@ -80,15 +80,15 @@ public:
     void SetUpMapID();                          // 0x8030fc40
     void InitStaffView();                        // 0x8030fc9c
     void StaffView();                           // 0x8030fdbc
-    int SetStaffNextID();                      // 0x8030ff40
+    bool SetStaffNextID();                      // 0x8030ff40
     void SetUpStaffID();                        // 0x8030ffb8
     // Inline/Unused
-    // void GetPerView();
+    void GetPerView();
     // void KartBody::getPerCam();
 
     KartCam *mCam;
     KartBody *mBody;
-    u8 _8[0x38 - 0x8];
+    Mtx mMat;
     u16 _38;
     u8 _3a;
     u8 _3b;

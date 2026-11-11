@@ -71,6 +71,7 @@ public:
     void InitBodyCamParam();
     void InitBodyParam();
     void Init(int);
+    KartPerCam *getPerCam() { return mKartPerCam; }
 
     // Inline
     KartCrash *getCrash() { return mKartCrash; }
