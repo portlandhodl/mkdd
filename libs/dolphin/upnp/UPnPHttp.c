@@ -313,28 +313,27 @@ s32 HTTPGetMethod(char* msg, char* method)
 
 s32 HTTPGetRequestURI(char* msg, char* uri, s32 size)
 {
-    char* p;
     char* token;
     int len;
 
     if (size < 1) {
         return -1;
     }
-    p = __HTTPGetToken(msg, &token, &len);
-    if (*p == '\0') {
+    msg = __HTTPGetToken(msg, &token, &len);
+    if (*msg == '\0') {
         return 0;
     }
-    if (token == NULL || *p != ' ' || len >= 16) {
+    if (token == NULL || *msg != ' ' || len >= 16) {
         return -1;
     }
-    p = __HTTPGetURI(p + 1, &token, &len);
-    if (*p == '\0') {
+    msg = __HTTPGetURI(msg + 1, &token, &len);
+    if (*msg == '\0') {
         return 0;
     }
-    if (token == NULL || *p != ' ') {
+    if (token == NULL || *msg != ' ') {
         return -1;
     }
-    size = (len < size - 1) ? len : size - 1;
+    size = (len < --size) ? len : size;
     memmove(uri, token, size);
     uri[size] = '\0';
     return len;
