@@ -9,9 +9,13 @@
 #include "JSystem/JAudio/System/JASSeqParser.h"
 #include "JSystem/JAudio/JAUAudioArchive.h"
 #include "JSystem/JAudio/JAUInitializer.h"
+#include "JSystem/JAudio/JAUStreamAramMgr.h"
+#include "JSystem/JAudio/Interface/JAIStreamMgr.h"
+#include "JSystem/JAudio/Interface/JAISeqMgr.h"
 #include "JSystem/JAudio/Interface/JAISoundHandles.h"
 #include "JSystem/JUtility/JUTAssert.h"
 
+#include "Inagaki/GameAudioArcLoader.h"
 #include "Inagaki/GameAudioCamera.h"
 #include "Inagaki/GameAudioCommon.h"
 #include "Inagaki/GameAudioMgr.h"
@@ -25,56 +29,143 @@ static const void *mLastBaaPointer;
 int GoalFanfareDelayFrame = 90;
 
 Main::Main() {
-
+    mState.bits.bgmRequest = false;
+    mState.bits.resetting = false;
+    mState.bits.active = false;
+    msBasic = this;
+    mSectionHeap = NULL;
+    mBaaList = NULL;
+    mOutputMode = 0;
+    mCamera = NULL;
+    _74 = 0;
+    _78 = 0;
+    _7c = 0;
+    _49 = 0;
+    _4a = 0;
+    _98 = 1.0f;
+    mBgmVolume = 1.0f;
+    mPauseStatus = PAUSE_NONE;
+    mStreamVolumeFactor = 1.0f;
+    _4b = 0;
+    _50 = 0;
+    _80 = 0;
+    mState.bits.goalProcess = false;
+    mCurrentBaa = NULL;
 }
 
 void Main::init(JKRSolidHeap *heap, u32 audioMemSize, void *baaData, void *baaPath, u32 param5) {
     mSeHandles = new (heap, 0) JAISoundHandles(_84, 4);
     JASWaveArcLoader::setCurrentDir("AudioRes/Waves");
     JAU_JASInitializer jasInit;
-    jasInit.mAudioMemSize = audioMemSize;
-    jasInit.mDvdThreadPrio = 4;
-    jasInit.mAudioThreadPrio = 3;
-    jasInit.mTrackPoolCount = 0x60;
     jasInit.mChannelPoolCount = 0xb4;
+    jasInit.mAudioMemSize = audioMemSize;
+    jasInit.mAudioThreadPrio = 3;
+    jasInit.mDvdThreadPrio = 4;
     jasInit.mChannelMax = 2;
+    jasInit.mTrackPoolCount = 0x60;
     jasInit.mDSPLevel = 1.4f;
     jasInit.initJASystem(heap);
     JASSeqParser::sCallBackFunc = processSeqCallback;
     JAU_JAIInitializer jaiInit;
-    jaiInit.mSeqCount = 3;
     jaiInit.mSeCount = 0x64;
+    jaiInit.mSeqCount = 3;
     jaiInit.mStreamCount = 3;
     jaiInit.mChildCount = jasInit.mChannelMax * 3 + 12;
     jaiInit.initJAInterface();
     mReseter = new (heap, 0) JASAudioReseter();
     mMgr = new (heap, 0) CustomMgr();
+    JAUSoundMgr *mgr = mMgr;
+    JAISeMgr *seMgr = &mgr->getSeMgr();
+    JAISeqMgr *seqMgr = (JAISeqMgr *)((u8 *)mgr + 0x728);
+
     mAudience = new (heap, 0) CustomAudience<4>();
-    mAudience->setting_._04 = 1.4f;
-    mAudience->setting_._08 = 19000.0f;
+    mAudience->setting_._04 = 19000.0f;
+    mAudience->setting_._08 = 3000.0f;
     mAudience->setting_.minVolume = 0.0f;
     mAudience->setting_._10 = -1500.0f;
     mAudience->setting_._14 = 2200.0f;
     mAudience->setting_._1c = 0.07874016f;
-    mAudience->setting_._30 = 0.47f;
-    mAudience->setting_._2c = 400.0f;
+    mAudience->setting_._30 = 400.0f;
+    mAudience->setting_._2c = 0.47f;
     mAudience->setting_._34 = 1.3f;
-    mAudience->setting_._38 = 0;
-    mMgr->getSeMgr().setAudience(mAudience);
+    mAudience->setting_._38 = 100;
+    mAudience->newMemPool(jaiInit.mSeCount);
+    mAudience->updateSetting();
     mAudience->initSlopesAndThresholds();
+    mAudience->updateVolume();
+    seMgr->setAudience(mAudience);
+
     ShoreSoundMgr::smAudience = new (heap, 0) CustomAudience<4>();
-    ShoreSoundMgr::smAudience->initSlopesAndThresholds();
-    ShoreSoundMgr::smAudience->setting_._04 = 1.4f;
+    ShoreSoundMgr::smAudience->setting_._04 = 19000.0f;
     ShoreSoundMgr::smAudience->setting_._08 = 3000.0f;
     ShoreSoundMgr::smAudience->setting_.minVolume = 0.0f;
     ShoreSoundMgr::smAudience->setting_._10 = -1500.0f;
     ShoreSoundMgr::smAudience->setting_._14 = 2200.0f;
-    ShoreSoundMgr::smAudience->setting_._1c = 0.07874016f;
-    ShoreSoundMgr::smAudience->setting_._30 = 0.47f;
-    ShoreSoundMgr::smAudience->setting_._2c = 400.0f;
+    ShoreSoundMgr::smAudience->setting_._20 = 0.1f;
+    ShoreSoundMgr::smAudience->setting_._1c = 0.2f;
+    ShoreSoundMgr::smAudience->setting_._18 = 0.5f;
+    ShoreSoundMgr::smAudience->setting_._30 = 400.0f;
+    ShoreSoundMgr::smAudience->setting_._2c = 0.25f;
     ShoreSoundMgr::smAudience->setting_._34 = 1.3f;
-    ShoreSoundMgr::smAudience->setting_._38 = 0;
-    // ... work in progress
+    ShoreSoundMgr::smAudience->setting_._38 = 100;
+    JAUDopplerAudible<4>::newMemPool(2);
+    ShoreSoundMgr::smAudience->updateSetting();
+    ShoreSoundMgr::smAudience->initSlopesAndThresholds();
+    ShoreSoundMgr::smAudience->updateVolume();
+
+    JAISeCategoryArrangement arrangement;
+    arrangement.mItems[0].mMaxActiveSe = 8;
+    arrangement.mItems[0].mMaxInactiveSe = 12;
+    arrangement.mItems[1].mMaxActiveSe = 8;
+    arrangement.mItems[1].mMaxInactiveSe = 12;
+    arrangement.mItems[2].mMaxActiveSe = 4;
+    arrangement.mItems[2].mMaxInactiveSe = 16;
+    arrangement.mItems[3].mMaxActiveSe = 4;
+    arrangement.mItems[3].mMaxInactiveSe = 16;
+    arrangement.mItems[4].mMaxActiveSe = 8;
+    arrangement.mItems[4].mMaxInactiveSe = 12;
+    seMgr->setCategoryArrangement(arrangement);
+    setRaceSeVolume(1.0f, 0);
+
+    JAUStreamStaticAramMgr_<1> *aramMgr = new (heap, 0) JAUStreamStaticAramMgr_<1>();
+    aramMgr->reserveAram(NULL, 1, jasInit.mChannelMax * 27);
+    mStreamAramMgr = aramMgr;
+    ((JAIStreamMgr *)((u8 *)mgr + 0x79c))->setStreamAramMgr(mStreamAramMgr);
+
+    mCamera = new (JASDram, 0) CameraMgr(4, mAudience);
+    for (u32 i = 0; i < 1; i++) {
+        mCamera->getCameraInfo(i);
+    }
+    mConfig = new (heap, 0) FxLineConfig(heap);
+    mTable = new (heap, 0) CustomSoundTable();
+
+    mSectionHeap = JAUNewSectionHeap(true);
+    CustomArcLoader loader(mSectionHeap);
+    if (baaData) {
+        loader.load(baaData);
+    }
+    else {
+        loader.load("AudioRes/GCKart.baa");
+    }
+    seMgr->setSeqDataMgr(mSectionHeap->sectionHeapData_.seSeqDataMgr_);
+    seqMgr->setSeqDataMgr((JAISeqDataMgr *)mSectionHeap);
+    ((JAIStreamMgr *)((u8 *)mgr + 0x79c))->setStreamDataMgr(mSectionHeap->sectionHeapData_.streamDataMgr_);
+
+    if (mBaaList == NULL) {
+        mBaaList = (const void **)loader.getData();
+    }
+#line 327
+    JUT_ASSERT_MSG(mBaaList, "シーンアーカイブコレクションがありません！\n");
+    for (u32 i = 0; i < (u32)mBaaList[0]; i++) {
+        ((u32 *)mBaaList)[i + 1] += (u32)mBaaList;
+    }
+
+    mTable->initAudibleSw();
+    mSectionHeap->loadWaveArc(5);
+    mSectionHeap->loadWaveArc(1);
+    updateBgmVolume(0);
+    mSectionHeap->finishBuild();
+    mState.bits.active = true;
 }
 
 void Main::bootDSP() {
@@ -136,52 +227,35 @@ void Main::frameWork() {
     _80++;
 }
 
-void Main::changeSection(u32 sectionNo) {
-    bool success;
-    mCurrentBaa = NULL;
-    const void *baa = mBaaList[sectionNo + 1];
+inline bool Main::loadSection(const void *baa) {
     if (mLastBaaPointer == baa) {
-        success = true;
+        return true;
     }
-    else if (mSectionHeap->getNumSections() != 1 && !mSectionHeap->popSection()) {
-        success = false;
+    if (mSectionHeap->getNumSections() != 1 && !mSectionHeap->popSection()) {
+        return false;
     }
-    else {
-        JAUSection *section = mSectionHeap->pushNewSection();
-        JAUAudioArcLoader loader(section);
-        loader.load(baa);
-        section->finishBuild();
-        mLastBaaPointer = baa;
-        success = true;
-    }
+    JAUSection *section = mSectionHeap->pushNewSection();
+    JAUAudioArcLoader loader(section);
+    loader.load(baa);
+    section->finishBuild();
+    mLastBaaPointer = baa;
+    return true;
+}
+
+bool Main::changeSection(u32 sectionNo) {
+    mCurrentBaa = NULL;
+    bool success = loadSection(mBaaList[sectionNo + 1]);
     if (!success) {
         mCurrentBaa = mBaaList[sectionNo + 1];
     }
+    return success;
 }
 
 void Main::checkSection() {
-    const void *baa = mCurrentBaa;
-    if (baa == NULL) {
+    if (mCurrentBaa == NULL) {
         return;
     }
-    bool success;
-    if (mLastBaaPointer == baa) {
-        success = true;
-    }
-    else if (mSectionHeap->getNumSections() != 1 && !mSectionHeap->popSection()) {
-        success = false;
-    }
-    else {
-        JAUSection *section = mSectionHeap->pushNewSection();
-        {
-            JAUAudioArcLoader loader(section);
-            loader.load(baa);
-            section->finishBuild();
-        }
-        mLastBaaPointer = baa;
-        success = true;
-    }
-    if (success) {
+    if (loadSection(mCurrentBaa)) {
         mCurrentBaa = NULL;
     }
 }
@@ -204,7 +278,92 @@ bool Main::isWaveLoaded(WS_ID id) {
     return false;
 }
 
-void Main::checkCourceOnRace() {}
+void Main::checkCourceOnRace() {
+    static JAISoundHandle _seHandle;
+    if (_50 != 3 || Parameters::getDemoMode() != 0 || mPauseStatus == PAUSE_ALL) {
+        return;
+    }
+
+    u32 sceneMax = Main::getAudio()->getCamera()->getSceneMax();
+    switch (Parameters::getRaceCourse()) {
+    case DK_MOUNTAIN:
+        for (u32 i = 0; i < sceneMax; i++) {
+            CameraInfo *cam = Main::getAudio()->getCamera()->getCameraInfo(i);
+            JGeometry::TVec3f pos(cam->_0);
+            cam->mArea->search(6, pos);
+            if (cam->mArea->isInside()) {
+                mMgr->startSound(0x40040, &_20.mHandles[i], NULL);
+                if (sceneMax != 0 && _20.mHandles[i].isSoundAttached()) {
+                    if (sceneMax > 1) {
+                        _20.mHandles[i]->getAuxiliary().movePan((f32)(i & 1), 0);
+                    }
+                    f32 volume = CustomAudience<4>::smCameraVolume[i];
+                    _20.mHandles[i]->getAuxiliary().moveVolume(volume, 0);
+                }
+            }
+        }
+        break;
+    case DINO_DINO_JUNGLE:
+        for (u32 i = 0; i < sceneMax; i++) {
+            CameraInfo *cam = Main::getAudio()->getCamera()->getCameraInfo(i);
+            JGeometry::TVec3f pos(cam->_0);
+            cam->mArea->search(6, pos);
+            if (cam->mArea->isInside()) {
+                mMgr->startSound(0x40041, &_20.mHandles[i], NULL);
+                if (_20.mHandles[i].isSoundAttached()) {
+                    if (sceneMax > 1) {
+                        _20.mHandles[i]->getAuxiliary().movePan((f32)(i & 1), 0);
+                    }
+                    f32 volume = CustomAudience<4>::smCameraVolume[i];
+                    _20.mHandles[i]->getAuxiliary().moveVolume(volume, 0);
+                }
+            }
+        }
+        break;
+    case BOWSER_CASTLE:
+        for (u32 i = 0; i < sceneMax; i++) {
+            CameraInfo *cam = Main::getAudio()->getCamera()->getCameraInfo(i);
+            if (cam->mEchoRate <= 0.1f) {
+                mMgr->startSound(0x40064, &_20.mHandles[i], NULL);
+                if (sceneMax != 0 && _20.mHandles[i].isSoundAttached()) {
+                    if (sceneMax > 1) {
+                        _20.mHandles[i]->getAuxiliary().movePan((f32)(i & 1), 0);
+                    }
+                    f32 volume = CustomAudience<4>::smCameraVolume[i];
+                    _20.mHandles[i]->getAuxiliary().moveVolume(volume, 0);
+                }
+            }
+        }
+        break;
+    case MINI_1:
+        for (u32 i = 0; i < sceneMax; i++) {
+            CameraInfo *cam = getCamera()->getCameraInfo(i);
+            JGeometry::TVec3f pos(cam->_0);
+            cam->mArea->search(6, pos);
+            if (cam->mArea->isInside()) {
+                JAISoundID id = 0x40064;
+                if (getCamera()->getCameraInfo(i)->_0.y < 7900.0f) {
+                    id = JAISoundID(0x4008f);
+                }
+                mMgr->startSound(id, &_20.mHandles[i], NULL);
+                if (_20.mHandles[i].isSoundAttached() && sceneMax > 1) {
+                    _20.mHandles[i]->getAuxiliary().movePan((f32)(i & 1), 0);
+                }
+            }
+        }
+        break;
+    case MUSHROOM_CITY:
+        for (u32 i = 0; i < sceneMax; i++) {
+            CameraInfo *cam = getCamera()->getCameraInfo(i);
+            JGeometry::TVec3f pos(cam->_0);
+            cam->mArea->search(6, pos);
+            if (cam->mArea->isInside()) {
+                mAudience->setEchoRate(i, 0.3f);
+            }
+        }
+        break;
+    }
+}
 
 void Main::setPause(PAUSE_STATUS status) {
     if (mPauseStatus == status) {
@@ -244,11 +403,11 @@ void Main::startSequenceBgm(u32 id) {
         if (Parameters::getDemoMode() != 0) {
             return;
         }
+        handle = &_70;
         if (_6c.isSoundAttached()) {
             _6c->getAuxiliary().moveVolume(0.0f, 5);
         }
         mState.bits.bgmRequest = true;
-        handle = &_70;
         break;
     default:
 #line 756
@@ -411,21 +570,23 @@ void Main::startStreamBgm(u32 id) {
             }
         }
     }
-    if (!(_68.isSoundAttached() && _68->getID() == id)) {
-        ((JAUSoundMgr *)mMgr)->startSound(id, &_68, NULL);
-    }
-    else {
+    if (_68.isSoundAttached() && _68->getID() == id) {
         _68->status_.unlockIfLocked();
         _7c = 0;
     }
-    if (!_68.isSoundAttached()) {
+    else {
+        ((JAUSoundMgr *)mMgr)->startSound(id, &_68, NULL);
+    }
+    if (_68.isSoundAttached()) {
+        if (id != 0x2000020 && id != 0x2000021 && id != 0x2000022 && id != 0x2000026) {
+            if (_4a != 0) {
+                _68->getAuxiliary().moveVolume(0.45f, 0);
+            }
+        }
+    }
+    else {
 #line 971
         JUT_WARNING_F(false, "%s", "GameAudioMain : startStreamBgm failed\n");
-    }
-    else if (id != 0x2000020 && id != 0x2000021 && id != 0x2000022 && id != 0x2000026) {
-        if (_4a != 0) {
-            _68->getAuxiliary().moveVolume(0.45f, 0);
-        }
     }
 }
 
@@ -448,23 +609,14 @@ void Main::setInvincibleBgm(u8 kartNo, u8 type) {
         return;
     }
     if (_4b == 0) {
-        if (_68.isSoundAttached()) {
-            if (mState.bits.goalProcess) {
-                _78 = 0;
-            }
-            else {
-                _78 = _68->getID();
-            }
-        }
-        else {
+        if (_68.isSoundAttached() && mState.bits.goalProcess) {
             _78 = 0;
         }
-        if (!_70.isSoundAttached()) {
-            if (_78 != 0) {
-                if (Parameters::getDemoMode() == 0) {
-                    prepareStreamBgm(_78);
-                }
-            }
+        else {
+            _78 = _68->getID();
+        }
+        if (!_70.isSoundAttached() && _78 != 0) {
+            prepareStreamBgm(_78);
         }
     }
     startInvincibleBgm(type, true);
@@ -473,37 +625,31 @@ void Main::setInvincibleBgm(u8 kartNo, u8 type) {
         u8 i;
         for (i = 0; i < count; i++) {
             if (_54[i].kartNo == kartNo && _54[i].type == type) {
-                for (; i < _4b - 1; i++) {
+                for (; _4b != 0 && i < _4b - 1; i++) {
                     _54[i].kartNo = _54[i + 1].kartNo;
                     _54[i].type = _54[i + 1].type;
                 }
                 _4b--;
-                goto doneRemove;
+                break;
             }
         }
-    doneRemove:
-        ;
     }
-    {
-        u8 i2 = _4b;
-        _54[i2].kartNo = kartNo;
-        _54[i2].type = type;
-        if (_4b < 7) {
-            _4b++;
-        }
-        else {
+    _54[_4b].kartNo = kartNo;
+    _54[_4b].type = type;
+    if (_4b < 7) {
+        _4b++;
+    }
+    else {
 #line 1080
-            JUT_WARNING_F(false, "%s", "Main::setInvincibleBgm mInvincibleBgmCount Over1!!!\n");
-        }
+        JUT_WARNING_F(false, "%s", "Main::setInvincibleBgm mInvincibleBgmCount Over1!!!\n");
     }
 }
 
 void Main::clearInvincibleBgm(u8 kartNo, u8 type) {
     u8 count = _4b;
     if (count > 1) {
-        int limit = count - 1;
         u8 i;
-        for (i = 0; i < limit; i++) {
+        for (i = 0; i < count - 1; i++) {
             if (_54[i].kartNo == kartNo && _54[i].type == type) {
                 for (; i < _4b - 1; i++) {
                     _54[i].kartNo = _54[i + 1].kartNo;
@@ -666,21 +812,19 @@ void Main::startBombPointSe(u8 kartNo, u8 type) {
         startRaceSystemSe(0x20029);
         return;
     }
-    u8 kartPar = kartNo & 1;
-    u8 typePar = type & 1;
-    if (kartPar == typePar) {
-        if (kartPar == 0) {
-            startRaceSystemSe(0x2002c);
+    if ((u8)(kartNo & 1) != (u8)(type & 1)) {
+        if ((u8)(kartNo & 1) < (u8)(type & 1)) {
+            startRaceSystemSe(0x2002a);
         }
         else {
-            startRaceSystemSe(0x2002d);
+            startRaceSystemSe(0x2002b);
         }
     }
-    else if ((kartNo & 1) < (type & 1)) {
-        startRaceSystemSe(0x2002a);
+    else if ((kartNo & 1) == 0) {
+        startRaceSystemSe(0x2002c);
     }
     else {
-        startRaceSystemSe(0x2002b);
+        startRaceSystemSe(0x2002d);
     }
 }
 
@@ -689,21 +833,19 @@ void Main::startBombReachSe(u8 kartNo, u8 type) {
         startRaceSystemSe(0x2002e);
         return;
     }
-    u8 kartParity = kartNo & 1;
-    u8 typeParity = type & 1;
-    if (kartParity == typeParity) {
-        if (kartParity == 0) {
-            startRaceSystemSe(0x20031);
+    if ((u8)(kartNo & 1) != (u8)(type & 1)) {
+        if ((u8)(kartNo & 1) < (u8)(type & 1)) {
+            startRaceSystemSe(0x2002f);
         }
         else {
-            startRaceSystemSe(0x20032);
+            startRaceSystemSe(0x20030);
         }
     }
-    else if (kartParity < typeParity) {
-        startRaceSystemSe(0x2002f);
+    else if ((kartNo & 1) == 0) {
+        startRaceSystemSe(0x20031);
     }
     else {
-        startRaceSystemSe(0x20030);
+        startRaceSystemSe(0x20032);
     }
 }
 
@@ -750,23 +892,21 @@ void Main::updateBgmVolume(u32 frames) {
 
 void Main::fadeOutAll(u32 frames) {
     JASReport("fadeOutAll %d", frames);
-    CustomMgr *mgr = mMgr;
-    JAISoundParamsMove *streamParams = (JAISoundParamsMove *)((u8 *)mgr + 0x7a0);
+    JAISoundParamsMove *streamParams = ((JAIStreamMgr *)((u8 *)mMgr + 0x79c))->getParams();
     if (streamParams->mTransition.mVolume.mCount != 0) {
         if (_68.isSoundAttached()) {
-            _68->getAuxiliary().moveVolume(((JAISoundParamsMove *)((u8 *)mgr + 0x7a0))->mVolume * _68->getAuxiliary().mVolume, 0);
+            _68->getAuxiliary().moveVolume(_68->getAuxiliary().mVolume * streamParams->mVolume, 0);
         }
     }
-    JAISoundParamsMove *seqParams = (JAISoundParamsMove *)((u8 *)mgr + 0x73c);
-    *streamParams = *seqParams;
+    *streamParams = *((JAISeqMgr *)((u8 *)mMgr + 0x728))->getParams();
     if (streamParams->mTransition.mVolume.mCount != 0) {
         if (_6c.isSoundAttached()) {
-            _6c->getAuxiliary().moveVolume(streamParams->mVolume * _6c->getAuxiliary().mVolume, 0);
+            _6c->getAuxiliary().moveVolume(_6c->getAuxiliary().mVolume * streamParams->mVolume, 0);
         }
     }
     updateBgmVolume(0);
-    ((JAIStreamMgr *)((u8 *)mgr + 0x79c))->stop(frames);
-    ((JAISeqMgr *)((u8 *)mgr + 0x728))->stop(frames);
+    ((JAIStreamMgr *)((u8 *)mMgr + 0x79c))->stop(frames);
+    ((JAISeqMgr *)((u8 *)mMgr + 0x728))->stop(frames);
     _78 = 0;
     _7c = 0;
     _4b = 0;
@@ -786,34 +926,13 @@ void Main::setRaceSeVolume(f32 volume, u32 frames) {
 
 void Main::setOutputMode(u32 mode) {
 #line 1462
-    JUT_ASSERT_MSG(mode <= 2, "GameAudio::setSoundOutputMode : invalid output mode.");
+    JUT_ASSERT_MSG(mode <= 2, "GameAudio::setSoundOutputMode : モードナンバーが異常です！\n");
     JASDriver::setOutputMode(mode);
     mOutputMode = mode;
 }
 
 void Main::resetAudio(u32 frames) {
-    bool success;
-    mCurrentBaa = NULL;
-    const void *baa = mBaaList[1];
-    if (mLastBaaPointer == baa) {
-        success = true;
-    }
-    else if (mSectionHeap->getNumSections() != 1 && !mSectionHeap->popSection()) {
-        success = false;
-    }
-    else {
-        JAUSection *section = mSectionHeap->pushNewSection();
-        {
-            JAUAudioArcLoader loader(section);
-            loader.load(baa);
-            section->finishBuild();
-        }
-        mLastBaaPointer = baa;
-        success = true;
-    }
-    if (!success) {
-        mCurrentBaa = mBaaList[1];
-    }
+    changeSection(0);
     mState.bits.resetting = true;
     mReseter->start(frames * 7, false);
 }
@@ -877,3 +996,16 @@ u16 Main::processSeqCallback(JASTrack *track, u16 port) {
 }
 
 }
+
+GameAudio::Main sJAudio;
+
+#include "JSystem/JAudio/JASFakeMatch.h"
+
+template <>
+JASMemPool<JAUDopplerAudible<4> > JASPoolAllocObject<JAUDopplerAudible<4> >::memPool_;
+template <>
+JASMemPool<JAIStream> JASPoolAllocObject<JAIStream>::memPool_;
+template <>
+JASMemPool<JAISeq> JASPoolAllocObject<JAISeq>::memPool_;
+template <>
+JASMemPool<JAISe> JASPoolAllocObject<JAISe>::memPool_;

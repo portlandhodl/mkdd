@@ -77,6 +77,35 @@ namespace std
         data[i] &= ~mask;
     }
 
+    template <>
+    class __bitset_base<1>
+    {
+    public:
+        __bitset_base() { data = 0; }
+
+        void set(size_t pos, bool val)
+        {
+            size_t mask = 1 << pos;
+            if (val)
+            {
+                data |= mask;
+            }
+            else
+            {
+                data &= ~mask;
+            }
+        }
+        void reset(size_t pos)
+        {
+            size_t mask = 1 << pos;
+            data &= ~mask;
+        }
+        bool test(size_t pos) const { return data & (1 << pos); }
+        bool any() const { return data != 0; }
+    private:
+        size_t data;
+    };
+
     template <size_t N>
     class bitset : private __bitset_base<(N - 1) / (sizeof(size_t) * 8) + 1>
     {

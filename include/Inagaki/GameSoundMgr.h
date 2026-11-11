@@ -126,7 +126,7 @@ JAISoundHandle *SoundMgr<T>::startSoundCustom(u32 soundID, u32 p2) {
 
 template<class T>
 void SoundMgr<T>::initAll() {
-    for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
+    for (SoundMgr<T> *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
         mgr->init();
         mgr->stopAllSounds();
     }
@@ -134,7 +134,7 @@ void SoundMgr<T>::initAll() {
 
 template<class T>
 void SoundMgr<T>::frameWorkAll() {
-    for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
+    for (SoundMgr<T> *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
         mgr->loop();
     }
 }
@@ -145,7 +145,7 @@ void SoundMgr<T>::pauseAll(bool doPause) {
     for (T *mgr = smStart; mgr != nullptr; mgr = mgr->mNext) {
         for (int i = 0; i < mgr->_10; i++) {
             if ((*mgr)[i].isSoundAttached()) {
-                u32 type = table->getSoundType((*mgr)[i]->getID());
+                u32 type = table->getSwBit((*mgr)[i]->getID());
                 if (type & 0x800000) {
                     (*mgr)[i]->pause(doPause);
                 }

@@ -22,14 +22,14 @@ public:
     void stopSoundID(JAISoundID soundID);
     void mixOut();
     JAIStream *newStream_();
-    bool isActive() const;
+    bool isActive() const { return mStreamList.getNumLinks() != 0; }
 
     JAIAudience *getAudience() { return mAudience; }
     JAISoundParamsMove *getParams() { return &mParams; }
     JAIStreamAramMgr *getStreamAramMgr() { return streamAramMgr_; }
     void setStreamDataMgr(JAIStreamDataMgr *dataMgr)
     {
-#line 138
+#line 139
         JUT_ASSERT(!isActive());
         streamDataMgr_ = dataMgr;
     }
