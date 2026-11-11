@@ -2,6 +2,9 @@
 #define PRERACE2D_H
 
 #include "JSystem/J2D/J2DPicture.h"
+#include "JSystem/J2D/J2DScreen.h"
+#include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J2D/J2DAnimation.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "JSystem/JORReflexible.h"
 #include "Kaneshige/HioMgr.h"
@@ -9,14 +12,16 @@
 
 class PreRace2DParam : public JORReflexible {
 public:
-    // Inline/Unused
     PreRace2DParam();
     virtual ~PreRace2DParam() {}
+
+    u16 _48; // 0x48
+    u8 mFlag; // 0x4a
 };
 
 class PreRace2DHioNode : public HioNode {
 public:
-    PreRace2DHioNode();
+    PreRace2DHioNode() : HioNode("ＰＲＥレース２Ｄ", &mParam, 0, 0) {}
     virtual ~PreRace2DHioNode() {}
 
     PreRace2DParam mParam;
@@ -45,10 +50,23 @@ public:
     int getStatus() const { return mStatus; }
     int getWipeType() const { return mWipeType; }
 private:
-    PLACEHOLDER_BYTES(0, 0x24);
-    int mStatus; // 24
-    PLACEHOLDER_BYTES(0x28, 0x2c);
-    int mWipeType; // 2c
-    PLACEHOLDER_BYTES(0x30, 0xe0);
-}; // class PreRace2D
+    struct Anim {
+        J2DAnmTransform *mAnm; // 0x0
+        J2DPicture *mPane;     // 0x4
+        f32 mFrame;            // 0x8
+    }; // Size: 0xc
+    Anim mAnim[2]; // 0x0
+    PreRace2DHioNode *mNode; // 0x18
+    J2DOrthoGraph *mOrtho; // 0x1c
+    J2DScreen *mScreen; // 0x20
+    int mStatus; // 0x24
+    int mCounter; // 0x28
+    int mWipeType; // 0x2c
+    J2DPicture *mGuS[9]; // 0x30
+    J2DPicture *mSC[3]; // 0x54
+    J2DPicture *mPm[8]; // 0x60
+    J2DPicture *mLaps; // 0x80
+    J2DPicture *mCourseName; // 0x84
+    J2DPicture *mRdA[22]; // 0x88
+}; // Size: 0xe0
 #endif // PRERACE2D_H

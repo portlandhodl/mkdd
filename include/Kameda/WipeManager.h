@@ -44,6 +44,7 @@ public:
 
 class WipeManager
 {
+    friend class PreRace2D;
 public:
     WipeManager(JKRHeap *);                                             // 0x80138720
     void reset();                                                       // 0x80138b38
