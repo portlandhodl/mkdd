@@ -392,7 +392,7 @@ void TMapObjSwimNossie::reset() {
     mPath->reset();
     TPathUtil *path = mPath;
     JGeometry::TVec3f pos;
-    pos.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, path->mNode)->pos);
+    pos.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)path->mNode)->pos);
     mPos.set(pos);
     JGeometry::TVec3f xDir, yDir, zDir;
     mPath->getDirection(zDir);
@@ -423,9 +423,9 @@ void TMapObjSwimNossie::calc() {
 
 f32 TMapObjSwimNossie::moveToNextNode() {
     TPathUtil *path = mPath;
-    int next = path->getNextNode();
+    u16 next = path->getNextNode();
     JGeometry::TVec3f target;
-    target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, next)->pos);
+    target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)next)->pos);
     JGeometry::TVec3f dir;
     dir.sub(target, mPos);
     f32 dist = dir.length();
@@ -475,7 +475,7 @@ void TMapObjPtera::reset() {
     mPath->reset();
     TPathUtil *path = mPath;
     JGeometry::TVec3f pos;
-    pos.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, path->mNode)->pos);
+    pos.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)path->mNode)->pos);
     mPos.set(pos);
     JGeometry::TVec3f xDir, yDir, zDir;
     mPath->getDirection(zDir);
@@ -494,8 +494,8 @@ void TMapObjPtera::calc() {
         path->mDistanceDirty = true;
         path->mNode = path->getNextNode();
         path = mPath;
-        int next = path->getNextNode();
-        f32 nextY = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, next)->pos.y;
+        u16 next = path->getNextNode();
+        f32 nextY = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)next)->pos.y;
         if (mAnmPlayer.getCurAnmNumber() == 0) {
             if (mPos.y > nextY) {
                 mAnmPlayer._10 = 1;
@@ -520,9 +520,9 @@ void TMapObjPtera::calc() {
 
 f32 TMapObjPtera::moveToNextNode() {
     TPathUtil *path = mPath;
-    int next = path->getNextNode();
+    u16 next = path->getNextNode();
     JGeometry::TVec3f target;
-    target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, next)->pos);
+    target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)next)->pos);
     JGeometry::TVec3f dir;
     dir.sub(target, mPos);
     f32 dist = dir.length();

@@ -2,6 +2,7 @@
 #include "Kaneshige/Course/CrsGround.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Shiraiwa/SiUtil.h"
+#include "mathHelper.h"
 #include "JSystem/JUtility/JUTAssert.h"
 #include "JSystem/JAudio/JASFakeMatch.h"
 #include "JSystem/JAudio/JASFakeMatch2.h"
@@ -30,22 +31,20 @@ void TPathUtil::reset() {
     mDir = 1;
 }
 u16 TPathUtil::getNextNode() {
-    int node = (s16)mNode;
-    node = (s16)node + (s8)mDir;
+    s16 node = mNode;
+    node += mDir;
     CrsData::PathData *path = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPathData(mObj->pathID);
-    if ((s16)node >= path->pointCount) {
+    if (node >= path->pointCount) {
         path = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPathData(mObj->pathID);
         if (path->isClosed()) {
             node = 0;
         } else {
             node = mNode - 1;
             mDir = -1;
-            node = (s16)node;
         }
-    } else if ((s16)node < 0) {
+    } else if (node < 0) {
         node = mNode + 1;
         mDir = 1;
-        node = (s16)node;
     }
     return node;
 }
@@ -53,7 +52,8 @@ void TPathUtil::getDirection(JGeometry::TVec3f &dst) {
     JGeometry::TVec3f p1pos;
     JGeometry::TVec3f p2pos;
     JGeometry::TVec3f res;
-    CrsData::PointData *p1 = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(mObj->pathID, mNode);
+    // the redundant (u16) node casts change MWCC's register allocation for the getPointData calls
+    CrsData::PointData *p1 = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(mObj->pathID, (u16)mNode);
     p1pos.x = p1->pos.x;
     p1pos.y = p1->pos.y;
     p1pos.z = p1->pos.z;
@@ -70,7 +70,7 @@ f32 TPathUtil::getDistance() {
     if (mDistanceDirty) {
         JGeometry::TVec3f p1pos;
         JGeometry::TVec3f p2pos;
-        CrsData::PointData *p1 = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(mObj->pathID, mNode);
+        CrsData::PointData *p1 = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(mObj->pathID, (u16)mNode);
         p1pos.x = p1->pos.x;
         p1pos.y = p1->pos.y;
         p1pos.z = p1->pos.z;
@@ -136,10 +136,11 @@ void TPathWalk::reset() {
     _94 = false;
     PSMTXIdentity(mMtxZ.mMtx);
     PSMTXIdentity(mMtxY.mMtx);
-    JGeometry::TVec3f v(mpMtx->mMtx[0][1], mpMtx->mMtx[1][1], mpMtx->mMtx[2][1]);
+    JGeometry::TVec3f v;
+    mpMtx->getYDir(v);
     mpRotY->setTargetVec(v, 1.0f, 1.0f, 1.0f, 121);
     mpRotY->update();
-    v.set(mpMtx->mMtx[0][2], mpMtx->mMtx[1][2], mpMtx->mMtx[2][2]);
+    mpMtx->getZDir(v);
     mpRotZ->setTargetVec(v, 1.0f, 1.0f, 1.0f, 122);
     mpRotZ->update();
     _90 = 0.0f;
@@ -193,7 +194,7 @@ void TPathWalk::dirUpdate() {
             target.y = util->mInterruptPos.y;
             target.z = util->mInterruptPos.z;
         } else {
-            CrsData::PointData *p = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(util->mObj->pathID, util->mNode);
+            CrsData::PointData *p = RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(util->mObj->pathID, (u16)util->mNode);
             target.x = p->pos.x;
             target.y = p->pos.y;
             target.z = p->pos.z;
@@ -214,12 +215,11 @@ void TPathWalk::dirUpdate() {
 }
 void TPathWalk::posUpdate() {
     JGeometry::TVec3f dir;
-    dir.y = mpMtx->mMtx[1][2];
-    dir.x = mpMtx->mMtx[0][2];
-    dir.z = mpMtx->mMtx[2][2];
+    mpMtx->getZDir(dir);
     f32 y = mpPos->y;
     dir.normalize();
-    mpVel->scale(_90, dir);
+    dir.scale(_90);
+    mpVel->set(dir);
     mpPos->add(*mpVel);
     mpGround->search(*mpPos);
     JGeometry::TVec3f normal;
@@ -236,9 +236,9 @@ bool TPathWalk::checkReachTarget() {
     if (util->_20)
         target.set(util->mInterruptPos);
     else
-        target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(util->mObj->pathID, util->mNode)->pos);
-    target.y = 0.0f;
+        target.set(RaceMgr::sRaceManager->getCourse()->getCrsData()->getPointData(util->mObj->pathID, (u16)util->mNode)->pos);
     target.sub(*mpPos);
+    target.y = 0.0f;
     if (target.squared() < mCheckLength * mCheckLength)
         reach = true;
     return reach;
@@ -312,13 +312,12 @@ void TFreeFly::posUpdate() {
     JGeometry::TVec3f dir;
     dir.sub(mTarget, *mpPos);
     dir.normalize();
-    fwd.y = mpMtx->mMtx[1][2];
-    fwd.x = mpMtx->mMtx[0][2];
-    fwd.z = mpMtx->mMtx[2][2];
+    mpMtx->getZDir(fwd);
     fwd.normalize();
     fwd.y = dir.y;
     fwd.normalize();
-    mpVel->scale(mSpeed, fwd);
+    fwd.scale(mSpeed);
+    mpVel->set(fwd);
     mpPos->add(*mpVel);
 }
 bool TFreeFly::checkReachTarget() {
@@ -345,6 +344,7 @@ TFreeFall::TFreeFall(JGeometry::TVec3f *pos, JGeometry::TVec3f *vel, JGeometry::
 TFreeFall::~TFreeFall() {
 }
 
+#line 560
 void TFreeFall::init(JGeometry::TVec3f *pos, JGeometry::TVec3f *vel, JGeometry::TPos3f *mtx) {
     JUT_ASSERT_F(pos != 0, "%s", "pos != 0");
     JUT_ASSERT_F(vel != 0, "%s", "vel != 0");
@@ -358,8 +358,8 @@ void TFreeFall::reset() {
     _08 = 1.0f;
     _0C = 0.3f;
     _10 = 1.0f;
-    _14 = 50.0f;
-    _18 = 0.0f;
+    _14 = 0.95f;
+    _18 = 50.0f;
     _1C = 0;
 }
 u8 TFreeFall::update() {
@@ -372,41 +372,42 @@ void TFreeFall::roll() {
     pos.x = mPos->x;
     pos.y = mPos->y;
     pos.z = mPos->z;
-    mVel->add(JGeometry::TVec3f(_04, _04, _04));
+    mVel->scale(_04);
     JGeometry::TVec3f vec;
     getGravity(&vec);
     addAccel(vec);
-    mPos->add(vec);
+    mPos->add(*mVel);
     reflect(pos);
     rotate();
 }
 void TFreeFall::reflect(const JGeometry::TVec3f &vec) {
     CrsGround ground(RaceMgr::sRaceManager->getCourse());
     ground.search(*mPos, vec);
-    CrsGround::EAttr attr = ground.getAttribute();
-    if (attr == CrsGround::Attr_2 || attr == CrsGround::Attr_10 || mPos->y < ground.getHeight() + _18) {
+    u32 attr = ground.getAttribute();
+    if (attr == CrsGround::Attr_2 || (attr != CrsGround::Attr_10 && mPos->y < _18 + ground.getHeight())) {
+        JGeometry::TVec3f normal;
         if (attr == CrsGround::Attr_2) {
-            JGeometry::TVec3f normal;
             f32 d = ground.getWallNormal(&normal, nullptr);
-            normal.normalize();
-            normal.scale(d);
-            mPos->add(normal);
+            JGeometry::TVec3f push;
+            push.x = normal.x;
+            push.y = normal.y;
+            push.z = normal.z;
+            push.setLength(d);
+            mPos->add(push);
         } else {
-            JGeometry::TVec3f normal;
             ground.getNormal(&normal);
-            mPos->y = ground.getHeight() + _18;
-            mVel->x += _08;
-            mVel->y += _08;
-            mVel->z += _08;
+            mPos->y = _18 + ground.getHeight();
+            mVel->scale(_08);
         }
         JGeometry::TVec3f tmp;
         JGeometry::TVec3f out;
-        tmp.set(*mVel);
+        tmp.scale(normal.dot(*mVel), normal);
         if (tmp.length() > _0C)
-            getReflect(*mPos, &out);
+            getReflect(normal, &out);
         else
             out.zero();
-        tmp.scale(-(1.0f + _10), out);
+        tmp.scale(-(1.0f + _10));
+        tmp.add(out);
         mVel->add(tmp);
     }
 }
@@ -421,36 +422,47 @@ void TFreeFall::getReflect(const JGeometry::TVec3f &vec, JGeometry::TVec3f *out)
     t.normalize();
     n.cross(t, vec);
     n.normalize();
-    if (n.squared() == 0.0f)
+    if (n.isZero())
         n.set(0.0f, 0.0f, 1.0f);
     out->set(n);
 }
 void TFreeFall::rotate() {
-    JGeometry::TPos3f mtx;
     JGeometry::TVec3f vel;
-    vel.x = mVel->x;
-    vel.y = 0.0f;
-    vel.z = mVel->z;
+    vel.set(mVel->x, 0.0f, mVel->z);
     if (!vel.isZero()) {
-        f32 ang = SiUtil::getNormalRange(vel.length(), 0.0f, 50.0f) * _14;
-        JGeometry::TVec3f cross;
-        JGeometry::TVec3f axis;
+        f32 ang = _14 * SiUtil::getNormalRange(vel.length(), 0.0f, 50.0f);
+        JGeometry::TVec3f cross, axis, dir;
+        dir.x = mVel->x;
+        dir.y = mVel->y;
+        dir.z = mVel->z;
+        dir.normalize();
         axis.set(0.0f, 1.0f, 0.0f);
-        cross.cross(vel, axis);
-        JGeometry::TVec3f n;
-        n.normalize(cross);
-        mtx.setRotate(n, ang);
+        cross.cross(axis, dir);
+        cross.normalize();
+        JGeometry::TPos3f mtx;
+        mtx.mMtx[2][3] = 0.0f;
+        mtx.mMtx[1][3] = 0.0f;
+        mtx.mMtx[0][3] = 0.0f;
+        mtx.mMtx[2][2] = 0.0f;
+        mtx.mMtx[1][2] = 0.0f;
+        mtx.mMtx[0][2] = 0.0f;
+        mtx.mMtx[2][1] = 0.0f;
+        mtx.mMtx[1][1] = 0.0f;
+        mtx.mMtx[0][1] = 0.0f;
+        mtx.mMtx[2][0] = 0.0f;
+        mtx.mMtx[1][0] = 0.0f;
+        mtx.mMtx[0][0] = 0.0f;
+        mtx.setRotate(cross, ang);
         PSMTXConcat(mtx, *mMtx, *mMtx);
     }
 }
 void TFreeFall::addAccel(const JGeometry::TVec3f &acc) {
     CrsGround ground(RaceMgr::sRaceManager->getCourse());
     ground.search(*mPos);
-    f32 height = ground.getHeight();
-    if (mPos->y - acc.y < height + _18) {
+    if (mPos->y - acc.y < _18 + ground.getHeight()) {
+        JGeometry::TVec3f accel;
         JGeometry::TVec3f normal;
         ground.getNormal(&normal);
-        JGeometry::TVec3f accel;
         accel.scaleAdd(-normal.dot(acc), normal, acc);
         mVel->add(accel);
     } else {
@@ -459,25 +471,17 @@ void TFreeFall::addAccel(const JGeometry::TVec3f &acc) {
 }
 void TFreeFall::getGravity(JGeometry::TVec3f *out) {
     out->set(0.0f, -1.0f, 0.0f);
-    JGeometry::TVec3f accel(_0C, _0C, _0C);
-    out->add(accel);
+    out->scale(_0C);
 }
 void TFreeFallShakeSky::getGravity(JGeometry::TVec3f *out) {
     JGeometry::TVec3f *gravity = (JGeometry::TVec3f *)((u8 *)RaceMgr::sRaceManager->getCourse() + 0x234);
     out->set(*gravity);
     out->normalize();
     out->negate();
-    JGeometry::TVec3f accel(_0C, _0C, _0C);
-    out->add(accel);
+    out->scale(_0C);
 }
 void TFreeFallShakeSky::reset() {
-    _04 = 0.99f;
-    _08 = 1.0f;
-    _0C = 0.3f;
-    _10 = 1.0f;
-    _14 = 50.0f;
-    _18 = 0.0f;
-    _1C = 0;
+    TFreeFall::reset();
     _34 = 5.0f;
     _38 = 0;
     _30 = 0.0f;
@@ -494,28 +498,88 @@ void TFreeFallShakeSky::getReflect(const JGeometry::TVec3f &vec, JGeometry::TVec
     t.normalize();
     n.cross(t, vec);
     n.normalize();
-    if (n.squared() == 0.0f)
+    if (n.isZero())
         n.set(0.0f, 0.0f, 1.0f);
     out->set(n);
 }
 void TFreeFallShakeSky::reflect(const JGeometry::TVec3f &vec) {
-    TFreeFall::reflect(vec);
+    CrsGround ground(RaceMgr::sRaceManager->getCourse());
+    ground.search(*mPos, vec);
+    u32 attr = ground.getAttribute();
+    if (attr == CrsGround::Attr_2 || (attr != CrsGround::Attr_10 && mPos->y < _18 + ground.getHeight())) {
+        JGeometry::TVec3f normal(0.0f, 0.0f, 0.0f);
+        f32 d;
+        if (attr == CrsGround::Attr_2) {
+            d = ground.getWallNormal(&normal, nullptr);
+            ground.getWallNormal(&normal, nullptr);
+            if (_38)
+                _30 = 0.0f;
+        } else {
+            ground.getNormal(&normal);
+            f32 height = ground.getHeight();
+            d = (_18 + height) - mPos->y;
+            mVel->scale(_08);
+            if (_38 && _30 > 1.5707964f) {
+                if (_2C) {
+                    JGeometry::TVec3f side, axis, dir;
+                    dir.x = mVel->x;
+                    dir.y = mVel->y;
+                    dir.z = mVel->z;
+                    dir.normalize();
+                    axis.set(0.0f, 1.0f, 0.0f);
+                    side.cross(axis, dir);
+                    side.normalize();
+                    f32 len = mVel->length();
+                    f32 max = (5.0f < len) ? 5.0f : len;
+                    f32 scale = max * (2.0f * _2C->get_ufloat_1() - 1.0f);
+                    side.scale(scale);
+                    mVel->add(side);
+                }
+                mVel->y += _34 * SiUtil::getNormalRange(mVel->length(), 5.0f, 20.0f) + 1.0f;
+                _30 = 0.0f;
+            }
+        }
+        mVel->length();
+        normal.normalize();
+        JGeometry::TVec3f push;
+        JGeometry::TVec3f tmp;
+        tmp.scale(normal.dot(*mVel), normal);
+        tmp.scale(-(1.0f + _10));
+        mVel->add(tmp);
+        push.scale(d, normal);
+        mPos->add(push);
+    } else if (_38) {
+        _30 = 0.0f;
+    }
 }
+
 void TFreeFallShakeSky::rotate() {
-    JGeometry::TPos3f mtx;
     JGeometry::TVec3f vel;
-    vel.x = mVel->x;
-    vel.y = 0.0f;
-    vel.z = mVel->z;
+    vel.set(mVel->x, 0.0f, mVel->z);
     if (!vel.isZero()) {
-        f32 ang = SiUtil::getNormalRange(vel.length(), 0.0f, 50.0f) * _14;
-        JGeometry::TVec3f cross;
-        JGeometry::TVec3f axis;
+        f32 ang = _14 * SiUtil::getNormalRange(vel.length(), 0.0f, 50.0f);
+        JGeometry::TVec3f cross, axis, dir;
+        dir.x = mVel->x;
+        dir.y = mVel->y;
+        dir.z = mVel->z;
+        dir.normalize();
         axis.set(0.0f, 1.0f, 0.0f);
-        cross.cross(vel, axis);
-        JGeometry::TVec3f n;
-        n.normalize(cross);
-        mtx.setRotate(n, ang);
+        cross.cross(axis, dir);
+        cross.normalize();
+        JGeometry::TPos3f mtx;
+        mtx.mMtx[2][3] = 0.0f;
+        mtx.mMtx[1][3] = 0.0f;
+        mtx.mMtx[0][3] = 0.0f;
+        mtx.mMtx[2][2] = 0.0f;
+        mtx.mMtx[1][2] = 0.0f;
+        mtx.mMtx[0][2] = 0.0f;
+        mtx.mMtx[2][1] = 0.0f;
+        mtx.mMtx[1][1] = 0.0f;
+        mtx.mMtx[0][1] = 0.0f;
+        mtx.mMtx[2][0] = 0.0f;
+        mtx.mMtx[1][0] = 0.0f;
+        mtx.mMtx[0][0] = 0.0f;
+        mtx.setRotate(cross, ang);
         PSMTXConcat(mtx, *mMtx, *mMtx);
         _30 += ang;
     }

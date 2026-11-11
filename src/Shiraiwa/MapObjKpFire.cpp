@@ -144,7 +144,7 @@ void TMapObjKpFire::doFunc_Walk()
 {
     TPathUtil *path = mPathUtil;
     u16 node = path->getNextNode();
-    CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(path->mObj->pathID, node);
+    CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)node);
 
     JGeometry::TVec3f dir;
     dir.sub(p->pos, mPos);
@@ -179,7 +179,7 @@ void TMapObjKpFire::doFunc_Stop()
     if (getStateCount() < sShakeFrame) {
         TPathUtil *path = mPathUtil;
         u16 node = path->getNextNode();
-        CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(path->mObj->pathID, node);
+        CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)node);
 
         JGeometry::TVec3f dir;
         dir.sub(p->pos, mPos);
