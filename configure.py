@@ -654,12 +654,20 @@ config.libs = [
             Object(NonMatching, "dolphin/ip/IPUuid.c")
         ]
     ),
-    DolphinLib(
-        "lg",  # unofficial name
-        [
+    {
+        "lib": "lg",  # unofficial name
+        "src_dir": "libs",
+        "mw_version": "GC/2.6",
+        "cflags": [
+            *[f for f in cflags_dolphin if f not in ("-fp_contract off", "-O4,p")],
+            "-O4,s",
+        ],
+        "progress_category": "sdk",
+        "host": True,
+        "objects": [
             Object(NonMatching, "dolphin/lg/allsrc.c")
-        ]
-    ),
+        ],
+    },
     DolphinLib(
         "mtx",
         [
@@ -1032,7 +1040,7 @@ config.libs = [
     ),
     JSystemLib(
         "Logitech",
-        ["-O4,p"],
+        ["-O4,s"],
         [
             Object(NonMatching, "JSystem/Logitech/Conditon.cpp"),
             Object(NonMatching, "JSystem/Logitech/Constant.cpp"),

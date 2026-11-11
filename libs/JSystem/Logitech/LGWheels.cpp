@@ -24,46 +24,25 @@ void LGWheels::InitVars(s32 wheel)
     mDamperSuppress[wheel] = 0;
     mSpringSuppress[wheel] = 0;
 
-    s32 *ids = mCondition.mIds[wheel];
-    u8 *bytes = mCondition.mBytes[wheel];
-    s32 i = 0;
-    do {
-        ids[i] = -1;
-        bytes[i] = 0;
-        ids[i + 40] = -1;
-        bytes[i + 160] = 0;
-        ids[i + 80] = -1;
-        bytes[i + 320] = 0;
-        ids[i + 120] = -1;
-        bytes[i + 480] = 0;
-        i++;
-    } while (i < 8);
+    for (s32 i = 0; i < 8; i++) {
+        mCondition.mIds[wheel][i] = -1;
+        mCondition.mBytes[wheel][i] = 0;
+        mConstant.mIds[wheel][i] = -1;
+        mConstant.mBytes[wheel][i] = 0;
+        mPeriodic.mIds[wheel][i] = -1;
+        mPeriodic.mBytes[wheel][i] = 0;
+        mRamp.mIds[wheel][i] = -1;
+        mRamp.mBytes[wheel][i] = 0;
+    }
 }
 
 void LGWheels::ReadAll()
 {
-    s16 ret = mWheels.ReadAll();
+    s32 ret = mWheels.ReadAll();
     memcpy(mPosition, &mWheels, 40);
 
-    if (ret != -1) {
-        mPlaying[ret] = 0;
-        mDamperSuppress[ret] = 0;
-        mSpringSuppress[ret] = 0;
-
-        s32 *ids = mCondition.mIds[ret];
-        u8 *bytes = mCondition.mBytes[ret];
-        s32 i = 0;
-        do {
-            ids[i] = -1;
-            bytes[i] = 0;
-            ids[i + 40] = -1;
-            bytes[i + 160] = 0;
-            ids[i + 80] = -1;
-            bytes[i + 320] = 0;
-            ids[i + 120] = -1;
-            bytes[i + 480] = 0;
-            i++;
-        } while (i < 8);
+    if ((s16)ret != -1) {
+        InitVars((s16)ret);
     }
 }
 
@@ -151,11 +130,9 @@ void LGWheels::StopForce(s32 wheel, s32 type)
         if (mAutoCalibFlags[wheel][8] == 1) {
             PlaySurfaceEffect(wheel, mSurface[wheel].type, mSurface[wheel].param, mSurface[wheel].duration);
         }
-        s32 i = 0;
-        do {
+        for (s32 i = 0; i < 10; i++) {
             mAutoCalibFlags[wheel][i] = 0;
-            i++;
-        } while (i < 10);
+        }
         break;
     }
 }
@@ -250,7 +227,7 @@ void LGWheels::PlayAutoCalibAndSpringForce(s32 wheel)
     }
 
     if ((u32)mCondition.mIds[wheel][0] == 0xFFFFFFFFu) {
-        mCondition.DownloadForce(wheel, 0, mWheels.mEffectId[wheel], 7, 0xFFFFFFFF, 2200, 0, 0, 180, 180, 0, 0);
+        mCondition.DownloadForce(wheel, 0, mWheels.mEffectId[wheel], 7, 0xFFFFFFFF, 2200, 0, 0, 180, 180, 180, 180);
         mCondition.Start(wheel, 0);
     }
 }
@@ -607,9 +584,10 @@ void LGWheels::PlaySurfaceEffect(s32 wheel, u8 type, u8 param, u16 duration)
             return;
         }
         s32 result;
-        if (mSurface[wheel].type != type) {
+        if (type != mSurface[wheel].type) {
             mPeriodic.Destroy(wheel, 3);
             result = mPeriodic.DownloadForce(wheel, 3, mWheels.mEffectId[wheel], type, 0xFFFFFFFF, 0, param, 90, duration, 0, 0, 0, 0, 0, 0);
+            mPeriodic.Start(wheel, 3);
         } else {
             result = mPeriodic.UpdateForce(wheel, 3, type, 0xFFFFFFFF, 0, param, 90, duration, 0, 0, 0, 0, 0, 0);
         }
@@ -637,7 +615,7 @@ void LGWheels::PlaySurfaceEffect(s32 wheel, u8 type, u8 param, u16 duration)
     }
 
     s32 result;
-    if (mSurface[wheel].type != type) {
+    if (type != mSurface[wheel].type) {
         mPeriodic.Destroy(wheel, 3);
         result = mPeriodic.DownloadForce(wheel, 3, mWheels.mEffectId[wheel], type, 0xFFFFFFFF, 0, param, 90, duration, 0, 0, 0, 0, 0, 0);
     } else {
