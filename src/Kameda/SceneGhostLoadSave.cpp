@@ -103,7 +103,45 @@ s32 SceneGhostLoadSave::GhostFileInfoTable::convCrsID(u8 courseID)
     return i;
 }
 
-void SceneGhostLoadSave::Card::searchPane(u8, J2DScreen *) {}
+void SceneGhostLoadSave::Card::searchPane(u8 id, J2DScreen *screen)
+{
+    mCardId = id;
+
+    for (int i = 0; i < 9; i++)
+        mPanes[i] = screen->search(mscaPaneTag[i] + id);
+
+    u64 tag = 0x4D656D4744315F41ULL;
+    for (int i = 0; i < 3; i++)
+    {
+        J2DPicture *pPane = (J2DPicture *)screen->search(tag + id);
+#line 243
+        JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
+        mPicturesA[i] = pPane;
+        tag++;
+    }
+
+    tag = 0x4D656D4F53315F41ULL;
+    for (int i = 0; i < 3; i++)
+    {
+        J2DPicture *pPane = (J2DPicture *)screen->search(tag + id);
+#line 253
+        JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
+        mPicturesB[i] = pPane;
+        tag++;
+    }
+
+    tag = 0x4D656D436F4E5F41ULL;
+    mCourseText = (J2DTextBox *)screen->search(tag + id);
+#line 260
+    JUT_ASSERT(mCourseText->getTypeID() == J2DPaneType_Picture);
+
+    tag = 0x000000546F745F41ULL;
+    mInfoText = (J2DTextBox *)screen->search(tag + id);
+#line 265
+    JUT_ASSERT(mInfoText->getTypeID() == J2DPaneType_TextBox);
+
+    mInfoText->setString(128, "");
+}
 
 void SceneGhostLoadSave::Card::setCardInfo()
 {
