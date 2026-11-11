@@ -212,12 +212,11 @@ public:
  public:
      static int getWinBombPoint(); // helper mirroring KartChecker::getWinBombPoint
 
-    u8 *getSpecialItem(int status, int pos)
-    {
-        u8 *thisp = (u8 *)mThis;
-        RACE2D_ASSERT_RANGE(463, status, status, 4);
-        RACE2D_ASSERT_RANGE(464, pos, pos, 2);
-        return *(u8 **)(thisp + 0x4b4 + status * 8 + pos * 4);
+    J2DPicture *getSpecialItem(int status, int pos) {
+#line 463
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, pos, 2);
+        return mSpecialItem[status][pos];
     }
     int getItem(int status, int driver, int no) {
 #line 544
