@@ -39,7 +39,7 @@ public:
     ECharID getCharID(int no) const { return (ECharID)mCharIDs[no]; }
     const char *getName() const { return mName; } // fabricated
 
-private:
+public:
     u8 mCharIDs[2]; // 00
     u8 mKartID;     // 02
     u8 mCourseID;   // 03

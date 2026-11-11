@@ -49,44 +49,45 @@ const u64 SceneGhostLoadSave::Card::mscaPaneTag[] = {
 
 s32 SceneGhostLoadSave::GhostFileInfoTable::append(s32 idx, u32 val, TARecord &record)
 {
-    if (mCount >= 127)
-        return 0;
-
-    GhostFileInfo *info = &mInfos[mCount++];
-    info->mIndex = idx;
-    info->mValue = val;
-    info->mRecord = record;
-
-    s32 crsID = convCrsID(record.getCourseID());
-    u32 newTime = info->mRecord.getRaceTime().get();
-    GhostFileInfo *cur = mHead;
-    GhostFileInfo *prev = nullptr;
-    GhostFileInfo **link = &mHead;
-
-    while (cur != nullptr)
+    if (mCount < 127)
     {
-        s32 curCrsID = convCrsID(cur->mRecord.getCourseID());
-        if (curCrsID > crsID)
-            break;
-        if (curCrsID == crsID)
+        GhostFileInfo *info = &mInfos[mCount++];
+        GhostFileInfo **link = &mHead;
+        GhostFileInfo *prev = nullptr;
+        info->mIndex = idx;
+        info->mValue = val;
+        info->mRecord = record;
+
+        int newTime = record.getRaceTime().get();
+        GhostFileInfo *cur = mHead;
+        s32 crsID = convCrsID(record.getCourseID());
+
+        while (cur != nullptr)
         {
-            if ((s32)cur->mRecord.getRaceTime().get() > (s32)newTime)
+            s32 curCrsID = convCrsID(cur->mRecord.getCourseID());
+            if (curCrsID > crsID)
                 break;
-            if (cur->mRecord.getRaceTime().get() == newTime && cur->mValue > val)
-                break;
+            if (curCrsID == crsID)
+            {
+                if (cur->mRecord.getRaceTime().get() > newTime)
+                    break;
+                if (newTime == cur->mRecord.getRaceTime().get() && cur->mValue > val)
+                    break;
+            }
+            prev = cur;
+            link = &cur->mNext;
+            cur = cur->mNext;
         }
-        prev = cur;
-        link = &cur->mNext;
-        cur = cur->mNext;
+
+        *link = info;
+        info->mNext = cur;
+        info->mPrev = prev;
+        if (cur != nullptr)
+            cur->mPrev = info;
+
+        return 1;
     }
-
-    *link = info;
-    info->mNext = cur;
-    info->mPrev = prev;
-    if (cur != nullptr)
-        cur->mPrev = info;
-
-    return 1;
+    return 0;
 }
 
 s32 SceneGhostLoadSave::GhostFileInfoTable::convCrsID(u8 courseID)
@@ -102,13 +103,14 @@ s32 SceneGhostLoadSave::GhostFileInfoTable::convCrsID(u8 courseID)
 
 void SceneGhostLoadSave::Card::searchPane(u8 id, J2DScreen *screen)
 {
+    int i;
     mCardId = id;
 
-    for (int i = 0; i < 9; i++)
+    for (i = 0; i < 9; i++)
         mPanes[i] = screen->search(mscaPaneTag[i] + mCardId);
 
     u64 tag = 'MemGD1_A';
-    for (int i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++)
     {
         J2DPicture *pPane = (J2DPicture *)screen->search(tag + id);
 #line 243
@@ -118,7 +120,7 @@ void SceneGhostLoadSave::Card::searchPane(u8 id, J2DScreen *screen)
     }
 
     tag = 'MemOS1_A';
-    for (int i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++)
     {
         J2DPicture *pPane = (J2DPicture *)screen->search(tag + id);
 #line 253
@@ -148,12 +150,9 @@ void SceneGhostLoadSave::Card::setCardInfo()
 {
     Kart2DCommon::ptr()->changeNumberTexture(mTable.mCount, &mPicturesA[0], 3, false, false);
 
-    CardMgr::CardData &data = CardMgr::msaCardData[mCardId];
-    int bytes = data.mByteNotUsed / 0x10000;
-    int files = data.mFilesNotUsed;
-    int *val = &bytes;
-    if (files < bytes)
-        val = &files;
+    int bytes = CardMgr::msaCardData[mCardId].mByteNotUsed / 0xa000;
+    int files = CardMgr::msaCardData[mCardId].mFilesNotUsed;
+    int *val = (files < bytes) ? &files : &bytes;
     _a = *val;
 
     Kart2DCommon::ptr()->changeNumberTexture(_a, &mPicturesB[0], 3, false, false);
@@ -161,45 +160,41 @@ void SceneGhostLoadSave::Card::setCardInfo()
     switch (mspSceneGhostLoadSave->_253c)
     {
     case 1:
-        if (mCardId != 0)
-        {
-            mState = 4;
-            insertCard();
-            unselect();
-        }
-        else
+        if (mTable.mCount == 0)
         {
             mState = 1;
             mError = 2;
             error();
         }
-        break;
-    case 2:
-    case 3:
-        if (mCardId != 0)
-        {
-            mState = 4;
-            insertCard();
-            unselect();
-        }
-        else if (bytes == 0)
-        {
-            mState = 1;
-            mError = 6;
-            error();
-        }
-        else if (files == 0)
-        {
-            mState = 1;
-            mError = 5;
-            error();
-        }
         else
         {
             mState = 4;
             insertCard();
             unselect();
         }
+        break;
+    case 2:
+    case 3:
+        if (mTable.mCount == 0)
+        {
+            if (bytes == 0)
+            {
+                mState = 1;
+                mError = 6;
+                error();
+                break;
+            }
+            if (files == 0)
+            {
+                mState = 1;
+                mError = 5;
+                error();
+                break;
+            }
+        }
+        mState = 4;
+        insertCard();
+        unselect();
         break;
     }
 }
@@ -423,10 +418,11 @@ OSPanic("SceneGhostLoadSave.cpp", 847, "Halt");
         break;
     }
 
+    u16 len;
     void *bmg = ResMgr::getPtr(ResMgr::mcCard);
     int bmgID = ReadPrintMessage::getBmgMessageID((PrintMemoryCard::MessageID)msgID);
     char *message = ReadPrintMessage::getMessage(bmg, bmgID);
-    u16 len = *(u16 *)&mInfoText->mStringLength;
+    len = *(u16 *)&mInfoText->mStringLength;
     char *str = mInfoText->getStringPtr();
     snprintf(str, len, message);
     mInfoText->mIsVisible = true;
@@ -487,8 +483,7 @@ OSPanic("SceneGhostLoadSave.cpp", 847, "Halt");
             }
 
             void *bmg = ResMgr::getPtr(ResMgr::mcCard);
-            int bmgID = ReadPrintMessage::getBmgMessageID((PrintMemoryCard::MessageID)msgID);
-            char *message = ReadPrintMessage::getMessage(bmg, bmgID);
+            char *message = ReadPrintMessage::getMessage(bmg, ReadPrintMessage::getBmgMessageID((PrintMemoryCard::MessageID)msgID));
             u16 len = *(u16 *)&mInfoText->mStringLength;
             char *str = mInfoText->getStringPtr();
             snprintf(str, len, message);
@@ -1087,6 +1082,8 @@ const u64 SceneGhostLoadSave::GDInexLineVC::mscaPaneTag[] = {
 
 void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *archive, JKRHeap *heap, bool hide)
 {
+    int i;
+    J2DPicture *pPane;
     mScreen = new (heap, 0) J2DScreen();
 
     char buf[64];
@@ -1097,7 +1094,7 @@ void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *archive, JKRHeap *heap,
     mAnim = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource(buf, archive));
     mScreen->setAnimation(mAnim);
 
-    for (int i = 0; i < 2; i++)
+    for (i = 0; i < 2; i++)
         mPanes[i] = mScreen->search(mscaPaneTag[i]);
 
     int n = 0;
@@ -1106,7 +1103,7 @@ void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *archive, JKRHeap *heap,
     {
         for (u8 i = 0; i < digits; i++)
         {
-            J2DPicture *pPane = (J2DPicture *)mScreen->search(tag + i);
+            pPane = (J2DPicture *)mScreen->search(tag + i);
 #line 1674
             JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
             mPictures[n++] = pPane;
@@ -1117,49 +1114,49 @@ void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *archive, JKRHeap *heap,
     }
 
     tag = 'GDName03';
-    for (int i = 19; i <= 21; i++)
+    for (i = 19; i <= 21; i++)
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search(tag--);
+        pPane = (J2DPicture *)mScreen->search(tag--);
 #line 1685
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         mPictures[i] = pPane;
     }
 
     tag = 'GDtime01';
-    for (int i = 6; i <= 11; i++)
+    for (i = 6; i <= 11; i++)
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search(tag++);
+        pPane = (J2DPicture *)mScreen->search(tag++);
 #line 1693
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         mPictures[i] = pPane;
     }
 
     tag = 'GDT00';
-    for (int i = 12; i <= 18; i++)
+    for (i = 12; i <= 18; i++)
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search(tag++);
+        pPane = (J2DPicture *)mScreen->search(tag++);
 #line 1701
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         mPictures[i] = pPane;
     }
 
     tag = 'GDCha01';
-    for (int i = 22; i <= 23; i++)
+    for (i = 22; i <= 23; i++)
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search(tag++);
+        pPane = (J2DPicture *)mScreen->search(tag++);
 #line 1709
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         mPictures[i] = pPane;
     }
 
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search('GDKart');
+        pPane = (J2DPicture *)mScreen->search('GDKart');
 #line 1714
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         mPictures[24] = pPane;
     }
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search('GDCoName');
+        pPane = (J2DPicture *)mScreen->search('GDCoName');
 #line 1718
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         mPictures[25] = pPane;
@@ -1167,9 +1164,9 @@ void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *archive, JKRHeap *heap,
 
     Kart2DCommon *common = Kart2DCommon::ptr();
     tag = 'GDChaW01';
-    for (int i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++)
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search(tag++);
+        pPane = (J2DPicture *)mScreen->search(tag++);
 #line 1729
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         pPane->changeTexture(common->getPartName(1), 0);
@@ -1177,18 +1174,19 @@ void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *archive, JKRHeap *heap,
 
     tag = 'GDTt01';
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search(tag++);
+        pPane = (J2DPicture *)mScreen->search(tag++);
 #line 1735
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         pPane->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, "timg/MarioFontColon2.bti"), 0);
     }
     {
-        J2DPicture *pPane = (J2DPicture *)mScreen->search(tag);
+        pPane = (J2DPicture *)mScreen->search(tag);
 #line 1738
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture);
         pPane->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, "timg/MarioFontColon1.bti"), 0);
     }
 
+    bool loop;
     J2DPane *pane = mScreen;
     while (pane != nullptr)
     {
@@ -1203,10 +1201,9 @@ void SceneGhostLoadSave::GDInexLineVC::setup(JKRArchive *archive, JKRHeap *heap,
         }
         else
         {
-            bool loop;
+            loop = true;
             do
             {
-                loop = true;
                 pane = pane->getParentPane();
                 if (pane == nullptr)
                 {
@@ -1367,7 +1364,9 @@ void SceneGhostLoadSave::GDIndexLayoutVC::setup(JKRArchive *archive, JKRHeap *he
 void SceneGhostLoadSave::GDIndexLayoutVC::setCard(SceneGhostLoadSave::Card *card)
 {
     mCard = card;
-    mCardCount = card->mTable.mCount;
+    GhostFileInfo *info = mCard->mTable.mHead;
+    u8 i;
+    mCardCount = mCard->mTable.mCount;
 
     bool flag = false;
     if (mspSceneGhostLoadSave->_253c == 2 && card->_a != 0)
@@ -1375,14 +1374,13 @@ void SceneGhostLoadSave::GDIndexLayoutVC::setCard(SceneGhostLoadSave::Card *card
 
     _3a8 = 0;
     _3a6 = 0;
-    _3ac = mCardCount;
+    _3aa = mCardCount;
     if (flag)
-        _3ac++;
-    _3ab = (mLineCount < _3ac) ? mLineCount : _3ac;
-    _3aa = _3ab * 4 + 7;
+        _3aa++;
+    _3ab = (mSelectedLine < _3aa) ? mSelectedLine : _3aa;
+    _3ac = _3ab * 4 + 7;
 
-    GhostFileInfo *info = card->mTable.mHead;
-    for (u8 i = 0; i < mLineCount; i++)
+    for (i = 0; i < mLineCount; i++)
     {
         if (i == 0 && flag)
         {
@@ -1410,13 +1408,13 @@ void SceneGhostLoadSave::GDIndexLayoutVC::setCard(SceneGhostLoadSave::Card *card
         mLines[6].updateInfo();
     }
 
-    for (u8 i = 0; i < _3ab; i++)
+    for (i = 0; i < _3ab; i++)
     {
         mPanes[i]->mIsVisible = true;
         mPanes[i]->setAlpha(255);
     }
 
-    for (u8 i = 0; i <= 5; i++)
+    for (; i <= 5; i++)
     {
         mPanes[i]->mIsVisible = false;
         mPanes[i]->setAlpha(255);
@@ -1424,15 +1422,16 @@ void SceneGhostLoadSave::GDIndexLayoutVC::setCard(SceneGhostLoadSave::Card *card
 
     u8 sel = mSelectedLine;
     if (flag)
-        sel = mSelectedLine - 1;
+        sel--;
     mPanes[6]->mIsVisible = false;
     if (mCardCount > sel)
         mPanes[7]->mIsVisible = true;
     else
         mPanes[7]->mIsVisible = false;
 
-    mLines[_3a8].mAnimState = 0;
-    mLines[_3a8].mFrame = -1;
+    GDInexLineVC &line = mLines[_3a8];
+    line.mAnimState = 0;
+    line.mFrame = -1;
 }
 
 s32 SceneGhostLoadSave::GDIndexLayoutVC::selectData()
@@ -1446,13 +1445,12 @@ s32 SceneGhostLoadSave::GDIndexLayoutVC::selectData()
 
     if (gGamePad1P.testRepeat(0x08000000))
     {
-        _3a8--;
-        if (_3a8 < 0)
+        if (--_3a8 < 0)
         {
             _3a8 = 0;
             if (_3a6 > 0)
             {
-                GameAudio::Main::getAudio()->startSystemSe(0x20005);
+                GameAudio::Main::getAudio()->startSystemSe(0x20000);
                 shiftUp();
                 mLines[1].mAnimState = 2;
                 mLines[1].mFrame = 8;
@@ -1463,44 +1461,45 @@ s32 SceneGhostLoadSave::GDIndexLayoutVC::selectData()
         }
         else
         {
-            GameAudio::Main::getAudio()->startSystemSe(0x20005);
-            mLines[_3a8 + 1].mAnimState = 2;
-            mLines[_3a8 + 1].mFrame = 8;
-            mLines[_3a8].mAnimState = 0;
-            mLines[_3a8].mFrame = -1;
+            GameAudio::Main::getAudio()->startSystemSe(0x20000);
+            GDInexLineVC &prev = mLines[_3a8 + 1];
+            prev.mAnimState = 2;
+            prev.mFrame = 8;
+            GDInexLineVC &cur = mLines[_3a8];
+            cur.mAnimState = 0;
+            cur.mFrame = -1;
         }
-
-        _3a6--;
-        if (_3a6 < 0)
+        if (--_3a6 < 0)
             _3a6 = 0;
     }
     else if (gGamePad1P.testRepeat(0x04000000))
     {
-        _3a8++;
-        if (_3a8 >= _3ab)
+        if (++_3a8 >= _3ab)
         {
             _3a8 = _3ab - 1;
             if (_3a6 < _3aa - 1)
             {
-                GameAudio::Main::getAudio()->startSystemSe(0x20005);
+                GameAudio::Main::getAudio()->startSystemSe(0x20000);
                 scrollDown();
-                mLines[mSelectedLine - 1].mAnimState = 2;
-                mLines[mSelectedLine - 1].mFrame = 8;
-                mLines[mSelectedLine].mAnimState = 0;
-                mLines[mSelectedLine].mFrame = -1;
+                GDInexLineVC &prev = mLines[mSelectedLine - 1];
+                prev.mAnimState = 2;
+                prev.mFrame = 8;
+                GDInexLineVC &cur = mLines[mSelectedLine];
+                cur.mAnimState = 0;
+                cur.mFrame = -1;
             }
         }
         else
         {
-            GameAudio::Main::getAudio()->startSystemSe(0x20005);
-            mLines[_3a8 - 1].mAnimState = 2;
-            mLines[_3a8 - 1].mFrame = 8;
-            mLines[_3a8].mAnimState = 0;
-            mLines[_3a8].mFrame = -1;
+            GameAudio::Main::getAudio()->startSystemSe(0x20000);
+            GDInexLineVC &prev = mLines[_3a8 - 1];
+            prev.mAnimState = 2;
+            prev.mFrame = 8;
+            GDInexLineVC &cur = mLines[_3a8];
+            cur.mAnimState = 0;
+            cur.mFrame = -1;
         }
-
-        _3a6++;
-        if (_3a6 >= _3aa)
+        if (++_3a6 >= _3aa)
             _3a6 = _3aa - 1;
     }
 

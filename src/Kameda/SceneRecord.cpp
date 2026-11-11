@@ -1,6 +1,7 @@
 #include "Kameda/SceneRecord.h"
 #include "Kameda/Scene.h"
 #include "Kameda/CourseName2D.h"
+#include "Kameda/Cup2D.h"
 #include "Kameda/SceneCourseSelect.h"
 
 #include "JSystem/J2D/J2DPicture.h"
@@ -799,9 +800,100 @@ void SceneRecord::calcAnmRecordGPLineEtc() {}
 
 void SceneRecord::calcTexChangeRecordGP() {}
 
-#pragma dont_inline on
-void SceneRecord::calcTexChangeRecordGPLine(ERaceLevel) {}
-#pragma dont_inline off
+void SceneRecord::calcTexChangeRecordGPLine(ERaceLevel level) {
+    int i;
+    int d;
+    u8 char1, char2;
+#line 1279
+    JUT_MINMAX_ASSERT(0, level, 4);
+    GPRecord rec = gSystemRecord.getGPRecord((ERaceGpCup)ConvNum2ERace(mGpIndex), level);
+    if (rec.isValid()) {
+        u8 rank = rec.mRank;
+        if (rank >= 3) {
+            mGpLineCursorPanes2[level]->hide();
+        } else {
+            mGpLineCursorPanes2[level]->show();
+            mGpLineCursorPanes2[level]->changeTexture((ResTIMG *)Cup2D::ptr()->getCupTexture((ERaceGpCup)ConvNum2ERace(mGpIndex), rank), 0);
+        }
+
+        int time = rec.mTotalTime.get();
+        if (!rec.mTotalTime.isAvailable()) {
+            for (i = 0; i < 7; i++) {
+                mGpLinePts[level][i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+                mGpLinePts[level][i]->show();
+            }
+        } else {
+            mGpLinePts[level][0]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(time % 10)), 0);
+            mGpLinePts[level][1]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 10) % 10)), 0);
+            mGpLinePts[level][2]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 100) % 10)), 0);
+            mGpLinePts[level][3]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 1000) % 10)), 0);
+            mGpLinePts[level][4]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 10000) % 6)), 0);
+            mGpLinePts[level][5]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 60000) % 10)), 0);
+            mGpLinePts[level][6]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 600000) % 10)), 0);
+            if ((time / 600000) % 10 != 0)
+                mGpLinePts[level][6]->show();
+            else
+                mGpLinePts[level][6]->hide();
+        }
+
+        u8 pts = rec.mPoints;
+        mGpLineChar[level][0]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(pts % 10)), 0);
+        u8 tens = pts / 10u;
+        d = tens % 10;
+        mGpLineChar[level][1]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)d), 0);
+        if (d != 0)
+            mGpLineChar[level][1]->show();
+        else if ((tens / 10) % 10 != 0)
+            mGpLineChar[level][1]->show();
+        else
+            mGpLineChar[level][1]->hide();
+        u8 hundreds = pts / 100u;
+        d = hundreds % 10;
+        mGpLineChar[level][2]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)d), 0);
+        if (d != 0)
+            mGpLineChar[level][2]->show();
+        else
+            mGpLineChar[level][2]->hide();
+
+        u8 c1 = rec.mCharIDs[0];
+        u8 c2 = rec.mCharIDs[1];
+        u8 kart = rec.mKartID;
+        char1 = c1;
+        char2 = c2;
+        if (c1 == 0)
+            char1 = 1;
+        if (c2 == 0)
+            char2 = 1;
+        mGpLineName[level]->show();
+        mGpLineName2[level]->show();
+        mGpLineName3[level]->show();
+        for (i = 0; i < 3; i++)
+            mGpLineCharWin[level][i]->show();
+        mGpLineName[level]->changeTexture(Kart2DCommon::ptr()->getCharIconTexture((ECharID)char1), 0);
+        mGpLineName2[level]->changeTexture(Kart2DCommon::ptr()->getCharIconTexture((ECharID)char2), 0);
+        mGpLineName3[level]->changeTexture(Kart2DCommon::ptr()->getKartIconTexture(kart), 0);
+        char *name = rec.mName;
+        for (i = 0; i < 3; i++)
+            mGpLineCharWin2[level][i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture(name[i]), 0);
+    } else {
+        mGpLineCursorPanes2[level]->hide();
+        for (i = 0; i < 7; i++) {
+            mGpLinePts[level][i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+            mGpLinePts[level][i]->show();
+        }
+        for (i = 0; i < 3; i++) {
+            mGpLineChar[level][i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+            mGpLineChar[level][i]->show();
+        }
+        mGpLineName[level]->hide();
+        mGpLineName2[level]->hide();
+        mGpLineName3[level]->hide();
+        for (i = 0; i < 3; i++)
+            mGpLineCharWin[level][i]->hide();
+        for (i = 0; i < 3; i++)
+            mGpLineCharWin2[level][i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+    }
+}
 
 void SceneRecord::calcAnmRecordTAAll() {}
 
@@ -912,13 +1004,131 @@ void SceneRecord::calcAnmRecordTALineAll() {
         mTaLineRank[i]->animationTransform();
 }
 
-#pragma dont_inline on
-void SceneRecord::calcTexChangeRecordTA() {}
-#pragma dont_inline off
+void SceneRecord::calcTexChangeRecordTA() {
+    int i;
+    ECourseID courseID = SceneCourseSelect::mCourseData[mTaCursor / 4][mTaCursor % 4].courseID;
+    mTaReOpPane->changeTexture((ResTIMG *)CourseName2D::ptr()->getCourseNameTexture(courseID), 0);
+    TARecord rec = *gSystemRecord.getBestLap(courseID);
+    bool valid = rec.mKartID < 0x15 && rec.mCharIDs[0] != 0 && rec.mCharIDs[0] < 0x15 && rec.mCharIDs[1] != 0 && rec.mCharIDs[1] < 0x15;
+    if (valid) {
+        u8 c[2];
+        c[0] = rec.mCharIDs[0];
+        c[1] = rec.mCharIDs[1];
+        u8 kart = rec.mKartID;
+        u8 char1 = c[0];
+        u8 char2 = c[1];
+        if (c[0] == 0)
+            char1 = 1;
+        if (c[1] == 0)
+            char2 = 1;
+        for (i = 0; i < 3; i++) {
+            mTaChar[i]->show();
+            mTaCharWin[i]->show();
+        }
+        mTaChar[0]->changeTexture(Kart2DCommon::ptr()->getCharIconTexture((ECharID)char1), 0);
+        mTaChar[1]->changeTexture(Kart2DCommon::ptr()->getCharIconTexture((ECharID)char2), 0);
+        mTaChar[2]->changeTexture(Kart2DCommon::ptr()->getKartIconTexture(kart), 0);
 
-#pragma dont_inline on
-void SceneRecord::calcTexChangeRecordTALine(int) {}
-#pragma dont_inline off
+        int time = rec.getRaceTime().get();
+        if (!rec.getRaceTime().isAvailable()) {
+            for (i = 0; i < 7; i++) {
+                mTaBestLap[i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+                mTaBestLap[i]->show();
+            }
+        } else {
+            mTaBestLap[0]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(time % 10)), 0);
+            mTaBestLap[1]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 10) % 10)), 0);
+            mTaBestLap[2]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 100) % 10)), 0);
+            mTaBestLap[3]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 1000) % 10)), 0);
+            mTaBestLap[4]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 10000) % 6)), 0);
+            mTaBestLap[5]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 60000) % 10)), 0);
+            mTaBestLap[6]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 600000) % 10)), 0);
+            if ((time / 600000) % 10 != 0)
+                mTaBestLap[6]->show();
+            else
+                mTaBestLap[6]->hide();
+        }
+        char *name = rec.mName;
+        for (i = 0; i < 3; i++)
+            mTaName[i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture(name[i]), 0);
+    } else {
+        for (i = 0; i < 3; i++) {
+            mTaChar[i]->hide();
+            mTaCharWin[i]->hide();
+        }
+        for (i = 0; i < 7; i++) {
+            mTaBestLap[i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+            mTaBestLap[i]->show();
+        }
+        for (i = 0; i < 3; i++)
+            mTaName[i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+    }
+
+    for (i = 0; i < 5; i++)
+        calcTexChangeRecordTALine(i);
+}
+
+void SceneRecord::calcTexChangeRecordTALine(int rank) {
+    int i;
+#line 1685
+    JUT_MINMAX_ASSERT(0, rank, 5);
+    TARecord rec = *gSystemRecord.getTARecord(SceneCourseSelect::mCourseData[mTaCursor / 4][mTaCursor % 4].courseID, rank);
+    bool valid = rec.mKartID < 0x15 && rec.mCharIDs[0] != 0 && rec.mCharIDs[0] < 0x15 && rec.mCharIDs[1] != 0 && rec.mCharIDs[1] < 0x15;
+    if (valid) {
+        u8 c[2];
+        c[0] = rec.mCharIDs[0];
+        c[1] = rec.mCharIDs[1];
+        u8 kart = rec.mKartID;
+        u8 char1 = c[0];
+        u8 char2 = c[1];
+        if (c[0] == 0)
+            char1 = 1;
+        if (c[1] == 0)
+            char2 = 1;
+        for (i = 0; i < 3; i++) {
+            mTaLineTime[rank][i]->show();
+            mTaLineQuote[rank][i]->show();
+        }
+        mTaLineTime[rank][0]->changeTexture(Kart2DCommon::ptr()->getCharIconTexture((ECharID)char1), 0);
+        mTaLineTime[rank][1]->changeTexture(Kart2DCommon::ptr()->getCharIconTexture((ECharID)char2), 0);
+        mTaLineTime[rank][2]->changeTexture(Kart2DCommon::ptr()->getKartIconTexture(kart), 0);
+
+        RaceTime rt = rec.getRaceTime();
+        int time = rt.get();
+        if (!rt.isAvailable()) {
+            for (i = 0; i < 7; i++) {
+                Kart2DCommon::ptr()->changeNumberTexture(0, &mTaLineChar[rank][i], 1, false, true);
+                mTaLineChar[rank][i]->show();
+            }
+        } else {
+            mTaLineChar[rank][0]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(time % 10)), 0);
+            mTaLineChar[rank][1]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 10) % 10)), 0);
+            mTaLineChar[rank][2]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 100) % 10)), 0);
+            mTaLineChar[rank][3]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 1000) % 10)), 0);
+            mTaLineChar[rank][4]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 10000) % 6)), 0);
+            mTaLineChar[rank][5]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 60000) % 10)), 0);
+            mTaLineChar[rank][6]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((time / 600000) % 10)), 0);
+            if ((time / 600000) % 10 != 0)
+                mTaLineChar[rank][6]->show();
+            else
+                mTaLineChar[rank][6]->hide();
+        }
+        char *name = rec.mName;
+        for (i = 0; i < 3; i++)
+            mTaLineCharWin[rank][i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture(name[i]), 0);
+    } else {
+        for (i = 0; i < 3; i++) {
+            mTaLineTime[rank][i]->hide();
+            mTaLineQuote[rank][i]->hide();
+        }
+        for (i = 0; i < 7; i++) {
+            Kart2DCommon::ptr()->changeNumberTexture(0, &mTaLineChar[rank][i], 1, false, true);
+            mTaLineChar[rank][i]->show();
+        }
+        for (i = 0; i < 3; i++)
+            mTaLineCharWin[rank][i]->changeTexture(Kart2DCommon::ptr()->getAsciiTexture('-'), 0);
+    }
+}
 
 void SceneRecord::calcAnm() {
     int i;
@@ -1176,9 +1386,12 @@ void SceneRecord::mode() {
         if (mMenuCursor >= 2)
             return;
         GameAudio::Main::getAudio()->startSystemSe(0x2000c);
-        mSubCursorTimer2[mMenuCursor][0] = 30;
-        mSubCursorTimer2[mMenuCursor][1] = 30;
-        mSubMatTimer[mMenuCursor][0] = 2;
+        int &t0 = mSubCursorTimer2[mMenuCursor][0];
+        t0 = 30;
+        int &t1 = mSubCursorTimer2[mMenuCursor][1];
+        t1 = 30;
+        int &t2 = mSubMatTimer[mMenuCursor][0];
+        t2 = 2;
         for (int i = 0; i < 2; i++) {
             if (mMenuCursor == i) {
                 switch (mMenuCursor) {
@@ -1199,9 +1412,12 @@ void SceneRecord::mode() {
         if (mMenuCursor >= 2)
             return;
         GameAudio::Main::getAudio()->startSystemSe(0x2000c);
-        mSubCursorTimer2[mMenuCursor][0] = 30;
-        mSubCursorTimer2[mMenuCursor][2] = 30;
-        mSubMatTimer[mMenuCursor][1] = 2;
+        int &t0 = mSubCursorTimer2[mMenuCursor][0];
+        t0 = 30;
+        int &t1 = mSubCursorTimer2[mMenuCursor][2];
+        t1 = 30;
+        int &t2 = mSubMatTimer[mMenuCursor][1];
+        t2 = 2;
         for (int i = 0; i < 2; i++) {
             if (mMenuCursor == i) {
                 switch (mMenuCursor) {
