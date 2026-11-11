@@ -61,7 +61,7 @@ public:
     BBAMgr(JKRHeap *);                      // 0x8020d678
     int processDHCP();                      // 0x8020d774
     int processAutoIP();                    // 0x8020d984
-    int disconnecting(bool);                // 0x8020dbe8
+    bool disconnecting(bool);               // 0x8020dbe8
     void startUPnP();                       // 0x8020dce0
     void startMSearch();                    // 0x8020dd0c
     int sendTo(void *, int, const void *); // 0x8020dd34

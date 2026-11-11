@@ -8,6 +8,8 @@
 
 class LANPlayInfo {
 public:
+    enum { cNetworkConsoleMax = 8 };
+
     void init();                       // 0x80218580
     ECourseID getCrsID();              // 0x8021865c
     ResMgr::CourseOrder getCrsOrder(); // 0x80218904
@@ -22,6 +24,13 @@ public:
     int getDisplayNum();               // 0x80218f04
     // Inline/Unused
     LANPlayInfo();
+
+    void setActiveNum(u8 cno, int num)
+    {
+#line 79
+        JUT_ASSERT(cno < cNetworkConsoleMax);
+        mActive[cno] = num;
+    }
 
 private:
     friend class LANEntry;

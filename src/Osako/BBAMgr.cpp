@@ -316,9 +316,9 @@ int BBAMgr::processAutoIP()
     }
 }
 
-int BBAMgr::disconnecting(bool unk)
+bool BBAMgr::disconnecting(bool unk)
 {
-    int ret = 0;
+    bool ret = false;
 
     switch (mState)
     {
@@ -326,14 +326,14 @@ int BBAMgr::disconnecting(bool unk)
     case 1:
     case 2:
         IPClearConfigError(0);
-        ret = 1;
+        ret = true;
         break;
     case 3:
     case 4:
         IPClearConfigError(0);
         SOCleanup();
         mState = 1;
-        ret = 1;
+        ret = true;
         break;
     case 5:
         IPClearConfigError(0);
@@ -341,7 +341,7 @@ int BBAMgr::disconnecting(bool unk)
         {
             SOCleanup();
             mState = 1;
-            ret = 1;
+            ret = true;
             break;
         }
         SSDPStop();
@@ -352,14 +352,14 @@ int BBAMgr::disconnecting(bool unk)
         {
             SOCleanup();
             mState = 1;
-            ret = 1;
+            ret = true;
             break;
         }
         if (SSDPGetState() == 1)
         {
             SOCleanup();
             mState = 1;
-            ret = 1;
+            ret = true;
         }
         break;
     }

@@ -5,6 +5,8 @@
 #include "Osako/kartPad.h"
 #include "Osako/NetGameMgr.h"
 #include "Osako/system.h"
+#include "Osako/PadMgr.h"
+#include "Kaneshige/RaceInfo.h"
 
 void LANEntry::waitEntry() {
     int bit;
@@ -118,6 +120,92 @@ void LANEntry::endReceipt() {
     mState = 2;
     System::getDisplay()->startFadeOut(15);
     GetGameAudioMain()->fadeOutAll(15);
+}
+
+void LANEntry::setRaceInfo() {
+    NetGameMgr *netMgr = NetGameMgr::ptr();
+    ERaceLevel level = LVL_50CC;
+    ERaceMode mode = GRAND_PRIX;
+    switch (gLANPlayInfo.mGameMode) {
+    case 0:
+        level = (ERaceLevel)gLANPlayInfo.mPower;
+        break;
+    case 1:
+        mode = BALLOON_BATTLE;
+        break;
+    case 2:
+        mode = ESCAPE_BATTLE;
+        break;
+    }
+
+    gRaceInfo.setRace(mode, mCount, mCount, mDisplayNum, _15[mSelfIndex]);
+    gRaceInfo.setRaceLevel(level);
+    gRaceInfo.setRandomSeed(NetGameMgr::ptr()->get12e9());
+    gRaceInfo.mLapNumLAN = gLANPlayInfo.mOrder;
+    gRaceInfo.mIsLanMode = true;
+    gLANPlayInfo.shuffleKart(mCount);
+
+    int kartNo = 0;
+    int padNo = 0;
+    int target = 0;
+    for (int i = 0; i < mPlayerNum; i++) {
+        if (mMask & (1 << i)) {
+            gLANPlayInfo.setActiveNum(i, _15[i]);
+            if (_1d) {
+                int j;
+                for (j = 0; j < _15[i]; j++) {
+                    EKartID kart = (EKartID)gLANPlayInfo.mPlayers[kartNo].mKart;
+                    gRaceInfo.setKart(kartNo, kart, gLANPlayInfo.getFront(kartNo),
+                                      gpaKartPad[padNo], gLANPlayInfo.getBack(kartNo), gpaKartPad[padNo + 1]);
+                    if (i == mSelfIndex) {
+                        gRaceInfo.setConsoleTarget(j, kartNo, false);
+                    }
+                    gRaceInfo.setStartPosIdx(kartNo, gLANPlayInfo.mPlayers[kartNo].mUnk);
+                    netMgr->setPadConv(padNo, i * 4 + j * 2);
+                    netMgr->setPadConv(padNo + 1, i * 4 + j * 2 + 1);
+                    kartNo++;
+                    padNo += 2;
+                }
+                if (i == mSelfIndex) {
+                    for (; j < mDisplayNum; j++) {
+                        gRaceInfo.setConsoleTarget(j, 0, true);
+                        gRaceInfo.hideConsole(j);
+                    }
+                }
+            } else {
+                int j;
+                for (j = 0; j < _15[i]; j++) {
+                    EKartID kart = (EKartID)gLANPlayInfo.mPlayers[kartNo].mKart;
+                    gRaceInfo.setKart(kartNo, kart, gLANPlayInfo.getFront(kartNo),
+                                      gpaKartPad[padNo], gLANPlayInfo.getBack(kartNo), nullptr);
+                    if (i == mSelfIndex) {
+                        gRaceInfo.setConsoleTarget(j, kartNo, false);
+                    }
+                    gRaceInfo.setStartPosIdx(kartNo, gLANPlayInfo.mPlayers[kartNo].mUnk);
+                    netMgr->setPadConv(padNo, i * 4 + j);
+                    kartNo++;
+                    padNo++;
+                }
+                if (i == mSelfIndex) {
+                    for (; j < mDisplayNum; j++) {
+                        gRaceInfo.setConsoleTarget(j, 0, true);
+                        gRaceInfo.hideConsole(j);
+                    }
+                }
+            }
+        } else {
+            if (i == mSelfIndex) {
+                for (int j = 0; j < mDisplayNum; j++) {
+                    gRaceInfo.setConsoleTarget(j, target, true);
+                }
+            }
+            if (++target >= mCount) {
+                target = 0;
+            }
+        }
+    }
+
+    PadMgr::resetPort();
 }
 
 int LANEntry::calc() {

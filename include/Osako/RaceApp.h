@@ -24,6 +24,7 @@ public:
 
     static RaceApp *ptr() { return mspRaceApp; };
     PadRecorder *getPadRecorder() { return mRecorder; }
+    RaceMgr *getRaceMgr() { return mRaceMgr; }
 
     // TODO: unlocked, or loaded?
     bool isStaffGhostLoaded() { return msStaffGhostFlag & 1 << SystemRecord::convCourseID(ResMgr::msCourseID); }
