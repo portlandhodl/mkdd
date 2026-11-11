@@ -1368,7 +1368,7 @@ config.libs = [
             Object(Matching, "Shiraiwa/AnmPlayer.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjSkyShip.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjDonkyRockGen.cpp"),
-            Object(NonMatching, "Shiraiwa/MapObjDonkyRock.cpp", extra_cflags=["-vector=on"]),
+            Object(NonMatching, "Shiraiwa/MapObjDonkyRock.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjNoMove.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjPeachTree.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjFireBar.cpp"),

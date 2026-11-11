@@ -10,19 +10,14 @@
 #include "Yamamoto/kartCtrl.h"
 
 
-static inline void mulAdd(const JGeometry::TVec3f &a, const JGeometry::TVec3f &b, JGeometry::TVec3f &dst) {
-    register vector signed short va = *(const vector signed short *)&a.x;
-    register vector signed short vb = *(const vector signed short *)&b.x;
-    register vector signed int vc = *(const vector signed int *)&b.x;
-    register vector signed int vd = vec_vmsumshm(va, vb, vc);
-    *(vector signed int *)&dst.x = vd;
-}
-static inline void scaleAddVec(const JGeometry::TVec3f &v, f32 s, JGeometry::TVec3f &dst) {
-    register vector float vs = vec_splat(*(vector float *)&s, 0);
-    register vector float vv = *(const vector float *)&v.x;
-    register vector float vd = *(const vector float *)&dst.x;
-    register vector signed int r = vec_vmsumshm((vector signed short)vv, (vector signed short)vs, (vector signed int)vd);
-    *(vector float *)&dst.x = (vector float)r;
+template <typename T>
+inline T wrapAngle(T val, T min, T max)
+{
+    while (val < min)
+        val += max - min;
+    while (val >= max)
+        val -= max - min;
+    return val;
 }
 
 f32 TMapObjDonkyRock::sReflectRate = 0.55f;
@@ -39,8 +34,6 @@ StateObserver::StateFuncSet<TMapObjDonkyRock> TMapObjDonkyRock::sTable[3] = {
     { 1, &TMapObjDonkyRock::initFunc_Fall, &TMapObjDonkyRock::doFunc_Fall },
     { 2, &TMapObjDonkyRock::initFunc_Break, &TMapObjDonkyRock::doFunc_Break },
 };
-
-#include "JSystem/JAudio/JASFakeMatch2.h"
 
 TMapObjDonkyRock::TMapObjDonkyRock()
     : TMapObjHioNode(0x1197), StateObserver(), JKRDisposer(), mLink(this) {
@@ -91,90 +84,17 @@ const char *TMapObjDonkyRock::getBmdFileName() {
 }
 
 const char *TMapObjDonkyRock::getShadowBmdFileName() {
-    static const char *cBmdName = "/Objects/DonkyRock1Shadow.bmd";
-    return cBmdName;
+    static const char *cShadowBmdName = "/Objects/DonkyRock1Shadow.bmd";
+    return cShadowBmdName;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void TMapObjDonkyRock::start() {
+#line 166
     JUT_ASSERT_MSG(mGenObjData != nullptr, "mGenObjData != 0");
 
     JUT_ASSERT_MSG(mGenObjData->pathID != 0xffff, "mGenObjData->mPathID != 0xffff");
 
-    const CrsData::SObject *obj = mGenObjData;
-    f32 height = mHeightOffset;
-    f32 px = obj->position.x;
-    f32 py = obj->position.y;
-    f32 pz = obj->position.z;
-    mPos.x = px;
-    mPos.y = py + height;
-    mPos.z = pz;
+    mPos.set(mGenObjData->position.x, mGenObjData->position.y + mHeightOffset, mGenObjData->position.z);
     mGeoObjFlag |= 2;
     mCheckKartHitFlags = -1;
     mGeoObjFlag &= ~0x20;
@@ -240,15 +160,14 @@ void TMapObjDonkyRock::initFunc_Fall() {
     }
 }
 
-#pragma dont_inline on
 void TMapObjDonkyRock::setStartVel() {
     static JGeometry::TVec3f axisY(0.0f, 1.0f, 0.0f);
 
-    f32 param3 = mGenObjData->mParam3;
-    if (param3 > 0.0f) {
+    f32 speed = mGenObjData->mParam3;
+    if (speed > 0.0f) {
         JGeometry::TVec3f node;
         getNodePosition(&node, 1);
-        mulAdd(node, mGenObjData->position, mStartVel);
+        mStartVel.sub(node, mGenObjData->position);
         mStartVel.y = 0.0f;
         mStartVel.normalize();
 
@@ -257,13 +176,16 @@ void TMapObjDonkyRock::setStartVel() {
         side.normalize();
 
         JGeometry::TQuat4f quat;
-        quat.setRotate(side, mGenObjData->mParam4 * 0.0174533f);
+        f32 half = 0.5f * (0.017453292f * mGenObjData->mParam4);
+        f32 s = sinf(half);
+        quat.xyz().scale(s, side);
+        quat.w = cosf(half);
         quat.transform(mStartVel);
+        mStartVel.scale(speed);
     } else {
         mStartVel.zero();
     }
 }
-#pragma dont_inline reset
 
 void TMapObjDonkyRock::doFunc_Fall() {
     u16 node = mBounceCount;
@@ -294,72 +216,69 @@ void TMapObjDonkyRock::doFunc_Fall() {
     }
 }
 
-void TMapObjDonkyRock::move_FallDown(JGeometry::TVec3f &pos) {
-    static JGeometry::TVec3f axisY(0.0f, 1.0f, 0.0f);
+void TMapObjDonkyRock::move_FallDown(JGeometry::TVec3f &target) {
+    JGeometry::TVec3f unitNormal;
+    JGeometry::TVec3f axis;
+    JGeometry::TVec3f dir;
+    JGeometry::TVec3f normal;
 
     mVel.add(mGravity);
-    if (mVel.length() > sMaxSpeed) {
-        mVel.normalize(sMaxSpeed);
+    if (mVel.squared() > sMaxSpeed * sMaxSpeed) {
+        mVel.normalize();
+        mVel.scale(sMaxSpeed);
     }
     mPos.add(mVel);
-
-    mGravity.x = 0.0f;
-    mGravity.y = sGravity;
-    mGravity.z = 0.0f;
-
+    mGravity.set(0.0f, sGravity, 0.0f);
     mpGround->search(mPos);
+    u32 attr = mpGround->getAttribute();
 
-    if (mpGround->getAttribute() != CrsGround::Attr_10 &&
-        mPos.y < mpGround->getHeight() + mHeightOffset) {
-        JGeometry::TVec3f normal;
+    static JGeometry::TVec3f axisY(0.0f, 1.0f, 0.0f);
+
+    if (attr != CrsGround::Attr_10 && mPos.y < mHeightOffset + mpGround->getHeight()) {
         mpGround->getNormal(&normal);
-        normal.normalize();
+        unitNormal.normalize(normal);
 
-        JGeometry::TVec3f dir;
-        mulAdd(pos, mPos, dir);
+        dir.sub(target, mPos);
+        dir.normalize();
 
-        JGeometry::TVec3f axis;
-        axis.cross(dir, normal);
+        axis.cross(dir, unitNormal);
         axis.normalize();
 
-        mPos.y = mpGround->getHeight() + mHeightOffset;
-        getReflect(normal, dir);
+        mPos.y = mHeightOffset + mpGround->getHeight();
+        getReflect(unitNormal, dir);
     }
 
-    JGeometry::TVec3f tangent;
-    tangent.x = mVel.x;
-    tangent.y = 0.0f;
-    tangent.z = mVel.z;
+    dir.set(mVel.x, 0.0f, mVel.z);
+    if (!dir.isZero()) {
+        unitNormal.set(axisY);
+        dir.normalize();
 
-    if (tangent.length() > JGeometry::TUtilf::epsilon()) {
-        JGeometry::TVec3f axis;
-        axis.cross(tangent, axisY);
+        axis.cross(dir, unitNormal);
         axis.normalize();
 
-        f32 roll = mRollAngle - sRotSpeed * mVel.length() / mScale.y;
-        while (roll < 0.0f) {
-            roll += 6.2831855f;
-        }
-        while (roll > 3.1415927f) {
-            roll -= 6.2831855f;
-        }
-        mRollAngle = roll;
-        mRotMtx.setRotate(axis, roll);
+        mRollAngle += -sRotSpeed * mVel.length() / mScale.y;
+        mRollAngle = wrapAngle(mRollAngle, -3.1415927f, 3.1415927f);
+        mRotMtx.setRotate(axis, mRollAngle);
     }
 }
-void TMapObjDonkyRock::getReflect(JGeometry::TVec3f &vel, JGeometry::TVec3f &dir) {
-    if (vel.squared() <= 100.0f + sGravity * sGravity) {
-        scaleAddVec(vel, -0.9f, mVel);
+
+void TMapObjDonkyRock::getReflect(JGeometry::TVec3f &normal, JGeometry::TVec3f &dir) {
+    JGeometry::TVec3f proj;
+    proj.scale(normal.dot(mVel), normal);
+    if (proj.squared() <= 100.0f + sGravity * sGravity) {
+        proj.scale(-0.9f);
+        mVel.add(proj);
+        mVel.scale(sFricRate);
         mSound->setRollSe(mVel.length());
     } else {
-        f32 scale = 1.0f + sReflectRate;
-        scaleAddVec(vel, -scale, mVel);
-        f32 mag = mVel.length();
+        proj.scale(-(1.0f + sReflectRate));
+        mVel.add(proj);
+        f32 len = mVel.length();
         mVel.normalize();
-        mVel.x = dir.x * mag;
-        mVel.y = dir.y * mag;
-        mVel.z = dir.z * mag;
-        mSound->setBoundSe(mag);
+        mVel.x = dir.x;
+        mVel.z = dir.z;
+        mVel.scale(len);
+        mSound->setBoundSe(len);
     }
 }
 
@@ -403,13 +322,13 @@ void TMapObjDonkyRock::doFunc_Break() {
 }
 
 void TMapObjDonkyRock::doKartColCallBack(int kartNo) {
-    u32 change = 0;
     u64 status = GetKartCtrl()->GetKartStatus(kartNo);
+    bool change = false;
 
-    if ((status & 0x0004000400000001ULL) != 0) {
+    if (status & 0x0000000100040004ULL) {
         _58 = 11;
         change = 1;
-    } else if ((status & 0x0000400000000000ULL) != 0) {
+    } else if (status & 0x0000000000004000ULL) {
         _58 = 11;
         if (RaceMgr::sRaceManager->getRaceMode() != TIME_ATTACK) {
             change = 1;
@@ -444,3 +363,4 @@ void TDonkyRockSupervisor::thunderDownAll() {
     }
 }
 
+#include "JSystem/JAudio/JASFakeMatch2.h"

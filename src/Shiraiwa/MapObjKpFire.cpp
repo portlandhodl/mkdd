@@ -41,17 +41,6 @@ int TMapObjKpFire::sFireJointNo;
 J3DAnmTransform *TMapObjKpFire::sKpFireBckAnmTrans;
 J3DMtxCalc *TMapObjKpFire::sKpFireBckMtxCalc;
 
-J3DAnmTextureSRTKey *TMapObjKpFireBall::sKpFireBallBtkAnm;
-J3DAnmTevRegKey *TMapObjKpFireBall::sKpFireBallTevRegKey;
-s16 TMapObjKpFireBall::sMaxLife = 500;
-s16 TMapObjKpFireBall::sAppearFrame = 1;
-f32 TMapObjKpFireBall::sMaxSpeed = 30.0f;
-f32 TMapObjKpFireBall::sVelocity0 = 140.0f;
-f32 TMapObjKpFireBall::sDecelSpeed = -1.0f;
-f32 TMapObjKpFireBall::sOrgScale = 1.0f;
-f32 TMapObjKpFireBall::sRotRadRange = 0.05f;
-f32 TMapObjKpFireBall::sRotRadMin = 0.1f;
-
 TMapObjKpFire::TMapObjKpFire(const CrsData::SObject &obj) : TMapObjHioNode(obj), StateObserver()
 {
     NewAnmCtrl();
@@ -110,7 +99,8 @@ void TMapObjKpFire::reset()
     mGeoObjFlag &= ~0x2;
     mCheckKartHitFlags = 0;
 
-    JGeometry::TVec3f dir(mRotMtx[0][2], mRotMtx[1][2], mRotMtx[2][2]);
+    JGeometry::TVec3f dir;
+    mRotMtx.getZDir(dir);
     dir.normalize();
 
     getAnmCtrl()->Reset();
@@ -145,25 +135,24 @@ void TMapObjKpFire::doFunc_Walk()
     TPathUtil *path = mPathUtil;
     u16 node = path->getNextNode();
     CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)node);
-
+    JGeometry::TVec3f target;
+    target.set(p->pos);
     JGeometry::TVec3f dir;
-    dir.sub(p->pos, mPos);
-    f32 dist = dir.length();
+    dir.sub(target, mPos);
 
-    if (dist < 50.0f) {
-        if (checkFire(mPathUtil->getNextNode()))
+    if (dir.length() < 50.0f) {
+        u16 next = mPathUtil->getNextNode();
+        if (checkFire(next))
             setState(2);
         else
             setState(1);
     }
 
-    dir.normalize();
-    mVel.scaleAdd(sAccel, dir);
+    dir.setLength(sAccel);
+    mVel.add(dir);
 
-    if (mVel.length() > sMaxSpeed) {
-        mVel.normalize();
-        mVel.scale(sMaxSpeed);
-    }
+    if (mVel.length() > sMaxSpeed)
+        mVel.setLength(sMaxSpeed);
 
     mPos.add(mVel);
     getSoundMgr()->setSe(0x40044);
@@ -181,25 +170,24 @@ void TMapObjKpFire::doFunc_Stop()
         u16 node = path->getNextNode();
         CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)node);
 
+        JGeometry::TVec3f target;
+        target.set(p->pos);
         JGeometry::TVec3f dir;
-        dir.sub(p->pos, mPos);
+        dir.sub(target, mPos);
+        dir.setLength(sShakeAccel);
+        mVel.add(dir);
 
-        if (dir.length() > JGeometry::TUtilf::epsilon()) {
-            dir.normalize();
-            mVel.scaleAdd(sShakeAccel, dir);
-        }
-
-        if (mVel.length() > sShakeMaxSpeed) {
-            mVel.normalize();
-            mVel.scale(sShakeMaxSpeed);
-        }
+        if (mVel.length() > sShakeMaxSpeed)
+            mVel.setLength(sShakeMaxSpeed);
 
         mPos.add(mVel);
     }
 
     if (getStateCount() > sShakeFrame + sWaitFrame) {
         mVel.zero();
-        CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(mPathUtil->mObj->pathID, mPathUtil->getNextNode());
+        TPathUtil *path = mPathUtil;
+        u16 node = path->getNextNode();
+        CrsData::PointData *p = RaceMgr::getManager()->getCourse()->getCrsData()->getPointData(path->mObj->pathID, (u16)node);
         mPos.set(p->pos);
         setState(3);
     }
@@ -255,7 +243,7 @@ void TMapObjKpFire::doFunc_Fire()
 void TMapObjKpFire::makeFireEmitter(const JGeometry::TVec3f &pos)
 {
     static const char *emName[] = { "mk_koopaz_a", "mk_koopaz_b" };
-    static const u8 isCameraClip[] = { 1, 0 };
+    static const u8 isCameraClip[] = { 0, 1 };
     static f32 emScale[3];
     static s8 init;
     if (!init) {
@@ -313,6 +301,17 @@ void TMapObjKpFire::MoveExec()
     (this->*func->mExecFunc)();
 }
 
+J3DAnmTextureSRTKey *TMapObjKpFireBall::sKpFireBallBtkAnm;
+J3DAnmTevRegKey *TMapObjKpFireBall::sKpFireBallTevRegKey;
+s16 TMapObjKpFireBall::sMaxLife = 500;
+s16 TMapObjKpFireBall::sAppearFrame = 1;
+f32 TMapObjKpFireBall::sMaxSpeed = 30.0f;
+f32 TMapObjKpFireBall::sVelocity0 = 140.0f;
+f32 TMapObjKpFireBall::sDecelSpeed = -1.0f;
+f32 TMapObjKpFireBall::sOrgScale = 1.0f;
+f32 TMapObjKpFireBall::sRotRadRange = 0.05f;
+f32 TMapObjKpFireBall::sRotRadMin = 0.1f;
+
 TMapObjKpFireBall::TMapObjKpFireBall() : TMapObjHioNode(0x1260), StateObserver()
 {
     createSoundMgr();
@@ -354,26 +353,17 @@ void TMapObjKpFireBall::MoveExec()
 
 void TMapObjKpFireBall::setVelDir(const JGeometry::TVec3f &dir)
 {
-    JGeometry::TVec3f v;
-
-    mVel.set(dir.x, dir.y, dir.z);
-    v.set(dir.x, dir.y, dir.z);
-    v.normalize();
-
-    JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
     JGeometry::TVec3f right;
+    JGeometry::TVec3f v;
+    JGeometry::TVec3f up;
+
+    mVel.set(dir);
+    v.set(dir);
+    v.normalize();
+    up.set(0.0f, 1.0f, 0.0f);
     right.cross(up, v);
     right.normalize();
-
-    mRotMtx[0][0] = right.x;
-    mRotMtx[0][1] = up.x;
-    mRotMtx[0][2] = v.x;
-    mRotMtx[1][0] = right.y;
-    mRotMtx[1][1] = up.y;
-    mRotMtx[1][2] = v.y;
-    mRotMtx[2][0] = right.z;
-    mRotMtx[2][1] = up.z;
-    mRotMtx[2][2] = v.z;
+    mRotMtx.setXYZDir(right, up, v);
 }
 
 void TMapObjKpFireBall::reset()
@@ -449,7 +439,7 @@ void TMapObjKpFireBall::createColModel(J3DModelData *)
 
 void TMapObjKpFireBall::doKartColCallBack(int kart)
 {
-    if (GetKartCtrl()->getKartBody(kart)->mCarStatus & 0x0004000000000000) {
+    if (GetKartCtrl()->getKartBody(kart)->mCarStatus & 0x40000ull) {
         makeBreakEmitter(3);
         setState(3);
     }
@@ -507,22 +497,21 @@ void TMapObjKpFireBall::doFunc_Fly()
         mVel.normalize(speed);
     }
 
-    f32 angle = SiUtil::getNormalRange(speed, sMaxSpeed, sVelocity0);
-    angle = sRotRadRange * angle + sRotRadMin;
+    f32 angle = sRotRadRange * SiUtil::getNormalRange(speed, sMaxSpeed, sVelocity0) + sRotRadMin;
 
     Mtx rot;
     PSMTXIdentity(rot);
-    f32 s = sin(angle);
-    f32 c = cos(angle);
+    f32 s = sinf(angle);
+    f32 c = cosf(angle);
+    rot[1][0] = s;
     rot[0][0] = c;
     rot[0][1] = -s;
-    rot[0][2] = 0.0f;
-    rot[1][0] = s;
     rot[1][1] = c;
+    rot[2][2] = 1.0f;
+    rot[2][1] = 0.0f;
     rot[1][2] = 0.0f;
     rot[2][0] = 0.0f;
-    rot[2][1] = 0.0f;
-    rot[2][2] = 1.0f;
+    rot[0][2] = 0.0f;
     PSMTXConcat(mRotMtx, rot, mRotMtx);
 
     getSoundMgr()->setSe(0x40034);
@@ -541,7 +530,7 @@ void TMapObjKpFireBall::initFunc_Disappear()
 void TMapObjKpFireBall::makeBreakEmitter(int num)
 {
     static const char *emName[] = { "mk_kpbball_a", "mk_kpbball_b", "mk_kpbball_c", "mk_kpbball_d" };
-    static const u8 isCameraClip[] = { 1, 1, 1, 1 };
+    static const u8 isCameraClip[] = { 0, 0, 0, 1 };
     static f32 emScale[3];
     static s8 init;
     if (!init) {
@@ -558,13 +547,14 @@ void TMapObjKpFireBall::makeBreakEmitter(int num)
         else
             emt = GetJPAMgr()->createEmt(emName[i], mPos);
 
-        if (emt)
+        if (emt) {
             emt->mGlobalScl.x = emScale[0];
             emt->mGlobalScl.y = emScale[1];
             emt->mGlobalScl.z = emScale[2];
             f32 y = emScale[1];
             emt->mGlobalPScl.x = emScale[0];
             emt->mGlobalPScl.y = y;
+        }
     }
 }
 
@@ -583,3 +573,5 @@ __declspec(weak) const char *TMapObjKpFire::getBmdFileName()
 {
     return "/Objects/KPFire1.bmd";
 }
+
+#include "JSystem/JAudio/JASFakeMatch2.h"
