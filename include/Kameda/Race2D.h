@@ -198,7 +198,7 @@ public:
     PLACEHOLDER_BYTES(0x338, 0x594);
     class J2DPicture *mRankDigits1[4][8]; // 0x594
     class J2DPicture *mRankDigits2[4][8]; // 0x614
-    class J2DPicture *_694x[20];        // 0x694 (unconfirmed)
+    class J2DPicture *_694x[2][10];     // 0x694
     // The lap digit table owner's tail overlaps the shine-vector storage
     // (mLapDigits[3][8][6..10+] aliases 0xd00..): only laps 0..8, digits 0..10 are real pictures.
     union Race2DLapShine {
@@ -227,7 +227,21 @@ public:
 #define mBombMarkFrame mLapShine.mShine.mBombMarkFrame
     PLACEHOLDER_BYTES(0xdc0, 0x1000);
     JGeometry::TVec2f mMarkPos[4][8]; // 0x1000
-    PLACEHOLDER_BYTES(0x1100, 0x1588);
+    PLACEHOLDER_BYTES(0x1100, 0x117c);
+    f32 mEscapeX;                        // 0x117c
+    f32 mEscapeY;                        // 0x1180
+    PLACEHOLDER_BYTES(0x1184, 0x1188);
+    int mEscapeFrame;                    // 0x1188
+    JGeometry::TVec2f mEscapeTarget[8];  // 0x118c
+    PLACEHOLDER_BYTES(0x11cc, 0x1540);
+    JUTColor mAnmTAColor; // 0x1540
+    PLACEHOLDER_BYTES(0x1544, 0x1560);
+    struct Race2DAnmTA {
+        int mCount[4];
+        int mNum;
+    };
+    Race2DAnmTA mAnmTA[2]; // 0x1560
+
     struct Race2DLapSlot {
         u8 mAvailable;  // +0x00
         u8 _1[3];       // +0x01
