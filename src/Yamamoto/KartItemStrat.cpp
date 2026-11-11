@@ -48,14 +48,12 @@ void KartItem::SetSucMashItem()
 
         if (_6 >= 120) {
             if (!GetKartCtrl()->getKartAnime(body->mMynum)->IsFloatAnime(body->mMynum)) {
-                if (!(body->mCarStatus & 0x02010800)) {
-                    if (_4 != 1) {
-                        _4 = 1;
-                        ItemObjMgr *mgr = GetItemObjMgr();
-                        mgr->stockItemToKart(5, body->mMynum, 0, 0, 0);
-                        mgr->stockItemToKart(5, body->mMynum, 1, 0, 0);
-                    }
-                }
+                if ((body->mCarStatus & 0x02010800) || _4 == 1)
+                    return;
+                _4 = 1;
+                ItemObjMgr *mgr = GetItemObjMgr();
+                mgr->stockItemToKart(5, body->mMynum, 0, 0, 0);
+                mgr->stockItemToKart(5, body->mMynum, 1, 0, 0);
             }
         }
     }
@@ -103,12 +101,12 @@ void KartItem::FallStealItem(int thiefIdx, int victimIdx)
 
     if (victimItem == 0 && thiefItem2 != 0) {
         mgr->robRivalOfItem(victimIdx, thiefIdx, thiefNum);
-        if (thief->mCarStatus & 0x40)
-            thief->mCarStatus &= ~0x40;
+        if (thief->mCarStatus & 0x4000000000ull)
+            thief->mCarStatus &= ~0x4000000000ull;
     } else if (victimItem == 0 && thiefItem2 == 0 && thiefItem1 != 0) {
         mgr->robRivalOfItem(victimIdx, thiefIdx, thiefNum ^ 1);
-        if (thief->mCarStatus & 0x40)
-            thief->mCarStatus &= ~0x40;
+        if (thief->mCarStatus & 0x4000000000ull)
+            thief->mCarStatus &= ~0x4000000000ull;
     }
 
     if (thiefItem1 && victimItem) {
@@ -121,8 +119,8 @@ void KartItem::FallStealItem(int thiefIdx, int victimIdx)
         } else {
             thiefItem1->setStateFall(true);
         }
-        if (thief->mCarStatus & 0x40)
-            thief->mCarStatus &= ~0x40;
+        if (thief->mCarStatus & 0x4000000000ull)
+            thief->mCarStatus &= ~0x4000000000ull;
     }
 
     if (thiefItem2 && victimItem) {
@@ -135,8 +133,8 @@ void KartItem::FallStealItem(int thiefIdx, int victimIdx)
         } else {
             thiefItem2->setStateFall(true);
         }
-        if (thief->mCarStatus & 0x40)
-            thief->mCarStatus &= ~0x40;
+        if (thief->mCarStatus & 0x4000000000ull)
+            thief->mCarStatus &= ~0x4000000000ull;
     }
 }
 
@@ -156,16 +154,10 @@ void KartItem::FallItem()
     body->getCrash()->DoRabbitMark();
 
     if (item) {
-        if (!(body->getDamage()->mFlags & 0x8) &&
-            !(body->mCarStatus & 0x800) &&
-            !(body->getDossin()->_14 & 1) &&
-            !(body->getThunder()->mFlags & 1)) {
-            if (item->IsSuccessionItem() && item->getKind() != 21) {
-                int n = item->getSuccessionItemNum() - 1;
-                for (int i = 0; i < n; i++)
-                    item->setChildStateFall();
-            }
-        } else {
+        if ((body->getDamage()->mFlags & 0x8) ||
+            (body->mCarStatus & 0x80000000000ull) ||
+            (body->getDossin()->_14 & 1) ||
+            (body->getThunder()->mFlags & 1)) {
             if (item->getKind() == 21) {
                 item->setStateFall(true);
             } else if (item->IsSuccessionItem()) {
@@ -175,8 +167,12 @@ void KartItem::FallItem()
             } else {
                 item->setStateFall(true);
             }
-            if (body->mCarStatus & 0x40)
-                body->mCarStatus &= ~0x40;
+            if (body->mCarStatus & 0x4000000000ull)
+                body->mCarStatus &= ~0x4000000000ull;
+        } else if (item->IsSuccessionItem() && item->getKind() != 21) {
+            int n = item->getSuccessionItemNum() - 1;
+            for (int i = 0; i < n; i++)
+                item->setChildStateFall();
         }
     }
 
@@ -192,16 +188,10 @@ void KartItem::FallItem()
         return;
     }
 
-    if (!(body->getDamage()->mFlags & 0x8) &&
-        !(body->mCarStatus & 0x800) &&
-        !(body->getDossin()->_14 & 1) &&
-        !(body->getThunder()->mFlags & 1)) {
-        if (item2->IsSuccessionItem() && item2->getKind() != 21) {
-            int n = item2->getSuccessionItemNum() - 1;
-            for (int i = 0; i < n; i++)
-                item2->setChildStateFall();
-        }
-    } else {
+    if ((body->getDamage()->mFlags & 0x8) ||
+        (body->mCarStatus & 0x80000000000ull) ||
+        (body->getDossin()->_14 & 1) ||
+        (body->getThunder()->mFlags & 1)) {
         if (item2->getKind() == 21) {
             item2->setStateFall(true);
         } else if (item2->IsSuccessionItem()) {
@@ -211,8 +201,12 @@ void KartItem::FallItem()
         } else {
             item2->setStateFall(true);
         }
-        if (body->mCarStatus & 0x40)
-            body->mCarStatus &= ~0x40;
+        if (body->mCarStatus & 0x4000000000ull)
+            body->mCarStatus &= ~0x4000000000ull;
+    } else if (item2->IsSuccessionItem() && item2->getKind() != 21) {
+        int n = item2->getSuccessionItemNum() - 1;
+        for (int i = 0; i < n; i++)
+            item2->setChildStateFall();
     }
 }
 
@@ -220,14 +214,14 @@ void KartItem::FallAllItem()
 {
     u8 idx = mBody->mMynum;
     KartBody *body = mBody;
-    int num;
     RaceMgr *raceMgr = RaceMgr::getCurrentManager();
+    ItemObj *item;
     ItemObjMgr *mgr = GetItemObjMgr();
-    num = ItemObjMgr::getNowTandemDriverNum(idx);
-    ItemObj *item = mgr->getKartEquipItem(idx, num ^ 1);
+    int num = ItemObjMgr::getNowTandemDriverNum(idx);
+    item = mgr->getKartEquipItem(idx, num ^ 1);
     mgr->deleteHeartItem(idx);
 
-    if (raceMgr->getRaceMode() == BOMB_BATTLE && !(body->mCarStatus & 0x40000000))
+    if (raceMgr->getRaceMode() == BOMB_BATTLE && !(body->mCarStatus & 0x400000))
         goto end;
 
     if (item) {
@@ -255,8 +249,8 @@ void KartItem::FallAllItem()
         }
     }
 
-    if (body->mCarStatus & 0x40)
-        body->mCarStatus &= ~0x40;
+    if (body->mCarStatus & 0x4000000000ull)
+        body->mCarStatus &= ~0x4000000000ull;
 end:
     ;
 }
@@ -272,7 +266,7 @@ void KartItem::ReleseWanWan()
         return;
     if (body->mCarStatus & 0x1000) {
         ItemWanWanObj *wanwan = (ItemWanWanObj *)ItemObjMgr::getItemWanWanObj(item);
-        if (wanwan->getKind() == 7) {
+        if (item->getKind() == 7) {
             wanwan->separate();
             body->mCarStatus &= ~0x1000;
             GetKartCtrl()->getKartAnime(idx)->mFlags |= 0x1000000;
@@ -292,7 +286,7 @@ bool KartItem::CompulsionReleseWanWan()
         return false;
     if (body->mCarStatus & 0x1000) {
         ItemWanWanObj *wanwan = (ItemWanWanObj *)ItemObjMgr::getItemWanWanObj(item);
-        if (wanwan->getKind() == 7) {
+        if (item->getKind() == 7) {
             if (wanwan->tstReverseThrow())
                 return true;
         }
@@ -319,11 +313,11 @@ void KartItem::KillWanWan()
 bool KartItem::IsMyItem()
 {
     u8 idx = mBody->mMynum;
-    KartBody *body = mBody;
-    ItemObj *item = GetItemObjMgr()->getKartEquipItem(idx);
+    ItemObjMgr *mgr = GetItemObjMgr();
+    ItemObj *item = mgr->getKartEquipItem(idx);
     if (item == 0)
         return false;
-    return !((ItemWanWanObj *)ItemObjMgr::getItemWanWanObj(item))->IsEndPull();
+    return ((ItemWanWanObj *)ItemObjMgr::getItemWanWanObj(item))->IsEndPull() != 1;
 }
 
 __declspec(weak) u8 ItemWanWanObj::IsEndPull()
@@ -571,11 +565,11 @@ void KartItem::DoOtherAnime()
             return;
         if (GetKartCtrl()->getKartAnime(idx)->IsDamage(idx))
             return;
-        if (GetKartCtrl()->getKartAnime(idx)->IsBackAnime(idx)) {
-            GetKartCtrl()->getKartAnime(idx)->mFlags &= ~4ull;
-            GetKartCtrl()->getKartAnime(idx)->MakeFrontAnime(idx);
+        if (!GetKartCtrl()->getKartAnime(idx)->IsBackAnime(idx)) {
+            GetKartCtrl()->getKartAnime(idx)->mFlags &= ~8ull;
+            GetKartCtrl()->getKartAnime(idx)->MakeBackAnime(idx);
         }
-        GetKartCtrl()->getKartAnime(idx)->mFlags &= ~8ull;
+        GetKartCtrl()->getKartAnime(idx)->mFlags &= ~4ull;
         break;
     case 7:
     case 8:
@@ -584,20 +578,19 @@ void KartItem::DoOtherAnime()
     case 13:
     case 16:
     case 17:
-        if (item->getState() != 9 && item->getState() != 5)
-            return;
-        GetKartCtrl()->getKartPad(idx)->_51 = 0;
-        if (GetKartCtrl()->getKartAnime(idx)->IsDamage(idx) ||
-            (body->getDamage()->mFlags & 0x48) ||
-            GetKartCtrl()->getKartAnime(idx)->IsThrow(idx)) {
-        } else {
-            if (GetKartCtrl()->getKartAnime(idx)->IsBackAnime(idx)) {
-                GetKartCtrl()->getKartAnime(idx)->mFlags &= ~4ull;
-                GetKartCtrl()->getKartAnime(idx)->MakeFrontAnime(idx);
+        if (item->getState() == 9 || item->getState() == 5) {
+            GetKartCtrl()->getKartPad(idx)->_51 = 0;
+            if (!GetKartCtrl()->getKartAnime(idx)->IsDamage(idx) &&
+                !(body->getDamage()->mFlags & 0x48) &&
+                !GetKartCtrl()->getKartAnime(idx)->IsThrow(idx)) {
+                if (GetKartCtrl()->getKartAnime(idx)->IsBackAnime(idx)) {
+                    GetKartCtrl()->getKartAnime(idx)->mFlags &= ~4ull;
+                    GetKartCtrl()->getKartAnime(idx)->MakeFrontAnime(idx);
+                }
+                GetKartCtrl()->getKartAnime(idx)->mFlags &= ~8ull;
             }
-            GetKartCtrl()->getKartAnime(idx)->mFlags &= ~8ull;
+            body->_57c &= ~0xfu;
         }
-        body->_57c &= ~0xfu;
         break;
     default:
         break;
@@ -641,11 +634,9 @@ void KartItem::DoTandemItemAnime()
         return;
     if (body->_57c & 1)
         return;
-    if (item->getState() == 9)
-        goto end;
-    else if (item->getState() == 5) {
-        goto end;
-    } else {
+    if (item->getState() == 9 || item->getState() == 5)
+        return;
+
     switch (item->getKind()) {
     case 0:
     case 1:
@@ -736,9 +727,6 @@ void KartItem::DoTandemItemAnime()
     default:
         break;
     }
-    }
-end:
-    ;
 }
 
 void KartItem::DoTandemItemRelease()
@@ -749,11 +737,8 @@ void KartItem::DoTandemItemRelease()
     ItemObj *item = GetItemObjMgr()->getKartEquipItem(idx);
     if (item == 0)
         return;
-    if (item->getState() == 9)
+    if (item->getState() == 9 || item->getState() == 5)
         return;
-    if (item->getState() == 5) {
-        goto end;
-    } else {
     if (!(body->_57c & 1))
         return;
     if (GetKartCtrl()->getKartPad(idx)->_51 != 0)
@@ -817,8 +802,6 @@ void KartItem::DoTandemItemRelease()
     default:
         break;
     }
-    }
-end:
     body->_57c &= ~7;
 }
 
