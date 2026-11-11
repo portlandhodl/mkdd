@@ -246,7 +246,7 @@ private:
     J2DScreen *mScreenSelectMode;          // 0x1F6C
     J2DScreen *mScreenSelectBattle;        // 0x1F70
     J2DScreen *mScreenCharLayout;          // 0x1F74
-    u8 _1f78[0x1F88 - 0x1F78];             // 0x1F78
+    JGeometry::TVec2f mCharBasePos[2];      // 0x1F78
     J2DScreen *mCharScreens[10];           // 0x1F88 (select_character_cc.blo copies)
     JGeometry::TVec2f mCharPos[10];        // 0x1FB0
     J2DScreen *mScreenChar1;               // 0x2000 (select_character1.blo)

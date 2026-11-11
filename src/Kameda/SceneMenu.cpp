@@ -23,6 +23,7 @@
 #include "Osako/NameEntryHelper.h"
 #include "Osako/SequenceApp.h"
 #include "Osako/SystemRecord.h"
+#include "Osako/system.h"
 #include "Osako/kartPad.h"
 #include "dolphin/gx/GXTransform.h"
 
@@ -357,9 +358,493 @@ SceneMenu::SceneMenu(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap) 
     createCharFn(heap);
 }
 
-void SceneMenu::reset() {}
+void SceneMenu::reset()
+{
+    for (int i = 0; i < 2; i++)
+    {
+        J2DPane *pane = mScreenCharLayout->search(0x0053657443686131ull + i);
+        JGeometry::TBox2f *bounds = pane->getBounds();
+        f32 bx = bounds->i.x;
+        f32 by = bounds->i.y;
+        mCharBasePos[i].x = bx;
+        mCharBasePos[i].y = by;
+    }
 
-void SceneMenu::init() {}
+    int n = 10;
+    if (!(gSystemRecord.mGameFlag & 1))
+    {
+        mCharScreens[4]->mIsVisible = false;
+        n = 9;
+    }
+    else
+    {
+        mCharScreens[4]->mIsVisible = true;
+    }
+    if (!(gSystemRecord.mGameFlag & 2))
+    {
+        mCharScreens[9]->mIsVisible = false;
+        n--;
+    }
+    else
+    {
+        mCharScreens[9]->mIsVisible = true;
+    }
+
+    int k = -2;
+    f32 scale = 2.0f * n;
+    f32 dx = (mCharBasePos[1].x - mCharBasePos[0].x) / scale;
+    f32 dy = (mCharBasePos[1].y - mCharBasePos[0].y) / scale;
+
+    for (int i = 0; i < 10; i++)
+    {
+        if (i != 4 || (gSystemRecord.mGameFlag & 1))
+            k += 2;
+        int idx = k + 1;
+        mCharPos[i].x = mCharBasePos[0].x + dx * idx;
+        mCharPos[i].y = mCharBasePos[0].y + dy * idx;
+    }
+
+    for (int i = 0; i < 20; i++)
+    {
+        J2DPicture *pane = (J2DPicture *)mCharCCBpk[i / 2][i % 2 + 2].mPane;
+#line 1440
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        pane->changeTexture(Kart2DCommon::ptr()->getCharIconTextureChecked((ECharID)mCharIndex[i]), 0);
+    }
+
+    for (int i = 0; i < 20; i++)
+    {
+        mChara[i].mCharId = mCharIndex[i];
+        mChara[i].mWeight = KartInfo::getDriverWeight((ECharID)mChara[i].mCharId);
+        mChara[i].mKartId = KartInfo::getDefaultKartID((ECharID)mChara[i].mCharId);
+        if (!SystemRecord::tstSecretKart((EKartID)mChara[i].mKartId, gSystemRecord.mSecretKart))
+        {
+            int charId = mChara[i].mCharId;
+            switch (charId)
+            {
+            case 14:
+                mChara[i].mKartId = 5;
+                break;
+            case 16:
+                mChara[i].mKartId = 3;
+                break;
+            case 10:
+                mChara[i].mKartId = 0;
+                break;
+            default:
+                mChara[i].mKartId = KartInfo::getPartnerKartID((ECharID)charId);
+                break;
+            }
+        }
+    }
+
+    for (int i = 0; i < 21; i++)
+    {
+        mKartList[i].mKartId = mKartIndex[i];
+        mKartList[i].mKartWeight = KartInfo::getKartWeight((EKartID)mKartList[i].mKartId);
+    }
+
+    for (int i = 0; i < 33; i++)
+        mIconBck[i].mFrame = 0.0f;
+    for (int i = 0; i < 13; i++)
+        mHowManyDriversBck[i].mFrame = 0.0f;
+    mHowManyDriversEnd.mFrame = 0.0f;
+    for (int i = 0; i < 22; i++)
+        mHowManyDriversBrk[i].mFrame = 0.0f;
+    mSingleTagSelectEndBck.mFrame = 0.0f;
+    for (int i = 0; i < 43; i++)
+        mSingleTagSelectBck[i].mFrame = 0.0f;
+    for (int i = 0; i < 24; i++)
+        mSingleTagSelectBtk[i].mFrame = 0.0f;
+    for (int i = 0; i < 78; i++)
+        mSingleTagSelectBrk[i].mFrame = 0.0f;
+    for (int i = 0; i < 7; i++)
+        mSingleTagSelectBpk[i].mFrame = 0.0f;
+    for (int i = 0; i < 75; i++)
+        mModeBck[i].mFrame = 0.0f;
+    for (int i = 0; i < 26; i++)
+        mModeBtk[i].mFrame = 0.0f;
+    for (int i = 0; i < 30; i++)
+        mModeBrk[i].mFrame = 0.0f;
+    for (int i = 0; i < 6; i++)
+        mModeBpk[i].mFrame = 0.0f;
+    for (int i = 0; i < 15; i++)
+        mBattleBck[i].mFrame = 0.0f;
+    mBattleBrk.mFrame = 0.0f;
+
+    for (int i = 0; i < 10; i++)
+    {
+        for (int j = 0; j < 2; j++)
+            mCharPane[i][j].mFrame = 0.0f;
+        mCharCCBck[i].mFrame = 0.0f;
+        for (int j = 0; j < 4; j++)
+            mCharCCBrk[i][j].mFrame = 0.0f;
+        for (int j = 0; j < 6; j++)
+            mCharCCBpk[i][j].mFrame = 0.0f;
+    }
+    for (int i = 0; i < 9; i++)
+        mCharPaneBck[i].mFrame = 0.0f;
+    mCharCCEndBck.mFrame = 0.0f;
+    mCharCCEndBrk.mFrame = 0.0f;
+    for (int i = 0; i < 19; i++)
+        mChar1PlusBck[i].mFrame = 0.0f;
+    for (int i = 0; i < 2; i++)
+        mChar1PlusBrk[i].mFrame = 0.0f;
+    mChar1PlusBpk.mFrame = 0.0f;
+    for (int i = 0; i < 20; i++)
+        mChar2Bck[i].mFrame = 0.0f;
+    mChar2EndBck.mFrame = 0.0f;
+    for (int i = 0; i < 5; i++)
+        mChar2Brk[i].mFrame = 0.0f;
+    mChar2EndBrk.mFrame = 0.0f;
+    for (int i = 0; i < 27; i++)
+        mChar3Bck[i].mFrame = 0.0f;
+    mChar3EndBck.mFrame = 0.0f;
+    for (int i = 0; i < 8; i++)
+        mChar3Brk[i].mFrame = 0.0f;
+    mChar3EndBrk.mFrame = 0.0f;
+    for (int i = 0; i < 26; i++)
+        mChar4Bck[i].mFrame = 0.0f;
+    mChar4EndBck.mFrame = 0.0f;
+    mChar4EndBrk.mFrame = 0.0f;
+
+    mInfo.mode = 0;
+    mInfo.oldMode = 0;
+    mInfo.nextMode = 0;
+    mInfo.timer = 0;
+    mInfo.nextScene = Scene::SCENE_MAX;
+    mInfo.playerNum = 0;
+    mInfo._18 = 0;
+    mInfo.entryNum = 0;
+    mInfo._20 = 0;
+    mInfo.engineType = 0;
+    _2108[0] = 0;
+    _2108[1] = 0;
+    _2108[2] = 0;
+    _210c = 0;
+    _2110 = 0;
+    _2114 = 0;
+    mMsgId = 0;
+    for (int i = 0; i < 4; i++)
+        mPlayerPadNo[i] = -1;
+    for (int i = 0; i < 4; i++)
+    {
+        mPlayerData[i].mCursor = -1;
+        mPlayerData[i].mCharNoF = -1;
+        mPlayerData[i].mCharNoB = -1;
+        mPlayerData[i].mCharF = -1;
+        mPlayerData[i].mCharB = -1;
+        mPlayerData[i].mKart = -1;
+        mPlayerData[i].mState = 0;
+    }
+    for (int i = 0; i < 20; i++)
+        ((u32 *)_219c)[i] = 0;
+
+    for (int i = 0; i < 33; i++)
+        mIconBck[i].mPane->hide();
+
+    mSingleTagSelectBck[0].mPane->hide();
+    mSingleTagSelectBck[1].mPane->hide();
+    mSingleTagSelectBck[12].mPane->hide();
+    mSingleTagSelectBck[24].mPane->hide();
+    mModeBck[33].mPane->hide();
+    mModeBck[61].mPane->hide();
+    mModeBck[36].mPane->hide();
+    mModeBck[48].mPane->hide();
+    mModeBck[34].mPane->hide();
+    mModeBck[35].mPane->hide();
+    mModeBck[0].mPane->hide();
+    mModeBck[19].mPane->hide();
+    mModeBck[26].mPane->hide();
+    mModeBck[1].mPane->hide();
+    mModeBck[2].mPane->hide();
+    mModeBck[3].mPane->hide();
+
+    strncpy(mName, gSystemRecord.mDefaultName, 4);
+    mNameEntry->init(mName);
+    mRouletteTimer = 0;
+}
+
+void SceneMenu::init()
+{
+    if (System::mspDisplay->getFader())
+        System::mspDisplay->getFader()->startFadeIn(15);
+
+    mCharacterSelect3D->init();
+    j3dSys.reinitGX();
+
+    Scene::SceneType seq = SequenceApp::ptr()->getPrevScene();
+    if (gSequenceInfo._28)
+        seq = (Scene::SceneType)12;
+    gSequenceInfo._28 = 0;
+
+    if (seq == Scene::SCENE_NONE)
+    {
+        reset();
+        return;
+    }
+
+    if (GameAudio::Main::getAudio()->getPlayingSequenceID() != 0x1000001)
+        GameAudio::Main::getAudio()->startSequenceBgm(0x1000001);
+
+    if (seq == Scene::SCENE_TITLE)
+    {
+        reset();
+        return;
+    }
+
+    mInfo.timer = 0;
+    mInfo.mode = mInfo.oldMode;
+
+    if (mInfo.mode == 14)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            if (mPlayerData[i].mState == 2)
+                mPlayerData[i].mState = 1;
+        }
+        mInfo.mode = 12;
+        return;
+    }
+
+    if (seq == Scene::SCENE_GHOST_LOAD_SAVE)
+    {
+        if (gSequenceInfo._30 == 0)
+            mInfo.mode = 12;
+        else
+            mInfo.mode = 6;
+        return;
+    }
+
+    if (seq == (Scene::SceneType)12 || seq == Scene::SCENE_COURSE || seq == Scene::SCENE_MAP_SELECT)
+    {
+        reset();
+        mInfo.nextMode = 13;
+        mInfo.mode = 12;
+        mInfo.oldMode = 12;
+        mInfo.nextScene = Scene::SCENE_MAX;
+        if (seq == (Scene::SceneType)12 && gSequenceInfo._2c == 1)
+        {
+            mInfo.nextMode = 10;
+            mInfo.mode = 9;
+            mInfo.oldMode = 9;
+        }
+    }
+
+    switch (gRaceInfo.mRaceMode)
+    {
+    case 0:
+        mInfo._20 = 0;
+        break;
+    case 1:
+        mInfo._20 = 2;
+        break;
+    case 2:
+        mInfo._20 = 1;
+        break;
+    case 3:
+        mInfo._20 = 3;
+        mMsgId = 0;
+        break;
+    case 4:
+        mInfo._20 = 3;
+        mMsgId = 2;
+        break;
+    case 5:
+        mInfo._20 = 3;
+        mMsgId = 1;
+        break;
+    case 6:
+    case 7:
+    default:
+#line 1702
+        JUT_ASSERT(0);
+    }
+
+    switch (gRaceInfo.mRaceLevel)
+    {
+    case 0:
+        mInfo.engineType = 0;
+        break;
+    case 1:
+        mInfo.engineType = 1;
+        break;
+    case 2:
+        mInfo.engineType = 2;
+        break;
+    case 3:
+        mInfo.engineType = 3;
+        break;
+    default:
+#line 1720
+        JUT_ASSERT(0);
+    }
+
+    for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+    {
+        KartGamePad *pad = gRaceInfo.getKartInfo(i)->getPad();
+        if (pad)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                if (pad == gpaKartPad[j])
+                {
+                    mPlayerData[i].mCharNoF = j;
+                    mPlayerPadNo[j] = i;
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+    {
+        KartGamePad *pad = gRaceInfo.getKartInfo(i)->getPad(1);
+        if (pad)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                if (pad == gpaKartPad[j])
+                {
+                    mPlayerData[i].mCharNoB = j;
+                    mPlayerPadNo[j] = i;
+                }
+            }
+        }
+    }
+
+    mInfo.playerNum = 0;
+    for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+    {
+        if (gRaceInfo.getKartInfo(i)->getPad(1))
+            mInfo.playerNum += 2;
+        else
+        {
+            mInfo.playerNum += 1;
+            mPlayerData[i].mCharNoB = mPlayerData[i].mCharNoF;
+        }
+    }
+    mInfo.playerNum -= 1;
+
+    mInfo.entryNum = gRaceInfo.mStatusNum;
+    mInfo.entryNum -= 1;
+
+    switch (mInfo.entryNum)
+    {
+    case 0:
+        switch (mInfo.playerNum)
+        {
+        case 0:
+            mInfo._18 = 0;
+            break;
+        case 1:
+            mInfo._18 = 1;
+            break;
+        default:
+#line 1773
+            JUT_ASSERT(0);
+        }
+        break;
+    case 1:
+        switch (mInfo.playerNum)
+        {
+        case 1:
+            mInfo._18 = 0;
+            break;
+        case 2:
+            mInfo._18 = 1;
+            break;
+        default:
+#line 1789
+            JUT_ASSERT(0);
+        }
+        break;
+    case 2:
+        switch (mInfo.playerNum)
+        {
+        case 2:
+            mInfo._18 = 0;
+            break;
+        case 3:
+            mInfo._18 = 2;
+            break;
+        default:
+#line 1802
+            JUT_ASSERT(0);
+        }
+        break;
+    case 3:
+        if (mInfo.playerNum == 3)
+            mInfo._18 = 0;
+        else
+        {
+#line 1812
+            JUT_ASSERT(0);
+        }
+        break;
+    default:
+#line 1817
+        JUT_ASSERT(0);
+    }
+
+    if (seq == Scene::SCENE_COURSE || seq == Scene::SCENE_MAP_SELECT)
+    {
+        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+        {
+            if (gRaceInfo.getKartInfo(i)->getPad())
+            {
+                ECharID charId = gRaceInfo.getKartInfo(i)->getDriverCharID(0);
+                for (int j = 0; j < 20; j++)
+                {
+                    if (charId == mChara[j].mCharId)
+                    {
+                        mPlayerData[i].mCharF = j;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+        {
+            if (gRaceInfo.getKartInfo(i)->getPad(1))
+            {
+                ECharID charId = gRaceInfo.getKartInfo(i)->getDriverCharID(1);
+                for (int j = 0; j < 20; j++)
+                {
+                    if (charId == mChara[j].mCharId)
+                    {
+                        mPlayerData[i].mCharB = j;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+        {
+            mPlayerData[i].mCursor = -1;
+            if (mPlayerData[i].mCharF != -1 && mPlayerData[i].mCharB != -1)
+            {
+                mPlayerData[i].mState = 1;
+                EKartID kartId = gRaceInfo.getKartInfo(i)->getKartID();
+                int kartNo = -1;
+                for (int j = 0; j < 21; j++)
+                {
+                    if (kartId == mKartIndex[j])
+                    {
+                        kartNo = j;
+                        break;
+                    }
+                }
+                if (kartNo < 21)
+                    mPlayerData[i].mKart = kartNo;
+                else
+                    mPlayerData[i].mKart = getKart(mPlayerData[i].mCharF, mPlayerData[i].mCharB);
+            }
+            mPlayerData[i].mState = 1;
+        }
+    }
+}
 
 SceneMenu::~SceneMenu() {}
 
@@ -704,10 +1189,8 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *a;
-            J2DPane *b;
-            b = panes[j];
-            a = panes[i];
+            J2DPane *b = panes[j];
+            J2DPane *a = panes[i];
             if (a->mScale.x > b->mScale.x)
             {
                 panes[i] = b;
@@ -726,10 +1209,8 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *a;
-            J2DPane *b;
-            b = panes[j];
-            a = panes[i];
+            J2DPane *b = panes[j];
+            J2DPane *a = panes[i];
             if (a->mScale.x > b->mScale.x)
             {
                 panes[i] = b;
@@ -886,7 +1367,356 @@ void SceneMenu::entry_init()
     }
 }
 
-void SceneMenu::entry() {}
+void SceneMenu::entry()
+{
+    if (gpaGamePad[0]->mButtons.mTrigger & 0x100)
+    {
+        GameAudio::Main::getAudio()->startSystemSe(0x20003);
+        switch (mInfo.playerNum)
+        {
+        case 0:
+            mInfo.nextMode = 6;
+            mInfo._18 = 0;
+            mInfo.entryNum = 0;
+            break;
+        case 1:
+        case 2:
+        case 3:
+            mInfo.nextMode = 3;
+            break;
+        default:
+#line 2641
+            JUT_ASSERT(0);
+        }
+        mInfo.mode = 2;
+        mInfo.oldMode = 1;
+        mInfo.timer = 0;
+    }
+    else if ((gpaGamePad[0]->mButtons.mTrigger & 0x200) && System::mspDisplay->getFader()->getStatus() == JUTFader::Status_In)
+    {
+        GameAudio::Main::getAudio()->startSystemSe(0x20004);
+        if (System::mspDisplay->getFader())
+            System::mspDisplay->getFader()->startFadeOut(15);
+        mInfo.nextMode = 15;
+        mInfo.mode = 2;
+        mInfo.oldMode = 1;
+        mInfo.timer = 0;
+        mInfo.nextScene = Scene::SCENE_TITLE;
+    }
+    else if (gpaGamePad[0]->mButtons.mRepeat & 0x08000000)
+    {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        mInfo.playerNum = (mInfo.playerNum + 3) % 4;
+    }
+    else if (gpaGamePad[0]->mButtons.mRepeat & 0x04000000)
+    {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        mInfo.playerNum = (mInfo.playerNum + 1) % 4;
+    }
+
+    switch (mInfo.playerNum)
+    {
+    case 0:
+    {
+        f32 val1 = mHowManyDriversBck[1].mFrame + 1.0f;
+        mHowManyDriversBck[1].mFrame = val1;
+        if (val1 > 22.0f)
+            mHowManyDriversBck[1].mFrame = 22.0f;
+        f32 val2 = mHowManyDriversBck[2].mFrame - 1.0f;
+        mHowManyDriversBck[2].mFrame = val2;
+        if (val2 < 14.0f)
+            mHowManyDriversBck[2].mFrame = 14.0f;
+        f32 val3 = mHowManyDriversBck[3].mFrame - 1.0f;
+        mHowManyDriversBck[3].mFrame = val3;
+        if (val3 < 14.0f)
+            mHowManyDriversBck[3].mFrame = 14.0f;
+        f32 val4 = mHowManyDriversBck[4].mFrame - 1.0f;
+        mHowManyDriversBck[4].mFrame = val4;
+        if (val4 < 14.0f)
+            mHowManyDriversBck[4].mFrame = 14.0f;
+
+        mHowManyDriversBrk[0].mFrame = 1.0f;
+        mHowManyDriversBrk[1].mFrame = 0.0f;
+        mHowManyDriversBrk[2].mFrame = 0.0f;
+        mHowManyDriversBrk[3].mFrame = 0.0f;
+
+        f32 val5 = mHowManyDriversBck[5].mFrame + 1.0f;
+        mHowManyDriversBck[5].mFrame = val5;
+        if (val5 > 22.0f)
+            mHowManyDriversBck[5].mFrame = 22.0f;
+        f32 val6 = mHowManyDriversBck[6].mFrame - 1.0f;
+        mHowManyDriversBck[6].mFrame = val6;
+        if (val6 < 14.0f)
+            mHowManyDriversBck[6].mFrame = 14.0f;
+        f32 val7 = mHowManyDriversBck[7].mFrame - 1.0f;
+        mHowManyDriversBck[7].mFrame = val7;
+        if (val7 < 14.0f)
+            mHowManyDriversBck[7].mFrame = 14.0f;
+        f32 val8 = mHowManyDriversBck[8].mFrame - 1.0f;
+        mHowManyDriversBck[8].mFrame = val8;
+        if (val8 < 14.0f)
+            mHowManyDriversBck[8].mFrame = 14.0f;
+
+        mHowManyDriversBrk[4].mFrame = 1.0f;
+        mHowManyDriversBrk[5].mFrame = 0.0f;
+        mHowManyDriversBrk[6].mFrame = 0.0f;
+        mHowManyDriversBrk[7].mFrame = 0.0f;
+
+        f32 val9 = mHowManyDriversBck[9].mFrame + 1.0f;
+        mHowManyDriversBck[9].mFrame = val9;
+        if (val9 >= 75.0f)
+            mHowManyDriversBck[9].mFrame = 14.0f;
+        mHowManyDriversBck[10].mFrame = 14.0f;
+        mHowManyDriversBck[11].mFrame = 14.0f;
+        mHowManyDriversBck[12].mFrame = 14.0f;
+
+        mHowManyDriversBrk[4].mFrame = 1.0f;
+        mHowManyDriversBrk[5].mFrame = 0.0f;
+        mHowManyDriversBrk[6].mFrame = 0.0f;
+        mHowManyDriversBrk[7].mFrame = 0.0f;
+        mHowManyDriversBrk[8].mFrame = 1.0f;
+        mHowManyDriversBrk[9].mFrame = 0.0f;
+        mHowManyDriversBrk[10].mFrame = 0.0f;
+        mHowManyDriversBrk[11].mFrame = 0.0f;
+        mHowManyDriversBrk[12].mFrame = 1.0f;
+        mHowManyDriversBrk[13].mFrame = 0.0f;
+        mHowManyDriversBrk[14].mFrame = 0.0f;
+        mHowManyDriversBrk[15].mFrame = 0.0f;
+        mHowManyDriversBrk[16].mFrame = 0.0f;
+        mHowManyDriversBrk[17].mFrame = 0.0f;
+        mHowManyDriversBrk[18].mFrame = 0.0f;
+        mHowManyDriversBrk[19].mFrame = 0.0f;
+        mHowManyDriversBrk[20].mFrame = 0.0f;
+        mHowManyDriversBrk[21].mFrame = 0.0f;
+        break;
+    }
+    case 1:
+    {
+        f32 val10 = mHowManyDriversBck[1].mFrame - 1.0f;
+        mHowManyDriversBck[1].mFrame = val10;
+        if (val10 < 14.0f)
+            mHowManyDriversBck[1].mFrame = 14.0f;
+        f32 val11 = mHowManyDriversBck[2].mFrame + 1.0f;
+        mHowManyDriversBck[2].mFrame = val11;
+        if (val11 > 22.0f)
+            mHowManyDriversBck[2].mFrame = 22.0f;
+        f32 val12 = mHowManyDriversBck[3].mFrame - 1.0f;
+        mHowManyDriversBck[3].mFrame = val12;
+        if (val12 < 14.0f)
+            mHowManyDriversBck[3].mFrame = 14.0f;
+        f32 val13 = mHowManyDriversBck[4].mFrame - 1.0f;
+        mHowManyDriversBck[4].mFrame = val13;
+        if (val13 < 14.0f)
+            mHowManyDriversBck[4].mFrame = 14.0f;
+
+        mHowManyDriversBrk[0].mFrame = 0.0f;
+        mHowManyDriversBrk[1].mFrame = 1.0f;
+        mHowManyDriversBrk[2].mFrame = 0.0f;
+        mHowManyDriversBrk[3].mFrame = 0.0f;
+
+        f32 val14 = mHowManyDriversBck[5].mFrame - 1.0f;
+        mHowManyDriversBck[5].mFrame = val14;
+        if (val14 < 14.0f)
+            mHowManyDriversBck[5].mFrame = 14.0f;
+        f32 val15 = mHowManyDriversBck[6].mFrame + 1.0f;
+        mHowManyDriversBck[6].mFrame = val15;
+        if (val15 > 22.0f)
+            mHowManyDriversBck[6].mFrame = 22.0f;
+        f32 val16 = mHowManyDriversBck[7].mFrame - 1.0f;
+        mHowManyDriversBck[7].mFrame = val16;
+        if (val16 < 14.0f)
+            mHowManyDriversBck[7].mFrame = 14.0f;
+        f32 val17 = mHowManyDriversBck[8].mFrame - 1.0f;
+        mHowManyDriversBck[8].mFrame = val17;
+        if (val17 < 14.0f)
+            mHowManyDriversBck[8].mFrame = 14.0f;
+
+        mHowManyDriversBrk[4].mFrame = 0.0f;
+        mHowManyDriversBrk[5].mFrame = 1.0f;
+        mHowManyDriversBrk[6].mFrame = 0.0f;
+        mHowManyDriversBrk[7].mFrame = 0.0f;
+
+        mHowManyDriversBck[9].mFrame = 14.0f;
+        f32 val18 = mHowManyDriversBck[10].mFrame + 1.0f;
+        mHowManyDriversBck[10].mFrame = val18;
+        if (val18 >= 75.0f)
+            mHowManyDriversBck[10].mFrame = 14.0f;
+        mHowManyDriversBck[11].mFrame = 14.0f;
+        mHowManyDriversBck[12].mFrame = 14.0f;
+
+        mHowManyDriversBrk[4].mFrame = 0.0f;
+        mHowManyDriversBrk[5].mFrame = 1.0f;
+        mHowManyDriversBrk[6].mFrame = 0.0f;
+        mHowManyDriversBrk[7].mFrame = 0.0f;
+        mHowManyDriversBrk[8].mFrame = 0.0f;
+        mHowManyDriversBrk[9].mFrame = 1.0f;
+        mHowManyDriversBrk[10].mFrame = 0.0f;
+        mHowManyDriversBrk[11].mFrame = 0.0f;
+        mHowManyDriversBrk[12].mFrame = 0.0f;
+        mHowManyDriversBrk[13].mFrame = 1.0f;
+        mHowManyDriversBrk[14].mFrame = 1.0f;
+        mHowManyDriversBrk[15].mFrame = 0.0f;
+        mHowManyDriversBrk[16].mFrame = 0.0f;
+        mHowManyDriversBrk[17].mFrame = 0.0f;
+        mHowManyDriversBrk[18].mFrame = 0.0f;
+        mHowManyDriversBrk[19].mFrame = 0.0f;
+        mHowManyDriversBrk[20].mFrame = 0.0f;
+        mHowManyDriversBrk[21].mFrame = 0.0f;
+        break;
+    }
+    case 2:
+    {
+        f32 val19 = mHowManyDriversBck[1].mFrame - 1.0f;
+        mHowManyDriversBck[1].mFrame = val19;
+        if (val19 < 14.0f)
+            mHowManyDriversBck[1].mFrame = 14.0f;
+        f32 val20 = mHowManyDriversBck[2].mFrame - 1.0f;
+        mHowManyDriversBck[2].mFrame = val20;
+        if (val20 < 14.0f)
+            mHowManyDriversBck[2].mFrame = 14.0f;
+        f32 val21 = mHowManyDriversBck[3].mFrame + 1.0f;
+        mHowManyDriversBck[3].mFrame = val21;
+        if (val21 > 22.0f)
+            mHowManyDriversBck[3].mFrame = 22.0f;
+        f32 val22 = mHowManyDriversBck[4].mFrame - 1.0f;
+        mHowManyDriversBck[4].mFrame = val22;
+        if (val22 < 14.0f)
+            mHowManyDriversBck[4].mFrame = 14.0f;
+
+        mHowManyDriversBrk[0].mFrame = 0.0f;
+        mHowManyDriversBrk[1].mFrame = 0.0f;
+        mHowManyDriversBrk[2].mFrame = 1.0f;
+        mHowManyDriversBrk[3].mFrame = 0.0f;
+
+        f32 val23 = mHowManyDriversBck[5].mFrame - 1.0f;
+        mHowManyDriversBck[5].mFrame = val23;
+        if (val23 < 14.0f)
+            mHowManyDriversBck[5].mFrame = 14.0f;
+        f32 val24 = mHowManyDriversBck[6].mFrame - 1.0f;
+        mHowManyDriversBck[6].mFrame = val24;
+        if (val24 < 14.0f)
+            mHowManyDriversBck[6].mFrame = 14.0f;
+        f32 val25 = mHowManyDriversBck[7].mFrame + 1.0f;
+        mHowManyDriversBck[7].mFrame = val25;
+        if (val25 > 22.0f)
+            mHowManyDriversBck[7].mFrame = 22.0f;
+        f32 val26 = mHowManyDriversBck[8].mFrame - 1.0f;
+        mHowManyDriversBck[8].mFrame = val26;
+        if (val26 < 14.0f)
+            mHowManyDriversBck[8].mFrame = 14.0f;
+
+        mHowManyDriversBrk[4].mFrame = 0.0f;
+        mHowManyDriversBrk[5].mFrame = 0.0f;
+        mHowManyDriversBrk[6].mFrame = 1.0f;
+        mHowManyDriversBrk[7].mFrame = 0.0f;
+
+        mHowManyDriversBck[9].mFrame = 14.0f;
+        mHowManyDriversBck[10].mFrame = 14.0f;
+        f32 val27 = mHowManyDriversBck[11].mFrame + 1.0f;
+        mHowManyDriversBck[11].mFrame = val27;
+        if (val27 >= 75.0f)
+            mHowManyDriversBck[11].mFrame = 14.0f;
+        mHowManyDriversBck[12].mFrame = 14.0f;
+
+        mHowManyDriversBrk[4].mFrame = 0.0f;
+        mHowManyDriversBrk[5].mFrame = 0.0f;
+        mHowManyDriversBrk[6].mFrame = 1.0f;
+        mHowManyDriversBrk[7].mFrame = 0.0f;
+        mHowManyDriversBrk[8].mFrame = 0.0f;
+        mHowManyDriversBrk[9].mFrame = 0.0f;
+        mHowManyDriversBrk[10].mFrame = 1.0f;
+        mHowManyDriversBrk[11].mFrame = 0.0f;
+        mHowManyDriversBrk[12].mFrame = 0.0f;
+        mHowManyDriversBrk[13].mFrame = 0.0f;
+        mHowManyDriversBrk[14].mFrame = 0.0f;
+        mHowManyDriversBrk[15].mFrame = 1.0f;
+        mHowManyDriversBrk[16].mFrame = 1.0f;
+        mHowManyDriversBrk[17].mFrame = 0.0f;
+        mHowManyDriversBrk[18].mFrame = 0.0f;
+        mHowManyDriversBrk[19].mFrame = 0.0f;
+        mHowManyDriversBrk[20].mFrame = 0.0f;
+        mHowManyDriversBrk[21].mFrame = 0.0f;
+        break;
+    }
+    case 3:
+    {
+        f32 val28 = mHowManyDriversBck[1].mFrame - 1.0f;
+        mHowManyDriversBck[1].mFrame = val28;
+        if (val28 < 14.0f)
+            mHowManyDriversBck[1].mFrame = 14.0f;
+        f32 val29 = mHowManyDriversBck[2].mFrame - 1.0f;
+        mHowManyDriversBck[2].mFrame = val29;
+        if (val29 < 14.0f)
+            mHowManyDriversBck[2].mFrame = 14.0f;
+        f32 val30 = mHowManyDriversBck[3].mFrame - 1.0f;
+        mHowManyDriversBck[3].mFrame = val30;
+        if (val30 < 14.0f)
+            mHowManyDriversBck[3].mFrame = 14.0f;
+        f32 val31 = mHowManyDriversBck[4].mFrame + 1.0f;
+        mHowManyDriversBck[4].mFrame = val31;
+        if (val31 > 22.0f)
+            mHowManyDriversBck[4].mFrame = 22.0f;
+
+        mHowManyDriversBrk[0].mFrame = 0.0f;
+        mHowManyDriversBrk[1].mFrame = 0.0f;
+        mHowManyDriversBrk[2].mFrame = 0.0f;
+        mHowManyDriversBrk[3].mFrame = 1.0f;
+
+        f32 val32 = mHowManyDriversBck[5].mFrame - 1.0f;
+        mHowManyDriversBck[5].mFrame = val32;
+        if (val32 < 14.0f)
+            mHowManyDriversBck[5].mFrame = 14.0f;
+        f32 val33 = mHowManyDriversBck[6].mFrame - 1.0f;
+        mHowManyDriversBck[6].mFrame = val33;
+        if (val33 < 14.0f)
+            mHowManyDriversBck[6].mFrame = 14.0f;
+        f32 val34 = mHowManyDriversBck[7].mFrame - 1.0f;
+        mHowManyDriversBck[7].mFrame = val34;
+        if (val34 < 14.0f)
+            mHowManyDriversBck[7].mFrame = 14.0f;
+        f32 val35 = mHowManyDriversBck[8].mFrame + 1.0f;
+        mHowManyDriversBck[8].mFrame = val35;
+        if (val35 > 22.0f)
+            mHowManyDriversBck[8].mFrame = 22.0f;
+
+        mHowManyDriversBrk[4].mFrame = 0.0f;
+        mHowManyDriversBrk[5].mFrame = 0.0f;
+        mHowManyDriversBrk[6].mFrame = 0.0f;
+        mHowManyDriversBrk[7].mFrame = 1.0f;
+
+        mHowManyDriversBck[9].mFrame = 14.0f;
+        mHowManyDriversBck[10].mFrame = 14.0f;
+        mHowManyDriversBck[11].mFrame = 14.0f;
+        f32 val36 = mHowManyDriversBck[12].mFrame + 1.0f;
+        mHowManyDriversBck[12].mFrame = val36;
+        if (val36 >= 75.0f)
+            mHowManyDriversBck[12].mFrame = 14.0f;
+
+        mHowManyDriversBrk[4].mFrame = 0.0f;
+        mHowManyDriversBrk[5].mFrame = 0.0f;
+        mHowManyDriversBrk[6].mFrame = 0.0f;
+        mHowManyDriversBrk[7].mFrame = 1.0f;
+        mHowManyDriversBrk[8].mFrame = 0.0f;
+        mHowManyDriversBrk[9].mFrame = 0.0f;
+        mHowManyDriversBrk[10].mFrame = 0.0f;
+        mHowManyDriversBrk[11].mFrame = 1.0f;
+        mHowManyDriversBrk[12].mFrame = 0.0f;
+        mHowManyDriversBrk[13].mFrame = 0.0f;
+        mHowManyDriversBrk[14].mFrame = 0.0f;
+        mHowManyDriversBrk[15].mFrame = 0.0f;
+        mHowManyDriversBrk[16].mFrame = 0.0f;
+        mHowManyDriversBrk[17].mFrame = 1.0f;
+        mHowManyDriversBrk[18].mFrame = 1.0f;
+        mHowManyDriversBrk[19].mFrame = 0.0f;
+        mHowManyDriversBrk[20].mFrame = 0.0f;
+        mHowManyDriversBrk[21].mFrame = 0.0f;
+        break;
+    }
+    default:
+#line 2849
+        JUT_ASSERT(0);
+    }
+}
 
 void SceneMenu::entry_end()
 {
@@ -1724,7 +2554,7 @@ void SceneMenu::selectZ(int no)
         return;
 
     int i;
-    const int padNo = mPlayerPadNo[no];
+    int padNo = mPlayerPadNo[no];
     for (i = 0; i <= mInfo.playerNum; i++)
     {
         if (no != i && mPlayerPadNo[i] == padNo)

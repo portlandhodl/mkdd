@@ -266,6 +266,7 @@ public:
     }
 
     friend class SceneMap;
+    friend class SceneMenu;
     friend class Goal2D;
     friend class Award2D;
     friend class SceneMapSelect;
