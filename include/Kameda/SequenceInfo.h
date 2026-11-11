@@ -36,11 +36,11 @@ public:
     SequenceInfo();
     void setGPRank(int, int);
 
-    void setStartNo(int kart, int kartNo) {
+    void setStartNo(int kartNo, int startNo) {
 #line 167
-        JUT_MINMAX_ASSERT(0, kart, 8);
         JUT_MINMAX_ASSERT(0, kartNo, 8);
-        mStartNo[kart] = kartNo;
+        JUT_MINMAX_ASSERT(0, startNo, 8);
+        mStartNo[kartNo] = startNo;
     }
 
     void set_318_charId(int kart, int driverNo, ECharID charId) {
@@ -191,45 +191,46 @@ public:
         return _40[kart][rank];
     }
 
-    void set_80(int kart, int val) {
+    void checkKart(int kart) {
 #line 192
         JUT_MINMAX_ASSERT(0, kart, 4);
-        _80[kart] = val;
     }
 
-    void set_40(int kart, int rank, int val) {
+    void checkKart2(int kart) {
 #line 205
         JUT_MINMAX_ASSERT(0, kart, 4);
+    }
+
+    void checkRank(int rank) {
 #line 206
         JUT_MINMAX_ASSERT(0, rank, 4);
-        _40[kart][rank] = val;
     }
 
     void inc_80(int kart) {
-        int k = kart;
 #line 188
         JUT_MINMAX_ASSERT(0, kart, 4);
-        int val = _80[kart] + 1;
+        int v = _80[kart];
+        checkKart(kart);
+        int val = v + 1;
         if (val > 99)
-            val = 99;
-#line 192
-        JUT_MINMAX_ASSERT(0, k, 4);
-        _80[k] = val;
+            _80[kart] = 99;
+        else
+            _80[kart] = val;
     }
 
     void inc_40(int kart, int rank) {
-        int val = _40[kart][rank] + 1;
 #line 200
         JUT_MINMAX_ASSERT(0, kart, 4);
 #line 201
         JUT_MINMAX_ASSERT(0, rank, 4);
+        int v = _40[kart][rank];
+        checkKart2(kart);
+        checkRank(rank);
+        int val = v + 1;
         if (val > 99)
-            val = 99;
-#line 205
-        JUT_MINMAX_ASSERT(0, kart, 4);
-#line 206
-        JUT_MINMAX_ASSERT(0, rank, 4);
-        _40[kart][rank] = val;
+            _40[kart][rank] = 99;
+        else
+            _40[kart][rank] = val;
     }
 
     int getCourse() { return mMapInfo.course; }

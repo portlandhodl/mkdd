@@ -217,6 +217,7 @@ public:
     }
     KartChecker *getKartChecker(int index) const
     {
+#line 267 "RaceMgr.h"
         JUT_MINMAX_ASSERT(0, index, 8);
         return mKartChecker[index];
     }

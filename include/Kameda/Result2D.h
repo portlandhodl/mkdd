@@ -133,7 +133,7 @@ public:
     void getFrameColor(JUTColor &); // 0x80150500
     f32 getScale(int); // 0x8015057c
     void setScale(int); // 0x801505c4
-    void setGPClr(); // 0x80150804
+    static void setGPClr(); // 0x80150804
     bool getAnmEnd(); // 0x80150830
     
     static const u64 mSetWordLineTag[9]; // 0x8036ec18
