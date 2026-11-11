@@ -10,6 +10,8 @@ static inline u32 getMdlDataFlag_TexGenFlag(u32 flags) { return flags & 0x0C0000
 static inline u32 getMdlDataFlag_ColorFlag(u32 flags) { return flags & 0xC0000000; }
 static inline u32 getMdlDataFlag_PEFlag(u32 flags) { return flags & 0x30000000; }
 
+inline J3DMaterial::J3DMaterial() { initialize(); }
+
 J3DMaterialFactory::J3DMaterialFactory(const J3DMaterialBlock& block)
 {
     _00 = block.mCount;
@@ -72,6 +74,31 @@ u32 J3DMaterialFactory::countUniqueMaterials()
         }
     }
     return count;
+}
+
+u32 J3DMaterialFactory::countTexGens(int matID) const
+{
+    J3DMaterialInitData& data = _04[_08[matID]];
+    u8 id = data._03;
+    if (id != 0xFF)
+        return _24[id];
+    return 0;
+}
+
+u32 J3DMaterialFactory::countStages(int matID) const
+{
+    J3DMaterialInitData& data = _04[_08[matID]];
+    u32 texNoCount = 0;
+    u32 stageNum   = 0;
+    if (data._04 != 0xFF)
+        stageNum = _4C[data._04];
+    for (int i = 0; i < 8; i++) {
+        if (data.mTexNoIndices[i] != 0xFFFF)
+            texNoCount++;
+    }
+    if (stageNum != texNoCount && texNoCount != 0)
+        return stageNum > texNoCount ? stageNum : texNoCount;
+    return stageNum;
 }
 
 J3DMaterial* J3DMaterialFactory::create(J3DMaterial* material, MaterialType type, int matID, u32 flags) const
@@ -279,11 +306,9 @@ void J3DMaterialFactory::modifyPatchedCurrentMtx(J3DMaterial* material, int matI
     u32 texGenNum = countTexGens(matID);
     for (u8 i = 0; i < texGenNum; i++)
         coords[i] = newTexCoord(matID, i);
-    material->mCurrentMtx.mMtxIdxRegA = ((u32)coords[0].getTexGenMtx() << 6) | ((u32)coords[1].getTexGenMtx() << 12)
-                                         | ((u32)coords[2].getTexGenMtx() << 18) | ((u32)coords[3].getTexGenMtx() << 24);
-    material->mCurrentMtx.mMtxIdxRegB
-        = coords[4].getTexGenMtx() | (coords[5].getTexGenMtx() << 6) | (coords[6].getTexGenMtx() << 12)
-          | (coords[7].getTexGenMtx() << 18);
+    material->mCurrentMtx.setCurrentTexMtx(coords[0].getTexGenMtx(), coords[1].getTexGenMtx(), coords[2].getTexGenMtx(),
+                                           coords[3].getTexGenMtx(), coords[4].getTexGenMtx(), coords[5].getTexGenMtx(),
+                                           coords[6].getTexGenMtx(), coords[7].getTexGenMtx());
 }
 
 J3DLockedMaterial* J3DMaterialFactory::createLockedMaterial(J3DMaterial* material, int matID, u32 flags) const
@@ -420,11 +445,12 @@ u8 J3DMaterialFactory::newColorChanNum(int idx) const
 
 J3DColorChan J3DMaterialFactory::newColorChan(int idx, int stage) const
 {
-    J3DMaterialInitData& initData = _04[_08[idx]];
-    u16 id = initData.mColorChanIndices[stage];
-    if (id != 0xFFFF)
-        return J3DColorChan(_18[id]);
-    return J3DColorChan();
+    J3DMaterialInitData* initData = &_04[_08[idx]];
+
+    if (initData->mColorChanIndices[stage] != 0xFFFF)
+        return J3DColorChan(_18[initData->mColorChanIndices[stage]]);
+    else
+        return J3DColorChan();
 }
 
 J3DGXColor J3DMaterialFactory::newAmbColor(int idx, int stage) const
@@ -503,7 +529,7 @@ J3DTevOrder J3DMaterialFactory::newTevOrder(int idx, int stage) const
 
 J3DGXColorS10 J3DMaterialFactory::newTevColor(int idx, int stage) const
 {
-    J3DGXColorS10 dflt = j3dDefaultTevColor;
+    GXColorS10 dflt = {0, 0, 0, 0};
 
     J3DMaterialInitData* initData = &_04[_08[idx]];
 
@@ -602,6 +628,11 @@ J3DIndTexCoordScale J3DMaterialFactory::newIndTexCoordScale(int idx, int stage) 
         return J3DIndTexCoordScale(_0C[idx].mIndTexCoordScales[stage]);
     else
         return J3DIndTexCoordScale(j3dDefaultIndTexCoordScaleInfo);
+}
+
+J3DMaterialInitData& J3DMaterialFactory::getMaterialInitData(u16 idx) const
+{
+    return _04[_08[idx]];
 }
 
 J3DFog J3DMaterialFactory::newFog(int idx) const

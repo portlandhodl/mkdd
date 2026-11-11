@@ -645,12 +645,12 @@ struct J3DTevStage {
         setTevAlphaOp(info.mAlphaOp, info.mAlphaBias, info.mAlphaScale, info.mAlphaClamp, info.mAlphaRegID);
     }
 
-    void setTexSel(u32 newTexSel) { mTevSwapModeInfo = mTevSwapModeInfo & ~0x0C | newTexSel << 2; }
-    void setRasSel(u32 newRasSel) { mTevSwapModeInfo = mTevSwapModeInfo & ~0x03 | newRasSel; }
+    void setTexSel(u8 newTexSel) { mTevSwapModeInfo = mTevSwapModeInfo & ~0x0C | newTexSel << 2; }
+    void setRasSel(u8 newRasSel) { mTevSwapModeInfo = mTevSwapModeInfo & ~0x03 | newRasSel; }
     void setTevSwapModeInfo(const J3DTevSwapModeInfo& info)
     {
-        setTexSel(info.mTexSel);
-        setRasSel(info.mRasSel);
+        mTevSwapModeInfo = mTevSwapModeInfo & ~0x0C | (u32)info.mTexSel << 2;
+        mTevSwapModeInfo = mTevSwapModeInfo & ~0x03 | (u32)info.mRasSel;
     }
 
     void load(u32) const

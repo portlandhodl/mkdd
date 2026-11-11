@@ -29,6 +29,7 @@ struct J3DTexMtxObj {
     ~J3DTexMtxObj();
 
     Mtx& getMtx(u16 idx) { return mTexMtx[idx]; }
+    Mtx44& getEffectMtx(u16 idx) { return mEffMtx[idx]; }
 
     void setEffectMtx(u16 idx, Mtx &m) {
         memcpy(mEffMtx[idx], m, sizeof(Mtx));
@@ -160,17 +161,7 @@ struct J3DMatPacket : public J3DDrawPacket {
     J3DMaterialAnm* mMaterialAnm;     // _3C
 };
 
-struct J3DShapePacket_0x24 {
-    inline J3DShapePacket_0x24(u16 num)
-        : _00(new Mtx[num])
-        , _04(new Mtx44[num])
-        , _08(num)
-    {
-    }
-    Mtx* _00;   // _00
-    Mtx44* _04; // _04
-    s16 _08;    // _08
-};
+typedef J3DTexMtxObj J3DShapePacket_0x24;
 
 /**
  * @size{0x3C}

@@ -149,30 +149,9 @@ struct J3DMaterialFactory {
 
     /** @fabricated */
     // inline s32 getMaterialInitDataIndex(s32 initDataIndexIndex) const { return _08[initDataIndexIndex]; }
-    inline J3DMaterialInitData& getMaterialInitData(s32 index) const { return _04[_08[index]]; }
-    inline u32 countTexGens(int matID) const
-    {
-        J3DMaterialInitData& data = _04[_08[matID]];
-        u8 id = data._03;
-        if (id != 0xFF)
-            return _24[id];
-        return 0;
-    }
-    inline u32 countStages(int matID) const
-    {
-        J3DMaterialInitData& data = _04[_08[matID]];
-        u32 texNoCount = 0;
-        u32 stageNum    = 0;
-        if (data._04 != 0xFF)
-            stageNum = _4C[data._04];
-        for (int i = 0; i < 8; i++) {
-            if (data.mTexNoIndices[i] != 0xFFFF)
-                texNoCount++;
-        }
-        if (stageNum != texNoCount && texNoCount != 0)
-            return stageNum > texNoCount ? stageNum : texNoCount;
-        return stageNum;
-    }
+    J3DMaterialInitData& getMaterialInitData(u16) const;
+    u32 countTexGens(int) const;
+    u32 countStages(int) const;
     inline u8 getMaterialMode(int matID) const { return _04[_08[matID]]._00; }
 
 

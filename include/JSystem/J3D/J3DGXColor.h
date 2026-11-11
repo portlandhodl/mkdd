@@ -60,7 +60,7 @@ struct J3DGXColorS10 : public GXColorS10 {
         ((u32*)this)[1] = ((const u32*)&other)[1];
     }
 
-    J3DGXColorS10(const GXColorS10& other) { *(u64*)this = *(u64*)&other; }
+    J3DGXColorS10(const GXColorS10& other) : GXColorS10(other) { }
 
     J3DGXColorS10(const u64& other)
     {

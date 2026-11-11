@@ -53,4 +53,31 @@ inline void J3DPSMtx33Copy
 }
 // clang-format on
 
+// clang-format off
+/**
+ * @fabricated
+ */
+inline void J3DPSMtx33CopyFrom34
+(
+    const register Mtx src,
+    register Mtx33 dst
+)
+{
+    __asm {
+        psq_l       fp5, 0(src),   0, 0
+        lfs         fp4, 8(src)
+        psq_l       fp3, 16(src),  0, 0
+        lfs         fp2, 24(src)
+        psq_l       fp1, 32(src),  0, 0
+        lfs         fp0, 40(src)
+        psq_st      fp5, 0(dst),   0, 0
+        stfs        fp4, 8(dst)
+        psq_st      fp3, 12(dst),  0, 0
+        stfs        fp2, 20(dst)
+        psq_st      fp1, 24(dst),  0, 0
+        stfs        fp0, 32(dst)
+    }
+}
+// clang-format on
+
 #endif
