@@ -1759,7 +1759,7 @@ void Race2D::drawPlayerMark()
         return;
     if (!mDrawFlag)
         return;
-    if (RCMGetManager()->getPlayerNumber() < 2 && !J2DManager::getNetFlag())
+    if (RCMGetManager()->getConsoleNumber() < 2 && !J2DManager::getNetFlag())
         return;
 
     mGrafContext->setPort();
@@ -1768,14 +1768,14 @@ void Race2D::drawPlayerMark()
     GXSetVtxDesc(GX_VA_CLR0, GX_DIRECT);
     GXSetVtxDesc(GX_VA_TEX0, GX_DIRECT);
     GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
-    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_F32, 0);
+    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U8, 7);
     GXSetVtxAttrFmt(GX_VTXFMT1, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-    GXSetVtxAttrFmt(GX_VTXFMT1, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+    GXSetVtxAttrFmt(GX_VTXFMT1, GX_VA_POS, GX_POS_XY, GX_F32, 0);
     GXSetVtxAttrFmt(GX_VTXFMT1, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
     GXSetVtxAttrFmt(GX_VTXFMT2, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-    GXSetVtxAttrFmt(GX_VTXFMT2, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
-    GXSetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+    GXSetVtxAttrFmt(GX_VTXFMT2, GX_VA_POS, GX_POS_XY, GX_F32, 0);
+    GXSetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 7);
 
     for (int i = 0; i < 2; i++)
     {
@@ -1783,12 +1783,13 @@ void Race2D::drawPlayerMark()
         GXSetTevAlphaOp((GXTevStageID)i, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
         GXSetTexCoordGen2((GXTexCoordID)i, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY, GX_FALSE, GX_PTIDENTITY);
     }
-    GXSetCurrentMtx(GX_IDENTITY);
+    GXSetCurrentMtx(GX_PNMTX0);
 
     f32 scale = 1.0f;
     switch (RCMGetManager()->getConsoleNumber())
     {
     case 1:
+        scale = 1.0f;
         break;
     case 2:
         scale = 0.85f;
@@ -1802,13 +1803,11 @@ void Race2D::drawPlayerMark()
         JUT_ASSERT_F(0, "%s", "0");
         break;
     }
-    f32 xOff = 10.0f * scale;
-    f32 yOff = 47.0f * scale;
 
     for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++)
     {
         GXSetScissor(mAlarm[status].mBase, mAlarm[status]._4, mAlarm[status].mStep, mAlarm[status]._c);
-        for (int item = 0; item < RCMGetManager()->getKartNumber(); item++)
+        for (int item = 0; item < RCMGetManager()->getPlayerNumber(); item++)
         {
             int kartNo = mMarkOrder[status][item];
             if (J2DManager::getKart2Status(kartNo) == status)
@@ -1824,27 +1823,23 @@ void Race2D::drawPlayerMark()
 
             if (RCMGetManager()->getRaceMode() != 6)
                 continue;
+            u8 alpha = mMark[status][kartNo]->getAlpha();
             if (!isBombReach(kartNo))
                 continue;
 
             for (int type = 0; type < 2; type++)
             {
-                K2DPicture *bomb = ((K2DPicture **)((u8 *)this + 0xc90))[kartNo * 2 + type];
                 f32 s = getReachBombScale(kartNo, type);
-                f32 bw = bomb->mPicture.getWidth() * s;
-                f32 bh = bomb->mPicture.getHeight() * s;
-                bomb->mPicture.setAlpha(((K2DPicture *)mMark[status][kartNo])->mPicture.getAlpha());
-                bomb->drawK2D(mMarkPos[status][kartNo].x - bw * 0.5f + xOff,
-                              mMarkPos[status][kartNo].y - bh * 0.5f - yOff, bw, bh, true);
+                f32 bw = mStarPics[kartNo][type]->getWidth() * s;
+                f32 bh = mStarPics[kartNo][type]->getHeight() * s;
+                mStarPics[kartNo][type]->setAlpha(alpha);
+                ((K2DPicture *)mStarPics[kartNo][type])->drawK2D(10.0f * scale + (mMarkPos[status][kartNo].x - bw / 2.0f),
+                                                                 mMarkPos[status][kartNo].y - bh / 2.0f - 47.0f * scale, bw, bh, true);
             }
         }
     }
 
-    int h = System::get2DScisH();
-    int w = System::get2DScisW();
-    int y = System::get2DScisY();
-    int x = System::get2DScisX();
-    GXSetScissor(x, y, w, h);
+    GXSetScissor(System::get2DScisX(), System::get2DScisY(), System::get2DScisW(), System::get2DScisH());
 }
 
 void Race2D::drawMask()
@@ -2111,8 +2106,7 @@ void Race2D::drawAlarm()
     for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++)
     {
         mPlayerHUD[status].mIsAlarm = false;
-        int kart = J2DManager::getStatus2Kart(status);
-        if (RCMGetManager()->getKartChecker(kart)->isGoal())
+        if (RCMGetManager()->getKartChecker(J2DManager::getStatus2Kart(status))->isGoal())
             continue;
 
         if (RCMGetManager()->mRaceDirector->isRaceEnd())
@@ -2120,73 +2114,72 @@ void Race2D::drawAlarm()
 
         GXSetScissor(mAlarm[status].mBase, mAlarm[status]._4, mAlarm[status].mStep, mAlarm[status]._c);
 
-        bool drawn = false;
-        for (JSULink<ItemObj> *link = ItemObjMgr::gItemMgr->_7fc.getFirst(); link != NULL; link = link->getNext())
+        for (int i = 0; i < 4; i++)
         {
-            ItemObj *item = link->getObject();
-            if (item == NULL)
-                continue;
-            int itemKart = J2DManager::getStatus2Kart(status);
-            if (item->mOwnerNum == itemKart)
-                continue;
-            if (item->mState == 3 || item->mState == 4)
-                continue;
-            if (item->mItemKind != alarmItemKind[status])
-                continue;
-
-            int kartNo = J2DManager::getStatus2Kart(status);
-            u8 *loader = (u8 *)RCMGetManager()->getKartLoader(status);
-            f32 dx = item->mPos.x - *(f32 *)(loader + 0x4c);
-            f32 dy = item->mPos.y - *(f32 *)(loader + 0x5c);
-            f32 dz = item->mPos.z - *(f32 *)(loader + 0x6c);
-            if (dx * dx + dy * dy + dz * dz >= 16000000.0f)
-                continue;
-
-            if (item->mItemKind == 11)
+            bool drawn = false;
+            for (JSUListIterator<ItemObj> it(ItemObjMgr::gItemMgr->_7fc.getFirst()); it != ItemObjMgr::gItemMgr->_7fc.getEnd(); it++)
             {
-                if (ItemObjMgr::getItemYoshiEgg(item)->mColorID == 1)
-                    mAlarmPic1->changeTexture(mItemTex[item->mItemKind], 0);
-                else
-                    mAlarmPic1->changeTexture(mItemTex[27], 0);
+                ItemObj *item = it.getObject();
+                if (item == NULL)
+                    continue;
+                int kartNo = J2DManager::getStatus2Kart(status);
+                if (kartNo == item->mOwnerNum)
+                    continue;
+                if (item->mState == 3 || item->mState == 4)
+                    continue;
+                if (alarmItemKind[i] != item->mItemKind)
+                    continue;
+
+                KartLoader *loader = RCMGetManager()->getKartLoader(kartNo);
+                JGeometry::TVec3f pos = item->mPos;
+                f32 dx = pos.x - *(f32 *)((u8 *)loader + 0x4c);
+                f32 dy = pos.y - *(f32 *)((u8 *)loader + 0x5c);
+                f32 dz = pos.z - *(f32 *)((u8 *)loader + 0x6c);
+                if (dx * dx + dy * dy + dz * dz < 16000000.0f)
+                {
+                    if (item->mItemKind == 11)
+                    {
+                        if (ItemObjMgr::getItemYoshiEgg(item)->mColorID == 1)
+                            mAlarmPic1->changeTexture(mItemTex[item->mItemKind], 0);
+                        else
+                            mAlarmPic1->changeTexture(mItemTex[27], 0);
+                    }
+                    else
+                    {
+                        mAlarmPic1->changeTexture(mItemTex[item->mItemKind], 0);
+                    }
+
+                    JGeometry::TVec2f screenPos;
+                    if (SiUtil::getScreenPos(status, pos, &screenPos, RCMGetManager()->isMirror()) == 0xffffffff)
+                    {
+                        alarmX(status, screenPos.x);
+
+                        mAlarmPic0->setAlpha(mPlayerHUD[status].mAlarmAlpha[i]);
+                        ((K2DPicture *)mAlarmPic0)->drawK2D(screenPos.x + mAlarmPos0.x, mAlarmX[status] + mAlarmPos0.y,
+                                                           mAlarmPic0->getWidth(), mAlarmPic0->getHeight(), true);
+
+                        mAlarmPic1->setAlpha(mPlayerHUD[status].mAlarmAlpha[i]);
+                        ((K2DPicture *)mAlarmPic1)->drawK2D(screenPos.x + mAlarmPos1.x, mAlarmX[status] + mAlarmPos1.y,
+                                                           mAlarmPic1->getWidth(), mAlarmPic1->getHeight(), true);
+
+                        drawn = true;
+                        mPlayerHUD[status].mIsAlarm = true;
+                    }
+                }
+            }
+
+            if (drawn)
+            {
+                mPlayerHUD[status].mAlarmAlpha[i] += 26;
+                if (mPlayerHUD[status].mAlarmAlpha[i] >= 255)
+                    mPlayerHUD[status].mAlarmAlpha[i] = 255;
             }
             else
             {
-                mAlarmPic1->changeTexture(mItemTex[item->mItemKind], 0);
+                mPlayerHUD[status].mAlarmAlpha[i] -= 13;
+                if (mPlayerHUD[status].mAlarmAlpha[i] < 0)
+                    mPlayerHUD[status].mAlarmAlpha[i] = 0;
             }
-
-            JGeometry::TVec2f pos;
-            if (SiUtil::getScreenPos(status, item->mPos, &pos, RCMGetManager()->isMirror()) == -1)
-                continue;
-
-            alarmX(status, pos.x);
-
-            J2DPicture *pic = mAlarmPic0;
-            pic->setAlpha((u8)mPlayerHUD[status].mAlarmAlpha[0]);
-            JGeometry::TBox2f *b = pic->getBounds();
-            ((K2DPicture *)pic)->drawK2D(pos.x + mAlarmPos0.x, mAlarmX[status] + mAlarmPos0.y,
-                                         b->getWidth(), b->getHeight(), true);
-
-            pic = mAlarmPic1;
-            pic->setAlpha((u8)mPlayerHUD[status].mAlarmAlpha[0]);
-            JGeometry::TBox2f *b2 = pic->getBounds();
-            ((K2DPicture *)pic)->drawK2D(pos.x + mAlarmPos1.x, mAlarmX[status] + mAlarmPos1.y,
-                                         b2->getWidth(), b2->getHeight(), true);
-
-            drawn = true;
-            mPlayerHUD[status].mIsAlarm = true;
-        }
-
-        if (drawn)
-        {
-            mPlayerHUD[status].mAlarmAlpha[0] += 26;
-            if (mPlayerHUD[status].mAlarmAlpha[0] > 255)
-                mPlayerHUD[status].mAlarmAlpha[0] = 255;
-        }
-        else
-        {
-            mPlayerHUD[status].mAlarmAlpha[0] -= 13;
-            if (mPlayerHUD[status].mAlarmAlpha[0] < 0)
-                mPlayerHUD[status].mAlarmAlpha[0] = 0;
         }
     }
 
@@ -2195,23 +2188,13 @@ void Race2D::drawAlarm()
 
 void Race2D::anmTA(int no)
 {
-    JUTColor colorA = mTimeCornerColor.mColor0;
-    JUTColor colorB;
-    J2DPicture::TCornerColor cornerB;
-    JUTColor colorB2 = mTimeCornerColor.mColor0;
-    JUTColor blackB2;
-    JUTColor colorC;
-    J2DPicture::TCornerColor cornerC;
-    JUTColor colorD;
     if (mAnmTA[no].mCount[0] != 0)
     {
-        int frame = mAnmTA[no].mCount[0];
-        mAnmTA[no].mCount[0] = frame + 1;
+        int frame = mAnmTA[no].mCount[0]++;
         if (frame < 246)
         {
             u8 alpha;
             getAlphaAnmTA(frame, alpha);
-            
             for (int i = 0; i < 10; i++)
                 _694x[no][i]->setAlpha(alpha);
         }
@@ -2219,122 +2202,90 @@ void Race2D::anmTA(int no)
         {
             mAnmTA[no].mCount[0] = 0;
             _694x[no][0]->changeTexture(mTimeLapName[0], 0);
-            JUTColor color = mTimeCornerColor.mColor0;
-            
             for (int i = 0; i < 10; i++)
             {
-                J2DPicture *pic = _694x[no][i];
-                pic->mCornerColors[0] = color;
-                pic->setAlpha(255);
+                _694x[no][i]->setCornerColor(mTimeCornerColor);
+                _694x[no][i]->setAlpha(255);
             }
         }
     }
 
     if (mAnmTA[no].mCount[1] != 0)
     {
-        int frame = mAnmTA[no].mCount[1];
-        mAnmTA[no].mCount[1] = frame + 1;
+        int frame = mAnmTA[no].mCount[1]++;
         switch (frame)
         {
         case 1:
-            GameAudio::Main::msBasic->startSystemSe(0x25f);
+            GameAudio::Main::msBasic->startSystemSe(0x2005f);
             break;
         case 17:
-            GameAudio::Main::msBasic->startSystemSe(0x260);
+            GameAudio::Main::msBasic->startSystemSe(0x20060);
             break;
         case 33:
-            GameAudio::Main::msBasic->startSystemSe(0x261);
+            GameAudio::Main::msBasic->startSystemSe(0x20061);
             break;
         case 49:
-            GameAudio::Main::msBasic->startSystemSe(0x262);
+            GameAudio::Main::msBasic->startSystemSe(0x20062);
             break;
         case 65:
-            GameAudio::Main::msBasic->startSystemSe(0x263);
+            GameAudio::Main::msBasic->startSystemSe(0x20063);
             break;
         case 81:
-            GameAudio::Main::msBasic->startSystemSe(0x264);
+            GameAudio::Main::msBasic->startSystemSe(0x20064);
             break;
         }
 
         if (frame < 192)
         {
-            colorB.set(0xffffffff);
-            cornerB.mColor0.set(0xffffffff);
-            cornerB.mColor1.set(0xffffffff);
-            cornerB.mColor2.set(0xffffffff);
-            cornerB.mColor3.set(0xffffffff);
-            getBestTimeColor(frame, colorB, cornerB);
-            
+            JUTColor color;
+            J2DPicture::TCornerColor cornerColor;
+            getBestTimeColor(frame, color, cornerColor);
             for (int i = 0; i < 10; i++)
             {
-                J2DPicture *pic = _694x[no][i];
-                *(J2DPicture::TCornerColor *)(u8 *)&pic->mCornerColors[0] = cornerB;
-                pic->setBlack(colorB);
+                _694x[no][i]->setBlack(color);
+                _694x[no][i]->setCornerColor(cornerColor);
             }
         }
         else
         {
             mAnmTA[no].mCount[1] = 0;
             _694x[no][0]->changeTexture(mTimeLapName[0], 0);
-            blackB2.set(0);
-            
             for (int i = 0; i < 10; i++)
             {
-                J2DPicture *pic = _694x[no][i];
-                *(J2DPicture::TCornerColor *)(u8 *)&pic->mCornerColors[0] = *(J2DPicture::TCornerColor *)&colorB2;
-                pic->setBlack(blackB2);
-            }
-            for (int i = 0; i < 9; i++)
-            {
-                J2DPicture *pic = _694x[no][i];
-                *(J2DPicture::TCornerColor *)(u8 *)&pic->mCornerColors[0] = *(J2DPicture::TCornerColor *)&colorB2;
-                pic->setBlack(blackB2);
+                _694x[no][i]->setCornerColor(mTimeCornerColor);
+                _694x[no][i]->setBlack(JUTColor(0));
+                _694x[no][i]->setCornerColor(mTimeCornerColor);
             }
         }
     }
 
     if (mAnmTA[no].mCount[2] != 0)
     {
-        int frame = mAnmTA[no].mCount[2] + 1;
-        mAnmTA[no].mCount[2] = frame;
-        colorC.set(0xffffffff);
-        cornerC.mColor0.set(0xffffffff);
-        cornerC.mColor1.set(0xffffffff);
-        cornerC.mColor2.set(0xffffffff);
-        cornerC.mColor3.set(0xffffffff);
-        getBestTimeColor(frame, colorC, cornerC);
-        
+        int frame = mAnmTA[no].mCount[2]++;
+        JUTColor color;
+        J2DPicture::TCornerColor cornerColor;
+        getBestTimeColor(frame, color, cornerColor);
         for (int i = 0; i < 10; i++)
         {
-            J2DPicture *pic = _694x[no][i];
-            *(J2DPicture::TCornerColor *)(u8 *)&pic->mCornerColors[0] = cornerC;
-            pic->setBlack(colorC);
+            _694x[no][i]->setBlack(color);
+            _694x[no][i]->setCornerColor(cornerColor);
         }
     }
 
     if (mAnmTA[no].mCount[3] != 0)
     {
-        int frame = mAnmTA[no].mCount[3] + 1;
-        mAnmTA[no].mCount[3] = frame;
-        colorD.set(0xffffffff);
-        getBestLapColor(frame, colorD);
-        int limit = mAnmTA[no].mNum;
-        int n = no * 396;
+        int frame = mAnmTA[no].mCount[3]++;
+        JUTColor color;
+        getBestLapColor(frame, color);
         for (int lap = 0; lap < 9; lap++)
         {
             for (int d = 0; d < 9; d++)
             {
-                if (lap == limit)
-                {
-                    J2DPicture *pic = mLapDigits[no][lap][d];
-                    *(J2DPicture::TCornerColor *)(u8 *)&pic->mCornerColors[0] = *(J2DPicture::TCornerColor *)&colorD;
-                    pic->setBlack(colorD);
-                }
+                if (lap == mAnmTA[no].mNum)
+                    mLapDigits[no][lap][d]->setBlack(color);
             }
         }
-        J2DPicture *pic = mLapDigits[no][0][10];
-        *(J2DPicture::TCornerColor *)(u8 *)&pic->mCornerColors[0] = *(J2DPicture::TCornerColor *)&colorD;
-        pic->setBlack(colorD);
+        mLapDigits[no][0][10]->setBlack(color);
     }
 }
 
@@ -2358,12 +2309,18 @@ void Race2D::getBestTimeColor(int frame, JUTColor &color, J2DPicture::TCornerCol
     color.g = (u8)(110.0f * t);
     color.b = 0;
     color.a = 0;
-    JUTColor c0(255, 255, (u8)(127.0f * t + 128.0f), 255);
-    JUTColor c1((u8)(177.0f * t + 78.0f), (u8)(255.0f * t), (u8)(128.0f * t), 255);
-    cornerColor.mColor0 = c0;
-    cornerColor.mColor1 = c1;
-    cornerColor.mColor2 = c1;
-    cornerColor.mColor3 = c0;
+    u8 b0 = 127.0f * t + 128.0f;
+    u8 r1 = 177.0f * t + 78.0f;
+    u8 g1 = 255.0f * t;
+    u8 b1 = 128.0f * t;
+    cornerColor.mColor0.r = cornerColor.mColor3.r = 255;
+    cornerColor.mColor0.g = cornerColor.mColor3.g = 255;
+    cornerColor.mColor0.b = cornerColor.mColor3.b = b0;
+    cornerColor.mColor0.a = cornerColor.mColor3.a = 255;
+    cornerColor.mColor1.r = cornerColor.mColor2.r = r1;
+    cornerColor.mColor1.g = cornerColor.mColor2.g = g1;
+    cornerColor.mColor1.b = cornerColor.mColor2.b = b1;
+    cornerColor.mColor1.a = cornerColor.mColor2.a = 255;
 }
 
 void Race2D::getBestLapColor(int frame, JUTColor &color)
@@ -2533,6 +2490,7 @@ f32 Race2D::getReachBombScale(int no, int type)
 void Race2D::drawEscape()
 {
     int frame;
+    int status;
     if (RCMGetManager()->getConsoleNumber() == 3 || RCMGetManager()->getConsoleNumber() == 4)
         frame = mEscapeTimer4;
     else
@@ -2542,42 +2500,34 @@ void Race2D::drawEscape()
         f32 scale = getStartShineTimeScale(frame);
         u8 alpha = K2DPicture::mK2DGlobalAlpha;
         K2DPicture::mK2DGlobalAlpha = 0xff;
-        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++)
+        for (status = 0; status < RCMGetManager()->getStatusNumber(); status++)
         {
             for (int item = 0; item < 5; item++)
             {
-                K2DPicture *pic = *(K2DPicture **)((u8 *)this + status * 20 + 0xcb0 + item * 4);
                 f32 s = mSpecialItemScale[mShineKind[status]] * scale;
                 f32 px = mShinePos[item].x * s;
-                f32 w = s * pic->mPicture.getWidth();
+                f32 w = s * mShinePics[status][item]->getWidth();
                 f32 py = mShinePos[item].y * s;
-                f32 h = s * pic->mPicture.getHeight();
-                px = px - w * 0.5f;
-                py = py - h * 0.5f;
-                f32 x = mShineBase[status].x + px;
-                f32 y = mShineBase[status].y + py;
-                pic->drawK2D(x, y, w, h, true);
+                f32 h = s * mShinePics[status][item]->getHeight();
+                ((K2DPicture *)mShinePics[status][item])->drawK2D(mShineBase[status].x + (px - w / 2.0f),
+                                                                  mShineBase[status].y + (py - h / 2.0f), w, h, true);
             }
         }
         K2DPicture::mK2DGlobalAlpha = alpha;
     }
     else
     {
-        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++)
+        for (status = 0; status < RCMGetManager()->getStatusNumber(); status++)
         {
             for (int item = 0; item < 5; item++)
             {
-                K2DPicture *pic = *(K2DPicture **)((u8 *)this + status * 20 + 0xcb0 + item * 4);
                 f32 s = mSpecialItemScale[mShineKind[status]];
                 f32 px = mShinePos[item].x * s;
-                f32 w = s * pic->mPicture.getWidth();
+                f32 w = s * mShinePics[status][item]->getWidth();
                 f32 py = mShinePos[item].y * s;
-                f32 h = s * pic->mPicture.getHeight();
-                px = px - w * 0.5f;
-                py = py - h * 0.5f;
-                f32 x = mShineBase[status].x + px;
-                f32 y = mShineBase[status].y + py;
-                pic->drawK2D(x, y, w, h, true);
+                f32 h = s * mShinePics[status][item]->getHeight();
+                ((K2DPicture *)mShinePics[status][item])->drawK2D(mShineBase[status].x + (px - w / 2.0f),
+                                                                  mShineBase[status].y + (py - h / 2.0f), w, h, true);
             }
         }
     }
@@ -2974,10 +2924,10 @@ void Race2D::calcPlayerMark()
         for (int i = 0; i < RCMGetManager()->getPlayerNumber(); i++)
         {
             mMarkOrder[status][i] = i;
-            mMarkPos[status][i].set(0.0f, 0.0f);
+            mMarkPos[status][i].set(-100.0f, -100.0f);
         }
 
-        int z[8];
+        u32 z[8];
         for (int i = 0; i < RCMGetManager()->getPlayerNumber(); i++)
         {
             KartLoader *loader = RCMGetManager()->getKartLoader(i);
@@ -2991,11 +2941,11 @@ void Race2D::calcPlayerMark()
         {
             for (int j = RCMGetManager()->getPlayerNumber() - 1; j > i; j--)
             {
-                if ((u32)z[mMarkOrder[status][j]] < (u32)z[mMarkOrder[status][j - 1]])
+                if (z[mMarkOrder[status][i]] < z[mMarkOrder[status][j]])
                 {
-                    int tmp = mMarkOrder[status][j];
-                    mMarkOrder[status][j] = mMarkOrder[status][j - 1];
-                    mMarkOrder[status][j - 1] = tmp;
+                    int tmp = mMarkOrder[status][i];
+                    mMarkOrder[status][i] = mMarkOrder[status][j];
+                    mMarkOrder[status][j] = tmp;
                 }
             }
         }
@@ -3005,30 +2955,38 @@ void Race2D::calcPlayerMark()
             if (J2DManager::getKart2Status(i) == status)
                 continue;
 
-            s16 x = (s16)mMarkPos[status][i].x;
-            s16 y = (s16)mMarkPos[status][i].y;
-            J2DPicture *pic = mMark[status][i];
-            u8 alpha = pic->getAlpha();
-            u32 newZ;
-            ZCaptureMgr *cap = RCMGetManager()->mRaceDrawer->getCaptureMgr();
+            int x = mMarkPos[status][i].x;
+            int y = mMarkPos[status][i].y;
+            u8 alpha = mMark[status][i]->getAlpha();
 
-            if ((u32)x < mAlarm[status].mBase)
-                continue;
-            if ((u32)x > mAlarm[status].mBase + mAlarm[status].mStep)
-                continue;
-            if ((u32)y < mAlarm[status]._4)
-                continue;
-            if ((u32)y > mAlarm[status]._4 + mAlarm[status]._c)
-                continue;
-
-            newZ = cap->getZValue(i, status);
-            cap->setPosition(i, status, x, y);
-
-            if ((u32)z[i] > newZ)
-                alpha = alpha > 4 ? alpha - 4 : 0;
+            if (mAlarm[status].mBase <= (s16)x && (s16)x <= mAlarm[status].mBase + mAlarm[status].mStep &&
+                mAlarm[status]._4 <= (s16)y && (s16)y <= mAlarm[status]._4 + mAlarm[status]._c)
+            {
+                u32 newZ = RCMGetManager()->mRaceDrawer->getCaptureMgr()->getZValue(i, status);
+                RCMGetManager()->mRaceDrawer->getCaptureMgr()->setPosition(i, status, x, y);
+                if (z[i] > newZ)
+                {
+                    if (alpha > 4)
+                        alpha -= 4;
+                    else
+                        alpha = 0;
+                }
+                else
+                {
+                    if (alpha < 247)
+                        alpha += 8;
+                    else
+                        alpha = 255;
+                }
+            }
             else
-                alpha = alpha < 247 ? alpha + 8 : 255;
-            pic->setAlpha(alpha);
+            {
+                if (alpha > 4)
+                    alpha -= 4;
+                else
+                    alpha = 0;
+            }
+            mMark[status][i]->setAlpha(alpha);
         }
     }
 }
@@ -3095,7 +3053,7 @@ void Race2D::calcParticle()
                     }
                 }
             } else {
-                u8 alpha = mMark[status][i]->getAlpha();
+                u8 alpha = mMark[status][i]->mAlpha;
                 if (RCMGetManager()->getKartDrawer(i)->getHiddenDrivers())
                     alpha = 0;
                 for (int j = 0; j < 2; j++) {
@@ -3695,13 +3653,12 @@ void Race2D::setEffectPos(int status)
     int win = (RCMGetManager()->getKartChecker(kartNo), KartChecker::getWinBombPoint());
     RCMGetManager()->getKartChecker(kartNo);
     for (int i = 0; i < win; i++) {
-        int frame = mBombMarkFrame[status][i];
-        if (frame < 20) {
+        if (mBombMarkFrame[status][i] < 20) {
             _e40[status][i].x = mMiniPos[status][0][i].x;
             _e40[status][i].y = mMiniPos[status][0][i].y;
-        } else if (frame < 31) {
-            _e40[status][i].x = _dc0[status][i].x + (frame - 21) * (mMiniPos[status][0][i].x - _dc0[status][i].x) / 10.0f;
-            _e40[status][i].y = _dc0[status][i].y + (frame - 21) * (mMiniPos[status][0][i].y - _dc0[status][i].y) / 10.0f;
+        } else if (mBombMarkFrame[status][i] < 31) {
+            _e40[status][i].set(_dc0[status][i].x + (mBombMarkFrame[status][i] - 21) * (mMiniPos[status][0][i].x - _dc0[status][i].x) / 10.0f,
+                                _dc0[status][i].y + (mBombMarkFrame[status][i] - 21) * (mMiniPos[status][0][i].y - _dc0[status][i].y) / 10.0f);
             for (int k = 0; k < 3; k++) {
                 if (_ec0[status][i][k])
                     _ec0[status][i][k]->setGlobalTranslation(_e40[status][i].x, _e40[status][i].y, 0.0f);
@@ -3729,9 +3686,11 @@ void Race2D::calcEscape()
         mEscape.y = dst.y;
     }
 
-    int rabbitNo = -1;
+    int i;
+    Kart2DCommon *common;
     bool found = false;
-    for (int i = 0; i < RCMGetManager()->getKartNumber(); i++)
+    int rabbitNo = -1;
+    for (i = 0; i < RCMGetManager()->getKartNumber(); i++)
     {
         if (RCMGetManager()->getKartChecker(i)->isRabbit())
         {
@@ -3748,58 +3707,52 @@ void Race2D::calcEscape()
     {
         mEscapeFrame = (mEscapeFrame + 1) % 39;
         mTimeColorFrame = (mTimeColorFrame + 1) % 60;
-        f32 dx = mEscape.x - mEscapeTarget[rabbitNo].x;
-        f32 dy = mEscape.y - mEscapeTarget[rabbitNo].y;
-        f32 dist = std::sqrtf(dx * dx + dy * dy);
+        JGeometry::TVec2f d = mEscape - mEscapeTarget[rabbitNo];
+        f32 dist = std::sqrtf(d.y * d.y + d.x * d.x);
         if (dist > 16.0f)
         {
             f32 f = 16.0f / dist;
-            dst.x = f * dx + mEscapeTarget[rabbitNo].x;
-            dst.y = f * dy + mEscapeTarget[rabbitNo].y;
-            mEscape.x = dst.x;
-            mEscape.y = dst.y;
+            dst.x = f * d.x + mEscapeTarget[rabbitNo].x;
+            dst.y = f * d.y + mEscapeTarget[rabbitNo].y;
+            mEscape.set(dst);
         }
     }
     else
     {
         mEscapeFrame = 0;
         mTimeColorFrame = 0;
-        f32 dx = mEscape.x - dst.x;
-        f32 dy = mEscape.y - dst.y;
-        f32 dist = std::sqrtf(dx * dx + dy * dy);
+        JGeometry::TVec2f d = mEscape - dst;
+        f32 dist = std::sqrtf(d.y * d.y + d.x * d.x);
         if (dist > 1.0f)
         {
-            f32 f = (dist - 1.0f) / dist;
-            dst.x = dx * f + dst.x;
-            dst.y = dy * f + dst.y;
-            mEscape.x = dst.x;
-            mEscape.y = dst.y;
+            dst.x = d.x * ((dist - 1.0f) / dist) + dst.x;
+            dst.y = d.y * ((dist - 1.0f) / dist) + dst.y;
+            mEscape.set(dst);
         }
         else
         {
-            mEscape.x = dst.x;
-            mEscape.y = dst.y;
+            mEscape.set(dst);
         }
     }
 
     calcTimeFrame(found, rabbitNo);
 
+    common = Kart2DCommon::mspKart2DCommon;
     for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++)
     {
-        J2DPicture **pics = (J2DPicture **)((u8 *)this + status * 20 + 0xcb8);
         if (count >= 10)
         {
-            Kart2DCommon::mspKart2DCommon->changeNumberTexture(count, pics, 2, true, false);
-            ((J2DPicture *)pics[0])->mAlpha = 1;
-            ((J2DPicture *)pics[1])->mAlpha = 1;
-            ((J2DPicture *)pics[2])->mAlpha = 0;
+            common->changeNumberTexture(count, &mShinePics[status][2], 2, true, false);
+            mShinePics[status][2]->show();
+            mShinePics[status][3]->show();
+            mShinePics[status][4]->hide();
         }
         else
         {
-            Kart2DCommon::mspKart2DCommon->changeNumberTexture(count, pics + 2, 1, true, false);
-            ((J2DPicture *)pics[0])->mAlpha = 0;
-            ((J2DPicture *)pics[1])->mAlpha = 0;
-            ((J2DPicture *)pics[2])->mAlpha = 1;
+            common->changeNumberTexture(count, &mShinePics[status][4], 1, true, false);
+            mShinePics[status][2]->hide();
+            mShinePics[status][3]->hide();
+            mShinePics[status][4]->show();
         }
     }
 
@@ -3810,14 +3763,12 @@ void Race2D::calcEscape()
 void Race2D::calcTimeFrame(bool shineFlag, int player)
 {
     int mgTime = RCMGetManager()->getMiniGameTime().get();
-    u8 flag = shineFlag;
     int ms = mgTime % 1000;
     for (int no = 0; no < RCMGetManager()->getStatusNumber(); no++)
     {
         int kartNo = J2DManager::getStatus2Kart(no);
-        if (flag)
+        if (shineFlag && shineFlag != sPreShineFlag)
         {
-            if (sPreShineFlag != flag)
             {
                 if (player == kartNo)
                 {
@@ -3832,9 +3783,8 @@ void Race2D::calcTimeFrame(bool shineFlag, int player)
                 continue;
             }
         }
-        if (!shineFlag)
+        if (!shineFlag && shineFlag != sPreShineFlag)
         {
-            if (sPreShineFlag != flag)
             {
                 if (sPreShinePlayer == kartNo)
                 {
@@ -3849,12 +3799,8 @@ void Race2D::calcTimeFrame(bool shineFlag, int player)
                 continue;
             }
         }
-        if (flag)
+        if (shineFlag && shineFlag == sPreShineFlag && player != sPreShinePlayer)
         {
-            if (sPreShineFlag != flag)
-                goto L;
-            if (player == sPreShinePlayer)
-                goto L;
             if (player == kartNo)
             {
                 mBattleTimeCount[no] = 1;
@@ -3872,8 +3818,7 @@ void Race2D::calcTimeFrame(bool shineFlag, int player)
             }
             continue;
         }
-    L:
-        if ((u8)shineFlag != sPreShineFlag)
+        if (shineFlag != sPreShineFlag)
             continue;
         if (player != sPreShinePlayer)
             continue;
@@ -4129,16 +4074,16 @@ bool Race2D::isAlarm(int status)
 
 void Race2D::getMapPos(int rot, JGeometry::TVec3f &pos, JGeometry::TVec2f &dst)
 {
-    f32 w = mCoursePic->getWidth();
-    f32 h = mCoursePic->getHeight();
-    f32 rangeX = mMapInfo.mMax.x - mMapInfo.mMin.x;
-    f32 rangeY = mMapInfo.mMax.y - mMapInfo.mMin.y;
-    f32 baseX = mCoursePos.x;
-    f32 baseY = mCoursePos.y;
-    Race2DParam *param = mHio->getParam();
-    f32 ofsX = param->mX;
-    f32 ofsY = param->mY;
-    f32 scale = param->mS;
+    f32 w, h, ofsY, scale, baseY, rangeX, rangeY, ofsX, baseX;
+    w = mCoursePic->getWidth();
+    h = mCoursePic->getHeight();
+    rangeX = mMapInfo.mMax.x - mMapInfo.mMin.x;
+    rangeY = mMapInfo.mMax.y - mMapInfo.mMin.y;
+    baseX = mCoursePos.x;
+    baseY = mCoursePos.y;
+    ofsX = mHio->getParam()->mX;
+    ofsY = mHio->getParam()->mY;
+    scale = mHio->getParam()->mS;
     switch (rot) {
     case 0:
         if (RCMGetManager()->isMirror())
@@ -4156,7 +4101,7 @@ void Race2D::getMapPos(int rot, JGeometry::TVec3f &pos, JGeometry::TVec2f &dst)
         break;
     case 2:
         if (RCMGetManager()->isMirror())
-            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * ((mMapInfo.mMax.x - pos.x) / rangeX);
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * (1.0f - ((mMapInfo.mMax.x - pos.x) / rangeX));
         else
             dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * ((mMapInfo.mMax.x - pos.x) / rangeX);
         dst.y = baseY + ofsY - 0.5f * h * (scale - 1.0f) + h * scale * ((mMapInfo.mMax.y - pos.z) / rangeY);
@@ -4191,12 +4136,26 @@ void Race2D::getCharacterClr(int kart, int type, int frame, JUTColor &color1, JU
 #line 4758
     JUT_MINMAX_ASSERT(0, frame, 39);
 
-    int v0, v1, v2, v3, v4, v5;
-    v0 = v1 = 125;
-    v2 = v4 = 140;
-    v3 = v5 = 255;
+    u8 w0 = 80;
+    u8 w2 = 100;
+    u8 v0, v1, v2, v3, v4, v5;
+    v1 = 125;
+    v4 = 140;
+    v5 = 255;
+    v0 = v1;
+    v2 = v4;
+    v3 = v5;
 
-    if (kart == J2DManager::getStatus2Kart(0) || kart == J2DManager::getStatus2Kart(1))
+    if (kart == J2DManager::getStatus2Kart(0))
+    {
+        v0 = 255;
+        v1 = 190;
+        v2 = 255;
+        v3 = 255;
+        v4 = 190;
+        v5 = 230;
+    }
+    else if (kart == J2DManager::getStatus2Kart(1))
     {
         v0 = 255;
         v1 = 190;
@@ -4210,43 +4169,37 @@ void Race2D::getCharacterClr(int kart, int type, int frame, JUTColor &color1, JU
     switch (1 - type)
     {
     case 1:
-    {
-        u8 c = (u8)(int)(80 + t * 0.0f);
-        color1.r = c;
-        color1.g = c;
-        color1.b = (u8)(int)(100 + t * 0.0f);
+        color1.r = w0 + t * (w0 - w0);
+        color1.g = w0 + t * (w0 - w0);
+        color1.b = w2 + t * (w2 - w2);
         color1.a = 255;
-        color2.r = (u8)(int)(v0 + t * (v1 - v0));
-        color2.g = (u8)(int)(v2 + t * (v4 - v2));
-        color2.b = (u8)(int)(v3 + t * (v5 - v3));
+        color2.r = v0 + t * (v1 - v0);
+        color2.g = v2 + t * (v4 - v2);
+        color2.b = v3 + t * (v5 - v3);
         color2.a = 255;
         alpha = 255;
-    }
-    break;
+        break;
     case 0:
-    {
-        u8 c = (u8)(int)(80 + t * 0.0f);
-        color1.r = c;
-        color1.g = c;
-        color1.b = (u8)(int)(100 + t * 0.0f);
+        color1.r = w0 + t * (w0 - w0);
+        color1.g = w0 + t * (w0 - w0);
+        color1.b = w2 + t * (w2 - w2);
         color1.a = 255;
-        color2.r = (u8)(int)(v1 + t * (v0 - v1));
-        color2.g = (u8)(int)(v4 + t * (v2 - v4));
-        color2.b = (u8)(int)(v5 + t * (v3 - v5));
+        color2.r = v1 + t * (v0 - v1);
+        color2.g = v4 + t * (v2 - v4);
+        color2.b = v5 + t * (v3 - v5);
         color2.a = 255;
         alpha = 255;
-    }
-    break;
+        break;
     }
 
-    int u0, u1, u2, u3, u4, u5;
+    u8 u0, u2, u4, u1, u3, u5;
     if (kart == J2DManager::getStatus2Kart(0))
     {
         u0 = 255;
-        u1 = 128;
         u2 = 80;
-        u3 = 55;
         u4 = 93;
+        u1 = 128;
+        u3 = 55;
         u5 = 70;
     }
     else if (kart == J2DManager::getStatus2Kart(1))
@@ -4254,43 +4207,42 @@ void Race2D::getCharacterClr(int kart, int type, int frame, JUTColor &color1, JU
         if (RCMGetManager()->getKartInfo(0)->getPad(1) != NULL)
         {
             u0 = 0;
-            u1 = 0;
             u2 = 220;
-            u3 = 128;
             u4 = 0;
+            u1 = 0;
+            u3 = 128;
             u5 = 0;
         }
         else
         {
             u0 = 0;
-            u1 = 0;
             u2 = 150;
-            u3 = 64;
             u4 = 255;
+            u1 = 0;
+            u3 = 64;
             u5 = 128;
         }
     }
     else
         return;
 
-    alpha = 255;
-    int curFrame = *(int *)((u8 *)this + 0x4e9c);
-    f32 s = JMASCos((s16)(curFrame * 0xffff / 40 + 0x7fff));
-    f32 f = 0.5f + -0.5f * s;
+    f32 f = 0.5f + -0.5f * JMASCos(_4e9c[0] * 0xffff / 40 + 0x7fff);
+    f32 rate = 1.0f;
 
-    if (type == 0)
+    switch (type)
     {
-        color1.r = (u8)(int)(u0 + f * (u1 - u0));
-        color1.g = (u8)(int)(u2 + f * (u3 - u2));
-        color1.b = (u8)(int)(u4 + f * (u5 - u4));
+    case 0:
+        color1.r = rate * (u0 + f * (u1 - u0));
+        color1.g = rate * (u2 + f * (u3 - u2));
+        color1.b = rate * (u4 + f * (u5 - u4));
         color1.a = 255;
-    }
-    else if (type == 1)
-    {
-        color1.r = (u8)(int)(u0 + f * (u1 - u0));
-        color1.g = (u8)(int)(u2 + f * (u3 - u2));
-        color1.b = (u8)(int)(u4 + f * (u5 - u4));
+        break;
+    case 1:
+        color1.r = rate * (u0 + f * (u1 - u0));
+        color1.g = rate * (u2 + f * (u3 - u2));
+        color1.b = rate * (u4 + f * (u5 - u4));
         color1.a = 255;
+        break;
     }
 }
 
@@ -4648,7 +4600,8 @@ void Race2D::itemStart()
         if (frame < 15) {
             JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
             JGeometry::TVec2f start = mThis->getItemPos2(status, driver);
-            mThis->setItemPos3(status, driver, start + (pos - start) * frame * 0.06666667f);
+            JGeometry::TVec2f res = start + (pos - start) * frame * 0.06666667f;
+            mThis->setItemPos3(status, driver, res);
         } else {
             JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
             mThis->setItemPos3(status, driver, pos);
@@ -4668,11 +4621,12 @@ void Race2D::itemBlinkInit()
 
 void Race2D::itemBlink()
 {
+    int count;
     Task::TCB *cb = mTask->mCurCB;
     int status = cb->mExecIdx;
     u8 driver = *(u8 *)&cb->_28;
     cb->_10++;
-    int count = (*(int *)&cb->_24)++;
+    count = (*(int *)&cb->_24)++;
     int item;
     mThis->decideItem(status, driver, item);
     JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
@@ -4737,14 +4691,15 @@ void Race2D::itemGetInit()
 void Race2D::itemGetMain()
 {
     Task::TCB *cb = mTask->mCurCB;
-    int frame = cb->_10;
+    int frame;
     int status = cb->mExecIdx;
     u8 driver = *(u8 *)&cb->_28;
-    cb->_10 = cb->_10 + 1;
+    frame = cb->_10++;
     if (frame < 15) {
         JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
         JGeometry::TVec2f start = mThis->getItemPos2(status, driver);
-        mThis->setItemPos3(status, driver, start + (pos - start) * frame * 0.06666667f);
+        JGeometry::TVec2f res = start + (pos - start) * frame * 0.06666667f;
+        mThis->setItemPos3(status, driver, res);
     } else {
         JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
         mThis->setItemPos3(status, driver, pos);
@@ -4761,10 +4716,10 @@ void Race2D::itemSpecialInit() {
 void Race2D::itemSpecialMain()
 {
     Task::TCB *tcb = mTask->mCurCB;
-    int frame = tcb->_10;
+    int frame;
     int status = tcb->mExecIdx;
     u8 slot = *(u8 *)&tcb->_28;
-    tcb->_10 = tcb->_10 + 1;
+    frame = tcb->_10++;
     f32 scale = 0.0f;
     switch (RCMGetManager()->getConsoleNumber())
     {
@@ -5134,11 +5089,8 @@ void Race2D::getGoalRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
     }
     else if (frame - 0x80 < 0x1e)
     {
-        JGeometry::TVec2f tmp;
-        tmp.x = baseX * (frame - 0x80);
-        tmp.y = baseY * (frame - 0x80);
-        pos.x = tmp.x * 0.033333335f;
-        pos.y = tmp.y * 0.033333335f;
+        JGeometry::TVec2f base(baseX, baseY);
+        pos = base * (frame - 0x80) * 0.033333335f;
     }
     else if (frame - 0x80 < 0xd7)
     {
