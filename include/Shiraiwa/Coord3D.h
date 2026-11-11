@@ -64,6 +64,13 @@ public:
     void setTargetNode(u16);
     void getNodeDir(u16, JGeometry::TVec3f *);
 
+    void setSpeed(f32 accel, f32 maxSpeed) {
+        _14 = accel;
+        _18 = maxSpeed;
+        f32 half = 0.5f * maxSpeed;
+        _20 = half * half;
+    }
+
 public:
     const CrsData::SObject *mpObj; // 0x04
     u16 _8;                        // 0x08, current node
