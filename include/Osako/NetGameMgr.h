@@ -7,10 +7,20 @@
 #include "Osako/PadMgr.h"
 
 struct NetPkt;
-struct NetPadPkt;
 struct SOInAddr
 {
     u32 mAddr;
+};
+struct NetPadPkt
+{
+    u8 mType;      // 0x0
+    u8 mArg0;      // 0x1
+    u8 mArg1;      // 0x2
+    u8 mArg2;      // 0x3
+    u8 _4[0x84];   // 0x4
+    int mLength;   // 0x88
+    union { SOInAddr mAddr; void *mNext; }; // 0x8c
+    union { u32 mUnk90; void *mPrev; };     // 0x90
 };
 struct SSDPSearchInfo;
 
@@ -19,12 +29,25 @@ class NetGameMgr
 public:
     enum NetActionType
     {
-
+        NET_ACTION_RECV = 2,
+        NET_ACTION_3 = 3,
+        NET_ACTION_4 = 4,
+        NET_ACTION_5 = 5,
+        NET_ACTION_6 = 6,
     };
 
     struct NetPkt
     {
+        u8 mType;      // 0x0
+        u8 mArg0;      // 0x1
+        u8 mArg1;      // 0x2
+        u8 mArg2;      // 0x3
+        u8 _4[0x84];   // 0x4
+        int mLength;   // 0x88
+        union { SOInAddr mAddr; NetPkt *mNext; }; // 0x8c
+        union { u32 mUnk90; NetPkt *mPrev; };     // 0x90
     };
+
     // Global
     static void create(JKRHeap *);                                               // 0x80205db4
     NetGameMgr();                                                                // 0x80205e00
@@ -41,8 +64,8 @@ public:
     void distributePadData(NetPadPkt &);                                         // 0x802069bc
     void appendPadData(unsigned char, NetPadPkt *);                              // 0x80206b4c
     void recv();                                                                 // 0x80206e50
-    void recvTask(void *);                                                       // 0x8020720c
-    void sendTask(void *);                                                       // 0x802072e4
+    static void recvTask(void *);                                                       // 0x8020720c
+    static void sendTask(void *);                                                       // 0x802072e4
     void framework();                                                            // 0x802073a4
     void syncwork();                                                             // 0x802079c4
     static void retraceCallback(u32);                                            // 0x80207c58
@@ -125,15 +148,36 @@ public:
 private:
     struct NetPadData
     {
-        u8 mType;        // 0x0
-        u8 _1[7];        // 0x1
-        u8 mPad[5][2];   // 0x8
+        s8 mType;           // 0x0
+        u8 mId;             // 0x1
+        u8 _2[2];           // 0x2
+        f32 mFrame;         // 0x4
+        u8 mPad[4][2];      // 0x8
+        NetPadData *mNext;  // 0x10
+        NetPadData *mPrev;  // 0x14
     };
 
     struct NetPadConn
     {
-        u8 _0[0xc];         // 0x0
+        u8 _0[4];           // 0x0
+        u32 _4;             // 0x4
+        u32 _8;             // 0x8
         NetPadData *mData;  // 0xc
+        NetPadConn *mNext;  // 0x10
+    };
+
+    struct NetLog
+    {
+        u8 mAction;     // 0x0
+        u8 mType;       // 0x1
+        u8 mArg0;       // 0x2
+        u8 mArg1;       // 0x3
+        u8 mArg2;       // 0x4
+        u8 _5[3];       // 0x5
+        u32 mUnk8;      // 0x8
+        u32 mTick;      // 0xc
+        NetLog *mNext;  // 0x10
+        NetLog *mPrev;  // 0x14
     };
 
     struct GCInfo
@@ -146,7 +190,10 @@ private:
         u32 _c;      // 0xc
     };
 
-    u8 _0[0x96c];              //
+    f32 mFrame;                // 0x0
+    u8 _4[4];                  // 0x4
+    NetLog mLog[100];          // 0x8
+    NetLog *mLogHead;          // 0x968
     int mState;                // 96C
     u8 _970;                   // 970
     u8 _971;                   // 971
@@ -161,19 +208,34 @@ private:
     u8 _98c[0x998 - 0x98C];    //
     GCInfo mGCInfo[16];        // 998
     u8 mGCInfoNum;             // A98
-    u8 _a99[0xC50 - 0xA99];    //
-    u8 _c50;                   // C50
-    u8 _c51[0xC58 - 0xC51];    //
-    u8 mNetworkNum;            // C58
-    u8 _c59[0xCF8 - 0xC59];    //
-    u32 _cf8;                  // CF8
-    NetPadConn *mPadConn[8];   // CFC
-    u8 *_d1c;                  // D1C
-    u8 *_d20;                  // D20
-    u8 _d24[8 * 0x78];         // D24
-    u8 _10e4[3][0x18];         // 10E4
-    u8 _112c[2][0x94];         // 112C
-    u8 _1254[0x12e8 - 0x1254]; //
+    u8 _a99[0xA9C - 0xA99];    //
+    NetPkt mSendBuf[2];        // A9C
+    NetPkt mRecvPkt;           // BC4
+    union
+    {
+        u8 mNetworkNum;              // C58
+        NetPadConn mPadConnArray[8]; // C58
+    };
+    NetPadConn *mPadConnHead;    // CF8
+    NetPadConn *mPadConn[8];     // CFC
+    NetPadData *mPadDataNext;    // D1C
+    NetPkt *mSendPktNext;      // D20
+    union
+    {
+        NetPadData mPadData[8][5]; // D24
+        u8 _d24[8 * 0x78];
+    };
+    union
+    {
+        NetPadData mPadDataLocal[3]; // 10E4
+        u8 _10e4[3][0x18];
+    };
+    union
+    {
+        NetPkt mSendPkt[2]; // 112C
+        u8 _112c[2][0x94];
+    };
+    NetPkt mPktSentinel;       // 1254
     u8 mNetworkCubes;          // 12e8
     u8 _12e9[0x12ec - 0x12e9]; //
     u16 _12ec;                 //

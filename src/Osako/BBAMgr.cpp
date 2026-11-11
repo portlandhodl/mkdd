@@ -378,14 +378,14 @@ void BBAMgr::startMSearch()
     SSDPSearch(&sSearchInfo);
 }
 
-void BBAMgr::sendTo(void *buf, int len, const void *addr)
+int BBAMgr::sendTo(void *buf, int len, const void *addr)
 {
-    SOSendTo(mSocket, buf, len, 0, (void *)addr);
+    return SOSendTo(mSocket, buf, len, 0, (void *)addr);
 }
 
-void BBAMgr::recvFrom(void *buf, int len, void *addr)
+int BBAMgr::recvFrom(void *buf, int len, void *addr)
 {
-    SORecvFrom(mSocket, buf, len, 0, addr);
+    return SORecvFrom(mSocket, buf, len, 0, addr);
 }
 
 int BBAMgr::getState()

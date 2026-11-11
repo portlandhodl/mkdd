@@ -64,8 +64,8 @@ public:
     int disconnecting(bool);                // 0x8020dbe8
     void startUPnP();                       // 0x8020dce0
     void startMSearch();                    // 0x8020dd0c
-    void sendTo(void *, int, const void *); // 0x8020dd34
-    void recvFrom(void *, int, void *);     // 0x8020dd60
+    int sendTo(void *, int, const void *); // 0x8020dd34
+    int recvFrom(void *, int, void *);     // 0x8020dd60
     int getState();                         // 0x8020dd8c
     void createBasicDevice();               // 0x8020de04
     void loadHttpFile();                    // 0x8020dfe0
