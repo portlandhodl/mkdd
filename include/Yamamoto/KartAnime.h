@@ -89,17 +89,17 @@ public:
     void DoCheck(int);                  // 0x802fbeb8
     void DoAnime(int);                  // 0x802fc4cc
     // Inline/Unused
-    // void IsDriverThrow(int);
-    // void IsDamageS2(int);
-    // void IsDriftEnd(int);
-    // void IsTandemStartOK(int);
-    // void IsTurn(int);
-    // void IsDriftLimAnime(int);
-    // void IsDangerEndAnime(int);
-    // void MakeDriverThrowAnime(int, int, int);
+    bool IsDriverThrow(int);
+    bool IsDamageS2(int);
+    bool IsDriftEnd(int);
+    bool IsTandemStartOK(int);
+    bool IsTurn(int);
+    bool IsDriftLimAnime(int);
+    bool IsDangerEndAnime(int);
+    void MakeDriverThrowAnime(int, int, int);
     // void MakeGetAnime(ItemObj *, int);
     // Inline
-    bool IsChangeStart(); // 0x802f9bc4
+    bool IsChangeStart() { return mFlags & 1; } // 0x802f9bc4
 
     class ItemObj *_0;   //
     f32 _04;             // 0x4
@@ -111,9 +111,11 @@ public:
     int _1c;               // 0x1c
     int _20;               // 0x20
     int _24;               // 0x24
-    u8 _28[0x30 - 0x28]; //
+    int _28;               // 0x28
+    u8 _2c;                // 0x2c
+    u8 _2d[0x30 - 0x2d]; //
     u64 mDamageFlags;             // 30, 34
-    u8 _38[0x3c - 0x38]; //
+    int _38;              // 0x38
     int _3c;              //
     int _40;              //
     u8 _44[0x48 - 0x44]; //

@@ -262,6 +262,7 @@ public:
     void setTransfer1() { mTransferFlags |= 1; }
     void clrTransferPartner() { mTransferFlags &= ~0x200; }
     void setTransferPartner() { mTransferFlags |= 0x200; }
+    bool tstTransferPartner() const { return mTransferFlags & 0x200; }
 
     // Inline/Unused
     void combMtxOn();

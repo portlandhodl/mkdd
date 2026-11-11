@@ -463,6 +463,10 @@ public:
     void updateSetBlendWeight();
     void update_mIsSpeakBCA();
     void BacktoDWait() { StartAnimation((StateEnum)0x95); }
+    void TurnBack() { StartAnimation((StateEnum)104); }
+    void StartNormalStart() { StartAnimation((StateEnum)34); }
+    void StartRocketStart() { StartAnimation((StateEnum)94); }
+    void StartRocketStartFailure() { StartAnimation((StateEnum)95); }
     void setItem(ItemObj *);
     void resetItem();
     void setLODLevel(int);
