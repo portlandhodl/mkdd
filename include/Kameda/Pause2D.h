@@ -78,15 +78,14 @@ private:
     J2DGrafContext *mOrtho;     // 0x004
     J2DScreen *mScreen;         // 0x008
     J2DAnmTransform *mAnm;      // 0x00c
-    J2DAnmTextureSRTKey *mAnm2; // 0x010
+    J2DAnmColor *mAnm2;         // 0x010
     int _14;                    // 0x014
     int _18;                    // 0x018
     int mCounters[2];           // 0x01c
     f32 mScales[2];             // 0x024
     J2DPicture *mPics[6];       // 0x02c
     J2DPicture *mResultPic;     // 0x044
-    J2DScreen *mScreens[4];     // 0x048
-    PLACEHOLDER_BYTES(0x58, 0x78);
+    J2DPicture *mKr[12];        // 0x048
     JGeometry::TVec2f mPos[12]; // 0x078
     J2DPicture *mCenterPics[2]; // 0x0d8
     int mDrawState;             // 0x0e0
@@ -94,7 +93,7 @@ private:
     JGeometry::TVec2f mTo[2];   // 0x0f4
     JGeometry::TVec2f mCur[2];  // 0x104
     SelPane mSel[6];            // 0x114
-    void (Pause2D::*mCalcFunc)(); // 0x15c
+    void (Pause2D::*mCalcFunc)(KartGamePad *); // 0x15c
     void (Pause2D::*mDrawFunc)(); // 0x168
 }; // class Pause2D
 #endif // PAUSE2D_H

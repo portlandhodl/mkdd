@@ -81,7 +81,7 @@ const int SceneMenu::mKartIndex[] = {
     0x00000014, 
 };
 
-const u8 SceneMenu::mKartPerf[] = {
+const s8 SceneMenu::mKartPerf[21][3] = {
     0x01, 0x05, 0x02, 0x02, 0x04, 0x02, 0x02, 0x04, 
     0x02, 0x01, 0x05, 0x02, 0x04, 0x02, 0x03, 0x04, 
     0x03, 0x01, 0x02, 0x04, 0x02, 0x01, 0x05, 0x02, 
@@ -1986,12 +1986,11 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *a = panes[i];
-            J2DPane *b = panes[j];
-            if (a->mScale.x > b->mScale.x)
+            if (panes[i]->getScaleX() > panes[j]->getScaleX())
             {
-                panes[i] = b;
-                panes[j] = a;
+                J2DPane *tmp = panes[i];
+                panes[i] = panes[j];
+                panes[j] = tmp;
             }
         }
     }
@@ -2006,12 +2005,11 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *a = panes[i];
-            J2DPane *b = panes[j];
-            if (a->mScale.x > b->mScale.x)
+            if (panes[i]->getScaleX() > panes[j]->getScaleX())
             {
-                panes[i] = b;
-                panes[j] = a;
+                J2DPane *tmp = panes[i];
+                panes[i] = panes[j];
+                panes[j] = tmp;
             }
         }
     }
@@ -2031,7 +2029,7 @@ void SceneMenu::entry_init()
         switch (mInfo.playerNum)
         {
         case 0:
-            mHowManyDriversBrk[0].mFrame = -1.0f;
+            mHowManyDriversBrk[0].mFrame = 1.0f;
             mHowManyDriversBrk[1].mFrame = 0.0f;
             mHowManyDriversBrk[2].mFrame = 0.0f;
             mHowManyDriversBrk[3].mFrame = 0.0f;
@@ -2039,15 +2037,15 @@ void SceneMenu::entry_init()
             mHowManyDriversBck[6].mFrame = 14.0f;
             mHowManyDriversBck[7].mFrame = 14.0f;
             mHowManyDriversBck[8].mFrame = 14.0f;
-            mHowManyDriversBrk[4].mFrame = -1.0f;
+            mHowManyDriversBrk[4].mFrame = 1.0f;
             mHowManyDriversBrk[5].mFrame = 0.0f;
             mHowManyDriversBrk[6].mFrame = 0.0f;
             mHowManyDriversBrk[7].mFrame = 0.0f;
-            mHowManyDriversBrk[8].mFrame = -1.0f;
+            mHowManyDriversBrk[8].mFrame = 1.0f;
             mHowManyDriversBrk[9].mFrame = 0.0f;
             mHowManyDriversBrk[10].mFrame = 0.0f;
             mHowManyDriversBrk[11].mFrame = 0.0f;
-            mHowManyDriversBrk[12].mFrame = -1.0f;
+            mHowManyDriversBrk[12].mFrame = 1.0f;
             mHowManyDriversBrk[13].mFrame = 0.0f;
             mHowManyDriversBrk[14].mFrame = 0.0f;
             mHowManyDriversBrk[15].mFrame = 0.0f;
@@ -2060,7 +2058,7 @@ void SceneMenu::entry_init()
             break;
         case 1:
             mHowManyDriversBrk[0].mFrame = 0.0f;
-            mHowManyDriversBrk[1].mFrame = -1.0f;
+            mHowManyDriversBrk[1].mFrame = 1.0f;
             mHowManyDriversBrk[2].mFrame = 0.0f;
             mHowManyDriversBrk[3].mFrame = 0.0f;
             mHowManyDriversBck[5].mFrame = 14.0f;
@@ -2068,16 +2066,16 @@ void SceneMenu::entry_init()
             mHowManyDriversBck[7].mFrame = 14.0f;
             mHowManyDriversBck[8].mFrame = 14.0f;
             mHowManyDriversBrk[4].mFrame = 0.0f;
-            mHowManyDriversBrk[5].mFrame = -1.0f;
+            mHowManyDriversBrk[5].mFrame = 1.0f;
             mHowManyDriversBrk[6].mFrame = 0.0f;
             mHowManyDriversBrk[7].mFrame = 0.0f;
             mHowManyDriversBrk[8].mFrame = 0.0f;
-            mHowManyDriversBrk[9].mFrame = -1.0f;
+            mHowManyDriversBrk[9].mFrame = 1.0f;
             mHowManyDriversBrk[10].mFrame = 0.0f;
             mHowManyDriversBrk[11].mFrame = 0.0f;
             mHowManyDriversBrk[12].mFrame = 0.0f;
-            mHowManyDriversBrk[13].mFrame = -1.0f;
-            mHowManyDriversBrk[14].mFrame = -1.0f;
+            mHowManyDriversBrk[13].mFrame = 1.0f;
+            mHowManyDriversBrk[14].mFrame = 1.0f;
             mHowManyDriversBrk[15].mFrame = 0.0f;
             mHowManyDriversBrk[16].mFrame = 0.0f;
             mHowManyDriversBrk[17].mFrame = 0.0f;
@@ -2089,7 +2087,7 @@ void SceneMenu::entry_init()
         case 2:
             mHowManyDriversBrk[0].mFrame = 0.0f;
             mHowManyDriversBrk[1].mFrame = 0.0f;
-            mHowManyDriversBrk[2].mFrame = -1.0f;
+            mHowManyDriversBrk[2].mFrame = 1.0f;
             mHowManyDriversBrk[3].mFrame = 0.0f;
             mHowManyDriversBck[5].mFrame = 14.0f;
             mHowManyDriversBck[6].mFrame = 14.0f;
@@ -2097,18 +2095,18 @@ void SceneMenu::entry_init()
             mHowManyDriversBck[8].mFrame = 14.0f;
             mHowManyDriversBrk[4].mFrame = 0.0f;
             mHowManyDriversBrk[5].mFrame = 0.0f;
-            mHowManyDriversBrk[6].mFrame = -1.0f;
+            mHowManyDriversBrk[6].mFrame = 1.0f;
             mHowManyDriversBrk[7].mFrame = 0.0f;
             mHowManyDriversBrk[8].mFrame = 0.0f;
             mHowManyDriversBrk[9].mFrame = 0.0f;
-            mHowManyDriversBrk[10].mFrame = -1.0f;
+            mHowManyDriversBrk[10].mFrame = 1.0f;
             mHowManyDriversBrk[11].mFrame = 0.0f;
             mHowManyDriversBrk[12].mFrame = 0.0f;
             mHowManyDriversBrk[13].mFrame = 0.0f;
             mHowManyDriversBrk[14].mFrame = 0.0f;
-            mHowManyDriversBrk[15].mFrame = -1.0f;
-            mHowManyDriversBrk[16].mFrame = -1.0f;
-            mHowManyDriversBrk[17].mFrame = -1.0f;
+            mHowManyDriversBrk[15].mFrame = 1.0f;
+            mHowManyDriversBrk[16].mFrame = 1.0f;
+            mHowManyDriversBrk[17].mFrame = 1.0f;
             mHowManyDriversBrk[18].mFrame = 0.0f;
             mHowManyDriversBrk[19].mFrame = 0.0f;
             mHowManyDriversBrk[20].mFrame = 0.0f;
@@ -2118,7 +2116,7 @@ void SceneMenu::entry_init()
             mHowManyDriversBrk[0].mFrame = 0.0f;
             mHowManyDriversBrk[1].mFrame = 0.0f;
             mHowManyDriversBrk[2].mFrame = 0.0f;
-            mHowManyDriversBrk[3].mFrame = -1.0f;
+            mHowManyDriversBrk[3].mFrame = 1.0f;
             mHowManyDriversBck[5].mFrame = 14.0f;
             mHowManyDriversBck[6].mFrame = 14.0f;
             mHowManyDriversBck[7].mFrame = 14.0f;
@@ -2126,21 +2124,21 @@ void SceneMenu::entry_init()
             mHowManyDriversBrk[4].mFrame = 0.0f;
             mHowManyDriversBrk[5].mFrame = 0.0f;
             mHowManyDriversBrk[6].mFrame = 0.0f;
-            mHowManyDriversBrk[7].mFrame = -1.0f;
+            mHowManyDriversBrk[7].mFrame = 1.0f;
             mHowManyDriversBrk[8].mFrame = 0.0f;
             mHowManyDriversBrk[9].mFrame = 0.0f;
             mHowManyDriversBrk[10].mFrame = 0.0f;
-            mHowManyDriversBrk[11].mFrame = -1.0f;
+            mHowManyDriversBrk[11].mFrame = 1.0f;
             mHowManyDriversBrk[12].mFrame = 0.0f;
             mHowManyDriversBrk[13].mFrame = 0.0f;
             mHowManyDriversBrk[14].mFrame = 0.0f;
             mHowManyDriversBrk[15].mFrame = 0.0f;
             mHowManyDriversBrk[16].mFrame = 0.0f;
             mHowManyDriversBrk[17].mFrame = 0.0f;
-            mHowManyDriversBrk[18].mFrame = -1.0f;
-            mHowManyDriversBrk[19].mFrame = -1.0f;
-            mHowManyDriversBrk[20].mFrame = -1.0f;
-            mHowManyDriversBrk[21].mFrame = -1.0f;
+            mHowManyDriversBrk[18].mFrame = 1.0f;
+            mHowManyDriversBrk[19].mFrame = 1.0f;
+            mHowManyDriversBrk[20].mFrame = 1.0f;
+            mHowManyDriversBrk[21].mFrame = 1.0f;
             break;
         default:
 #line 2598
@@ -2215,21 +2213,13 @@ void SceneMenu::entry()
     {
     case 0:
     {
-        f32 val1 = mHowManyDriversBck[1].mFrame + 1.0f;
-        mHowManyDriversBck[1].mFrame = val1;
-        if (val1 > 22.0f)
+        if ((mHowManyDriversBck[1].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[1].mFrame = 22.0f;
-        f32 val2 = mHowManyDriversBck[2].mFrame - 1.0f;
-        mHowManyDriversBck[2].mFrame = val2;
-        if (val2 < 14.0f)
+        if ((mHowManyDriversBck[2].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[2].mFrame = 14.0f;
-        f32 val3 = mHowManyDriversBck[3].mFrame - 1.0f;
-        mHowManyDriversBck[3].mFrame = val3;
-        if (val3 < 14.0f)
+        if ((mHowManyDriversBck[3].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[3].mFrame = 14.0f;
-        f32 val4 = mHowManyDriversBck[4].mFrame - 1.0f;
-        mHowManyDriversBck[4].mFrame = val4;
-        if (val4 < 14.0f)
+        if ((mHowManyDriversBck[4].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[4].mFrame = 14.0f;
 
         mHowManyDriversBrk[0].mFrame = 1.0f;
@@ -2237,21 +2227,13 @@ void SceneMenu::entry()
         mHowManyDriversBrk[2].mFrame = 0.0f;
         mHowManyDriversBrk[3].mFrame = 0.0f;
 
-        f32 val5 = mHowManyDriversBck[5].mFrame + 1.0f;
-        mHowManyDriversBck[5].mFrame = val5;
-        if (val5 > 22.0f)
+        if ((mHowManyDriversBck[5].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[5].mFrame = 22.0f;
-        f32 val6 = mHowManyDriversBck[6].mFrame - 1.0f;
-        mHowManyDriversBck[6].mFrame = val6;
-        if (val6 < 14.0f)
+        if ((mHowManyDriversBck[6].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[6].mFrame = 14.0f;
-        f32 val7 = mHowManyDriversBck[7].mFrame - 1.0f;
-        mHowManyDriversBck[7].mFrame = val7;
-        if (val7 < 14.0f)
+        if ((mHowManyDriversBck[7].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[7].mFrame = 14.0f;
-        f32 val8 = mHowManyDriversBck[8].mFrame - 1.0f;
-        mHowManyDriversBck[8].mFrame = val8;
-        if (val8 < 14.0f)
+        if ((mHowManyDriversBck[8].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[8].mFrame = 14.0f;
 
         mHowManyDriversBrk[4].mFrame = 1.0f;
@@ -2259,9 +2241,7 @@ void SceneMenu::entry()
         mHowManyDriversBrk[6].mFrame = 0.0f;
         mHowManyDriversBrk[7].mFrame = 0.0f;
 
-        f32 val9 = mHowManyDriversBck[9].mFrame + 1.0f;
-        mHowManyDriversBck[9].mFrame = val9;
-        if (val9 >= 75.0f)
+        if ((mHowManyDriversBck[9].mFrame += 1.0f) >= 75.0f)
             mHowManyDriversBck[9].mFrame = 14.0f;
         mHowManyDriversBck[10].mFrame = 14.0f;
         mHowManyDriversBck[11].mFrame = 14.0f;
@@ -2289,21 +2269,13 @@ void SceneMenu::entry()
     }
     case 1:
     {
-        f32 val10 = mHowManyDriversBck[1].mFrame - 1.0f;
-        mHowManyDriversBck[1].mFrame = val10;
-        if (val10 < 14.0f)
+        if ((mHowManyDriversBck[1].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[1].mFrame = 14.0f;
-        f32 val11 = mHowManyDriversBck[2].mFrame + 1.0f;
-        mHowManyDriversBck[2].mFrame = val11;
-        if (val11 > 22.0f)
+        if ((mHowManyDriversBck[2].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[2].mFrame = 22.0f;
-        f32 val12 = mHowManyDriversBck[3].mFrame - 1.0f;
-        mHowManyDriversBck[3].mFrame = val12;
-        if (val12 < 14.0f)
+        if ((mHowManyDriversBck[3].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[3].mFrame = 14.0f;
-        f32 val13 = mHowManyDriversBck[4].mFrame - 1.0f;
-        mHowManyDriversBck[4].mFrame = val13;
-        if (val13 < 14.0f)
+        if ((mHowManyDriversBck[4].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[4].mFrame = 14.0f;
 
         mHowManyDriversBrk[0].mFrame = 0.0f;
@@ -2311,21 +2283,13 @@ void SceneMenu::entry()
         mHowManyDriversBrk[2].mFrame = 0.0f;
         mHowManyDriversBrk[3].mFrame = 0.0f;
 
-        f32 val14 = mHowManyDriversBck[5].mFrame - 1.0f;
-        mHowManyDriversBck[5].mFrame = val14;
-        if (val14 < 14.0f)
+        if ((mHowManyDriversBck[5].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[5].mFrame = 14.0f;
-        f32 val15 = mHowManyDriversBck[6].mFrame + 1.0f;
-        mHowManyDriversBck[6].mFrame = val15;
-        if (val15 > 22.0f)
+        if ((mHowManyDriversBck[6].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[6].mFrame = 22.0f;
-        f32 val16 = mHowManyDriversBck[7].mFrame - 1.0f;
-        mHowManyDriversBck[7].mFrame = val16;
-        if (val16 < 14.0f)
+        if ((mHowManyDriversBck[7].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[7].mFrame = 14.0f;
-        f32 val17 = mHowManyDriversBck[8].mFrame - 1.0f;
-        mHowManyDriversBck[8].mFrame = val17;
-        if (val17 < 14.0f)
+        if ((mHowManyDriversBck[8].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[8].mFrame = 14.0f;
 
         mHowManyDriversBrk[4].mFrame = 0.0f;
@@ -2334,9 +2298,7 @@ void SceneMenu::entry()
         mHowManyDriversBrk[7].mFrame = 0.0f;
 
         mHowManyDriversBck[9].mFrame = 14.0f;
-        f32 val18 = mHowManyDriversBck[10].mFrame + 1.0f;
-        mHowManyDriversBck[10].mFrame = val18;
-        if (val18 >= 75.0f)
+        if ((mHowManyDriversBck[10].mFrame += 1.0f) >= 75.0f)
             mHowManyDriversBck[10].mFrame = 14.0f;
         mHowManyDriversBck[11].mFrame = 14.0f;
         mHowManyDriversBck[12].mFrame = 14.0f;
@@ -2363,21 +2325,13 @@ void SceneMenu::entry()
     }
     case 2:
     {
-        f32 val19 = mHowManyDriversBck[1].mFrame - 1.0f;
-        mHowManyDriversBck[1].mFrame = val19;
-        if (val19 < 14.0f)
+        if ((mHowManyDriversBck[1].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[1].mFrame = 14.0f;
-        f32 val20 = mHowManyDriversBck[2].mFrame - 1.0f;
-        mHowManyDriversBck[2].mFrame = val20;
-        if (val20 < 14.0f)
+        if ((mHowManyDriversBck[2].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[2].mFrame = 14.0f;
-        f32 val21 = mHowManyDriversBck[3].mFrame + 1.0f;
-        mHowManyDriversBck[3].mFrame = val21;
-        if (val21 > 22.0f)
+        if ((mHowManyDriversBck[3].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[3].mFrame = 22.0f;
-        f32 val22 = mHowManyDriversBck[4].mFrame - 1.0f;
-        mHowManyDriversBck[4].mFrame = val22;
-        if (val22 < 14.0f)
+        if ((mHowManyDriversBck[4].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[4].mFrame = 14.0f;
 
         mHowManyDriversBrk[0].mFrame = 0.0f;
@@ -2385,21 +2339,13 @@ void SceneMenu::entry()
         mHowManyDriversBrk[2].mFrame = 1.0f;
         mHowManyDriversBrk[3].mFrame = 0.0f;
 
-        f32 val23 = mHowManyDriversBck[5].mFrame - 1.0f;
-        mHowManyDriversBck[5].mFrame = val23;
-        if (val23 < 14.0f)
+        if ((mHowManyDriversBck[5].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[5].mFrame = 14.0f;
-        f32 val24 = mHowManyDriversBck[6].mFrame - 1.0f;
-        mHowManyDriversBck[6].mFrame = val24;
-        if (val24 < 14.0f)
+        if ((mHowManyDriversBck[6].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[6].mFrame = 14.0f;
-        f32 val25 = mHowManyDriversBck[7].mFrame + 1.0f;
-        mHowManyDriversBck[7].mFrame = val25;
-        if (val25 > 22.0f)
+        if ((mHowManyDriversBck[7].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[7].mFrame = 22.0f;
-        f32 val26 = mHowManyDriversBck[8].mFrame - 1.0f;
-        mHowManyDriversBck[8].mFrame = val26;
-        if (val26 < 14.0f)
+        if ((mHowManyDriversBck[8].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[8].mFrame = 14.0f;
 
         mHowManyDriversBrk[4].mFrame = 0.0f;
@@ -2409,9 +2355,7 @@ void SceneMenu::entry()
 
         mHowManyDriversBck[9].mFrame = 14.0f;
         mHowManyDriversBck[10].mFrame = 14.0f;
-        f32 val27 = mHowManyDriversBck[11].mFrame + 1.0f;
-        mHowManyDriversBck[11].mFrame = val27;
-        if (val27 >= 75.0f)
+        if ((mHowManyDriversBck[11].mFrame += 1.0f) >= 75.0f)
             mHowManyDriversBck[11].mFrame = 14.0f;
         mHowManyDriversBck[12].mFrame = 14.0f;
 
@@ -2428,7 +2372,7 @@ void SceneMenu::entry()
         mHowManyDriversBrk[14].mFrame = 0.0f;
         mHowManyDriversBrk[15].mFrame = 1.0f;
         mHowManyDriversBrk[16].mFrame = 1.0f;
-        mHowManyDriversBrk[17].mFrame = 0.0f;
+        mHowManyDriversBrk[17].mFrame = 1.0f;
         mHowManyDriversBrk[18].mFrame = 0.0f;
         mHowManyDriversBrk[19].mFrame = 0.0f;
         mHowManyDriversBrk[20].mFrame = 0.0f;
@@ -2437,21 +2381,13 @@ void SceneMenu::entry()
     }
     case 3:
     {
-        f32 val28 = mHowManyDriversBck[1].mFrame - 1.0f;
-        mHowManyDriversBck[1].mFrame = val28;
-        if (val28 < 14.0f)
+        if ((mHowManyDriversBck[1].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[1].mFrame = 14.0f;
-        f32 val29 = mHowManyDriversBck[2].mFrame - 1.0f;
-        mHowManyDriversBck[2].mFrame = val29;
-        if (val29 < 14.0f)
+        if ((mHowManyDriversBck[2].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[2].mFrame = 14.0f;
-        f32 val30 = mHowManyDriversBck[3].mFrame - 1.0f;
-        mHowManyDriversBck[3].mFrame = val30;
-        if (val30 < 14.0f)
+        if ((mHowManyDriversBck[3].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[3].mFrame = 14.0f;
-        f32 val31 = mHowManyDriversBck[4].mFrame + 1.0f;
-        mHowManyDriversBck[4].mFrame = val31;
-        if (val31 > 22.0f)
+        if ((mHowManyDriversBck[4].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[4].mFrame = 22.0f;
 
         mHowManyDriversBrk[0].mFrame = 0.0f;
@@ -2459,21 +2395,13 @@ void SceneMenu::entry()
         mHowManyDriversBrk[2].mFrame = 0.0f;
         mHowManyDriversBrk[3].mFrame = 1.0f;
 
-        f32 val32 = mHowManyDriversBck[5].mFrame - 1.0f;
-        mHowManyDriversBck[5].mFrame = val32;
-        if (val32 < 14.0f)
+        if ((mHowManyDriversBck[5].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[5].mFrame = 14.0f;
-        f32 val33 = mHowManyDriversBck[6].mFrame - 1.0f;
-        mHowManyDriversBck[6].mFrame = val33;
-        if (val33 < 14.0f)
+        if ((mHowManyDriversBck[6].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[6].mFrame = 14.0f;
-        f32 val34 = mHowManyDriversBck[7].mFrame - 1.0f;
-        mHowManyDriversBck[7].mFrame = val34;
-        if (val34 < 14.0f)
+        if ((mHowManyDriversBck[7].mFrame -= 1.0f) < 14.0f)
             mHowManyDriversBck[7].mFrame = 14.0f;
-        f32 val35 = mHowManyDriversBck[8].mFrame + 1.0f;
-        mHowManyDriversBck[8].mFrame = val35;
-        if (val35 > 22.0f)
+        if ((mHowManyDriversBck[8].mFrame += 1.0f) > 22.0f)
             mHowManyDriversBck[8].mFrame = 22.0f;
 
         mHowManyDriversBrk[4].mFrame = 0.0f;
@@ -2484,9 +2412,7 @@ void SceneMenu::entry()
         mHowManyDriversBck[9].mFrame = 14.0f;
         mHowManyDriversBck[10].mFrame = 14.0f;
         mHowManyDriversBck[11].mFrame = 14.0f;
-        f32 val36 = mHowManyDriversBck[12].mFrame + 1.0f;
-        mHowManyDriversBck[12].mFrame = val36;
-        if (val36 >= 75.0f)
+        if ((mHowManyDriversBck[12].mFrame += 1.0f) >= 75.0f)
             mHowManyDriversBck[12].mFrame = 14.0f;
 
         mHowManyDriversBrk[4].mFrame = 0.0f;
@@ -2502,11 +2428,11 @@ void SceneMenu::entry()
         mHowManyDriversBrk[14].mFrame = 0.0f;
         mHowManyDriversBrk[15].mFrame = 0.0f;
         mHowManyDriversBrk[16].mFrame = 0.0f;
-        mHowManyDriversBrk[17].mFrame = 1.0f;
+        mHowManyDriversBrk[17].mFrame = 0.0f;
         mHowManyDriversBrk[18].mFrame = 1.0f;
-        mHowManyDriversBrk[19].mFrame = 0.0f;
-        mHowManyDriversBrk[20].mFrame = 0.0f;
-        mHowManyDriversBrk[21].mFrame = 0.0f;
+        mHowManyDriversBrk[19].mFrame = 1.0f;
+        mHowManyDriversBrk[20].mFrame = 1.0f;
+        mHowManyDriversBrk[21].mFrame = 1.0f;
         break;
     }
     default:
@@ -2820,48 +2746,48 @@ void SceneMenu::vs_init()
                 mSingleTagSelectBck[31].mFrame = 14.0f;
                 mSingleTagSelectBck[32].mFrame = 14.0f;
                 mSingleTagSelectBck[33].mFrame = 22.0f;
-                mSingleTagSelectBrk[36].mFrame = 1.0f;
-                mSingleTagSelectBrk[37].mFrame = 1.0f;
-                mSingleTagSelectBrk[38].mFrame = 0.0f;
-                mSingleTagSelectBrk[39].mFrame = 1.0f;
-                mSingleTagSelectBrk[40].mFrame = 1.0f;
-                mSingleTagSelectBrk[41].mFrame = 1.0f;
-                mSingleTagSelectBrk[42].mFrame = 1.0f;
-                mSingleTagSelectBrk[43].mFrame = 1.0f;
-                mSingleTagSelectBrk[44].mFrame = 1.0f;
-                mSingleTagSelectBrk[45].mFrame = 1.0f;
-                mSingleTagSelectBrk[46].mFrame = 1.0f;
-                mSingleTagSelectBrk[47].mFrame = 0.0f;
-                mSingleTagSelectBrk[48].mFrame = 0.0f;
-                mSingleTagSelectBrk[49].mFrame = 0.0f;
-                mSingleTagSelectBrk[50].mFrame = 0.0f;
-                mSingleTagSelectBrk[51].mFrame = 1.0f;
-                mSingleTagSelectBrk[52].mFrame = 1.0f;
-                mSingleTagSelectBrk[53].mFrame = 1.0f;
-                mSingleTagSelectBrk[54].mFrame = 1.0f;
-                mSingleTagSelectBrk[55].mFrame = 1.0f;
-                mSingleTagSelectBrk[56].mFrame = 1.0f;
-                mSingleTagSelectBrk[57].mFrame = 1.0f;
-                mSingleTagSelectBrk[58].mFrame = 1.0f;
-                mSingleTagSelectBrk[59].mFrame = 0.0f;
-                mSingleTagSelectBrk[60].mFrame = 0.0f;
-                mSingleTagSelectBrk[61].mFrame = 0.0f;
-                mSingleTagSelectBrk[62].mFrame = 0.0f;
-                mSingleTagSelectBrk[63].mFrame = 1.0f;
-                mSingleTagSelectBrk[64].mFrame = 1.0f;
-                mSingleTagSelectBrk[65].mFrame = 1.0f;
-                mSingleTagSelectBrk[66].mFrame = 1.0f;
-                mSingleTagSelectBrk[67].mFrame = 1.0f;
-                mSingleTagSelectBrk[68].mFrame = 1.0f;
-                mSingleTagSelectBrk[69].mFrame = 0.0f;
-                mSingleTagSelectBrk[70].mFrame = 0.0f;
-                mSingleTagSelectBrk[71].mFrame = 0.0f;
-                mSingleTagSelectBrk[72].mFrame = 1.0f;
-                mSingleTagSelectBrk[73].mFrame = 1.0f;
-                mSingleTagSelectBrk[74].mFrame = 1.0f;
-                mSingleTagSelectBrk[75].mFrame = 1.0f;
-                mSingleTagSelectBrk[76].mFrame = 0.0f;
-                mSingleTagSelectBrk[77].mFrame = 0.0f;
+                mSingleTagSelectBrk[36].mFrame = 0.0f;
+                mSingleTagSelectBrk[37].mFrame = 0.0f;
+                mSingleTagSelectBrk[38].mFrame = 1.0f;
+                mSingleTagSelectBrk[39].mFrame = 0.0f;
+                mSingleTagSelectBrk[40].mFrame = 0.0f;
+                mSingleTagSelectBrk[41].mFrame = 0.0f;
+                mSingleTagSelectBrk[42].mFrame = 0.0f;
+                mSingleTagSelectBrk[43].mFrame = 0.0f;
+                mSingleTagSelectBrk[44].mFrame = 0.0f;
+                mSingleTagSelectBrk[45].mFrame = 0.0f;
+                mSingleTagSelectBrk[46].mFrame = 0.0f;
+                mSingleTagSelectBrk[47].mFrame = 1.0f;
+                mSingleTagSelectBrk[48].mFrame = 1.0f;
+                mSingleTagSelectBrk[49].mFrame = 1.0f;
+                mSingleTagSelectBrk[50].mFrame = 1.0f;
+                mSingleTagSelectBrk[51].mFrame = 0.0f;
+                mSingleTagSelectBrk[52].mFrame = 0.0f;
+                mSingleTagSelectBrk[53].mFrame = 0.0f;
+                mSingleTagSelectBrk[54].mFrame = 0.0f;
+                mSingleTagSelectBrk[55].mFrame = 0.0f;
+                mSingleTagSelectBrk[56].mFrame = 0.0f;
+                mSingleTagSelectBrk[57].mFrame = 0.0f;
+                mSingleTagSelectBrk[58].mFrame = 0.0f;
+                mSingleTagSelectBrk[59].mFrame = 1.0f;
+                mSingleTagSelectBrk[60].mFrame = 1.0f;
+                mSingleTagSelectBrk[61].mFrame = 1.0f;
+                mSingleTagSelectBrk[62].mFrame = 1.0f;
+                mSingleTagSelectBrk[63].mFrame = 0.0f;
+                mSingleTagSelectBrk[64].mFrame = 0.0f;
+                mSingleTagSelectBrk[65].mFrame = 0.0f;
+                mSingleTagSelectBrk[66].mFrame = 0.0f;
+                mSingleTagSelectBrk[67].mFrame = 0.0f;
+                mSingleTagSelectBrk[68].mFrame = 0.0f;
+                mSingleTagSelectBrk[69].mFrame = 1.0f;
+                mSingleTagSelectBrk[70].mFrame = 1.0f;
+                mSingleTagSelectBrk[71].mFrame = 1.0f;
+                mSingleTagSelectBrk[72].mFrame = 0.0f;
+                mSingleTagSelectBrk[73].mFrame = 0.0f;
+                mSingleTagSelectBrk[74].mFrame = 0.0f;
+                mSingleTagSelectBrk[75].mFrame = 0.0f;
+                mSingleTagSelectBrk[76].mFrame = 1.0f;
+                mSingleTagSelectBrk[77].mFrame = 1.0f;
                 break;
             default:
 #line 3229
@@ -5312,13 +5238,13 @@ void SceneMenu::battle()
             {
                 GameAudio::Main::getAudio()->startSystemSe(0x20000);
                 mMsgId = (mMsgId + 2) % 3;
-                mBattleBck[13].mFrame = 34.0f;
+                mBattleBck[13].mFrame = 25.0f;
             }
             else if (repeat & JUTGamePad::MAINSTICK_DOWN)
             {
                 GameAudio::Main::getAudio()->startSystemSe(0x20000);
                 mMsgId = (mMsgId + 1) % 3;
-                mBattleBck[13].mFrame = 34.0f;
+                mBattleBck[13].mFrame = 25.0f;
             }
         }
     }
@@ -5327,21 +5253,13 @@ void SceneMenu::battle()
     {
         if (i == mMsgId)
         {
-            f32 f0 = mBattleBck[1 + i].mFrame + -1.0f;
-            mBattleBck[1 + i].mFrame = f0;
-            if (f0 > 19.0f)
+            if ((mBattleBck[1 + i].mFrame += 1.0f) > 19.0f)
                 mBattleBck[1 + i].mFrame = 19.0f;
-            f32 f1 = mBattleBck[4 + i].mFrame + -1.0f;
-            mBattleBck[4 + i].mFrame = f1;
-            if (f1 > 19.0f)
+            if ((mBattleBck[4 + i].mFrame += 1.0f) > 19.0f)
                 mBattleBck[4 + i].mFrame = 19.0f;
-            f32 f2 = mBattleBck[7 + i].mFrame + -1.0f;
-            mBattleBck[7 + i].mFrame = f2;
-            if (f2 > 19.0f)
+            if ((mBattleBck[7 + i].mFrame += 1.0f) > 19.0f)
                 mBattleBck[7 + i].mFrame = 19.0f;
-            f32 f3 = mBattleBck[10 + i].mFrame + -1.0f;
-            mBattleBck[10 + i].mFrame = f3;
-            if (f3 > 19.0f)
+            if ((mBattleBck[10 + i].mFrame += 1.0f) > 19.0f)
                 mBattleBck[10 + i].mFrame = 19.0f;
 
             J2DPane *pane = mBattleBck[4 + i].mPane;
@@ -5362,21 +5280,13 @@ void SceneMenu::battle()
         }
         else
         {
-            f32 f0 = mBattleBck[1 + i].mFrame - -1.0f;
-            mBattleBck[1 + i].mFrame = f0;
-            if (f0 < 14.0f)
+            if ((mBattleBck[1 + i].mFrame -= 1.0f) < 14.0f)
                 mBattleBck[1 + i].mFrame = 14.0f;
-            f32 f1 = mBattleBck[4 + i].mFrame - -1.0f;
-            mBattleBck[4 + i].mFrame = f1;
-            if (f1 < 14.0f)
+            if ((mBattleBck[4 + i].mFrame -= 1.0f) < 14.0f)
                 mBattleBck[4 + i].mFrame = 14.0f;
-            f32 f2 = mBattleBck[7 + i].mFrame - -1.0f;
-            mBattleBck[7 + i].mFrame = f2;
-            if (f2 < 14.0f)
+            if ((mBattleBck[7 + i].mFrame -= 1.0f) < 14.0f)
                 mBattleBck[7 + i].mFrame = 14.0f;
-            f32 f3 = mBattleBck[10 + i].mFrame - -1.0f;
-            mBattleBck[10 + i].mFrame = f3;
-            if (f3 < 14.0f)
+            if ((mBattleBck[10 + i].mFrame -= 1.0f) < 14.0f)
                 mBattleBck[10 + i].mFrame = 14.0f;
 
             J2DPane *pane = mBattleBck[4 + i].mPane;
@@ -5397,10 +5307,10 @@ void SceneMenu::battle()
         }
     }
 
-    f32 frame = mBattleBck[13].mFrame;
-    if (24.0f != frame)
+    if (mBattleBck[13].mFrame != 24.0f)
     {
-        mBattleBck[13].mFrame = frame + -1.0f;
+        f32 frame = mBattleBck[13].mFrame;
+        mBattleBck[13].mFrame += 1.0f;
         if (frame == 29.0f)
         {
             J2DPane *pane = mBattleBck[14].mPane;
@@ -5409,7 +5319,7 @@ void SceneMenu::battle()
             static_cast<J2DPicture *>(pane)->changeTexture(mBattleName[mMsgId], 0);
             changeText();
         }
-        if (frame >= 27.0f)
+        if (frame >= 34.0f)
             mBattleBck[13].mFrame = 24.0f;
     }
 }
@@ -5852,13 +5762,13 @@ void SceneMenu::character()
         }
     }
 
-    f32 dec = -1.0f;
+    f32 inc = 1.0f;
     f32 endFrame = 26.0f;
     for (int i = 0; i < 10; i++)
     {
         for (int j = 0; j < 2; j++)
         {
-            f32 frame = mCharPane[i][j].mFrame + dec;
+            f32 frame = mCharPane[i][j].mFrame + inc;
             mCharPane[i][j].mFrame = frame;
             if (endFrame == frame)
             {
@@ -6265,11 +6175,11 @@ void SceneMenu::selectZ(int no)
     if (isSelectAnm(no))
         return;
 
-    int padNo = mPlayerPadNo[no];
     int i;
+    int padNo = mPlayerPadNo[no];
     for (i = 0; i <= mInfo.playerNum; i++)
     {
-        if (no != i && mPlayerPadNo[i] == padNo)
+        if (no != i && padNo == mPlayerPadNo[i])
             break;
     }
 
@@ -6630,13 +6540,14 @@ void SceneMenu::characterAnm()
         mCharState[i] = 0;
     }
 
+    int col;
     for (int i = 0; i < 4; i++)
     {
         int no = mPlayerData[i].mCharNoF;
         int charF = mPlayerData[i].mCharF;
         if (charF >= 0 && charF < 20 && no >= 0 && no < 4)
         {
-            int col = charF % 2;
+            col = charF % 2;
             int row = charF / 2;
             charPlayer[charF] = no;
             mCharCCBpk[row][col + 4].mPane->show();
@@ -6662,7 +6573,7 @@ void SceneMenu::characterAnm()
 #line 6976
             JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
             pane->changeTexture(mCharCCName[col][no], 0);
-            mCharState[charB] = 2;
+            mCharState[charB] = 1;
         }
     }
 
@@ -7026,24 +6937,13 @@ void SceneMenu::setChar1Plus()
     int charB = mPlayerData[0].mCharB;
     int kart = mPlayerData[0].mKart;
     bool busy = mPlayerData[0].mState == 2;
-    f32 dec = -1.0f;
 
     if (charF >= 0 && charF < 20 && !busy)
     {
         mChar1PlusBck[0].mPane->show();
-        
-        f32 f1 = dec + mChar1PlusBck[0].mFrame;
-        mChar1PlusBck[0].mFrame = f1;
-
-        if (f1 > 9.0f)
-
+        if ((mChar1PlusBck[0].mFrame += 1.0f) > 9.0f)
             mChar1PlusBck[0].mFrame = 9.0f;
-        
-        f32 f2 = dec + mChar1PlusBrk[0].mFrame;
-        mChar1PlusBrk[0].mFrame = f2;
-
-        if (f2 > 9.0f)
-
+        if ((mChar1PlusBrk[0].mFrame += 1.0f) > 9.0f)
             mChar1PlusBrk[0].mFrame = 9.0f;
 
         J2DPane *pane = mChar1PlusBck[0].mPane;
@@ -7052,47 +6952,27 @@ void SceneMenu::setChar1Plus()
         static_cast<J2DPicture *>(pane)->changeTexture(mCharName[charF], 0);
 
         mChar1PlusBck[1].mPane->show();
-        
-        f32 f3 = dec + mChar1PlusBck[1].mFrame;
-        mChar1PlusBck[1].mFrame = f3;
-
-        if (f3 > 9.0f)
-
+        if ((mChar1PlusBck[1].mFrame += 1.0f) > 9.0f)
             mChar1PlusBck[1].mFrame = 9.0f;
-        
-        f32 f4 = dec + mChar1PlusBpk.mFrame;
-        mChar1PlusBpk.mFrame = f4;
-
-        if (f4 > 9.0f)
-
+        if ((mChar1PlusBpk.mFrame += 1.0f) > 9.0f)
             mChar1PlusBpk.mFrame = 9.0f;
     }
     else
     {
         mChar1PlusBck[0].mPane->hide();
-        mChar1PlusBck[0].mFrame = -1.0f;
-        mChar1PlusBrk[0].mFrame = -1.0f;
+        mChar1PlusBck[0].mFrame = 0.0f;
+        mChar1PlusBrk[0].mFrame = 0.0f;
         mChar1PlusBck[1].mPane->hide();
-        mChar1PlusBck[1].mFrame = -1.0f;
-        mChar1PlusBpk.mFrame = -1.0f;
+        mChar1PlusBck[1].mFrame = 0.0f;
+        mChar1PlusBpk.mFrame = 0.0f;
     }
 
     if (charB >= 0 && charB < 20 && !busy)
     {
         mChar1PlusBck[2].mPane->show();
-        
-        f32 f5 = dec + mChar1PlusBck[2].mFrame;
-        mChar1PlusBck[2].mFrame = f5;
-
-        if (f5 > 9.0f)
-
+        if ((mChar1PlusBck[2].mFrame += 1.0f) > 9.0f)
             mChar1PlusBck[2].mFrame = 9.0f;
-        
-        f32 f6 = dec + mChar1PlusBrk[1].mFrame;
-        mChar1PlusBrk[1].mFrame = f6;
-
-        if (f6 > 9.0f)
-
+        if ((mChar1PlusBrk[1].mFrame += 1.0f) > 9.0f)
             mChar1PlusBrk[1].mFrame = 9.0f;
 
         J2DPane *pane = mChar1PlusBck[2].mPane;
@@ -7103,27 +6983,24 @@ void SceneMenu::setChar1Plus()
     else
     {
         mChar1PlusBck[2].mPane->hide();
-        mChar1PlusBck[2].mFrame = -1.0f;
-        mChar1PlusBrk[1].mFrame = -1.0f;
+        mChar1PlusBck[2].mFrame = 0.0f;
+        mChar1PlusBrk[1].mFrame = 0.0f;
     }
 
     if (kart >= 0 && kart < 21 && !busy)
     {
-        const s8 *p0 = (const s8 *)mKartPerf + kart * 3;
         mChar1PlusBck[3].mPane->show();
-        const s8 *p1 = p0 + 1;
-        const s8 *p2 = p0 + 2;
         for (int i = 0; i < 5; i++)
         {
-            if (i < p0[0])
+            if (i < mKartPerf[kart][0])
                 mChar1PlusBck[4 + i].mPane->show();
             else
                 mChar1PlusBck[4 + i].mPane->hide();
-            if (i < p1[0])
+            if (i < mKartPerf[kart][1])
                 mChar1PlusBck[9 + i].mPane->show();
             else
                 mChar1PlusBck[9 + i].mPane->hide();
-            if (i < p2[0])
+            if (i < mKartPerf[kart][2])
                 mChar1PlusBck[14 + i].mPane->show();
             else
                 mChar1PlusBck[14 + i].mPane->hide();

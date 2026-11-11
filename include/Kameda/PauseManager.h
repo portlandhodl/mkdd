@@ -5,6 +5,8 @@
 #include "Osako/kartPad.h"
 #include "types.h"
 
+class JKRArchive;
+
 class PauseManager {
 public:
     PauseManager(JKRHeap *);     // 0x801343d0
@@ -28,6 +30,7 @@ public:
     }
 
     bool isResultStart() const { return mResultStart; }
+    JKRArchive *getArchive() const { return mArchive; }
 
 private:
     static PauseManager *mThis;    // 0x80416298
@@ -37,7 +40,9 @@ private:
     static int mPauseNextChoice;   // 0x804162a8
     static KartGamePad *mPausePad; // 0x804162ac
 
-    u8 _0[0xe];
+    u8 _0[0x4];
+    JKRArchive *mArchive; // 0x4
+    u8 _8[0xe - 0x8];
     bool mResultStart;
     bool _f;
     bool mGameOver;

@@ -150,7 +150,7 @@ private:
     static const u32 mCharGoVoice[20];           // 0x80371388
     static const int mCharIndex[20];             // 0x803713d8
     static const int mKartIndex[21];             // 0x803715d4
-    static const u8 mKartPerf[63];               // 0x80371628
+    static const s8 mKartPerf[21][3];               // 0x80371628
     static const ERaceLevel mLevelID[4];         // 0x80371668
     static const u64 mPlayerIconBckTag[33];      // 0x80371678
     static const u64 mHowManyDriversBckTag[13];  // 0x803717b0
