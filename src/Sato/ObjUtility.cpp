@@ -610,3 +610,223 @@ bool BombEffectObj::execute()
 
 
 DECL_WEAK BombEffectObj::~BombEffectObj() {}
+
+void CLPointController::reset()
+{
+    mPrev = nullptr;
+    mNext = nullptr;
+    _c.zero();
+    _18.zero();
+    mIsReverse = false;
+}
+
+void CLPointController::init_ByKartIndex(int kart)
+{
+    mPrev = KartCtrl::getKartCtrl()->GetKartCenterPtr(kart);
+    mNext = calcNextPoint(mPrev);
+    calcCLDir();
+}
+
+void CLPointController::init_ByCLPointPtr(CLPoint *point)
+{
+    mPrev = point->getPrevPoint(0);
+    mNext = point;
+    calcCLDir();
+}
+
+bool CLPointController::chkArriveAtFwPoint(const JGeometry::TVec3f &pos, f32 dist)
+{
+    bool arrived = false;
+    JGeometry::TVec3f next;
+    JGeometry::TVec3f diff;
+    mNext->getPosition(&next);
+    diff.sub(next, pos);
+    if (PSVECMag(&diff) < dist)
+        arrived = true;
+    return arrived;
+}
+
+bool CLPointController::chkIsOverFwPoint(const JGeometry::TVec3f &pos)
+{
+    bool over = false;
+    JGeometry::TVec3f next;
+    mNext->getPosition(&next);
+    JGeometry::TVec3f v;
+    v.sub(pos, next);
+    v.y = 0.0f;
+    JGeometry::TVec3f cross;
+    cross.cross(_c, v);
+    f32 mag = PSVECMag(&cross);
+    f32 dot = _c.dot(v);
+    f32 at = JGeometry::TUtilf::atan2(mag, dot);
+    at = JGeometry::TUtilf::abs(at) * 57.29578f;
+    if (at < 90.0f)
+        over = true;
+    return over;
+}
+
+bool CLPointController::doNextChkIsOverFwPoint(const JGeometry::TVec3f &pos)
+{
+    bool over = false;
+    JGeometry::TVec3f v;
+    JGeometry::TVec3f next;
+    mNext->getPosition(&next);
+    v.sub(pos, next);
+    v.y = 0.0f;
+    JGeometry::TVec3f cross;
+    cross.cross(_c, v);
+    f32 mag = PSVECMag(&cross);
+    f32 dot = _c.dot(v);
+    f32 at = JGeometry::TUtilf::atan2(mag, dot);
+    at = JGeometry::TUtilf::abs(at) * 57.29578f;
+    if (at < 90.0f)
+        over = true;
+    if (over)
+        changeNextPoint();
+    return over;
+}
+
+f32 CLPointController::getLengthFromCLDir(const JGeometry::TVec3f &dir)
+{
+    JGeometry::TVec3f next;
+    mNext->getPosition(&next);
+    f32 mag = PSVECMag(&((JGeometry::TVec3f &)_c));
+    return fabs(dir.dot(_c));
+}
+
+void CLPointController::changeNextPoint()
+{
+    mPrev = mNext;
+    mNext = calcNextPoint(mPrev);
+    calcCLDir();
+}
+
+void CLPointController::calcCLDir()
+{
+    JGeometry::TVec3f next;
+    JGeometry::TVec3f prev;
+    JGeometry::TVec3f up;
+    up.set(0.0f, 1.0f, 0.0f);
+    mNext->getPosition(&next);
+    mPrev->getPosition(&prev);
+    _c.sub(next, prev);
+    _c.y = 0.0f;
+    stVecNormalize(_c);
+    PSVECCrossProduct(&up, &_c, &_18);
+}
+
+void CLPointController::calcFirstCLbyAngle(const JGeometry::TVec3f &dir, int maxCnt, f32 threshold)
+{
+    CLPoint *point = mPrev;
+    JGeometry::TVec3f d2;
+    JGeometry::TVec3f d1;
+    d1.set(0.0f, 0.0f, 0.0f);
+    int i = 0;
+    for (; i < maxCnt; i++)
+    {
+        CLPoint *next = calcNextPoint(point);
+        JGeometry::TVec3f prevPos;
+        JGeometry::TVec3f nextPos;
+        mNext->getPosition(&prevPos);
+        next->getPosition(&nextPos);
+        d1.sub(nextPos, prevPos);
+        d1.y = 0.0f;
+        stVecNormalize(d1);
+        d2.sub(dir, prevPos);
+        d2.y = 0.0f;
+        stVecNormalize(d2);
+        if (i == maxCnt - 1 || d2.dot(d1) < threshold)
+        {
+            mPrev = point;
+            mNext = next;
+            break;
+        }
+        point = next;
+    }
+    calcCLDir();
+}
+
+CLPoint *CLPointController::calcNextPoint(CLPoint *point)
+{
+    int no = findNextPointNo(point);
+    if (mIsReverse)
+        return point->getPrevPoint(no);
+    return point->getNextPoint(no);
+}
+
+
+int CLPointController::findNextPointNo(CLPoint *) { return 0; }
+
+int CLPointController::findRndPointNoExceptForShortCut(CLPoint *point, stRandom *rnd)
+{
+    int num = mIsReverse ? point->getPrevPointNumber() : point->getNextPointNumber();
+    if (num == 1)
+        return 0;
+
+    JUT_MINMAX_ASSERT(0, num, 5);
+
+    int candidates[6];
+    int shortcutCnt = 0;
+    int candCnt = 0;
+    int offset = 0;
+    candidates[0] = 0;
+    u8 i = 0;
+    while (i < num)
+    {
+        CLPoint *p = mIsReverse ? point->getPrevPoint(i) : point->getNextPoint(i);
+        if (p->getPointData()->groupSetting != 0)
+            shortcutCnt++;
+        else
+        {
+            candidates[candCnt] = i;
+            candCnt++;
+            offset += 4;
+        }
+        i++;
+    }
+
+    int sel;
+    if (candCnt > 1)
+        sel = candidates[rnd->getRandomMax(candCnt - 1)];
+    else
+    {
+        if (shortcutCnt > 0)
+            candidates[0] = 0;
+        sel = candidates[0];
+    }
+
+    JUT_MINMAX_ASSERT(0, sel, num);
+    return sel;
+}
+
+
+void CLPointController::recursiveTargetCalc(CLPoint *point, int groupID, int *pPointNo, u8 *pCnt, bool *pFound)
+{
+    (*pCnt)++;
+    if (*pCnt > 2)
+        return;
+
+    int num = mIsReverse ? point->getPrevPointNumber() : point->getNextPointNumber();
+    for (int i = 0; i < num; i++)
+    {
+        if (*pCnt == 1)
+            *pPointNo = i;
+
+        CLPoint *p = mIsReverse ? point->getPrevPoint(i) : point->getNextPoint(i);
+        if (groupID == p->getGroupID())
+        {
+            *pFound = true;
+            break;
+        }
+
+        CLPoint *div = p->getDivPoint();
+        if (div)
+        {
+            recursiveTargetCalc(div, groupID, pPointNo, pCnt, pFound);
+            (*pCnt)--;
+        }
+
+        if (*pFound)
+            break;
+    }
+}

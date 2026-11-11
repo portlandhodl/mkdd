@@ -72,12 +72,12 @@ public:
     bool chkArriveAtFwPoint(const JGeometry::TVec3f &, f32);
     bool chkIsOverFwPoint(const JGeometry::TVec3f &);
     bool doNextChkIsOverFwPoint(const JGeometry::TVec3f &);
-    void getLengthFromCLDir(const JGeometry::TVec3f &);
+    f32 getLengthFromCLDir(const JGeometry::TVec3f &);
     void changeNextPoint();
     void calcCLDir();
     void calcFirstCLbyAngle(const JGeometry::TVec3f &, int, f32);
     CLPoint *calcNextPoint(CLPoint *);
-    void findRndPointNoExceptForShortCut(CLPoint *, stRandom *);
+    int findRndPointNoExceptForShortCut(CLPoint *, stRandom *);
     void recursiveTargetCalc(CLPoint *, int, int *, u8 *, bool *);
 
     // Inline/Unused
