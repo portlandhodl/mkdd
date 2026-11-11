@@ -15,6 +15,7 @@ public:
     virtual ~TMapObjNossieColBase() {}
     virtual void reset();
     virtual void calc();
+    virtual void createColModel(J3DModelData *) = 0;
     virtual u32 getReaction();
 };
 
@@ -30,6 +31,7 @@ public:
     virtual void reset();
     virtual void calc();
     virtual void createColModel(J3DModelData *);
+    virtual const char *getShadowBmdFileName() = 0;
     virtual u32 getReleaseFrame();
     virtual u32 getReaction() { return 0xa; }
 
@@ -43,7 +45,8 @@ public:
     f32 mShake;                   // 0x180
     u8 mPrevHit;                  // 0x184
     u8 mHit;                      // 0x185
-    u8 _186[6];                   // 0x186
+    u8 _186[2];                   // 0x186
+    u32 mStepSeID;                // 0x188
 };
 
 class TMapObjNossieColFootFront : public TMapObjNossieColFoot
@@ -108,11 +111,12 @@ public:
 
     static TAnmInfo sAnmInfos[16];
     static TAnmInfo sAnmInfosTA[1];
+    static const u32 scNossieEffectAppearPos[16];
     static const char *sNossieLegJointName[4];
     static const char *sHeadJointName;
     static int sNossieLegJointNo[4];
     static int sHeadJointNo;
-    static f32 sOffsetY[4];
+    static const f32 sOffsetY[4];
     static JGeometry::TVec3f sHeadOffset;
     static JGeometry::TVec3f sBodyOffset;
 

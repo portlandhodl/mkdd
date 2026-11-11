@@ -93,8 +93,8 @@ public:
     void thunderDown();
     virtual s32 getThrowPow() { return mThrowPow; }    // 0x802A1E08
 
-    virtual void InitExec();                          // 0x8029FA18
     virtual void MoveExec();                          // 0x8029FA84
+    virtual void InitExec();                          // 0x8029FA18
 
     bool isIgnore(int);
     void ignoreKart(int);
