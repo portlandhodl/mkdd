@@ -538,7 +538,7 @@ void SceneMenu::reset()
         mPlayerData[i].mState = 0;
     }
     for (int i = 0; i < 20; i++)
-        ((u32 *)_219c)[i] = 0;
+        mCharState[i] = 0;
 
     for (int i = 0; i < 33; i++)
         mIconBck[i].mPane->hide();
@@ -856,6 +856,11 @@ void SceneMenu::draw()
 
     switch (mInfo.mode)
     {
+    default:
+    case 12:
+    case 13:
+    case 14:
+        break;
     case 0:
     case 1:
     case 2:
@@ -877,16 +882,12 @@ void SceneMenu::draw()
     case 11:
         mScreenSelectBattle->draw(0.0f, 0.0f, mOrtho);
         break;
-    case 12:
-    case 13:
-    case 14:
-    default:
-        break;
     }
 
     if (mInfo.mode < 15)
     {
-    if (mInfo.mode >= 12)
+    if (mInfo.mode < 12) { }
+    else
     {
         for (int i = 0; i < 10; i++)
         {
@@ -911,9 +912,6 @@ void SceneMenu::draw()
             JUT_ASSERT(0);
         }
     }
-    else
-    {
-    }
     }
 
     mScreenPlayerIcon->draw(0.0f, 0.0f, mOrtho);
@@ -921,7 +919,8 @@ void SceneMenu::draw()
 
     if (mInfo.mode < 15)
     {
-    if (mInfo.mode >= 12)
+    if (mInfo.mode < 12) { }
+    else
     {
         for (int i = 0; i <= mInfo.entryNum; i++)
         {
@@ -1189,8 +1188,8 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *b = panes[j];
             J2DPane *a = panes[i];
+            J2DPane *b = panes[j];
             if (a->mScale.x > b->mScale.x)
             {
                 panes[i] = b;
@@ -1209,8 +1208,8 @@ void SceneMenu::calcModeOrder()
     {
         for (int j = 2; j > i; j--)
         {
-            J2DPane *b = panes[j];
             J2DPane *a = panes[i];
+            J2DPane *b = panes[j];
             if (a->mScale.x > b->mScale.x)
             {
                 panes[i] = b;
@@ -1734,7 +1733,382 @@ void SceneMenu::entry_end()
     }
 }
 
-void SceneMenu::vs_init() {}
+void SceneMenu::vs_init()
+{
+    if (mInfo.timer < 15)
+    {
+        MenuTitleLine::ptr()->drop(MenuTitleLine::mcVsCoop);
+        mIconBck[0].mPane->show();
+        mIconBck[1].mPane->show();
+        mIconBck[2].mPane->show();
+        mSingleTagSelectBck[0].mPane->show();
+        mIconBck[0].mFrame = mInfo.timer;
+        mIconBck[1].mFrame = mInfo.timer;
+        mIconBck[2].mFrame = mInfo.timer;
+        mSingleTagSelectBck[0].mFrame = mInfo.timer;
+
+        switch (mInfo.playerNum)
+        {
+        case 1:
+        {
+            J2DPane *pane = mIconBck[1].mPane;
+#line 2900
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->changeTexture(mPlayerIconPlayerName[1], 0);
+            mSingleTagSelectBck[1].mPane->show();
+            mSingleTagSelectBck[12].mPane->hide();
+            mSingleTagSelectBck[24].mPane->hide();
+            switch (mInfo._18)
+            {
+            case 0:
+                mSingleTagSelectBck[2].mFrame = 22.0f;
+                mSingleTagSelectBck[3].mFrame = 14.0f;
+                mSingleTagSelectBck[7].mFrame = 22.0f;
+                mSingleTagSelectBck[8].mFrame = 14.0f;
+                mSingleTagSelectBrk[0].mFrame = 1.0f;
+                mSingleTagSelectBrk[1].mFrame = 0.0f;
+                mSingleTagSelectBrk[2].mFrame = 1.0f;
+                mSingleTagSelectBrk[3].mFrame = 1.0f;
+                mSingleTagSelectBrk[4].mFrame = 0.0f;
+                mSingleTagSelectBrk[5].mFrame = 0.0f;
+                mSingleTagSelectBrk[6].mFrame = 0.0f;
+                mSingleTagSelectBrk[7].mFrame = 1.0f;
+                mSingleTagSelectBrk[8].mFrame = 1.0f;
+                mSingleTagSelectBrk[9].mFrame = 0.0f;
+                mSingleTagSelectBrk[10].mFrame = 0.0f;
+                mSingleTagSelectBrk[11].mFrame = 1.0f;
+                mSingleTagSelectBrk[12].mFrame = 1.0f;
+                mSingleTagSelectBrk[13].mFrame = 1.0f;
+                break;
+            case 1:
+                mSingleTagSelectBck[2].mFrame = 14.0f;
+                mSingleTagSelectBck[3].mFrame = 22.0f;
+                mSingleTagSelectBck[7].mFrame = 14.0f;
+                mSingleTagSelectBck[8].mFrame = 22.0f;
+                mSingleTagSelectBrk[0].mFrame = 0.0f;
+                mSingleTagSelectBrk[1].mFrame = 1.0f;
+                mSingleTagSelectBrk[2].mFrame = 0.0f;
+                mSingleTagSelectBrk[3].mFrame = 0.0f;
+                mSingleTagSelectBrk[4].mFrame = 1.0f;
+                mSingleTagSelectBrk[5].mFrame = 1.0f;
+                mSingleTagSelectBrk[6].mFrame = 1.0f;
+                mSingleTagSelectBrk[7].mFrame = 0.0f;
+                mSingleTagSelectBrk[8].mFrame = 0.0f;
+                mSingleTagSelectBrk[9].mFrame = 1.0f;
+                mSingleTagSelectBrk[10].mFrame = 1.0f;
+                mSingleTagSelectBrk[11].mFrame = 0.0f;
+                mSingleTagSelectBrk[12].mFrame = 0.0f;
+                mSingleTagSelectBrk[13].mFrame = 0.0f;
+                break;
+            default:
+#line 2952
+                JUT_ASSERT(0);
+            }
+            mSingleTagSelectBck[4].mFrame = 10.0f;
+            mSingleTagSelectBck[5].mFrame = 10.0f;
+            mSingleTagSelectBck[6].mFrame = 10.0f;
+            mSingleTagSelectBck[10].mFrame = 14.0f;
+            mSingleTagSelectBck[11].mFrame = 14.0f;
+            mSingleTagSelectBck[9].mFrame = 14.0f;
+            mSingleTagSelectBtk[2].mFrame = 0.0f;
+            mSingleTagSelectBtk[3].mFrame = 0.0f;
+            mSingleTagSelectBtk[4].mFrame = 0.0f;
+            mSingleTagSelectBpk[0].mFrame = 0.0f;
+            mSingleTagSelectBpk[1].mFrame = 0.0f;
+            break;
+        }
+        case 2:
+        {
+            J2DPane *pane = mIconBck[1].mPane;
+#line 2972
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->changeTexture(mPlayerIconPlayerName[2], 0);
+            mSingleTagSelectBck[1].mPane->hide();
+            mSingleTagSelectBck[12].mPane->show();
+            mSingleTagSelectBck[24].mPane->hide();
+            switch (mInfo._18)
+            {
+            case 0:
+                mSingleTagSelectBck[13].mFrame = 22.0f;
+                mSingleTagSelectBck[14].mFrame = 14.0f;
+                mSingleTagSelectBck[17].mFrame = 22.0f;
+                mSingleTagSelectBck[18].mFrame = 14.0f;
+                mSingleTagSelectBrk[14].mFrame = 1.0f;
+                mSingleTagSelectBrk[15].mFrame = 0.0f;
+                mSingleTagSelectBrk[16].mFrame = 1.0f;
+                mSingleTagSelectBrk[17].mFrame = 1.0f;
+                mSingleTagSelectBrk[18].mFrame = 1.0f;
+                mSingleTagSelectBrk[19].mFrame = 0.0f;
+                mSingleTagSelectBrk[20].mFrame = 0.0f;
+                mSingleTagSelectBrk[21].mFrame = 0.0f;
+                mSingleTagSelectBrk[22].mFrame = 1.0f;
+                mSingleTagSelectBrk[23].mFrame = 1.0f;
+                mSingleTagSelectBrk[24].mFrame = 1.0f;
+                mSingleTagSelectBrk[25].mFrame = 0.0f;
+                mSingleTagSelectBrk[26].mFrame = 0.0f;
+                mSingleTagSelectBrk[27].mFrame = 0.0f;
+                mSingleTagSelectBrk[28].mFrame = 1.0f;
+                mSingleTagSelectBrk[29].mFrame = 1.0f;
+                mSingleTagSelectBrk[30].mFrame = 1.0f;
+                mSingleTagSelectBrk[31].mFrame = 0.0f;
+                mSingleTagSelectBrk[32].mFrame = 0.0f;
+                mSingleTagSelectBrk[33].mFrame = 1.0f;
+                mSingleTagSelectBrk[34].mFrame = 1.0f;
+                mSingleTagSelectBrk[35].mFrame = 0.0f;
+                break;
+            case 1:
+                mSingleTagSelectBck[13].mFrame = 14.0f;
+                mSingleTagSelectBck[14].mFrame = 22.0f;
+                mSingleTagSelectBck[17].mFrame = 14.0f;
+                mSingleTagSelectBck[18].mFrame = 22.0f;
+                mSingleTagSelectBrk[14].mFrame = 0.0f;
+                mSingleTagSelectBrk[15].mFrame = 1.0f;
+                mSingleTagSelectBrk[16].mFrame = 0.0f;
+                mSingleTagSelectBrk[17].mFrame = 0.0f;
+                mSingleTagSelectBrk[18].mFrame = 0.0f;
+                mSingleTagSelectBrk[19].mFrame = 1.0f;
+                mSingleTagSelectBrk[20].mFrame = 1.0f;
+                mSingleTagSelectBrk[21].mFrame = 1.0f;
+                mSingleTagSelectBrk[22].mFrame = 0.0f;
+                mSingleTagSelectBrk[23].mFrame = 0.0f;
+                mSingleTagSelectBrk[24].mFrame = 0.0f;
+                mSingleTagSelectBrk[25].mFrame = 1.0f;
+                mSingleTagSelectBrk[26].mFrame = 1.0f;
+                mSingleTagSelectBrk[27].mFrame = 1.0f;
+                mSingleTagSelectBrk[28].mFrame = 0.0f;
+                mSingleTagSelectBrk[29].mFrame = 0.0f;
+                mSingleTagSelectBrk[30].mFrame = 0.0f;
+                mSingleTagSelectBrk[31].mFrame = 1.0f;
+                mSingleTagSelectBrk[32].mFrame = 1.0f;
+                mSingleTagSelectBrk[33].mFrame = 0.0f;
+                mSingleTagSelectBrk[34].mFrame = 0.0f;
+                mSingleTagSelectBrk[35].mFrame = 1.0f;
+                break;
+            default:
+#line 3041
+                JUT_ASSERT(0);
+            }
+            mSingleTagSelectBck[15].mFrame = 10.0f;
+            mSingleTagSelectBck[16].mFrame = 10.0f;
+            mSingleTagSelectBck[19].mFrame = 14.0f;
+            mSingleTagSelectBck[20].mFrame = 14.0f;
+            mSingleTagSelectBck[21].mFrame = 14.0f;
+            mSingleTagSelectBck[22].mFrame = 14.0f;
+            mSingleTagSelectBck[23].mFrame = 14.0f;
+            mSingleTagSelectBtk[7].mFrame = 0.0f;
+            mSingleTagSelectBtk[8].mFrame = 0.0f;
+            mSingleTagSelectBtk[9].mFrame = 0.0f;
+            mSingleTagSelectBtk[10].mFrame = 0.0f;
+            mSingleTagSelectBtk[11].mFrame = 0.0f;
+            mSingleTagSelectBpk[2].mFrame = 0.0f;
+            mSingleTagSelectBpk[3].mFrame = 0.0f;
+            break;
+        }
+        case 3:
+        {
+            J2DPane *pane = mIconBck[1].mPane;
+#line 3064
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            static_cast<J2DPicture *>(pane)->changeTexture(mPlayerIconPlayerName[3], 0);
+            mSingleTagSelectBck[1].mPane->hide();
+            mSingleTagSelectBck[12].mPane->hide();
+            mSingleTagSelectBck[24].mPane->show();
+            switch (mInfo._18)
+            {
+            case 0:
+                mSingleTagSelectBck[25].mFrame = 22.0f;
+                mSingleTagSelectBck[26].mFrame = 14.0f;
+                mSingleTagSelectBck[27].mFrame = 14.0f;
+                mSingleTagSelectBck[31].mFrame = 22.0f;
+                mSingleTagSelectBck[32].mFrame = 14.0f;
+                mSingleTagSelectBck[33].mFrame = 14.0f;
+                mSingleTagSelectBrk[36].mFrame = 1.0f;
+                mSingleTagSelectBrk[37].mFrame = 0.0f;
+                mSingleTagSelectBrk[38].mFrame = 0.0f;
+                mSingleTagSelectBrk[39].mFrame = 1.0f;
+                mSingleTagSelectBrk[40].mFrame = 1.0f;
+                mSingleTagSelectBrk[41].mFrame = 1.0f;
+                mSingleTagSelectBrk[42].mFrame = 1.0f;
+                mSingleTagSelectBrk[43].mFrame = 0.0f;
+                mSingleTagSelectBrk[44].mFrame = 0.0f;
+                mSingleTagSelectBrk[45].mFrame = 0.0f;
+                mSingleTagSelectBrk[46].mFrame = 0.0f;
+                mSingleTagSelectBrk[47].mFrame = 0.0f;
+                mSingleTagSelectBrk[48].mFrame = 0.0f;
+                mSingleTagSelectBrk[49].mFrame = 0.0f;
+                mSingleTagSelectBrk[50].mFrame = 0.0f;
+                mSingleTagSelectBrk[51].mFrame = 1.0f;
+                mSingleTagSelectBrk[52].mFrame = 1.0f;
+                mSingleTagSelectBrk[53].mFrame = 1.0f;
+                mSingleTagSelectBrk[54].mFrame = 1.0f;
+                mSingleTagSelectBrk[55].mFrame = 0.0f;
+                mSingleTagSelectBrk[56].mFrame = 0.0f;
+                mSingleTagSelectBrk[57].mFrame = 0.0f;
+                mSingleTagSelectBrk[58].mFrame = 0.0f;
+                mSingleTagSelectBrk[59].mFrame = 0.0f;
+                mSingleTagSelectBrk[60].mFrame = 0.0f;
+                mSingleTagSelectBrk[61].mFrame = 0.0f;
+                mSingleTagSelectBrk[62].mFrame = 0.0f;
+                mSingleTagSelectBrk[63].mFrame = 1.0f;
+                mSingleTagSelectBrk[64].mFrame = 1.0f;
+                mSingleTagSelectBrk[65].mFrame = 1.0f;
+                mSingleTagSelectBrk[66].mFrame = 1.0f;
+                mSingleTagSelectBrk[67].mFrame = 0.0f;
+                mSingleTagSelectBrk[68].mFrame = 0.0f;
+                mSingleTagSelectBrk[69].mFrame = 0.0f;
+                mSingleTagSelectBrk[70].mFrame = 0.0f;
+                mSingleTagSelectBrk[71].mFrame = 0.0f;
+                mSingleTagSelectBrk[72].mFrame = 1.0f;
+                mSingleTagSelectBrk[73].mFrame = 1.0f;
+                mSingleTagSelectBrk[74].mFrame = 1.0f;
+                mSingleTagSelectBrk[75].mFrame = 0.0f;
+                mSingleTagSelectBrk[76].mFrame = 0.0f;
+                mSingleTagSelectBrk[77].mFrame = 0.0f;
+                break;
+            case 1:
+                mSingleTagSelectBck[25].mFrame = 14.0f;
+                mSingleTagSelectBck[26].mFrame = 22.0f;
+                mSingleTagSelectBck[27].mFrame = 14.0f;
+                mSingleTagSelectBck[31].mFrame = 14.0f;
+                mSingleTagSelectBck[32].mFrame = 22.0f;
+                mSingleTagSelectBck[33].mFrame = 14.0f;
+                mSingleTagSelectBrk[36].mFrame = 0.0f;
+                mSingleTagSelectBrk[37].mFrame = 1.0f;
+                mSingleTagSelectBrk[38].mFrame = 0.0f;
+                mSingleTagSelectBrk[39].mFrame = 0.0f;
+                mSingleTagSelectBrk[40].mFrame = 0.0f;
+                mSingleTagSelectBrk[41].mFrame = 0.0f;
+                mSingleTagSelectBrk[42].mFrame = 0.0f;
+                mSingleTagSelectBrk[43].mFrame = 1.0f;
+                mSingleTagSelectBrk[44].mFrame = 1.0f;
+                mSingleTagSelectBrk[45].mFrame = 1.0f;
+                mSingleTagSelectBrk[46].mFrame = 1.0f;
+                mSingleTagSelectBrk[47].mFrame = 0.0f;
+                mSingleTagSelectBrk[48].mFrame = 0.0f;
+                mSingleTagSelectBrk[49].mFrame = 0.0f;
+                mSingleTagSelectBrk[50].mFrame = 0.0f;
+                mSingleTagSelectBrk[51].mFrame = 0.0f;
+                mSingleTagSelectBrk[52].mFrame = 0.0f;
+                mSingleTagSelectBrk[53].mFrame = 0.0f;
+                mSingleTagSelectBrk[54].mFrame = 0.0f;
+                mSingleTagSelectBrk[55].mFrame = 1.0f;
+                mSingleTagSelectBrk[56].mFrame = 1.0f;
+                mSingleTagSelectBrk[57].mFrame = 1.0f;
+                mSingleTagSelectBrk[58].mFrame = 1.0f;
+                mSingleTagSelectBrk[59].mFrame = 0.0f;
+                mSingleTagSelectBrk[60].mFrame = 0.0f;
+                mSingleTagSelectBrk[61].mFrame = 0.0f;
+                mSingleTagSelectBrk[62].mFrame = 0.0f;
+                mSingleTagSelectBrk[63].mFrame = 0.0f;
+                mSingleTagSelectBrk[64].mFrame = 0.0f;
+                mSingleTagSelectBrk[65].mFrame = 0.0f;
+                mSingleTagSelectBrk[66].mFrame = 0.0f;
+                mSingleTagSelectBrk[67].mFrame = 1.0f;
+                mSingleTagSelectBrk[68].mFrame = 1.0f;
+                mSingleTagSelectBrk[69].mFrame = 0.0f;
+                mSingleTagSelectBrk[70].mFrame = 0.0f;
+                mSingleTagSelectBrk[71].mFrame = 0.0f;
+                mSingleTagSelectBrk[72].mFrame = 0.0f;
+                mSingleTagSelectBrk[73].mFrame = 0.0f;
+                mSingleTagSelectBrk[74].mFrame = 0.0f;
+                mSingleTagSelectBrk[75].mFrame = 1.0f;
+                mSingleTagSelectBrk[76].mFrame = 0.0f;
+                mSingleTagSelectBrk[77].mFrame = 0.0f;
+                break;
+            case 2:
+                mSingleTagSelectBck[25].mFrame = 14.0f;
+                mSingleTagSelectBck[26].mFrame = 14.0f;
+                mSingleTagSelectBck[27].mFrame = 22.0f;
+                mSingleTagSelectBck[31].mFrame = 14.0f;
+                mSingleTagSelectBck[32].mFrame = 14.0f;
+                mSingleTagSelectBck[33].mFrame = 22.0f;
+                mSingleTagSelectBrk[36].mFrame = 1.0f;
+                mSingleTagSelectBrk[37].mFrame = 1.0f;
+                mSingleTagSelectBrk[38].mFrame = 0.0f;
+                mSingleTagSelectBrk[39].mFrame = 1.0f;
+                mSingleTagSelectBrk[40].mFrame = 1.0f;
+                mSingleTagSelectBrk[41].mFrame = 1.0f;
+                mSingleTagSelectBrk[42].mFrame = 1.0f;
+                mSingleTagSelectBrk[43].mFrame = 1.0f;
+                mSingleTagSelectBrk[44].mFrame = 1.0f;
+                mSingleTagSelectBrk[45].mFrame = 1.0f;
+                mSingleTagSelectBrk[46].mFrame = 1.0f;
+                mSingleTagSelectBrk[47].mFrame = 0.0f;
+                mSingleTagSelectBrk[48].mFrame = 0.0f;
+                mSingleTagSelectBrk[49].mFrame = 0.0f;
+                mSingleTagSelectBrk[50].mFrame = 0.0f;
+                mSingleTagSelectBrk[51].mFrame = 1.0f;
+                mSingleTagSelectBrk[52].mFrame = 1.0f;
+                mSingleTagSelectBrk[53].mFrame = 1.0f;
+                mSingleTagSelectBrk[54].mFrame = 1.0f;
+                mSingleTagSelectBrk[55].mFrame = 1.0f;
+                mSingleTagSelectBrk[56].mFrame = 1.0f;
+                mSingleTagSelectBrk[57].mFrame = 1.0f;
+                mSingleTagSelectBrk[58].mFrame = 1.0f;
+                mSingleTagSelectBrk[59].mFrame = 0.0f;
+                mSingleTagSelectBrk[60].mFrame = 0.0f;
+                mSingleTagSelectBrk[61].mFrame = 0.0f;
+                mSingleTagSelectBrk[62].mFrame = 0.0f;
+                mSingleTagSelectBrk[63].mFrame = 1.0f;
+                mSingleTagSelectBrk[64].mFrame = 1.0f;
+                mSingleTagSelectBrk[65].mFrame = 1.0f;
+                mSingleTagSelectBrk[66].mFrame = 1.0f;
+                mSingleTagSelectBrk[67].mFrame = 1.0f;
+                mSingleTagSelectBrk[68].mFrame = 1.0f;
+                mSingleTagSelectBrk[69].mFrame = 0.0f;
+                mSingleTagSelectBrk[70].mFrame = 0.0f;
+                mSingleTagSelectBrk[71].mFrame = 0.0f;
+                mSingleTagSelectBrk[72].mFrame = 1.0f;
+                mSingleTagSelectBrk[73].mFrame = 1.0f;
+                mSingleTagSelectBrk[74].mFrame = 1.0f;
+                mSingleTagSelectBrk[75].mFrame = 1.0f;
+                mSingleTagSelectBrk[76].mFrame = 0.0f;
+                mSingleTagSelectBrk[77].mFrame = 0.0f;
+                break;
+            default:
+#line 3229
+                JUT_ASSERT(0);
+            }
+            mSingleTagSelectBck[28].mFrame = 10.0f;
+            mSingleTagSelectBck[29].mFrame = 10.0f;
+            mSingleTagSelectBck[30].mFrame = 10.0f;
+            mSingleTagSelectBck[34].mFrame = 14.0f;
+            mSingleTagSelectBck[35].mFrame = 14.0f;
+            mSingleTagSelectBck[36].mFrame = 14.0f;
+            mSingleTagSelectBck[37].mFrame = 14.0f;
+            mSingleTagSelectBck[38].mFrame = 14.0f;
+            mSingleTagSelectBck[39].mFrame = 14.0f;
+            mSingleTagSelectBck[40].mFrame = 14.0f;
+            mSingleTagSelectBck[41].mFrame = 14.0f;
+            mSingleTagSelectBck[42].mFrame = 14.0f;
+            mSingleTagSelectBtk[15].mFrame = 0.0f;
+            mSingleTagSelectBtk[16].mFrame = 0.0f;
+            mSingleTagSelectBtk[17].mFrame = 0.0f;
+            mSingleTagSelectBtk[18].mFrame = 0.0f;
+            mSingleTagSelectBtk[19].mFrame = 0.0f;
+            mSingleTagSelectBtk[20].mFrame = 0.0f;
+            mSingleTagSelectBtk[21].mFrame = 0.0f;
+            mSingleTagSelectBtk[22].mFrame = 0.0f;
+            mSingleTagSelectBtk[23].mFrame = 0.0f;
+            mSingleTagSelectBpk[4].mFrame = 0.0f;
+            mSingleTagSelectBpk[5].mFrame = 0.0f;
+            mSingleTagSelectBpk[6].mFrame = 0.0f;
+            break;
+        }
+        case 0:
+        default:
+#line 3262
+            JUT_ASSERT(0);
+            break;
+        }
+    }
+    else
+    {
+        mInfo.oldMode = mInfo.mode;
+        mInfo.mode = 4;
+        mInfo.timer = 0;
+    }
+}
 
 void SceneMenu::vs() {}
 
@@ -2313,7 +2687,7 @@ void SceneMenu::selectA(int no)
     if (isSelectAnm(no))
         return;
 
-    const int padNo = mPlayerPadNo[no];
+    int padNo = mPlayerPadNo[no];
     switch (mPlayerData[padNo].mState)
     {
     case 0:
@@ -2344,8 +2718,9 @@ void SceneMenu::selectA(int no)
     }
     case 1:
     {
-        int charF = mPlayerData[padNo].mCharF;
-        int charB = mPlayerData[padNo].mCharB;
+        PlayerData &pd = mPlayerData[padNo];
+        int charF = pd.mCharF;
+        int charB = pd.mCharB;
         if (charF >= 0 && charF < 20)
         {
             GameAudio::Main::getAudio()->startSystemSe(mCharGoVoice[charF]);
@@ -2354,7 +2729,7 @@ void SceneMenu::selectA(int no)
         {
             GameAudio::Main::getAudio()->startSystemSe(mCharGoVoice[charB]);
         }
-        mPlayerData[padNo].mState = 2;
+        pd.mState = 2;
         break;
     }
     case 2:
@@ -2553,8 +2928,8 @@ void SceneMenu::selectZ(int no)
     if (isSelectAnm(no))
         return;
 
-    int i;
     int padNo = mPlayerPadNo[no];
+    int i;
     for (i = 0; i <= mInfo.playerNum; i++)
     {
         if (no != i && mPlayerPadNo[i] == padNo)
@@ -2907,7 +3282,264 @@ int SceneMenu::changeKart(int charF, int charB, int kart, int dir)
     }
 }
 
-void SceneMenu::characterAnm() {}
+void SceneMenu::characterAnm()
+{
+    int charPlayer[20];
+
+    for (int i = 0; i < 20; i++)
+    {
+        charPlayer[i] = -1;
+        mCharCCBpk[i / 2][i % 2 + 4].mPane->hide();
+        mCharState[i] = 0;
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        int no = mPlayerData[i].mCharNoF;
+        int charF = mPlayerData[i].mCharF;
+        if (charF >= 0 && charF < 20 && no >= 0 && no < 4)
+        {
+            int col = charF % 2;
+            int row = charF / 2;
+            charPlayer[charF] = no;
+            J2DPicture *pane = (J2DPicture *)mCharCCBpk[row][col + 4].mPane;
+            pane->show();
+#line 6960
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            pane->changeTexture(mCharCCName[no + col * 4], 0);
+            mCharState[charF] = 1;
+        }
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        int no = mPlayerData[i].mCharNoB;
+        int charB = mPlayerData[i].mCharB;
+        if (charB >= 0 && charB < 20 && no >= 0 && no < 4)
+        {
+            int col = charB % 2;
+            int row = charB / 2;
+            charPlayer[charB] = no;
+            J2DPicture *pane = (J2DPicture *)mCharCCBpk[row][col + 4].mPane;
+            pane->show();
+#line 6976
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            pane->changeTexture(mCharCCName[no + col * 4], 0);
+            mCharState[charB] = 2;
+        }
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        int cursor = mPlayerData[i].mCursor;
+        if (cursor >= 0 && cursor < 20)
+        {
+            int col = cursor % 2;
+            int row = cursor / 2;
+            charPlayer[cursor] = i;
+            J2DPicture *pane = (J2DPicture *)mCharCCBpk[row][col + 4].mPane;
+            pane->show();
+#line 6991
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            pane->changeTexture(mCharCCName[i + col * 4], 0);
+            mCharState[cursor] = 2;
+        }
+    }
+
+    for (int i = 0; i < 20; i++)
+    {
+        int row = i / 2;
+        int col = i % 2;
+
+        switch (mCharState[i])
+        {
+        case 0:
+            mCharCCBrk[row][col].mPane->show();
+            mCharCCBrk[row][col].mFrame = 0.0f;
+            mCharCCBrk[row][col + 2].mPane->show();
+            mCharCCBrk[row][col + 2].mFrame = 0.0f;
+            mCharCCBpk[row][col].mFrame = 0.0f;
+            mCharCCBpk[row][col + 2].mFrame = 1.0f;
+            mCharCCBpk[row][col + 4].mFrame = 0.0f;
+            break;
+        case 1:
+            mCharCCBrk[row][col].mPane->show();
+            mCharCCBrk[row][col].mFrame = (f32)(charPlayer[i] + 1);
+            mCharCCBrk[row][col + 2].mPane->hide();
+            mCharCCBrk[row][col + 2].mFrame = (f32)(charPlayer[i] + 1);
+            mCharCCBpk[row][col].mFrame = (f32)(charPlayer[i] + 1);
+            mCharCCBpk[row][col + 2].mFrame = 0.0f;
+            mCharCCBpk[row][col + 4].mFrame = 0.0f;
+            break;
+        case 2:
+            mCharCCBrk[row][col].mPane->hide();
+            mCharCCBrk[row][col].mFrame = (f32)(charPlayer[i] + 1);
+            mCharCCBrk[row][col + 2].mPane->show();
+            mCharCCBrk[row][col + 2].mFrame = (f32)(charPlayer[i] + 1);
+            mCharCCBpk[row][col].mFrame = (f32)(charPlayer[i] + 1);
+            mCharCCBpk[row][col + 2].mFrame = 1.0f;
+            mCharCCBpk[row][col + 4].mFrame = (f32)(charPlayer[i] + 1);
+            break;
+        default:
+#line 7042
+            JUT_ASSERT(0);
+        }
+    }
+
+    switch (mInfo.entryNum)
+    {
+    case 0:
+    {
+        int charF = mPlayerData[0].mCharF;
+        int charB = mPlayerData[0].mCharB;
+        int kart = mPlayerData[0].mKart;
+
+        if (charF >= 0 && charF < 20)
+        {
+            mCharacterSelect3D->setCharacter(0, 0, (ECharID)mChara[charF].mCharId,
+                                             JGeometry::TVec3f(170.0f, 110.0f, 380.0f),
+                                             JGeometry::TVec3f(352.0f, 346.0f, 4.0f), 0.95f);
+        }
+        else
+        {
+            mCharacterSelect3D->setCharacterStatus(0, 0, CharacterSelect3D::STATUS_0);
+        }
+
+        if (charB >= 0 && charB < 20)
+        {
+            mCharacterSelect3D->setCharacter(0, 1, (ECharID)mChara[charB].mCharId,
+                                             JGeometry::TVec3f(-385.0f, -150.0f, -380.0f),
+                                             JGeometry::TVec3f(353.0f, 13.6f, 356.0f), 1.85f);
+        }
+        else
+        {
+            mCharacterSelect3D->setCharacterStatus(0, 1, CharacterSelect3D::STATUS_0);
+        }
+
+        if (kart >= 0 && kart < 21)
+        {
+            mCharacterSelect3D->setKart(0, (EKartID)mKartList[kart].mKartId,
+                                        JGeometry::TVec3f(0.0f, 5.0f, 0.0f),
+                                        JGeometry::TVec3f(0.0f, 320.0f, 0.0f), 1.2f);
+        }
+        break;
+    }
+    case 1:
+        for (int i = 0; i < 2; i++)
+        {
+            int charF = mPlayerData[i].mCharF;
+            int charB = mPlayerData[i].mCharB;
+            int kart = mPlayerData[i].mKart;
+
+            if (charF >= 0 && charF < 20)
+            {
+                mCharacterSelect3D->setCharacter(i, 0, (ECharID)mChara[charF].mCharId,
+                                                 JGeometry::TVec3f(110.0f, 58.0f, 265.0f),
+                                                 JGeometry::TVec3f(353.0f, 353.0f, 2.0f), 1.0f);
+            }
+            else
+            {
+                mCharacterSelect3D->setCharacterStatus(i, 0, CharacterSelect3D::STATUS_0);
+            }
+
+            if (charB >= 0 && charB < 20)
+            {
+                mCharacterSelect3D->setCharacter(i, 1, (ECharID)mChara[charB].mCharId,
+                                                 JGeometry::TVec3f(-190.0f, -25.0f, -380.0f),
+                                                 JGeometry::TVec3f(355.0f, 7.5f, 0.0f), 1.4f);
+            }
+            else
+            {
+                mCharacterSelect3D->setCharacterStatus(i, 1, CharacterSelect3D::STATUS_0);
+            }
+
+            if (kart >= 0 && kart < 21)
+            {
+                mCharacterSelect3D->setKart(i, (EKartID)mKartList[kart].mKartId,
+                                            JGeometry::TVec3f(-10.0f, 0.0f, 0.0f),
+                                            JGeometry::TVec3f(0.0f, 320.0f, 0.0f), 1.13f);
+            }
+        }
+        break;
+    case 2:
+        for (int i = 0; i < 3; i++)
+        {
+            int charF = mPlayerData[i].mCharF;
+            int charB = mPlayerData[i].mCharB;
+            int kart = mPlayerData[i].mKart;
+
+            if (charF >= 0 && charF < 20)
+            {
+                mCharacterSelect3D->setCharacter(i, 0, (ECharID)mChara[charF].mCharId,
+                                                 JGeometry::TVec3f(64.0f, 62.0f, 265.0f),
+                                                 JGeometry::TVec3f(354.0f, 354.0f, 0.5f), 0.85f);
+            }
+            else
+            {
+                mCharacterSelect3D->setCharacterStatus(i, 0, CharacterSelect3D::STATUS_0);
+            }
+
+            if (charB >= 0 && charB < 20)
+            {
+                mCharacterSelect3D->setCharacter(i, 1, (ECharID)mChara[charB].mCharId,
+                                                 JGeometry::TVec3f(-90.0f, -15.0f, -380.0f),
+                                                 JGeometry::TVec3f(357.0f, 2.5f, 0.0f), 1.3f);
+            }
+            else
+            {
+                mCharacterSelect3D->setCharacterStatus(i, 1, CharacterSelect3D::STATUS_0);
+            }
+
+            if (kart >= 0 && kart < 21)
+            {
+                mCharacterSelect3D->setKart(i, (EKartID)mKartList[kart].mKartId,
+                                            JGeometry::TVec3f(-10.0f, 10.0f, 0.0f),
+                                            JGeometry::TVec3f(0.0f, 320.0f, 0.0f), 1.0f);
+            }
+        }
+        break;
+    case 3:
+        for (int i = 0; i < 4; i++)
+        {
+            int charF = mPlayerData[i].mCharF;
+            int charB = mPlayerData[i].mCharB;
+            int kart = mPlayerData[i].mKart;
+
+            if (charF >= 0 && charF < 20)
+            {
+                mCharacterSelect3D->setCharacter(i, 0, (ECharID)mChara[charF].mCharId,
+                                                 JGeometry::TVec3f(45.0f, 60.0f, 265.0f),
+                                                 JGeometry::TVec3f(351.0f, 353.5f, 1.0f), 0.75f);
+            }
+            else
+            {
+                mCharacterSelect3D->setCharacterStatus(i, 0, CharacterSelect3D::STATUS_0);
+            }
+
+            if (charB >= 0 && charB < 20)
+            {
+                mCharacterSelect3D->setCharacter(i, 1, (ECharID)mChara[charB].mCharId,
+                                                 JGeometry::TVec3f(-65.0f, 5.0f, -380.0f),
+                                                 JGeometry::TVec3f(356.0f, 2.4f, 0.0f), 1.15f);
+            }
+            else
+            {
+                mCharacterSelect3D->setCharacterStatus(i, 1, CharacterSelect3D::STATUS_0);
+            }
+
+            if (kart >= 0 && kart < 21)
+            {
+                mCharacterSelect3D->setKart(i, (EKartID)mKartList[kart].mKartId,
+                                            JGeometry::TVec3f(-10.0f, 15.0f, 0.0f),
+                                            JGeometry::TVec3f(0.0f, 320.0f, 0.0f), 0.85f);
+            }
+        }
+        break;
+    default:
+#line 7197
+        JUT_ASSERT(0);
+    }
+}
 
 void SceneMenu::characterOkWaitAnm()
 {

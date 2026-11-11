@@ -266,7 +266,7 @@ private:
     int mMsgId;                            // 0x2118
     int mPlayerPadNo[4];                   // 0x211C
     PlayerData mPlayerData[4];             // 0x212C
-    u8 _219c[0x21EC - 0x219C];             // 0x219C
+    int mCharState[20];                    // 0x219C
     SelectAnm mSelectAnm[10][2];           // 0x21EC
     u8 mCharacterFlag[20];                 // 0x228C
     u8 mCharSelFlag[20];                   // 0x22A0
