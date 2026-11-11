@@ -485,6 +485,11 @@ void DriverModel::setShakeAnm3(StateEnum s, f32 a)
 {
 }
 
+static void driverPoolPad1(DriverModel *d)
+{
+    JUT_ASSERT_F(0 <= d->mState && d->mState < 152, "range over: %d <= mState=%d < %d", 0, d->mState, 152);
+}
+
 void DriverModel::setDriveAnm(f32 rate)
 {
     switch (mState) {
@@ -494,8 +499,8 @@ void DriverModel::setDriveAnm(f32 rate)
     case (StateEnum)11:
     case (StateEnum)12:
     case (StateEnum)120:
-        int i;
-        for (i = 0; i < 2; i++) {
+        int i = 0;
+        for (; i < 2; i++) {
             mAnmID = msAnmBlendList[0][i];
 #line 997
             JUT_MINMAX_ASSERT(0, mAnmID, 82);
@@ -872,6 +877,8 @@ void DriverModel::Start1ShotAnm_base(DriversAnimator *animator, StateEnum state)
         }
     }
 }
+
+
 void DriverModel::StartAnimation2()
 {
     s32 state = mState;
@@ -988,7 +995,7 @@ void DriverModel::StartAnimationWC(StateEnum s)
 void DriverModel::StartAnimation(StateEnum state)
 {
 #line 1639
-    JUT_ASSERT((int)state >= mcDrive);
+    JUT_ASSERT(state >= mcDrive);
     if (mState == (int)state)
         return;
     if (IsDemo())
@@ -999,9 +1006,13 @@ void DriverModel::StartAnimation(StateEnum state)
         if ((int)state >= 0x6e)
             goto L_go;
         if ((int)state >= 0x6c)
-            return;
+            goto L_ret_c8;
         goto L_go;
+        goto L_ret_c8;
     }
+    goto L_go;
+L_ret_c8:
+    return;
 L_go:;
 
     m_c8 = 2;
@@ -1101,8 +1112,9 @@ void DriverModel::Change_next_mState(StateEnum s)
 
 void DriverModel::updateFrame()
 {
-    f32 rate = m_668.mCurrentValue;
-    for (int blend_num = 0; blend_num < 2; blend_num++) {
+    int blend_num = 0;
+    f32 rate = m_668.mCurrentValue + blend_num * 0.0f;
+    for (; blend_num < 2; blend_num++) {
 #line 1789
         JUT_MINMAX_ASSERT(0, blend_num, 2);
         mAnmID = msAnmBlendList[0x96][blend_num];
@@ -1118,7 +1130,8 @@ void DriverModel::updateFrame()
     m_668.update();
 
     rate = m_688.mCurrentValue;
-    for (int blend_num = 0; blend_num < 2; blend_num++) {
+    blend_num = 0;
+    for (; blend_num < 2; blend_num++) {
 #line 1789
         JUT_MINMAX_ASSERT(0, blend_num, 2);
         mAnmID = msAnmBlendList[0x97][blend_num];
@@ -1159,6 +1172,14 @@ void DriverModel::updateFrame_base(DriversAnimator *animator, StateEnum state)
 
 void DriverModel::updateSetFrame_base(StateEnum s)
 {
+}
+
+
+static void driverPoolPad2(DriverModel *d)
+{
+    JUT_ASSERT_F(0 <= d->mState && d->mState < 152, "range over: %d <= stt=%d < %d", 0, d->mState, 152);
+    s32 nes = d->mState;
+    JUT_ASSERT_F(nes >= DriverModel::mcDrive, "%s", "nes >= mcDrive");
 }
 
 void DriverModel::updateSetFrame()
@@ -1338,13 +1359,15 @@ void DriverModel::updateLoadCommand_Sound(int a)
 void DriverModel::updateLoad_Animation()
 {
 #line 2465
-    JUT_MINMAX_ASSERT(0, next_mState_Hokan, 152);
+    s32 next_mState = next_mState_Hokan;
+#line 2465
+    JUT_ASSERT_F(0 <= next_mState && next_mState < 152, "range over: %d <= next_mState=%d < %d", 0, next_mState, 152);
     mAnimBufMgr->resetFrame();
     int anmID;
 
     if ((u8)CheckDriverFlags_Hokan((StateEnum)next_mState_Hokan)) {
 #line 2471
-        JUT_MINMAX_ASSERT(0, next_before_mState_Hokan, 152);
+        JUT_ASSERT_F(0 <= next_before_mState_Hokan && next_before_mState_Hokan < 152, "range over: %d <= next_before_mState_Hokan=%d < %d", 0, next_before_mState_Hokan, 152);
         anmID = msAnmBlendList[next_before_mState_Hokan][0];
         if (!IsAnmResInMRAM(anmID))
             mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
@@ -1370,17 +1393,20 @@ void DriverModel::updateLoad_Animation()
             mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
         if (mState >= 126) {
             if (mState >= 128)
-                m_500 = 3;
-            else
-                m_500 = mState;
+                goto L_set_3;
         } else {
             if (mState >= 55)
-                m_500 = 3;
-            else if (mState >= 49)
-                m_500 = mState;
-            else
-                m_500 = 3;
+                goto L_set_3;
+            if (mState >= 49)
+                goto L_set_state_13;
+            goto L_set_3;
         }
+    L_set_state_13:
+        m_500 = mState;
+        goto L_set_state_done_13;
+    L_set_3:
+        m_500 = 3;
+    L_set_state_done_13:;
         anmID = msAnmBlendList[m_500][0];
         if (!IsAnmResInMRAM(anmID))
             mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
@@ -1396,10 +1422,17 @@ void DriverModel::updateLoad_Animation()
         anmID = msAnmBlendList[next_mState_Hokan][0];
         if (!IsAnmResInMRAM(anmID))
             mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
-        if (mState >= 55 && mState < 61)
-            m_500 = mState;
-        else
-            m_500 = 4;
+        if (mState >= 61)
+            goto L_set_4;
+        if (mState >= 55)
+            goto L_set_state_17;
+        goto L_set_4;
+    L_set_state_17:
+        m_500 = mState;
+        goto L_set_state_done_17;
+    L_set_4:
+        m_500 = 4;
+    L_set_state_done_17:;
         anmID = msAnmBlendList[m_500][0];
         if (!IsAnmResInMRAM(anmID))
             mAnimBufMgr->CheckAndLoadAnimAvailable(anmID, mDataID);
@@ -1464,9 +1497,9 @@ void DriverModel::updateLoad()
     JUT_MINMAX_ASSERT(0, next_mState, 152);
     u8 anmID = (u8)msAnmBlendList[next_mState_Hokan][0];
     DriverLoader::checkAnmID(anmID);
-    int sndNo = DriverLoader::mscAnm2SoundList[anmID];
-    if (!IsAnmSoundResInMRAM(sndNo))
-        mAnimBufMgr->CheckAndLoadAnimSoundAvailable(sndNo, mDataID);
+    anmID = DriverLoader::mscAnm2SoundList[anmID];
+    if (!IsAnmSoundResInMRAM(anmID))
+        mAnimBufMgr->CheckAndLoadAnimSoundAvailable(anmID, mDataID);
     if (mAnimBufMgr->mRes0 == 0)
         m_cc = 1;
     if (mAnimBufMgr->mRes4 == 0)
@@ -1484,12 +1517,12 @@ int DriverModel::updateCheckRenew_Animation()
             goto L_367C;
     }
 #line 2598
-    JUT_MINMAX_ASSERT(0, mBeforeState, 152);
+    JUT_ASSERT_F(0 <= mBeforeState && mBeforeState < 152, "range over: %d <= before_mState_Hokan=%d < %d", 0, mBeforeState, 152);
     mState = mState;
 #line 2599
     JUT_MINMAX_ASSERT(0, mState, 152);
 #line 2600
-    JUT_MINMAX_ASSERT(0, m_500, 152);
+    JUT_ASSERT_F(0 <= m_500 && m_500 < 152, "range over: %d <= mStateThrow=%d < %d", 0, m_500, 152);
     const u32 (*list)[2] = msAnmBlendList;
     if (m_ac != 0) {
         J3DAnmTransform *pa1 = getAnmTransformPtr(list[mState][1]);
@@ -1594,9 +1627,13 @@ int DriverModel::updateCheckRenew()
             result = 1;
         }
     }
+    if (result != 0)
+        return 1;
+    else {
 #line 2684
-    JUT_ASSERT(result != 0);
-    return result;
+        JUT_ASSERT_F(result != 0, "%s", "ARAM DMA not finished?(kawano).");
+        return 0;
+    }
 }
 
 void DriverModel::BlendValue(f32 a)
@@ -1769,7 +1806,7 @@ void DriverModel::updateBlendCount()
             if (m_bb == blendTime) {
                 int nes = mState - 76;
 #line 1839
-                JUT_ASSERT((int)nes >= mcDrive);
+                JUT_ASSERT(nes >= DriverModel::mcDrive);
                 if (m_e8 == 0 && m_504 == 0) {
                     if (next_mState_Hokan != mState) {
                         if (nes < 104) {
@@ -1906,7 +1943,7 @@ void DriverModel::updateBlendCount()
             if (m_bb == blendTime) {
                 int nes = mState - 108;
 #line 1839
-                JUT_ASSERT((int)nes >= mcDrive);
+                JUT_ASSERT(nes >= DriverModel::mcDrive);
                 if (m_e8 == 0 && m_504 == 0) {
                     if (next_mState_Hokan != mState) {
                         if (nes < 104) {
@@ -1943,7 +1980,7 @@ void DriverModel::updateBlendCount()
             if (m_bb == blendTime) {
                 int nes = (mState - 113) * 3 + 50;
 #line 1839
-                JUT_ASSERT((int)nes >= mcDrive);
+                JUT_ASSERT(nes >= DriverModel::mcDrive);
                 if (m_e8 == 0 && m_504 == 0) {
                     if (next_mState_Hokan != mState) {
                         if (nes < 104) {
@@ -2032,30 +2069,37 @@ int DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
     case 111:
         if (mBeforeState < 108) {
             if (mBeforeState == 74)
-                return DriverManager::ptr()->getBlendTime(13);
+                goto L_ret13_111;
             if (mBeforeState < 74) {
                 if (mBeforeState == 71)
-                    return DriverManager::ptr()->getBlendTime(13);
+                    goto L_ret13_111;
                 return DriverManager::ptr()->getBlendTime(26);
             }
-            if (mBeforeState >= 93)
-                return DriverManager::ptr()->getBlendTime(26);
-            if (mBeforeState >= 91)
-                return DriverManager::ptr()->getBlendTime(13);
+            if (mBeforeState < 93) {
+                if (mBeforeState >= 91)
+                    goto L_ret13_111;
+            }
             return DriverManager::ptr()->getBlendTime(26);
         }
         if (mBeforeState == 117)
             return DriverManager::ptr()->getBlendTime(29);
-        if (mBeforeState < 117)
+        if (mBeforeState < 117) {
+            if (mBeforeState >= 110)
+                return DriverManager::ptr()->getBlendTime(26);
             return DriverManager::ptr()->getBlendTime(26);
-        if (mBeforeState >= 125)
-            return DriverManager::ptr()->getBlendTime(26);
-        if (mBeforeState >= 123)
-            return DriverManager::ptr()->getBlendTime(33);
+        }
+        if (mBeforeState < 125) {
+            if (mBeforeState >= 123)
+                return DriverManager::ptr()->getBlendTime(33);
+        }
         return DriverManager::ptr()->getBlendTime(26);
+    L_ret13_111:
+        return DriverManager::ptr()->getBlendTime(13);
     case 112:
-        if (mBeforeState < 125 && mBeforeState >= 123)
-            return DriverManager::ptr()->getBlendTime(33);
+        if (mBeforeState < 125) {
+            if (mBeforeState >= 123)
+                return DriverManager::ptr()->getBlendTime(33);
+        }
         return DriverManager::ptr()->getBlendTime(26);
     case 113: case 114: case 115: case 116:
         return DriverManager::ptr()->getBlendTime(30);
@@ -2101,7 +2145,7 @@ void DriverModel::update(u16 param)
     mAnmID_debug_index = 0;
 
 #line 3678
-    JUT_ASSERT_F(mState >= 0, "%s", "mState >= 0");
+    JUT_ASSERT_F(mState >= mcDrive, "%s", "mState >= mcDrive");
 
     if (m_e8 == 0 && m_514 > 0) {
         m_514--;
@@ -2267,7 +2311,7 @@ void DriverModel::update(u16 param)
 #line 3875
     JUT_MINMAX_ASSERT(0, mState, 152);
 #line 3876
-    JUT_MINMAX_ASSERT(0, m_500, 152);
+    JUT_ASSERT_F(0 <= m_500 && m_500 < 152, "range over: %d <= mStateThrow=%d < %d", 0, m_500, 152);
 
     if (mState < 21) {
         if (mState < 13) {
@@ -2288,7 +2332,7 @@ void DriverModel::update(u16 param)
 L_useThree:
     if (mState < 17) {
 #line 3206
-        JUT_MINMAX_ASSERT(0, m_500, 152);
+        JUT_ASSERT_F(0 <= m_500 && m_500 < 152, "range over: %d <= mStateThrow=%d < %d", 0, m_500, 152);
         if (mMtxCalcs[m_500] != nullptr) {
             mMtxCalcs[m_500]->setWeight(0, 1.0f - (f32)m_ba / (f32)DriverManager::ptr()->mBlendTimes[0]);
             mMtxCalcs[m_500]->setWeight(1, (f32)m_ba / (f32)DriverManager::ptr()->mBlendTimes[0]);
@@ -2476,7 +2520,7 @@ L_after:
         mAnimBufMgr->resetFrameSound();
 
 #line 2565
-        JUT_MINMAX_ASSERT(0, next_mState_Hokan, 152);
+        JUT_ASSERT_F(0 <= next_mState_Hokan && next_mState_Hokan < 152, "range over: %d <= next_mState=%d < %d", 0, next_mState_Hokan, 152);
         u8 anmID = (u8)msAnmBlendList[next_mState_Hokan][0];
         DriverLoader::checkAnmID(anmID);
         int sndNo = DriverLoader::mscAnm2SoundList[anmID];
@@ -2490,7 +2534,7 @@ L_after:
     }
 
 #line 4031
-    JUT_ASSERT_F(mState >= 0, "%s", "mState >= 0");
+    JUT_ASSERT_F(mState >= mcDrive, "%s", "mState >= mcDrive");
 
     mState = next_mState_Hokan;
     mBeforeState = next_before_mState_Hokan;
@@ -2516,15 +2560,15 @@ bool DriverModel::createModel(JKRSolidHeap *heap, u32 a, u32 b)
         lock();
         FeelingMgr::ptr()->createModel(this, heap, a, b);
 
-        if (mCharID == 19)
+        switch (mCharID) {
+        case 18:
+            OsageMgr::ptr()->createModel(this, heap, a, b);
+            break;
+        case 19:
+            break;
+        default:
             goto L_create_done;
-        if (mCharID >= 19)
-            goto L_create_done;
-        if (mCharID >= 18)
-            goto L_create_osage;
-        goto L_create_done;
-    L_create_osage:
-        OsageMgr::ptr()->createModel(this, heap, a, b);
+        }
     L_create_done:;
     }
 
@@ -2537,15 +2581,15 @@ void DriverModel::setCurrentViewNo(u32 viewNo)
 {
     ExModel::setCurrentViewNo(viewNo);
 
-    if (mCharID == 19)
+    switch (mCharID) {
+    case 18:
+        OsageMgr::ptr()->setCurrentViewNo(this, viewNo);
+        break;
+    case 19:
+        break;
+    default:
         goto L_view_done;
-    if (mCharID >= 19)
-        goto L_view_done;
-    if (mCharID >= 18)
-        goto L_view_osage;
-    goto L_view_done;
-L_view_osage:
-    OsageMgr::ptr()->setCurrentViewNo(this, viewNo);
+    }
 L_view_done:;
     LaurelMgr::ptr()->setCurrentViewNo(this, viewNo);
 
