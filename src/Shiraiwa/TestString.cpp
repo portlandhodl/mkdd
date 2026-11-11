@@ -15,6 +15,8 @@
 #include "Sato/GeographyObjMgr.h"
 #include "Sato/ObjUtility.h"
 
+static const f32 sDummy[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+
 f32 TTestStrBarrel::sItemVelScale = 0.6f;
 f32 TTestStrBarrel::sKartVelScale = 3.0f;
 
@@ -26,12 +28,12 @@ f32 TTestString::sDownVel = 5.0f;
 
 TTestStrSupervisor *TTestString::sSupervisor;
 
-f32 TTestStrSupervisor::sStringOffset[18] = {
+const f32 TTestStrSupervisor::sStringOffset[18] = {
     -5.0f, 50.0f, -5.77f, 5.0f, 50.0f, -5.77f, 0.0f, 50.0f, 4.23f,
     -5.0f, 0.0f, -5.77f, 5.0f, 0.0f, -5.77f, 0.0f, 0.0f, 4.23f,
 };
 
-f32 TTestStrSupervisor::sStringTexOffset[12] = {
+const f32 TTestStrSupervisor::sStringTexOffset[12] = {
     1.0f, 0.0f, 1.0f, 0.33f, 1.0f, 0.66f,
     0.0f, 0.0f, 0.0f, 0.33f, 0.0f, 0.66f,
 };
@@ -62,7 +64,7 @@ void TTestStrBarrel::calc()
     cross1.normalize();
     up.cross(cross1, dir);
     up.normalize();
-    JMAVECScaleAdd(&mPos, &mPos, &dir, -100.0f);
+    mPos.scaleAdd(-100.0f, dir, mPos);
 
     mRotMtx[0][0] = cross1.x;
     mRotMtx[1][0] = cross1.y;
@@ -98,14 +100,67 @@ void TTestStrBarrel::moveShadowModel()
     scale->z = mScale.z;
 }
 
-void TTestStrBarrel::checkItemHitting() {}
+void TTestStrBarrel::checkItemHitting()
+{
+    JGeometry::TVec3f vel;
+    JGeometry::TVec3f dir;
+    if (tstItemHitting()) {
+        ItemObj *item = mColItemObj;
+        u32 kind = item->getKind();
+        switch (kind) {
+        case 0:
+        case 1:
+        case 2:
+        case 7:
+        case 9:
+        case 11:
+            vel.set(item->getVel());
+            if (mReaction.tstFlg(kind) == 1) {
+                vel.negate();
+            }
+            vel.scale(sItemVelScale);
+            mString->attack(vel);
+            break;
+        case 8:
+            dir.sub(mPos, JGeometry::TVec3f(item->getPos()));
+            dir.setLength(50.0f);
+            mString->attack(dir);
+            break;
+        }
+    }
+}
 
 void TTestStrBarrel::createColModel(J3DModelData *)
 {
-    createBoundsSphere(5.0f, 0.0f);
+    createBoundsSphere(115.0f, 1.0f);
 }
 
-void TTestStrBarrel::doKartColCallBack(int) {}
+void TTestStrBarrel::doKartColCallBack(int kartNo)
+{
+    JGeometry::TVec3f vel;
+    JGeometry::TVec3f kartPos;
+    JGeometry::TVec3f dir;
+    JGeometry::TVec3f up;
+    JGeometry::TVec3f pos;
+    f32 radius;
+
+    ObjUtility::getKartVel(kartNo, &vel);
+    if (vel.squared() < 1.0f) {
+        vel.zero();
+    }
+    vel.scale(sKartVelScale);
+    GeographyObjManager::gMgr->getKartCollidePosRadius(kartPos, radius, kartNo);
+    dir.sub(getBoundsGlPos(0), kartPos);
+    dir.normalize();
+    mRotMtx.getYDir(up);
+    up.normalize();
+    up.scale(100.0f);
+    pos.scaleAdd(115.0f + radius, dir, kartPos);
+    pos.add(up);
+    mString->attack(pos, vel);
+    vibrate(kartNo);
+    KartCtrl::getKartCtrl()->getKartSound(kartNo)->mSoundMgr->setCrushSe(getSoundID(), 0.03f * getBounds(0)->getBoundDepth());
+}
 
 __declspec(weak) u32 TTestStrBarrel::getSoundID() const { return 0x10063; }
 
@@ -113,7 +168,7 @@ void TTestStrBarrel::vibrate(int kartNo)
 {
     JGeometry::TVec3f vel;
     ObjUtility::getKartVel(kartNo, &vel);
-    if (vel.squared() > 4.0f) {
+    if (vel.squared() > 100.0f) {
         KartBody *body = KartCtrl::getKartCtrl()->getKartBody(kartNo);
         body->getStrat()->DoMotor((MotorManager::MotorType)getMotorType());
     }
@@ -139,9 +194,7 @@ void TTestStrItem::calc()
 
     mString->getPoint(&mPos);
     JGeometry::TVec3f up;
-    up.x = 0.0f;
-    up.y = up.x;
-    up.z = 0.0f;
+    up.set(0.0f, 0.0f, 1.0f);
     mString->getPointDir(&dir);
     cross1.cross(dir, up);
     cross1.normalize();
@@ -181,7 +234,7 @@ void TTestStrItem::doKartColCallBack(int kartNo)
 
 void TTestStrItem::createColModel(J3DModelData *)
 {
-    createBoundsSphere(5.0f, 0.0f);
+    createBoundsSphere(150.0f, 1.0f);
 }
 
 static void forceJSUListDtor(JSUList<TTestString> *list) { list->~JSUList<TTestString>(); }
@@ -190,7 +243,7 @@ TTestStrSupervisor::~TTestStrSupervisor() { delete mTexture; }
 
 void TTestStrSupervisor::drawAll(u32 cameraNo)
 {
-    GXColor color = { 0x42, 0x48, 0, 0 };
+    GXColor color = { 0xff, 0xff, 0xff, 0xff };
     GXSetTevColor(GX_TEVREG0, color);
     GXSetTevOp(GX_TEVSTAGE0, GX_REPLACE);
     GXSetNumTexGens(1);
@@ -210,7 +263,7 @@ void TTestStrSupervisor::drawAll(u32 cameraNo)
     GXClearVtxDesc();
     GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
     GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
-    GXSetArray(GX_VA_TEX0, sStringTexOffset, 8);
+    GXSetArray(GX_VA_TEX0, (void *)sStringTexOffset, 8);
     GXSetVtxDesc(GX_VA_TEX0, GX_INDEX8);
     GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 
@@ -221,10 +274,8 @@ void TTestStrSupervisor::drawAll(u32 cameraNo)
 void TTestStrSupervisor::load()
 {
     ResTIMG *timg = (ResTIMG *)ObjUtility::getPtrCourseArc("/Objects/TestHimo1Tex.bti");
-    if (timg == nullptr) {
-        JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "TestString.cpp", 387, "", "timg != 0");
-        OSPanic("TestString.cpp", 387, "Halt");
-    }
+#line 387
+    JUT_ASSERT(timg != 0);
     timg->mWrapS = 1;
     mTexture->storeTIMG(timg, (u8)0);
 
@@ -250,9 +301,9 @@ TTestString::TTestString(const CrsData::SObject &obj) : GeographyObj(obj), JKRDi
         mNodeNum = 5;
     mLength = obj.mParam2;
     if (mLength <= 0.0f)
-        mLength = 50.0f;
+        mLength = 1000.0f;
     mNodeLengths = new f32[mNodeNum];
-    mNodeMgr = new ExStringNodeManager(mNodeNum, 115.0f, true, false, 0);
+    mNodeMgr = new ExStringNodeManager(mNodeNum, 30.0f, true, false, 0);
 
     if (sSupervisor == nullptr) {
         sSupervisor = new TTestStrSupervisor();
@@ -269,6 +320,28 @@ TTestString::~TTestString()
     delete mNodeMgr;
 }
 
+// Inlines from StringObj.h, written out with the original header's assert lines
+#define STRINGOBJ_NUM_ASSERT(line, num, max)                                                                    \
+    (((0 <= (num)) && ((num) < (max))))                                                                         \
+        ? (void)0                                                                                               \
+        : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "StringObj.h", line,                          \
+                                      "range over: %d <= num=%d < %d", 0, (num), (max)),                        \
+           OSPanic("StringObj.h", line, "Halt"));
+
+template <typename T>
+static inline void setNodeLength(T *mgr, u32 num, f32 length)
+{
+    STRINGOBJ_NUM_ASSERT(202, num, mgr->mStrNodeList.getNumLinks());
+    mgr->mStrNodeList.getNth(num)->getObject()->_34 = length;
+}
+
+template <typename T>
+static inline void clrNodeFlag(T *mgr, u32 num)
+{
+    STRINGOBJ_NUM_ASSERT(112, num, mgr->mStrNodeList.getNumLinks());
+    mgr->mStrNodeList.getNth(num)->getObject()->_30 = 0;
+}
+
 void TTestString::reset()
 {
     resetObject();
@@ -277,33 +350,26 @@ void TTestString::reset()
     PSMTXIdentity(mRotMtx);
     mNodeMgr->resetNodeAll(nullptr);
 
-    f32 length = mLength;
-    if (mObjData->mParam1 == 0) {
-        for (int i = 0; i < mNodeNum - 1; i++) {
+    if (mObjData->mParam3 == 0) {
+        f32 length = mLength;
+        for (u32 i = 0; i < mNodeNum - 1; i++) {
             length *= 0.5f;
             mNodeLengths[i] = length;
-            StringNode *node = mNodeMgr->mStrNodeList.getNth(i)->getObject();
-            node->_34 = mNodeLengths[i];
-            node->_30 = 0;
+            setNodeLength(mNodeMgr, i, mNodeLengths[i]);
+            clrNodeFlag(mNodeMgr, i);
         }
         mNodeLengths[mNodeNum - 1] = length;
-        StringNode *node = mNodeMgr->mStrNodeList.getNth(mNodeNum - 1)->getObject();
-        node->_34 = mNodeLengths[mNodeNum - 1];
+        setNodeLength(mNodeMgr, mNodeNum - 1, mNodeLengths[mNodeNum - 1]);
     } else {
-        length /= (f32)mNodeNum;
+        f32 length = mLength / (f32)mNodeNum;
         mNodeMgr->setNodeLengthAll(length);
-        for (int i = 0; i < mNodeNum - 1; i++) {
+        for (u32 i = 0; i < mNodeNum - 1; i++) {
             mNodeLengths[i] = length;
-            StringNode *node = mNodeMgr->mStrNodeList.getNth(i)->getObject();
-            node->_34 = length;
-            node->_30 = 0;
+            clrNodeFlag(mNodeMgr, i);
         }
     }
     setParameters();
 }
-
-
-
 
 void TTestString::load(J3DModelData *) {}
 
@@ -315,8 +381,8 @@ void TTestString::calc()
     mNodeMgr->calc();
     mNodeMgr->setNodePos(0, mObjData->position);
 
-    f32 downVel = -sDownVel;
-    JGeometry::TVec3f vel(0.0f, downVel, 0.0f);
+    JGeometry::TVec3f vel;
+    vel.scale(-sDownVel, up);
     mNodeMgr->addNodeVel(mNodeNum - 1, vel);
 }
 
@@ -339,23 +405,59 @@ void TTestString::draw(u32 cameraNo)
         mNodeMgr->getNodePos(i, &pos1);
         mNodeMgr->getNodePos(i + 1, &pos2);
         if (i == 0) {
-            f32 half = 0.5f;
-            f32 slant = 0.85f;
-            mPoints[0].x = pos1.x;
-            mPoints[0].y = pos1.y;
-            mPoints[0].z = pos1.z;
-            mPoints[1].x = pos1.x + sWidth;
-            mPoints[1].y = pos1.y;
-            mPoints[1].z = pos1.z;
-            mPoints[2].x = pos1.x + half * sWidth;
-            mPoints[2].y = pos1.y;
-            mPoints[2].z = pos1.z + slant * sWidth;
+            mPoints[0].set(pos1);
+            mPoints[1].set(pos1.x + sWidth, pos1.y, pos1.z);
+            mPoints[2].set(pos1.x + 0.5f * sWidth, pos1.y, pos1.z + 0.85f * sWidth);
         }
         drawNode(mNodeLengths[i], pos1, pos2, cameraNo);
     }
 }
 
-void TTestString::drawNode(f32, JGeometry::TVec3f &, JGeometry::TVec3f &, u32) {}
+void TTestString::drawNode(f32 length, JGeometry::TVec3f &p1, JGeometry::TVec3f &p2, u32 cameraNo)
+{
+    Mtx transMtx;
+    Mtx texMtx;
+    JGeometry::TVec3f ofs[3];
+    JGeometry::TVec3f side;
+    JGeometry::TVec3f dir;
+    JGeometry::TVec3f up;
+
+    MtxPtr camMtx = RaceMgr::getManager()->getCamera(cameraNo)->GetMtx();
+    PSMTXTrans(transMtx, p1.x, p1.y, p1.z);
+
+    up.set(0.0f, 0.0f, 1.0f);
+    dir.set(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
+    dir.normalize();
+    side.cross(dir, up);
+    side.normalize();
+    up.cross(side, dir);
+    up.normalize();
+
+    mRotMtx[0][0] = side.x;
+    mRotMtx[1][0] = side.y;
+    mRotMtx[2][0] = side.z;
+    mRotMtx[0][1] = dir.x;
+    mRotMtx[1][1] = dir.y;
+    mRotMtx[2][1] = dir.z;
+    mRotMtx[0][2] = up.x;
+    mRotMtx[1][2] = up.y;
+    mRotMtx[2][2] = up.z;
+    GXLoadPosMtxImm(camMtx, 0);
+
+    PSMTXScale(texMtx, length / 50.0f, 1.0f, 0.0f);
+    GXLoadTexMtxImm(texMtx, 30, GX_MTX2x4);
+
+    ofs[0] = up * 0.33f * sWidth;
+    ofs[1] = (side * -0.5f - up * 0.167f) * sWidth;
+    ofs[2] = (side * 0.5f - up * 0.167f) * sWidth;
+
+    drawCrevicePyramid(p1, ofs[1], ofs[2]);
+    drawPrism(p1, p2, ofs[0], ofs[1], ofs[2]);
+
+    mPoints[0] = p2 + ofs[0];
+    mPoints[1] = p2 + ofs[1];
+    mPoints[2] = p2 + ofs[2];
+}
 
 void TTestString::drawCrevicePyramid(JGeometry::TVec3f &p1, JGeometry::TVec3f &p2, JGeometry::TVec3f &p3)
 {

@@ -55,8 +55,8 @@ public:
     // Inline
     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; } // 0x802cb998
     virtual ~TMapObjAwardItemBox(); // 0x802cb9a0
-    void InitExec(); // 0x802cbe68
     void MoveExec(); // 0x802cbed4
+    void InitExec(); // 0x802cbe68
     virtual const char *getBmdFileName() { return GeoItemBox::getBmdName(); } // 0x802cd6cc
     virtual const char *getShadowBmdFileName() { return GeoItemBox::getShadowBmdName(); } // 0x802cd6ec
 

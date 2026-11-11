@@ -12,7 +12,6 @@
 //void JSULink<TMapObjAwardItemBox>::~JSULink();
 //void JSUList<TMapObjAwardCup>::~JSUList();
 //void JSULink<TMapObjAwardCup>::~JSULink();
-//void TMapObjAwardCup::draw(u32);
 //void JSUList<TMapObjAwardItemBox>::~JSUList();
 //void TMapObjAwardCup::sSidePowDecel;
 //void TMapObjAwardCup::sAxisCycle;
@@ -21,7 +20,7 @@ class TMapObjAwardCup;
 
 class TAwardCupSupervisor : public GeoObjSupervisor {
 public:
-    TAwardCupSupervisor() {}
+    TAwardCupSupervisor() { mList.initiate(); }
 
     void entry(TMapObjAwardCup *);
     void draw(u32);
@@ -53,9 +52,10 @@ public:
     void doFunc_Roll();
     void rotAnimation(bool);
     void calc();
+    void draw(u32);
 
     static StateFuncSet<TMapObjAwardCup> sTable[3];
-    static f32 sVelocity0[19];
+    static JGeometry::TVec3f sVelocity0;
     static f32 sAirFriction;
     static f32 sGravity;
     static f32 sScaleVel;
@@ -70,15 +70,14 @@ public:
     static s16 sAxisCycleDecel;
     static f32 sOffsetHeight;
     static TAwardCupSupervisor *sSupervisor;
-    static J3DAnmBase *sAwardCupBtpAnm; // TODO: type
+    static J3DAnmTexPattern *sAwardCupBtpAnm;
 
-    virtual const char *getBtpFileName() { return nullptr; }
+    void MoveExec(); // 0x802cc610
+    void InitExec(); // 0x802cc5a4
+    virtual const char *getBmdFileName() = 0;
+    virtual const char *getBtpFileName() = 0;
     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
     virtual u32 getJ3DModelDataTevStageNum() const { return 0x20000; }
-
-    // Inline ptmf stuff
-    void InitExec() { Observer_FindAndInit(TMapObjAwardCup, 3); } // 0x802cc5a4
-    void MoveExec() { Observer_FindAndExec(TMapObjAwardCup, 3); } // 0x802cc610
     friend class TMapObjAwardItemBox;
     friend class TAwardCupSupervisor;
     JSULink<TMapObjAwardCup> mLink; // 0x190
@@ -86,9 +85,9 @@ private:
     J3DAnmObjMaterial mMatAnm; // 0x1a0
     s8 mDir;                   // 0x1c0
     u8 _pad1c1[3];             // 0x1c1
-    JGeometry::TVec3f mModelXDir; // 0x1c4
+    JGeometry::TVec3f mModelZDir; // 0x1c4
     JGeometry::TVec3f mModelYDir; // 0x1d0
-    JGeometry::TVec3f mModelZDir; // 0x1dc
+    JGeometry::TVec3f mModelXDir; // 0x1dc
     Mtx mOrgMtx;               // 0x1e8
     f32 mRollSpeed;            // 0x218
     f32 mRollSpeed2;           // 0x21c

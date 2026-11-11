@@ -28,8 +28,8 @@ public:
     virtual void createModel(JKRSolidHeap *, u32);
     void drawAll(u32);
 
-    static f32 sStringOffset[18];
-    static f32 sStringTexOffset[12];
+    static const f32 sStringOffset[18];
+    static const f32 sStringTexOffset[12];
 
     JSUList<TTestString> mList; // 0x24
     JUTTexture *mTexture;       // 0x30

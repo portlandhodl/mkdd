@@ -35,6 +35,8 @@ public:
         _18 = false;
     }
 
+    void setMaxSpeed(f32 speed) { _24 = speed; }
+
 private:
     JGeometry::TVec3f mTagret;
     JGeometry::TVec3f *mpPos;

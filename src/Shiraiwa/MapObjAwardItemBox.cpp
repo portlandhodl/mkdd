@@ -8,8 +8,12 @@
 #include "Shiraiwa/SiUtil.h"
 #include "Sato/RivalSpeedCtrl.h"
 #include "Yamamoto/kartCtrl.h"
+#include "Kaneshige/LightMgr.h"
+#include "Kaneshige/SimpleDrawer.h"
 
 #include "JSystem/JMath/JMath.h"
+
+static const f32 sDummy[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 
 const int TMapObjAwardItemBox::scIDTable[18] = {
     0xd67, 0xd67, 0xd67, 0xd68, 0xd68, 0xd68, 0xd69, 0xd69, 0xd69,
@@ -28,7 +32,7 @@ StateObserver::StateFuncSet<TMapObjAwardItemBox> TMapObjAwardItemBox::sTable[4] 
     {3, &TMapObjAwardItemBox::initFunc_Hide, &TMapObjAwardItemBox::doFunc_Hide},
 };
 
-f32 TMapObjAwardCup::sVelocity0[19];
+JGeometry::TVec3f TMapObjAwardCup::sVelocity0(0.0f, 84.0f, 0.0f);
 f32 TMapObjAwardCup::sAirFriction = 0.9999f;
 f32 TMapObjAwardCup::sGravity = 0.8f;
 f32 TMapObjAwardCup::sScaleVel = 0.05f;
@@ -43,7 +47,7 @@ f32 TMapObjAwardCup::sRotBrake = 0.003f;
 s16 TMapObjAwardCup::sAxisCycleDecel = 0x1e;
 f32 TMapObjAwardCup::sOffsetHeight;
 TAwardCupSupervisor *TMapObjAwardCup::sSupervisor;
-J3DAnmBase *TMapObjAwardCup::sAwardCupBtpAnm;
+J3DAnmTexPattern *TMapObjAwardCup::sAwardCupBtpAnm;
 
 StateObserver::StateFuncSet<TMapObjAwardCup> TMapObjAwardCup::sTable[3] = {
     {0, &TMapObjAwardCup::initFunc_InBox, &TMapObjAwardCup::doFunc_InBox},
@@ -51,7 +55,6 @@ StateObserver::StateFuncSet<TMapObjAwardCup> TMapObjAwardCup::sTable[3] = {
     {2, &TMapObjAwardCup::initFunc_Roll, &TMapObjAwardCup::doFunc_Roll},
 };
 
-#include "JSystem/JAudio/JASFakeMatch2.h"
 
 
 
@@ -81,17 +84,18 @@ TMapObjAwardItemBox::TMapObjAwardItemBox(const CrsData::SObject &obj)
         type = 5;
         break;
     default:
-        JUT_ASSERT_F(0, "range over: %d <= type=%d < %d");
+#line 93
+        JUT_ASSERT(false);
         break;
     }
 
-    type = type * 3 - 1;
-    type = mObjData->mParam1 + type;
+    type = mObjData->mParam1 + type * 3 - 1;
+#line 99
     JUT_MINMAX_ASSERT(0, type, 18);
 
     mCup = (TMapObjAwardCup *)GeographyObjManager::gMgr->createSubObj(scIDTable[type]);
 
-    mCup->mMatAnm.getFrameCtrl()->mFrame = (f32)(mObjData->mParam1 - 1);
+    mCup->mMatAnm.getFrameCtrl()->mFrame = (s16)(mObjData->mParam1 - 1);
     mCup->mDir = (mObjData->mParam1 == 3) ? -1 : 1;
 
     if (getSupervisor() == nullptr) {
@@ -117,19 +121,16 @@ void TMapObjAwardItemBox::reset() {
     }
 
     JGeometry::TVec3f dir;
-    dir.set(mRotMtx[0][0], mRotMtx[1][0], mRotMtx[2][0]);
+    mRotMtx.getXDir(dir);
     dir.normalize();
-    f32 ratio = (f32)TMapObjAwardCup::sJumpFrame / (f32)mObjData->mParam2;
-    mCup->mDirVec.x = dir.x;
-    mCup->mDirVec.y = dir.y;
-    mCup->mDirVec.z = ratio;
+    mCup->mDirVec.scale((f32)mObjData->mParam2 / (f32)TMapObjAwardCup::sJumpFrame, dir);
     mCup->setOrgMtx(mRotMtx);
 }
 
 #pragma auto_inline off
 void TMapObjAwardItemBox::skip() {
-    int no = RaceMgr::getManager()->mRaceInfo->mAwardKartNo;
     int rank = -1;
+    int no = RaceMgr::getManager()->getAwardKartNo();
     if (no != -1) {
         rank = RaceMgr::getManager()->getKartChecker(no)->getRank();
     }
@@ -211,17 +212,17 @@ void TMapObjAwardItemBox::doFunc_Roll() {
 }
 
 void TMapObjAwardItemBox::rotAnimation() {
-    mRotAngle0 += JMASSin(mRandDir) * sRollSpeed;
-    mRotAngle1 += JMASCos(mRandDir) * -sRollSpeed;
-    mModelZDir.x += mModelXDir.x * mRotAngle1;
-    mModelZDir.y += mModelXDir.y * mRotAngle1;
-    mModelZDir.z += mModelXDir.z * mRotAngle1;
-    mModelZDir.x += mModelYDir.x * mRotAngle0;
-    mModelZDir.y += mModelYDir.y * mRotAngle0;
-    mModelZDir.z += mModelYDir.z * mRotAngle0;
+    JGeometry::TVec3f vy, vx;
+    mRotAngle0 += sRollSpeed * JMASSin(mRandDir);
+    vy.scale(mRotAngle0, mModelYDir);
+    mRotAngle1 += -sRollSpeed * JMASCos(mRandDir);
+    vx.scale(mRotAngle1, mModelXDir);
+    mModelZDir.add(vx);
+    mModelZDir.add(vy);
     mModelZDir.normalize();
-    mModelZDir.cross(mModelXDir, mModelYDir);
     mModelYDir.cross(mModelZDir, mModelXDir);
+    mModelYDir.normalize();
+    mModelXDir.cross(mModelYDir, mModelZDir);
     mRandDir += 0x100;
     stMakeRMtx(mRotMtx, mModelXDir, mModelYDir, mModelZDir);
 }
@@ -254,6 +255,30 @@ void TMapObjAwardItemBox::initFunc_Hide() {
 
 void TMapObjAwardItemBox::doFunc_Hide() {}
 
+TMapObjAwardCup::TMapObjAwardCup(u32 id) : TMapObjDemoObj(id), StateObserver(), JKRDisposer(), mLink(this) {
+    mFlag &= ~1;
+    mObjFlag |= 0x400;
+    createSoundMgr();
+    setObjFlagSimpleDraw();
+    if (getSupervisor() == nullptr) {
+        sSupervisor = new TAwardCupSupervisor();
+    }
+    sSupervisor->entry(this);
+}
+
+void TMapObjAwardCup::InitExec() {
+    Observer_FindAndInit(TMapObjAwardCup, 3);
+}
+
+void TMapObjAwardCup::MoveExec() {
+    Observer_FindAndExec(TMapObjAwardCup, 3);
+}
+
+void TMapObjAwardCup::createModel(JKRSolidHeap *, u32) {
+    mMatAnm.setExModel(&mModel);
+    mMatAnm.attach(sAwardCupBtpAnm);
+}
+
 void TMapObjAwardCup::update() {
     mMatAnm.anmFrameProc();
     setModelMatrixAndScale();
@@ -275,11 +300,18 @@ void TMapObjAwardCup::reset() {
     }
 }
 
+void TMapObjAwardCup::loadAnimation() {
+    J3DModelData *modelData = mModel.getModelData();
+    JKRArchive *arc = *(JKRArchive **)((char *)RaceMgr::getManager() + 0x90); // mAwardArc
+    J3DAnmObjMaterial::setupTexPatternAnmData(&sAwardCupBtpAnm, modelData, arc->getResource(getBtpFileName()));
+}
+
 void TMapObjAwardCup::setOrgMtx(const JGeometry::TPos3f &mtx) {
-    JGeometry::TVec3f z;
-    JGeometry::TVec3f x(mtx[0][0], mtx[1][0], mtx[2][0]);
-    JGeometry::TVec3f y(mtx[0][1], mtx[1][1], mtx[2][1]);
-    z.cross(x, y);
+    JGeometry::TVec3f x, z, y;
+    mtx.getXDir(x);
+    mtx.getYDir(y);
+    mtx.getZDir(z);
+    x.cross(z, y);
     x.normalize();
     mOrgMtx[0][0] = x.x;
     mOrgMtx[1][0] = x.y;
@@ -294,7 +326,7 @@ void TMapObjAwardCup::setOrgMtx(const JGeometry::TPos3f &mtx) {
 
 f32 TMapObjAwardCup::makeOffset() {
     f32 height = 0.0f;
-    f32 vel = sVelocity0[1];
+    f32 vel = sVelocity0.y;
     int n = sJumpFrame + 1;
     for (int i = 0; i <= n; i++) {
         vel *= sAirFriction;
@@ -311,6 +343,20 @@ void TMapObjAwardCup::flyOut(const JGeometry::TVec3f &pos) {
     mPos.z = pos.z;
 }
 
+void TMapObjAwardCup::skip(const JGeometry::TVec3f &pos) {
+    mPos.scaleAdd(sJumpFrame, mDirVec, pos);
+    mPos.y += sOffsetHeight;
+    mFlag222 = 0;
+    mRollSpeed = sRollSpeedMax;
+    mRollSpeed2 = mDir * sRollSpeedMax;
+    mFlag220 = mDir > 0 ? 0 : 0x8000;
+    mRotMtx.getXDir(mModelXDir);
+    mRotMtx.getYDir(mModelYDir);
+    mRotMtx.getZDir(mModelZDir);
+    mFlag234 = 0;
+    setState(2);
+}
+
 void TMapObjAwardCup::initFunc_InBox() {
     mCheckKartHitFlags = 0;
     mGeoObjFlag &= ~2;
@@ -319,12 +365,152 @@ void TMapObjAwardCup::initFunc_InBox() {
 
 void TMapObjAwardCup::doFunc_InBox() {}
 
+void TMapObjAwardCup::initFunc_FlyOut() {
+    mScale.x = 0.0f;
+    mScale.y = 0.0f;
+    mScale.z = 0.0f;
+    mVel.set(sVelocity0);
+    mFlag234 = 0;
+    mRotMtx.getXDir(mModelXDir);
+    mRotMtx.getYDir(mModelYDir);
+    mRotMtx.getZDir(mModelZDir);
+    mRollSpeed = sRotVel0;
+    mRollSpeed2 = mDir * sRotVel0;
+    mFlag220 = mDir > 0 ? 0 : 0x8000;
+    mFlag222 = 0;
+    mSoundMgr->setSe(0x20044);
+}
+
+void TMapObjAwardCup::doFunc_FlyOut() {
+    mVel.scale(sAirFriction);
+    mVel.y -= sGravity;
+    mPos.add(mVel);
+    mPos.add(mDirVec);
+    if (mScale.y < 1.0f) {
+        f32 s = mScale.y + sScaleVel;
+        if (s > 1.0f) {
+            s = 1.0f;
+        }
+        mScale.x = s;
+        mScale.y = s;
+        mScale.z = s;
+    }
+    rotAnimation(false);
+    if (getStateCount() > sJumpFrame) {
+        setState(2);
+    }
+}
+
+void TMapObjAwardCup::initFunc_Roll() {}
+
+void TMapObjAwardCup::doFunc_Roll() {
+    rotAnimation(true);
+}
+
+void TMapObjAwardCup::draw(u32 viewNo) {
+    if (mFlag234 == 0) {
+        mMatAnm.anmFrameProc();
+        J3DModelData *modelData = mModel.getModelData();
+        SimpleDrawer drawer;
+        drawer.drawInit(modelData);
+        while (drawer.loadPreDrawSetting()) {
+            MtxPtr effectMtx = LightMgr::getManager()->searchLight(viewNo + 0x53434e30)->getEffectMtx();
+            mModel.setScale(mScale);
+            mModel.clipAll(viewNo, true);
+            mModel.simpleDraw(viewNo, effectMtx, 1);
+        }
+    }
+    else {
+        mModel.hide();
+    }
+}
+
+void TMapObjAwardCup::rotAnimation(bool roll) {
+    Mtx m1;
+    Mtx m2;
+    JGeometry::TVec3f vel;
+    JGeometry::TVec3f side;
+    JGeometry::TVec3f axis;
+    f32 maxSpeed;
+    if (roll) {
+        maxSpeed = sRollSpeedMax;
+    }
+    else {
+        maxSpeed = __fabsf(mRollSpeed2);
+    }
+    f32 accel = -sRollSpeed * JMASCos(mFlag220);
+    mRollSpeed2 += accel;
+    if (fabs(mRollSpeed2) > maxSpeed) {
+        mRollSpeed2 -= sRotBrake * (mRollSpeed2 < 0.0f ? -1.0f : 1.0f);
+        if (fabs(mRollSpeed2) < maxSpeed) {
+            mRollSpeed2 = maxSpeed * (mRollSpeed2 < 0.0f ? -1.0f : 1.0f);
+        }
+    }
+    vel.scale(mRollSpeed2, mModelXDir);
+    mModelZDir.add(vel);
+    mModelZDir.normalize();
+    mModelYDir.cross(mModelZDir, mModelXDir);
+    mModelYDir.normalize();
+    mModelXDir.cross(mModelYDir, mModelZDir);
+    mModelXDir.normalize();
+
+    PSMTXIdentity(m1);
+    m1[0][0] = mModelXDir.x;
+    m1[1][0] = mModelXDir.y;
+    m1[2][0] = mModelXDir.z;
+    m1[0][1] = mModelYDir.x;
+    m1[1][1] = mModelYDir.y;
+    m1[2][1] = mModelYDir.z;
+    m1[0][2] = mModelZDir.x;
+    m1[1][2] = mModelZDir.y;
+    m1[2][2] = mModelZDir.z;
+    PSMTXIdentity(m2);
+
+    static JGeometry::TVec3f axisZ(0.0f, 0.0f, 1.0f);
+    s16 cycle = roll ? sAxisRotCycle : sFlyOutRotCycle;
+    if (mFlag224 > cycle) {
+        mFlag224 -= sAxisCycleDecel;
+    }
+    if (mFlag224 < cycle) {
+        mFlag224 = cycle;
+    }
+    s16 angle = mFlag224 * JMASCos(mFlag222);
+    axis.set(JMASSin(angle), JMASCos(angle), 0.0f);
+    side.cross(axis, axisZ);
+    side.normalize();
+    m2[0][0] = side.x;
+    m2[1][0] = side.y;
+    m2[2][0] = side.z;
+    m2[0][1] = axis.x;
+    m2[1][1] = axis.y;
+    m2[2][1] = axis.z;
+    m2[0][2] = axisZ.x;
+    m2[1][2] = axisZ.y;
+    m2[2][2] = axisZ.z;
+    PSMTXConcat(m1, m2, m1);
+    PSMTXConcat(mOrgMtx, m1, mRotMtx);
+
+    mFlag220 += sRotCycle;
+    if (roll) {
+        mFlag222 += sRotCycle;
+    }
+    else {
+        mFlag222 += sRotCycle * 15;
+    }
+}
+
 void TMapObjAwardCup::calc() {
     ExecuteState();
 }
 
 void TAwardCupSupervisor::entry(TMapObjAwardCup *cup) {
     mList.append(&cup->mLink);
+}
+
+void TAwardCupSupervisor::draw(u32 viewNo) {
+    for (JSULink<TMapObjAwardCup> *link = mList.getFirst(); link != nullptr; link = link->getNext()) {
+        link->getObject()->draw(viewNo);
+    }
 }
 
 TAwardItemBoxSupervisor::TAwardItemBoxSupervisor() : GeoObjSupervisor() { mList.initiate(); }
@@ -356,3 +542,4 @@ bool TAwardItemBoxSupervisor::isRollState() {
     return ret;
 }
 
+#include "JSystem/JAudio/JASFakeMatch2.h"
