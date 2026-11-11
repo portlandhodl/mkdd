@@ -675,6 +675,32 @@ void *CharacterSelect3D::mKinopioDump;
 CharacterSelect3D *CharacterSelect3D::mCharacterSelect3D;
 
 
+CharacterSelect3DParam::CharacterSelect3DParam()
+{
+    JGeometry::TVec3f eye(0.0f, 345.0f, 1000.0f);
+    JGeometry::TVec3f target(0.0f, 135.0f, 0.0f);
+    JGeometry::TVec3f bodyPos0(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f bodyTarget0(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f bodyPos1(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f bodyTarget1(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f kartPos(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f kartTarget(0.0f, 0.0f, 0.0f);
+    mAdjust = 0;
+    mFovy = 30.0f;
+    mEye = eye;
+    mTarget = target;
+    mBodyPos[0] = bodyPos0;
+    mBodyTarget[0] = bodyTarget0;
+    mBodyScale[0] = 1.0f;
+    mBodyPos[1] = bodyPos1;
+    mBodyTarget[1] = bodyTarget1;
+    mBodyScale[1] = 1.0f;
+    mKartPos = kartPos;
+    mKartTarget = kartTarget;
+    mKartScale = 1.0f;
+}
+
+
 CharacterSelect3D::CharacterSelect3D(JKRHeap *heap)
 {
     CharacterSelect3DParam *param = new (heap, 0) CharacterSelect3DParam();
@@ -878,10 +904,10 @@ CharacterSelect3D::CharacterSelect3D(JKRHeap *heap)
             }
 
             mKartPartsC[kartID][i] = new (kartHeap, 0) ExModel(1);
-            if (i % 2 == 0)
-                mKartPartsC[kartID][i]->setModelData(mKartModelData[kartID][3]);
-            else
+            if (i % 2 != 0)
                 mKartPartsC[kartID][i]->setModelData(mKartModelData[kartID][4]);
+            else
+                mKartPartsC[kartID][i]->setModelData(mKartModelData[kartID][3]);
         }
     }
 
@@ -966,9 +992,9 @@ CharacterSelect3D::CharacterSelect3D(JKRHeap *heap)
     mDefaultTable[51] = mPeachTire[0];
     mDefaultTable[55] = mBabyTire[0];
     mDefaultTable[59] = mWaluigiTire[0];
-    mDefaultTable[63] = mKinopioTire[0];
-    mDefaultTable[67] = mKoopaJrTire[0];
-    mDefaultTable[71] = mKoopaJrTire[0];
+    mDefaultTable[63] = mKoopaJrTire[0];
+    mDefaultTable[67] = mKinopioTire[0];
+    mDefaultTable[71] = mKinopioTire[0];
     mDefaultTable[75] = mKingTeresaTire[0];
     mDefaultTable[79] = mKingTeresaTire[0];
     mDefaultTable[83] = mBonusTire[0];
@@ -1020,8 +1046,7 @@ CharacterSelect3D::CharacterSelect3D(JKRHeap *heap)
         mSubLight[i] = MenuSubLight::createAndAppend(heap, i, mSceneLight, i + 1);
     }
 
-    JUtility::TColor color(200, 185, 180, 255);
-    mSceneLight->setColor(color);
+    mSceneLight->setColor(JUtility::TColor(200, 185, 180, 255));
 
     mSceneLight->mOffsetPos.set(-10300.0f, 15600.0f, 21000.0f);
     mSubLight[0]->mOffsetPos.set(-10300.0f, 15600.0f, 21000.0f);
@@ -1033,25 +1058,6 @@ CharacterSelect3D::CharacterSelect3D(JKRHeap *heap)
     init();
 }
 
-CharacterSelect3DParam::CharacterSelect3DParam()
-{
-    mAdjust = 0;
-    mFovy = 30.0f;
-    mEye.set(0.0f, 135.0f, 1000.0f);
-    mTarget.set(0.0f, 135.0f, 0.0f);
-    mBodyPos[0].set(0.0f, 0.0f, 0.0f);
-    mBodyTarget[0].set(0.0f, 0.0f, 0.0f);
-    mBodyScale[0] = 1.0f;
-    mBodyPos[1].set(0.0f, 0.0f, 0.0f);
-    mBodyTarget[1].set(0.0f, 0.0f, 0.0f);
-    mBodyScale[1] = 1.0f;
-    mKartPos.set(0.0f, 135.0f, 0.0f);
-    mKartTarget.set(0.0f, 0.0f, 0.0f);
-    mKartScale = 1.0f;
-}
-
-static const Vec sUpVector = {0.0f, 1.0f, 0.0f};
-static const Vec sUpVector2 = {0.0f, 1.0f, 0.0f};
 
 void CharacterSelect3D::init()
 {
@@ -1096,17 +1102,15 @@ void CharacterSelect3D::draw(int player, f32 aspect)
     CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
     j3dSys.drawInit();
 
-    JGeometry::TVec3f target;
-    JGeometry::TVec3f up = sUpVector;
-    JGeometry::TVec3f eye;
+    Mtx44 projMtx;
     Mtx tmp;
-    Mtx projMtx;
 
     C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
     GXSetProjection(projMtx, GX_PERSPECTIVE);
 
-    eye = param->mEye;
-    target = param->mTarget;
+    Vec eye = JGeometry::TVec3f(param->mEye);
+    Vec up = {0.0f, 1.0f, 0.0f};
+    Vec target = JGeometry::TVec3f(param->mTarget);
 
     if (player == 0)
     {
@@ -1128,8 +1132,8 @@ void CharacterSelect3D::draw(int player, f32 aspect)
         }
     }
 
-    mSceneLight->mCameraPos.set(eye.x, eye.y, eye.z);
-    mSceneLight->mTargetPos.set(target.x, target.y, target.z);
+    mSceneLight->mCameraPos.set(JGeometry::TVec3f(eye));
+    mSceneLight->mTargetPos.set(JGeometry::TVec3f(target));
     j3dSys.setViewMtx(mCameraMatrix);
 
     LightMgr::getManager()->setCurrentViewNo(0);
@@ -1140,23 +1144,26 @@ void CharacterSelect3D::draw(int player, f32 aspect)
         drawKart(mKartStatus[player].mKartID);
     }
 
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < 4; ++i)
     {
-        if (!mCharacterStatus[player][i].mActive)
-            continue;
-
-        int index = mCharacterStatus[player][i].mCharID - 1;
-        mCharacterModel[index].mModel->setCurrentViewNo(0);
-
-        MtxPtr effectMtx = mSceneLight->getEffectMtx();
-        if (i == 1)
-            effectMtx = ((LightObj *)mSubLight[1])->getEffectMtx();
-        mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
-
-        if (index + 1 == 17)
+        for (int j = 0; j < 2; ++j)
         {
-            mCharacterModel[20].mModel->setCurrentViewNo(0);
-            mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+            if (!mCharacterStatus[i][j].mActive)
+                continue;
+
+            int index = mCharacterStatus[i][j].mCharID - 1;
+            mCharacterModel[index].mModel->setCurrentViewNo(0);
+
+            MtxPtr effectMtx = mSceneLight->getEffectMtx();
+            if (j == 1)
+                effectMtx = mSubLight[1]->getEffectMtx();
+            mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
+
+            if (index + 1 == 17)
+            {
+                mCharacterModel[20].mModel->setCurrentViewNo(0);
+                mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+            }
         }
     }
 
@@ -1190,12 +1197,12 @@ void CharacterSelect3D::draw(int player, f32 aspect, JGeometry::TVec3f eye, JGeo
     CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
     j3dSys.drawInit();
 
-    Mtx projMtx;
+    Mtx44 projMtx;
     Mtx tmp;
     C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
     GXSetProjection(projMtx, GX_PERSPECTIVE);
 
-    Vec up = sUpVector2;
+    Vec up = {0.0f, 1.0f, 0.0f};
 
     if (player == 0)
     {
@@ -1217,8 +1224,8 @@ void CharacterSelect3D::draw(int player, f32 aspect, JGeometry::TVec3f eye, JGeo
         }
     }
 
-    mSceneLight->mCameraPos.set(eye.x, eye.y, eye.z);
-    mSceneLight->mTargetPos.set(target.x, target.y, target.z);
+    mSceneLight->mCameraPos.set(eye);
+    mSceneLight->mTargetPos.set(target);
     j3dSys.setViewMtx(mCameraMatrix);
 
     LightMgr::getManager()->setCurrentViewNo(0);
@@ -1229,23 +1236,26 @@ void CharacterSelect3D::draw(int player, f32 aspect, JGeometry::TVec3f eye, JGeo
         drawKart(mKartStatus[player].mKartID);
     }
 
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < 4; ++i)
     {
-        if (!mCharacterStatus[player][i].mActive)
-            continue;
-
-        int index = mCharacterStatus[player][i].mCharID - 1;
-        mCharacterModel[index].mModel->setCurrentViewNo(0);
-
-        MtxPtr effectMtx = mSceneLight->getEffectMtx();
-        if (i == 1)
-            effectMtx = ((LightObj *)mSubLight[1])->getEffectMtx();
-        mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
-
-        if (index + 1 == 17)
+        for (int j = 0; j < 2; ++j)
         {
-            mCharacterModel[20].mModel->setCurrentViewNo(0);
-            mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+            if (!mCharacterStatus[i][j].mActive)
+                continue;
+
+            int index = mCharacterStatus[i][j].mCharID - 1;
+            mCharacterModel[index].mModel->setCurrentViewNo(0);
+
+            MtxPtr effectMtx = mSceneLight->getEffectMtx();
+            if (j == 1)
+                effectMtx = mSubLight[1]->getEffectMtx();
+            mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
+
+            if (index + 1 == 17)
+            {
+                mCharacterModel[20].mModel->setCurrentViewNo(0);
+                mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+            }
         }
     }
 
@@ -1292,14 +1302,11 @@ void CharacterSelect3D::calc()
             if (!mCharacterStatus[player][position].mActive)
                 continue;
 
-            GXLightID lightMask = position ? GX_LIGHT2 : GX_LIGHT0;
-            int index = mCharacterStatus[player][position].mCharID - 1;
-            mCharacterModel[index].mModel->setLightMask(
-                mCharacterModel[index].mModelData, lightMask);
+            ExModel::setLightMask(mCharacterModel[mCharacterStatus[player][position].mCharID - 1].mModelData,
+                                  position == 0 ? GX_LIGHT0 : GX_LIGHT2);
             if (mCharacterStatus[player][position].mCharID == 17)
             {
-                mCharacterModel[20].mModel->setLightMask(
-                    mCharacterModel[20].mModelData, lightMask);
+                ExModel::setLightMask(mCharacterModel[20].mModelData, position == 0 ? GX_LIGHT0 : GX_LIGHT2);
             }
 
             calcCharacter(player, position, mCharacterStatus[player][position].mCharID,
@@ -1309,16 +1316,15 @@ void CharacterSelect3D::calc()
 
             if (mCharacterStatus[player][position].mCharID == 19)
             {
+                int index = mCharacterStatus[player][position].mCharID - 1;
                 mAccessoryAnm->setFrame(mAccessoryScale);
 
                 int rootIdx = mCharacterModel[index].mModelData->getJointName()->getIndex("skl_root");
                 Mtx mtx;
                 PSMTXCopy(mCharacterModel[index].mModel->getModel()->getAnmMtx(rootIdx), mtx);
 
-                f32 scale = mCharacterStatus[player][position].mScale *
-                            mCharacterDefScale[index] * 0.5f;
-                JGeometry::TVec3f scaleVec;
-                scaleVec.set(scale, scale, scale);
+                f32 scale = 1.75f * (mCharacterStatus[player][position].mScale * mCharacterDefScale[index]);
+                JGeometry::TVec3f scaleVec(scale, scale, scale);
 
                 mAccessoryModel->setCurrentViewNo(0);
                 mAccessoryModel->setBaseTRMtx(mtx);
@@ -1328,33 +1334,30 @@ void CharacterSelect3D::calc()
         }
     }
 
-    f32 oldAccessoryScale = mAccessoryScale;
-    mAccessoryScale = oldAccessoryScale + 1.0f;
-    if (oldAccessoryScale >= mAccessoryAnm->getFrameMax())
+    if (mAccessoryScale++ >= mAccessoryAnm->getFrameMax())
         mAccessoryScale = 0.0f;
 
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
     for (int player = 0; player < 4; ++player)
     {
         if (!mKartStatus[player].mActive)
             continue;
 
         EKartID kartID = mKartStatus[player].mKartID;
-        CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
-
-        JGeometry::TVec3f pos = mKartStatus[player].mPos;
-        JGeometry::TVec3f target = mKartStatus[player].mTarget;
+        JGeometry::TVec3f pos(mKartStatus[player].mPos);
+        JGeometry::TVec3f target(mKartStatus[player].mTarget);
         f32 scale = mKartStatus[player].mScale;
 
         int count;
-        if (kartID == KOOPA_KING || kartID == BARREL_TRAIN)
+        if (kartID == 7 || kartID == 9)
             count = 6;
         else
             count = 4;
 
-        const f32 *body = mDefaultTable[kartID * 4];
         scale *= mKartDefScale[kartID];
 
         Mtx mtx;
+        const f32 *body = mDefaultTable[kartID * 4];
         PSMTXTrans(mtx, body[0] * scale, body[1] * scale, body[2] * scale);
 
         if (param->mAdjust & 1)
@@ -1364,103 +1367,63 @@ void CharacterSelect3D::calc()
 
         mKartModel[kartID]->setCurrentViewNo(0);
         mKartModel[kartID]->setBaseTRMtx(mtx);
-        JGeometry::TVec3f scaleVec;
-        scaleVec.set(scale, scale, scale);
-        mKartModel[kartID]->setBaseScale(scaleVec);
+        JGeometry::TVec3f bodyScale(scale, scale, scale);
+        mKartModel[kartID]->setBaseScale(bodyScale);
 
         for (int i = 0; i < count; ++i)
         {
-            const f32 *part = mDefaultTable[kartID * 4 + 1] + i * 9;
-            JGeometry::TVec3f partPos;
-            JGeometry::TVec3f partTarget;
-            JGeometry::TVec3f partScale;
-            partPos.set(part[0] * scale, part[1] * scale, part[2] * scale);
-            partTarget.set(part[3] * scale, part[4] * scale, part[5] * scale);
-
-            JGeometry::TVec3f p;
-            JGeometry::TVec3f t;
             PSMTXTrans(mtx, 0.0f, 0.0f, 0.0f);
+            const f32 *part = mDefaultTable[kartID * 4 + 1] + i * 9;
+            JGeometry::TVec3f partPos(scale * part[0], scale * part[1], scale * part[2]);
+            JGeometry::TVec3f partRot(part[3], part[4], part[5]);
+            calcRotTrans(mtx, partPos, partRot);
             if (param->mAdjust & 1)
-            {
-                p.set(param->mKartPos.x + partPos.x, param->mKartPos.y + partPos.y,
-                      param->mKartPos.z + partPos.z);
-                t.set(param->mKartTarget.x + partTarget.x, param->mKartTarget.y + partTarget.y,
-                      param->mKartTarget.z + partTarget.z);
-            }
+                calcRotTrans(mtx, param->mKartPos, param->mKartTarget);
             else
-            {
-                p.set(pos.x + partPos.x, pos.y + partPos.y, pos.z + partPos.z);
-                t.set(target.x + partTarget.x, target.y + partTarget.y, target.z + partTarget.z);
-            }
-            calcRotTrans(mtx, p, t);
+                calcRotTrans(mtx, pos, target);
             mKartPartsA[kartID][i]->setCurrentViewNo(0);
             mKartPartsA[kartID][i]->setBaseTRMtx(mtx);
-            partScale.set(part[6] * scale, part[7] * scale, part[8] * scale);
+            part = mDefaultTable[kartID * 4 + 1] + i * 9;
+            JGeometry::TVec3f partScale(scale * part[6], scale * part[7], scale * part[8]);
             mKartPartsA[kartID][i]->setBaseScale(partScale);
         }
 
-        if (kartID != BARREL_TRAIN && (u32)(kartID - 16) > 1)
+        if (!(kartID == 9 || kartID == 16 || kartID == 17))
         {
             for (int i = 0; i < count; ++i)
             {
-                const f32 *part = mDefaultTable[kartID * 4 + 2] + i * 9;
-                JGeometry::TVec3f partPos;
-                JGeometry::TVec3f partTarget;
-                JGeometry::TVec3f partScale;
-                partPos.set(part[0] * scale, part[1] * scale, part[2] * scale);
-                partTarget.set(part[3] * scale, part[4] * scale, part[5] * scale);
-
-                JGeometry::TVec3f p;
-                JGeometry::TVec3f t;
                 PSMTXTrans(mtx, 0.0f, 0.0f, 0.0f);
+                const f32 *part = mDefaultTable[kartID * 4 + 2] + i * 9;
+                JGeometry::TVec3f partPos(scale * part[0], scale * part[1], scale * part[2]);
+                JGeometry::TVec3f partRot(part[3], part[4], part[5]);
+                calcRotTrans(mtx, partPos, partRot);
                 if (param->mAdjust & 1)
-                {
-                    p.set(param->mKartPos.x + partPos.x, param->mKartPos.y + partPos.y,
-                          param->mKartPos.z + partPos.z);
-                    t.set(param->mKartTarget.x + partTarget.x, param->mKartTarget.y + partTarget.y,
-                          param->mKartTarget.z + partTarget.z);
-                }
+                    calcRotTrans(mtx, param->mKartPos, param->mKartTarget);
                 else
-                {
-                    p.set(pos.x + partPos.x, pos.y + partPos.y, pos.z + partPos.z);
-                    t.set(target.x + partTarget.x, target.y + partTarget.y, target.z + partTarget.z);
-                }
-                calcRotTrans(mtx, p, t);
+                    calcRotTrans(mtx, pos, target);
                 mKartPartsB[kartID][i]->setCurrentViewNo(0);
                 mKartPartsB[kartID][i]->setBaseTRMtx(mtx);
-                partScale.set(part[6] * scale, part[7] * scale, part[8] * scale);
+                part = mDefaultTable[kartID * 4 + 2] + i * 9;
+                JGeometry::TVec3f partScale(scale * part[6], scale * part[7], scale * part[8]);
                 mKartPartsB[kartID][i]->setBaseScale(partScale);
             }
         }
 
         for (int i = 0; i < count; ++i)
         {
-            const f32 *part = mDefaultTable[kartID * 4 + 3] + i * 9;
-            JGeometry::TVec3f partPos;
-            JGeometry::TVec3f partTarget;
-            JGeometry::TVec3f partScale;
-            partPos.set(part[0] * scale, part[1] * scale, part[2] * scale);
-            partTarget.set(part[3] * scale, part[4] * scale, part[5] * scale);
-
-            JGeometry::TVec3f p;
-            JGeometry::TVec3f t;
             PSMTXTrans(mtx, 0.0f, 0.0f, 0.0f);
+            const f32 *part = mDefaultTable[kartID * 4 + 3] + i * 9;
+            JGeometry::TVec3f partPos(scale * part[0], scale * part[1], scale * part[2]);
+            JGeometry::TVec3f partRot(part[3], part[4], part[5]);
+            calcRotTrans(mtx, partPos, partRot);
             if (param->mAdjust & 1)
-            {
-                p.set(param->mKartPos.x + partPos.x, param->mKartPos.y + partPos.y,
-                      param->mKartPos.z + partPos.z);
-                t.set(param->mKartTarget.x + partTarget.x, param->mKartTarget.y + partTarget.y,
-                      param->mKartTarget.z + partTarget.z);
-            }
+                calcRotTrans(mtx, param->mKartPos, param->mKartTarget);
             else
-            {
-                p.set(pos.x + partPos.x, pos.y + partPos.y, pos.z + partPos.z);
-                t.set(target.x + partTarget.x, target.y + partTarget.y, target.z + partTarget.z);
-            }
-            calcRotTrans(mtx, p, t);
+                calcRotTrans(mtx, pos, target);
             mKartPartsC[kartID][i]->setCurrentViewNo(0);
             mKartPartsC[kartID][i]->setBaseTRMtx(mtx);
-            partScale.set(part[6] * scale, part[7] * scale, part[8] * scale);
+            part = mDefaultTable[kartID * 4 + 3] + i * 9;
+            JGeometry::TVec3f partScale(scale * part[6], scale * part[7], scale * part[8]);
             mKartPartsC[kartID][i]->setBaseScale(partScale);
         }
     }
@@ -1575,8 +1538,8 @@ int CharacterSelect3D::isCancel(int player)
 {
     if (mCharacterStatus[player][0].mState == STATUS_2 &&
         mCharacterStatus[player][1].mState == STATUS_2 &&
-        mCharacterStatus[player][0].mTimer[2] >= 0.0f &&
-        mCharacterStatus[player][1].mTimer[2] >= 0.0f)
+        mCharacterStatus[player][0].mTimer[2] >= 58.0f &&
+        mCharacterStatus[player][1].mTimer[2] >= 58.0f)
     {
         return 1;
     }
@@ -1587,8 +1550,8 @@ int CharacterSelect3D::isNext(int player)
 {
     if (mCharacterStatus[player][0].mState == STATUS_2 &&
         mCharacterStatus[player][1].mState == STATUS_2 &&
-        mCharacterStatus[player][0].mTimer[2] >= 0.0f &&
-        mCharacterStatus[player][1].mTimer[2] >= 0.0f)
+        mCharacterStatus[player][0].mTimer[2] >= 43.0f &&
+        mCharacterStatus[player][1].mTimer[2] >= 43.0f)
     {
         return 1;
     }
@@ -1638,9 +1601,7 @@ void CharacterSelect3D::calcCharacter(int player, int position, ECharID characte
     {
     case STATUS_0:
     {
-        f32 old = mCharacterStatus[player][position].mTimer[0];
-        mCharacterStatus[player][position].mTimer[0] = old + 1.0f;
-        if (old >= mCharacterModel[index].mAnm[0].mAnmTransform->getFrameMax())
+        if (mCharacterStatus[player][position].mTimer[0]++ >= mCharacterModel[index].mAnm[0].mAnmTransform->getFrameMax())
         {
             mCharacterStatus[player][position].mPrevState = STATUS_0;
             mCharacterStatus[player][position].mState = STATUS_1;
@@ -1649,9 +1610,7 @@ void CharacterSelect3D::calcCharacter(int player, int position, ECharID characte
     }
     case STATUS_1:
     {
-        f32 old = mCharacterStatus[player][position].mTimer[1];
-        mCharacterStatus[player][position].mTimer[1] = old + 1.0f;
-        if (old >= mCharacterModel[index].mAnm[1].mAnmTransform->getFrameMax())
+        if (mCharacterStatus[player][position].mTimer[1]++ >= mCharacterModel[index].mAnm[1].mAnmTransform->getFrameMax())
         {
             mCharacterStatus[player][position].mPrevState = STATUS_1;
             mCharacterStatus[player][position].mTimer[1] = 0.0f;
@@ -1660,12 +1619,10 @@ void CharacterSelect3D::calcCharacter(int player, int position, ECharID characte
     }
     case STATUS_2:
     {
-        f32 old = mCharacterStatus[player][position].mTimer[2];
-        mCharacterStatus[player][position].mTimer[2] = old + 1.0f;
-        if (old >= mCharacterModel[index].mAnm[2].mAnmTransform->getFrameMax())
+        if (mCharacterStatus[player][position].mTimer[2]++ >= mCharacterModel[index].mAnm[2].mAnmTransform->getFrameMax())
         {
             mCharacterStatus[player][position].mTimer[2] =
-                mCharacterModel[index].mAnm[2].mAnmTransform->getFrameMax() - 1.0f;
+                mCharacterModel[index].mAnm[2].mAnmTransform->getFrameMax() - 1;
         }
         break;
     }
@@ -1682,56 +1639,56 @@ void CharacterSelect3D::calcCharacter(int player, int position, ECharID characte
     if (index + 1 == 18)
         mCharacterModel[20].mAnm[state].mAnmTransform->setFrame(frame);
 
-    if (frame < 0.0f && prevState != state)
+    if (frame < 15.0f && prevState != state)
     {
         if (prevState == STATUS_0 && state == STATUS_1)
         {
             mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
-                mCharacterModel[index].mAnm[1].mMtxCalc);
+                mCharacterModel[index].mAnm[state].mMtxCalc);
             if (index + 1 == 18)
                 mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
-                    mCharacterModel[20].mAnm[1].mMtxCalc);
+                    mCharacterModel[20].mAnm[state].mMtxCalc);
         }
         else if (prevState == STATUS_1 && state == STATUS_2)
         {
             mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
                 mCharacterModel[index].mMtxCalc02);
-            mCharacterModel[index].mMtxCalc02->setWeight(0, 1.0f - frame);
-            mCharacterModel[index].mMtxCalc02->setWeight(1, 0.5f * frame);
+            mCharacterModel[index].mMtxCalc02->setWeight(0, 1.0 - 0.066 * frame);
+            mCharacterModel[index].mMtxCalc02->setWeight(1, 0.1f * frame);
             if (index + 1 == 18)
             {
                 mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
                     mCharacterModel[20].mMtxCalc02);
-                mCharacterModel[20].mMtxCalc02->setWeight(0, 1.0f - frame);
-                mCharacterModel[20].mMtxCalc02->setWeight(1, 0.5f * frame);
+                mCharacterModel[20].mMtxCalc02->setWeight(0, 1.0 - 0.066 * frame);
+                mCharacterModel[20].mMtxCalc02->setWeight(1, 0.1f * frame);
             }
         }
         else if (prevState == STATUS_2 && state == STATUS_1)
         {
             mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
                 mCharacterModel[index].mMtxCalc02);
-            mCharacterModel[index].mMtxCalc02->setWeight(1, 1.0f - frame);
-            mCharacterModel[index].mMtxCalc02->setWeight(0, 0.5f * frame);
+            mCharacterModel[index].mMtxCalc02->setWeight(1, 1.0 - 0.066 * frame);
+            mCharacterModel[index].mMtxCalc02->setWeight(0, 0.1f * frame);
             if (index + 1 == 18)
             {
                 mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
                     mCharacterModel[20].mMtxCalc02);
-                mCharacterModel[20].mMtxCalc02->setWeight(1, 1.0f - frame);
-                mCharacterModel[20].mMtxCalc02->setWeight(0, 0.5f * frame);
+                mCharacterModel[20].mMtxCalc02->setWeight(1, 1.0 - 0.066 * frame);
+                mCharacterModel[20].mMtxCalc02->setWeight(0, 0.1f * frame);
             }
         }
         else if (prevState == STATUS_0 && state == STATUS_2)
         {
             mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
                 mCharacterModel[index].mMtxCalc12);
-            mCharacterModel[index].mMtxCalc12->setWeight(0, 1.0f - frame);
-            mCharacterModel[index].mMtxCalc12->setWeight(1, 0.5f * frame);
+            mCharacterModel[index].mMtxCalc12->setWeight(0, 1.0 - 0.066 * frame);
+            mCharacterModel[index].mMtxCalc12->setWeight(1, 0.1f * frame);
             if (index + 1 == 18)
             {
                 mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
                     mCharacterModel[20].mMtxCalc12);
-                mCharacterModel[20].mMtxCalc12->setWeight(0, 1.0f - frame);
-                mCharacterModel[20].mMtxCalc12->setWeight(1, 0.5f * frame);
+                mCharacterModel[20].mMtxCalc12->setWeight(0, 1.0 - 0.066 * frame);
+                mCharacterModel[20].mMtxCalc12->setWeight(1, 0.1f * frame);
             }
         }
         else
@@ -1750,15 +1707,15 @@ void CharacterSelect3D::calcCharacter(int player, int position, ECharID characte
     }
 
     if (state == STATUS_2)
-        mCharacterModel[index].mAnmTexPattern->setFrame(frame);
-    else
-        mCharacterModel[index].mAnmTexPattern->setFrame(0.0f);
-
-    if (index + 1 == 18)
     {
-        if (state == STATUS_2)
+        mCharacterModel[index].mAnmTexPattern->setFrame(frame);
+        if (index + 1 == 18)
             mCharacterModel[20].mAnmTexPattern->setFrame(frame);
-        else
+    }
+    else
+    {
+        mCharacterModel[index].mAnmTexPattern->setFrame(0.0f);
+        if (index + 1 == 18)
             mCharacterModel[20].mAnmTexPattern->setFrame(0.0f);
     }
 

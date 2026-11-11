@@ -14,6 +14,8 @@
 
 #include "mathHelper.h"
 
+LANNum2DParam::LANNum2DParam() : _48(0), mFlag(1) {}
+
 LANNum2D::LANNum2D(JKRHeap *heap) {
     mNode = new (heap, 0) LANNum2DHioNode();
 
@@ -126,11 +128,6 @@ LANNum2D::LANNum2D(JKRHeap *heap) {
     init();
 }
 
-
-LANNum2DParam::~LANNum2DParam() {}
-
-LANNum2DHioNode::~LANNum2DHioNode() {}
-
 void LANNum2D::setDraw1() {
     switch (RCMGetManager()->getStatusNumber()) {
     case 0:
@@ -177,8 +174,7 @@ void LANNum2D::setDraw1() {
     }
 
     if (RCMGetManager()->getStatusNumber() == 1) {
-        int status = J2DManager::getStatus2Kart(0);
-        if (RCMGetManager()->getKartInfo(status)->getPad(1) == NULL) {
+        if (RCMGetManager()->getKartInfo(J2DManager::getStatus2Kart(0))->getPad(1) == NULL) {
             mConsolePanes[0].mPane[0][0]->hide();
             mConsolePanes[0].mPane[1][0]->hide();
         }
@@ -236,8 +232,7 @@ void LANNum2D::setDraw2() {
     }
 
     if (RCMGetManager()->getStatusNumber() == 1) {
-        int status = J2DManager::getStatus2Kart(0);
-        if (RCMGetManager()->getKartInfo(status)->getPad(1) == NULL) {
+        if (RCMGetManager()->getKartInfo(J2DManager::getStatus2Kart(0))->getPad(1) == NULL) {
             mConsolePanes[0].mPane[0][0]->hide();
             mConsolePanes[0].mPane[1][0]->hide();
         }
@@ -281,19 +276,15 @@ void LANNum2D::setDraw4() {
             mConsolePanes[i].mPane[0][2]->changeTexture(Result2D::mPlayerNumberName[port], 0);
         }
 
-        if (RCMGetManager()->getKartInfo(status)->getPad(1) != NULL) {
-            if (i == 0) {
-                int coPort = coPad->getPadPort() + 0;
-                if (coPort >= 0 && coPort < 4) {
-                    mConsolePanes[i].mPane[1][1]->setCornerColor(Race2D::getCornerColor(coPort));
-                    mConsolePanes[i].mPane[1][2]->setCornerColor(Race2D::getCornerColor(coPort));
-                    mConsolePanes[i].mPane[1][2]->changeTexture(Result2D::mPlayerNumberName[coPort], 0);
-                }
+        if (RCMGetManager()->getKartInfo(status)->getPad(1) != NULL && i == 0) {
+            int coPort = coPad->getPadPort() + 0;
+            if (coPort >= 0 && coPort < 4) {
+                mConsolePanes[i].mPane[1][1]->setCornerColor(Race2D::getCornerColor(coPort));
+                mConsolePanes[i].mPane[1][2]->setCornerColor(Race2D::getCornerColor(coPort));
+                mConsolePanes[i].mPane[1][2]->changeTexture(Result2D::mPlayerNumberName[coPort], 0);
             }
-        } else {
-            if (i == 0) {
-                mConsolePanes[i].mPane[1][0]->hide();
-            }
+        } else if (i == 0) {
+            mConsolePanes[i].mPane[1][0]->hide();
         }
 
         if (status >= 0 && status < 8) {
@@ -304,8 +295,7 @@ void LANNum2D::setDraw4() {
     }
 
     if (RCMGetManager()->getStatusNumber() == 1) {
-        int status = J2DManager::getStatus2Kart(0);
-        if (RCMGetManager()->getKartInfo(status)->getPad(1) == NULL) {
+        if (RCMGetManager()->getKartInfo(J2DManager::getStatus2Kart(0))->getPad(1) == NULL) {
             mConsolePanes[0].mPane[0][0]->hide();
             mConsolePanes[0].mPane[1][0]->hide();
         }
@@ -327,6 +317,10 @@ void LANNum2D::init() {
     mScreen->animation();
 }
 
+LANNum2D::~LANNum2D() {
+    delete mNode;
+}
+
 void LANNum2D::draw() {
     if (mNode->mParam.mFlag & 1 && mDrawFlag) {
         ERacePhase racePhase = RCMGetManager()->getRacePhase();
@@ -345,7 +339,7 @@ void LANNum2D::draw() {
 }
 
 void LANNum2D::calc() {
-    if (mNode->mParam.mFlag & 1 && mDrawFlag && mFrame < 0.0f) {
+    if (mNode->mParam.mFlag & 1 && mDrawFlag && mFrame < 200.0f) {
         f32 frame = mFrame++;
         if (mDrawFlag2) {
             if (!(frame < 100.0f)) {

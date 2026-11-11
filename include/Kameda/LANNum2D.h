@@ -11,8 +11,8 @@
 
 class LANNum2DParam : public JORReflexible {
 public:
-    LANNum2DParam() : _48(0), mFlag(1) {}
-    virtual ~LANNum2DParam();
+    LANNum2DParam();
+    virtual ~LANNum2DParam() {}
 
     u16 _48; // 0x48
     u8 mFlag; // 0x4a
@@ -22,7 +22,7 @@ class LANNum2DHioNode : public HioNode {
 public:
     LANNum2DHioNode()
     : HioNode("ＬＡＮＮｕｍ２Ｄ", &mParam, 0, 0) {}
-    virtual ~LANNum2DHioNode();
+    virtual ~LANNum2DHioNode() {}
 
     LANNum2DParam mParam;
 };
