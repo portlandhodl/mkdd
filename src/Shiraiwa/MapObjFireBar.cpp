@@ -2,11 +2,10 @@
 
 #include <math.h>
 
-#include "JSystem/JAudio/JASFakeMatch2.h"
 #include "JSystem/JMath/JMath.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Sato/ObjUtility.h"
-#include "Sato/Objects/MapObjFireBall.h"
+#include "Shiraiwa/Objects/MapObjFireBall.h"
 
 TMapObjFireBar::TMapObjFireBar(const CrsData::SObject &obj, u32 id) : TMapObjFireObj(obj, id) {
     mAngle = 0;
@@ -42,45 +41,34 @@ void TMapObjFireBar::reset() {
     if (mSep == 0) {
         mSep = 2;
     }
-    _180 = 0.0f;
+    mFireRotRate = 0.0f;
     resetFire();
 }
 
 void TMapObjFireBar::resetFire() {
+    JGeometry::TVec3f v;
     int group = 0;
     for (int i = 0; i < mFireNum; i++) {
         if (i % mSep == 0) {
             group++;
         }
         s16 ang = (i % mSep) * 0x10000 / mSep;
-        int value = mAngle * group;
-        f32 cv = JMACosShort(ang) * value;
-        f32 sv = JMASinShort(ang) * value;
-        TMapObjFireBallBase *fire = mFire[i];
-        fire->_178 = cv;
-        fire->_17c = sv;
-        fire->_180 = 0.0f;
-        mFire[i]->_184.x = mPos.x;
-        mFire[i]->_184.y = mPos.y;
-        mFire[i]->_184.z = mPos.z;
+        v.set(mAngle * group * JMACosShort(ang), mAngle * group * JMASinShort(ang), 0.0f);
+        mFire[i]->_178.set(v);
         mFire[i]->setRMtx(mRotMtx);
-        TMapObjFireBallBase *fire3 = mFire[i];
-        fire3->mScale.x = mScale.x;
-        fire3->mScale.y = mScale.y;
-        fire3->mScale.z = mScale.z;
-        mFire[i]->mIndex = (i + mSep) % mFireNum;
+        mFire[i]->_184.set(mPos);
+        mFire[i]->mScale.set(mScale);
+        mFire[i]->mIndex = i + mSep >= mFireNum;
         if (mObjData->mParam5 == 0 && mFireNum - i > mSep) {
-            mFire[i]->mCheckKartHitFlags = 0;
-            mFire[i]->mGeoObjFlag &= ~2;
+            TMapObjFireBallBase *fire = mFire[i];
+            fire->mCheckKartHitFlags = 0;
+            fire->mGeoObjFlag &= ~2;
         }
     }
     if (mSpeed != 0.0f) {
-        JGeometry::TVec3f zAxis(0.0f, 0.0f, 1.0f);
-        JGeometry::TQuat4f q;
-        q.setRotate(zAxis, mSpeed);
-        mFireRotQ[0] = q;
-        q.setRotate(zAxis, 3.0f * mSpeed);
-        mFireRotQ[1] = q;
+        v.set(0.0f, 0.0f, 1.0f);
+        ((JGeometry::TQuat4f &)mFireRotQ[0]).setRotate(v, mSpeed);
+        ((JGeometry::TQuat4f &)mFireRotQ[1]).setRotate(v, 3.0f * mSpeed);
     } else {
         mFireRotQ[0].set(0.0f, 0.0f, 0.0f, 1.0f);
         mFireRotQ[1].set(0.0f, 0.0f, 0.0f, 1.0f);
@@ -92,12 +80,7 @@ void TMapObjFireBar::createColModel(J3DModelData *modelData) {
 }
 
 const char *TMapObjFireBar::getBmdFileName() {
-    static s8 init;
-    static const char *cBmdName;
-    if (!init) {
-        cBmdName = "/Objects/FireBar1.bmd";
-        init = 1;
-    }
+    static const char *cBmdName = "/Objects/FireBar1.bmd";
     return cBmdName;
 }
 
@@ -134,7 +117,7 @@ void TMapObjKpFireBar::reset() {
     if (mSep == 0) {
         mSep = 2;
     }
-    _180 = 0.0f;
+    mFireRotRate = 0.0f;
     resetFire();
     mScale.x = 1.0f;
     mScale.y = 1.0f;
@@ -185,8 +168,6 @@ void TMapObjKpFireBar::createModel(JKRSolidHeap *heap, u32 viewNo) {
 
 void TMapObjKpFireBar::createColModel(J3DModelData *) {}
 
-TMapObjKpFireBar *TMapObjKpFireBarDummy;
-
 J3DAnmTransform *TMapObjKpFireBar::sKpFireBarBckAnmTrans;
 J3DMtxCalc *TMapObjKpFireBar::sKpFireBarBckMtxCalc;
 u8 TMapObjKpFireBar::sUseBck;
@@ -209,11 +190,10 @@ void TMapObjFireCircle::reset() {
     if (mSpeed == 0.0f) {
         mSpeed = 0.001f;
     }
-    s16 t = mObjData->mParam3;
-    if (t == 10 || t == 0) {
-        mRotSpeed = 0.0f;
+    if (mObjData->mParam3 == 10 || mObjData->mParam3 == 0) {
+        mRotSpeed = 1.0f;
     } else {
-        mRotSpeed = t * 0.1f;
+        mRotSpeed = mObjData->mParam3 * 0.1f;
     }
     mRadius = (int)mObjData->mParam4;
     if (mRadius == 0.0f) {
@@ -221,7 +201,7 @@ void TMapObjFireCircle::reset() {
     }
     mAngle = 0;
     mAngleSpeed = 273;
-    _180 = 0.0f;
+    mFireRotRate = 0.0f;
     resetFire();
 }
 
@@ -229,33 +209,19 @@ void TMapObjFireCircle::resetFire() {
     s16 step = 0x10000 / mFireNum;
     s16 ang = 0;
     for (s16 i = 0; i < mFireNum; i++) {
-        TMapObjFireBallBase *fire = mFire[i];
-        f32 radius = mRadius;
-        f32 cv = JMACosShort(ang) * radius;
-        f32 sv = JMASinShort(ang) * radius;
-        fire->_178 = cv;
-        fire->_17c = sv;
-        fire->_180 = 0.0f;
+        mFire[i]->_178.set(mRadius * JMACosShort(ang), mRadius * JMASinShort(ang), 0.0f);
+        mFire[i]->_184.set(mPos);
         mFire[i]->setRMtx(mRotMtx);
-        TMapObjFireBallBase *fire2 = mFire[i];
-        fire2->_184.x = mPos.x;
-        fire2->_184.y = mPos.y;
-        fire2->_184.z = mPos.z;
-        TMapObjFireBallBase *fire3 = mFire[i];
-        fire3->mScale.x = mScale.x;
-        fire3->mScale.y = mScale.y;
-        fire3->mScale.z = mScale.z;
-        mFire[i]->mCheckKartHitFlags = 0;
-        mFire[i]->mGeoObjFlag &= ~2;
+        mFire[i]->mScale.set(mScale);
+        TMapObjFireBallBase *fire = mFire[i];
+        fire->mCheckKartHitFlags = 0;
+        fire->mGeoObjFlag &= ~2;
         ang += step;
     }
     if (mSpeed != 0.0f) {
         static JGeometry::TVec3f zAxis(0.0f, 0.0f, 1.0f);
-        JGeometry::TQuat4f q;
-        q.setRotate(zAxis, mSpeed);
-        mFireRotQ[0] = q;
-        q.setRotate(zAxis, 3.0f * mSpeed);
-        mFireRotQ[1] = q;
+        ((JGeometry::TQuat4f &)mFireRotQ[0]).setRotate(zAxis, mSpeed);
+        ((JGeometry::TQuat4f &)mFireRotQ[1]).setRotate(zAxis, 3.0f * mSpeed);
     } else {
         mFireRotQ[0].set(0.0f, 0.0f, 0.0f, 1.0f);
         mFireRotQ[1].set(0.0f, 0.0f, 0.0f, 1.0f);
@@ -263,39 +229,36 @@ void TMapObjFireCircle::resetFire() {
 }
 
 void TMapObjFireCircle::calc() {
-    f32 radius = mRadius * mRotSpeed;
+    f32 radius = mRadius * mRotSpeed + 1000.0f;
     f32 sq = radius * radius;
     u8 mask = 0;
     for (int i = 0; i < RaceMgr::getManager()->getKartNumber(); i++) {
         JGeometry::TVec3f pos;
         ObjUtility::getKartPos(i, &pos);
-        JGeometry::TVec3f delta;
-        delta.sub(pos, mPos);
-        if (delta.squared() < sq) {
+        pos.sub(mPos);
+        if (pos.squared() < sq) {
             mask |= 1 << i;
         }
     }
     for (int j = 0; j < mFireNum; j++) {
-        TMapObjFireBallBase *fire = mFire[j];
         for (int k = 0; k < RaceMgr::getManager()->getKartNumber(); k++) {
-            u32 bit = 1 << k;
+            int bit = 1 << k;
             if (mask & bit) {
-                fire->mCheckKartHitFlags |= bit;
+                mFire[j]->mCheckKartHitFlags |= bit;
             } else {
-                fire->mCheckKartHitFlags &= ~bit;
+                mFire[j]->mCheckKartHitFlags &= ~bit;
             }
         }
     }
     TMapObjFireObj::calc();
-    if (mRotSpeed != 0.0f) {
-        s16 ang = mAngle;
-        f32 s = JMACosShort(ang);
-        f32 v = mRotSpeed + (mRotSpeed - 0.0f) * s;
-        v *= 0.5f;
+    if (mRotSpeed != 1.0f) {
+        f32 v = 0.5f * (mRotSpeed + (1.0f + (mRotSpeed - 1.0f) * JMACosShort(mAngle)));
         for (int i = 0; i < mFireNum; i++) {
-            mFire[i]->_184.y = v;
+            mFire[i]->_174 = v;
         }
         mAngle += mAngleSpeed;
         mSoundMgr->setSe(0x40032);
     }
 }
+
+#include "JSystem/JAudio/JASFakeMatch2.h"

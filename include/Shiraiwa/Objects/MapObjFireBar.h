@@ -16,11 +16,8 @@ public:
     virtual void createColModel(J3DModelData *);
     virtual void resetFire();
 
-    f32 _180; // 0x180
-    f32 _184; // 0x184
-    u8 mSep;  // 0x188
-    u8 _189;  // 0x189
-    u16 _18a; // 0x18a
+    u8 mSep;    // 0x188
+    u8 _189[3]; // 0x189
     s16 mAngle; // 0x18c
     u16 _18e;   // 0x18e
     f32 mSpeed; // 0x190
@@ -53,8 +50,6 @@ public:
     virtual void calc();
     virtual void resetFire();
 
-    f32 _180;        // 0x180
-    f32 _184;        // 0x184
     f32 mRadius;     // 0x188
     s16 mAngle;      // 0x18c
     s16 mAngleSpeed; // 0x18e

@@ -63,6 +63,7 @@ void TMapObjVentilator::calc() {
     f32 vel = 0.3f;
     switch (getState()) {
     case 0:
+        vel = 0.3f;
         break;
     case 2:
         vel = 1.0f;

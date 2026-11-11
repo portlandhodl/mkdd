@@ -8,7 +8,6 @@
 #include "Kaneshige/Course/CrsGround.h"
 #include "Kaneshige/RaceMgr.h"
 #include "JSystem/JMath/JMath.h"
-#include "JSystem/JAudio/JASFakeMatch2.h"
 
 class TMapObjMeteor : public TMapObjHioNode, public StateObserver
 {
@@ -17,7 +16,7 @@ public:
     virtual ~TMapObjMeteor();
 
     virtual void reset();
-    virtual const char *getBmdFileName();
+    virtual const char *getBmdFileName() { return "/Objects/GeoStar.bmd"; }
     virtual void createColModel(J3DModelData *);
     virtual void calc();
 
@@ -42,7 +41,7 @@ public:
     static f32 sObjRadius;
     static s16 sAppearFrame;
     static f32 sRotSpeed;
-    static Vec sItemVel[4];
+    static JGeometry::TVec3f sItemVel;
 
 private:
     JGeometry::TVec3f mAxisX;      // 0x158
@@ -57,7 +56,6 @@ f32 TMapObjMeteor::sBoxSize = 100.0f;
 f32 TMapObjMeteor::sObjRadius = 300.0f;
 s16 TMapObjMeteor::sAppearFrame = 5;
 f32 TMapObjMeteor::sRotSpeed = 0.1f;
-Vec TMapObjMeteor::sItemVel[4] = { { 0.0f, 50.0f, 0.0f } };
 
 const StateObserver::StateFuncSet<TMapObjMeteor> TMapObjMeteor::sTable[4] = {
     { 0, &TMapObjMeteor::initFunc_Hide, &TMapObjMeteor::doFunc_Hide },
@@ -65,6 +63,8 @@ const StateObserver::StateFuncSet<TMapObjMeteor> TMapObjMeteor::sTable[4] = {
     { 2, &TMapObjMeteor::initFunc_Move, &TMapObjMeteor::doFunc_Move },
     { 3, &TMapObjMeteor::initFunc_Crush, &TMapObjMeteor::doFunc_Crush },
 };
+
+JGeometry::TVec3f TMapObjMeteor::sItemVel(0.0f, 50.0f, 0.0f);
 
 TMapObjMeteor::TMapObjMeteor(const CrsData::SObject &object) : TMapObjHioNode(object), StateObserver()
 {
@@ -78,76 +78,49 @@ void TMapObjMeteor::createColModel(J3DModelData *modelData)
     createBoundsSphere(sObjRadius, 1.0f);
 }
 
-__declspec(weak) const char *TMapObjMeteor::getBmdFileName()
-{
-    return "/Objects/GeoStar.bmd";
-}
-
 void TMapObjMeteor::reset()
 {
     resetObject();
 
-    mAxisY.x = mObjData->yNorm.x;
-    mAxisY.y = mObjData->yNorm.y;
-    mAxisY.z = mObjData->yNorm.z;
-    mAxisZ.x = mObjData->zNorm.x;
-    mAxisZ.y = mObjData->zNorm.y;
-    mAxisZ.z = mObjData->zNorm.z;
-
+    mAxisY.set(mObjData->yNorm);
     mAxisY.normalize();
+    mAxisZ.set(mObjData->zNorm);
     mAxisZ.normalize();
-
     mAxisX.cross(mAxisY, mAxisZ);
     mAxisX.normalize();
-
-    mAxisY.set(-mAxisX.z, -mAxisY.x, -mAxisY.z);
+    mAxisY.negate();
 
     mAxisX.scale(mObjData->scale.x * sBoxSize);
     mAxisY.scale(mObjData->scale.y * sBoxSize);
     mAxisZ.scale(mObjData->scale.z * sBoxSize);
 
     JGeometry::TVec3f center;
-    center.x = mAxisY.x + 0.5f * mAxisX.x;
-    center.x += 0.5f * mAxisZ.x;
-    center.y = mAxisY.y + 0.5f * mAxisX.y;
-    center.y += 0.5f * mAxisZ.y;
-    center.z = mAxisY.z + 0.5f * mAxisX.z;
-    center.z += 0.5f * mAxisZ.z;
-
+    center.x = mAxisY.x + 0.5f * mAxisX.x + 0.5f * mAxisZ.x;
+    center.y = mAxisY.y + 0.5f * mAxisX.y + 0.5f * mAxisZ.y;
+    center.z = mAxisY.z + 0.5f * mAxisX.z + 0.5f * mAxisZ.z;
     mItemVel.scaleAdd(-1.0f, center, mObjData->position);
 
-    mScale.zero();
+    mScale.set(1.0f, 1.0f, 1.0f);
     PSMTXIdentity(mRotMtx);
     clrObjFlagHidding();
-    clrObjFlagCheckGeoHitting();
+    clrObjFlagCheckItemHitting();
     mCheckKartHitFlags = 0;
     _58 = 13;
 
     f32 life = mObjData->mParam2;
-    if (life == 0.0f) {
+    if (life <= 0.0f) {
         life = 100.0f;
     }
     mLife = life;
 
-    s16 angle = (s16)(mObjData->mParam4 * 182.0444f);
-    f32 sin = JMath::sincosTable_.sinShort(angle);
-    f32 cos = JMath::sincosTable_.cosShort(angle);
-
     JGeometry::TVec3f xAxis;
     JGeometry::TVec3f yAxis(0.0f, 1.0f, 0.0f);
-    JGeometry::TVec3f zAxis(cos, 0.0f, sin);
+    s16 angle = mObjData->mParam4 * 182.04445f;
+    JGeometry::TVec3f zAxis(JMath::sincosTable_.cosShort(angle), 0.0f, JMath::sincosTable_.sinShort(angle));
     xAxis.cross(yAxis, zAxis);
+    mRotMtx.setXYZDir(xAxis, yAxis, zAxis);
 
-    mRotMtx.ref(0, 0) = xAxis.x;
-    mRotMtx.ref(1, 0) = xAxis.y;
-    mRotMtx.ref(2, 0) = xAxis.z;
-    mRotMtx.ref(0, 1) = yAxis.x;
-    mRotMtx.ref(1, 1) = yAxis.y;
-    mRotMtx.ref(2, 1) = yAxis.z;
-    mRotMtx.ref(0, 2) = zAxis.x;
-    mRotMtx.ref(1, 2) = zAxis.y;
-    mRotMtx.ref(2, 2) = zAxis.z;
-
+    Quaternion q = {0.0f, 0.0f, 0.0f, 1.0f};
     mEmitter = nullptr;
     ResetState();
 }
@@ -171,22 +144,21 @@ void TMapObjMeteor::doFunc_Hide()
 
 void TMapObjMeteor::initFunc_Appear()
 {
-    f32 scale = getGeoRnd()->get_ufloat_1();
-    f32 offset = getGeoRnd()->get_ufloat_1() - 1.0f;
+    f32 x = getGeoRnd()->get_ufloat_1();
+    f32 z = getGeoRnd()->get_ufloat_1();
 
-    JGeometry::TVec3f pos = mAxisX;
-    pos.scaleAdd(offset, mAxisZ);
+    JGeometry::TVec3f pos;
+    pos.set(mAxisX);
+    pos.scale(x);
+    pos.scaleAdd(z, mAxisZ);
+    mPos.add(mItemVel, pos);
 
-    mPos.x = pos.x + mAxisZ.x + mItemVel.x;
-    mPos.y = pos.y + mAxisZ.y + mItemVel.y;
-    mPos.z = pos.z + mAxisZ.z + mItemVel.z;
-
-    mScale.zero();
+    mScale.set(0.0f, 0.0f, 0.0f);
     mGeoObjFlag &= ~0x20;
     mEmitter = GetJPAMgr()->createEmt("mk_rbStarKira_a", mPos);
 
 #line 171
-    JUT_ASSERT_MSG(mEmitter != nullptr, "TMapObjMeteor: Can't create Emitter");
+    JUT_WARNING_F(mEmitter != nullptr, "%s", "TMapObjMeteor: Can't create Emitter");
 }
 
 void TMapObjMeteor::doFunc_Appear()
@@ -319,7 +291,7 @@ void TMapObjMeteor::showItem()
 
     f32 random = getGeoRnd()->get_ufloat_1();
     if (random <= 0.3f) {
-        ItemObjMgr::gItemMgr->occurItem(6, mPos, *(JGeometry::TVec3f *)&sItemVel[0]);
+        ItemObjMgr::gItemMgr->occurItem(6, mPos, sItemVel);
         getSoundMgr()->setSe(0x40051);
         GetJPAMgr()->createEmt("mk_rbStarBreak_b", mPos);
     }
@@ -334,3 +306,5 @@ void TMapObjMeteor::MoveExec()
 {
     Observer_FindAndExec(TMapObjMeteor, 4);
 }
+
+#include "JSystem/JAudio/JASFakeMatch2.h"
