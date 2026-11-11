@@ -67,7 +67,7 @@ public:
     static const u64 mMapSelectBckTag[3]; // 0x80376358
     static const u64 mMapBckTag[3]; // 0x80376370
     static const u64 mMapBrkTag[2]; // 0x80376388
-    static const u64 mMapBpkTag; // 0x80419af8
+    static const u64 mMapBpkTag[1]; // 0x80419af8
 
 private:
     BckData mMainBck[3];      // 0x00C
@@ -75,7 +75,7 @@ private:
     ColData mMainBpk;         // 0x03C
     BckData mMapBck[6][3];    // 0x048
     BrkData mMapBrk[6][2];    // 0x120
-    BpkData mMapBpk[6];       // 0x1B0
+    BpkData mMapBpk[6][1];    // 0x1B0
     J2DScreen *mMainScreen;   // 0x1F8
     f32 mMainX;               // 0x1FC
     f32 mMainY;               // 0x200

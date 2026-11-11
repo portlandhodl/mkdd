@@ -43,7 +43,7 @@ const u64 SceneMapSelect::mMapBrkTag[2] = {
     'MapPict', 'Name',
 };
 
-const u64 SceneMapSelect::mMapBpkTag = 'HighL';
+const u64 SceneMapSelect::mMapBpkTag[1] = {'HighL'};
 
 SceneMapSelect::SceneMapSelect(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap) {
     mMainScreen = new (heap, 0) J2DScreen();
@@ -53,15 +53,9 @@ SceneMapSelect::SceneMapSelect(JKRArchive *archive, JKRHeap *heap) : Scene(archi
     MenuBackground::create(SceneFactory::ptr()->getArchive(9));
     MenuTitleLine::create(SceneFactory::ptr()->getArchive(8), nullptr);
 
-    mMainScreen->set("SelectMapLayout.blo", 0x104, mArchive);
+    mMainScreen->set("SelectMapLayout.blo", 0x1040000, mArchive);
     for (int i = 0; i < 6; i++)
-        mScreens[i]->set("SelectMap1.blo", 0x104, mArchive);
-
-    J2DScreen **screens = mScreens;
-    const u64 *bckTag = mMapBckTag;
-    const u64 *brkTag = mMapBrkTag;
-    J2DAnmColor **bpkAnim = &mMapBpk[0].mAnm;
-    J2DPicture **bpkPane = &mMapBpk[0].mPane;
+        mScreens[i]->set("SelectMap1.blo", 0x1040000, mArchive);
 
     for (int i = 0; i < 3; i++) {
         mMainBck[i].mPane = (J2DPicture *)mMainScreen->search(mMapSelectBckTag[i]);
@@ -79,20 +73,22 @@ SceneMapSelect::SceneMapSelect(JKRArchive *archive, JKRHeap *heap) : Scene(archi
 
     for (int i = 0; i < 6; i++) {
         for (int j = 0; j < 3; j++) {
-            mMapBck[i][j].mPane = (J2DPicture *)screens[i]->search(bckTag[j]);
+            mMapBck[i][j].mPane = (J2DPicture *)mScreens[i]->search(mMapBckTag[j]);
             mMapBck[i][j].mAnm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("SelectMap1.bck", mArchive));
             mMapBck[i][j].mPane->setAnimation(mMapBck[i][j].mAnm);
         }
         for (int j = 0; j < 2; j++) {
-            mMapBrk[i][j].mPane = (J2DPicture *)screens[i]->search(brkTag[j]);
+            mMapBrk[i][j].mPane = (J2DPicture *)mScreens[i]->search(mMapBrkTag[j]);
             mMapBrk[i][j].mAnm = (J2DAnmTevRegKey *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("SelectMap1.brk", mArchive));
-            mMapBrk[i][j].mAnm->searchUpdateMaterialID(screens[i]);
+            mMapBrk[i][j].mAnm->searchUpdateMaterialID(mScreens[i]);
             mMapBrk[i][j].mPane->setAnimation(mMapBrk[i][j].mAnm);
         }
-        bpkPane[i * 3] = (J2DPicture *)screens[i]->search(*(const u64 *)&mMapBpkTag);
-        bpkAnim[i * 3] = (J2DAnmColor *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("SelectMap1.bpk", mArchive));
-        bpkAnim[i * 3]->searchUpdateMaterialID(screens[i]);
-        bpkPane[i * 3]->setAnimation(bpkAnim[i * 3]);
+        for (int j = 0; j < 1; j++) {
+            mMapBpk[i][j].mPane = (J2DPicture *)mScreens[i]->search(mMapBpkTag[j]);
+            mMapBpk[i][j].mAnm = (J2DAnmColor *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("SelectMap1.bpk", mArchive));
+            mMapBpk[i][j].mAnm->searchUpdateMaterialID(mScreens[i]);
+            mMapBpk[i][j].mPane->setAnimation(mMapBpk[i][j].mAnm);
+        }
     }
 
     mMapIndex = 0;
@@ -152,18 +148,18 @@ void SceneMapSelect::reset() {
     JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
     pane->changeTexture(BattleName2D::ptr()->getBattleNameTexture((BattleName2D::BattleName)gSequenceInfo.mBattleType), 0);
 
-    pane = (J2DPicture *)mMainScreen->search('BtlPict');
+    J2DPicture *btlPane = (J2DPicture *)mMainScreen->search('BtlPict');
 #line 203
-    JUT_ASSERT_MSG(pane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
+    JUT_ASSERT_MSG(btlPane->getTypeID() == J2DPane_Picture, "pane->getTypeID() == J2DPane_Picture");
     switch (gRaceInfo.getRaceMode()) {
     case BALLOON_BATTLE:
-        pane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(0), 0);
+        btlPane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(0), 0);
         break;
     case BOMB_BATTLE:
-        pane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(1), 0);
+        btlPane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(1), 0);
         break;
     case ESCAPE_BATTLE:
-        pane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(2), 0);
+        btlPane->changeTexture(Kart2DCommon::ptr()->getBattleIconTexture(2), 0);
         break;
     default:
         break;
@@ -179,7 +175,8 @@ void SceneMapSelect::reset() {
             mMapBck[i][j].mFrame = 0.0f;
         for (int j = 0; j < 2; j++)
             mMapBrk[i][j].mFrame = 0.0f;
-        (*(BpkData *)((u8 *)mMapBpk + i * 12)).mFrame = 0.0f;
+        for (int j = 0; j < 1; j++)
+            mMapBpk[i][j].mFrame = 0.0f;
     }
 
     mState = 0;
@@ -260,14 +257,9 @@ void SceneMapSelect::calc() {
     MenuBackground::ptr()->calc();
     MenuTitleLine::ptr()->calc();
 
-    f32 f;
-    f = 1.0f + mMainBtk.mFrame;
-    mMainBtk.mFrame = f;
-    if (f >= 120.0f)
+    if ((mMainBtk.mFrame += 1.0f) >= 120.0f)
         mMainBtk.mFrame = 0.0f;
-    f = 1.0f + mMainBpk.mFrame;
-    mMainBpk.mFrame = f;
-    if (f >= 120.0f)
+    if ((mMainBpk.mFrame += 1.0f) >= 120.0f)
         mMainBpk.mFrame = 0.0f;
 
     for (int i = 0; i < 3; i++)
@@ -281,7 +273,7 @@ void SceneMapSelect::calc() {
             mMapBck[i][j].mAnm->setFrame(mMapBck[i][j].mFrame);
         for (int j = 0; j < 2; j++)
             mMapBrk[i][j].mAnm->setFrame(mMapBrk[i][j].mFrame);
-        mMapBpk[i].mAnm->setFrame(mMapBpk[i].mFrame);
+        mMapBpk[i][0].mAnm->setFrame(mMapBpk[i][0].mFrame);
         mScreens[i]->animation();
     }
 
@@ -437,7 +429,7 @@ void SceneMapSelect::buttonA() {
 
 void SceneMapSelect::buttonB() {
     if (mField264) {
-        if (mMainBck[1].mFrame == 0.0f) {
+        if (mMainBck[1].mFrame == 9.0f) {
             GetGameAudioMain()->startSystemSe(0x20005);
             mField264 = 0;
         }
@@ -517,39 +509,25 @@ void SceneMapSelect::nextBattle() {
 void SceneMapSelect::calcAnm() {
     for (int i = 0; i < mMapCount; i++) {
         if (mMapIndex == i) {
-            f32 f = 1.0f + mMapBck[i][0].mFrame;
-            mMapBck[i][0].mFrame = f;
-            if (f >= 8.0f)
+            if ((mMapBck[i][0].mFrame += 1.0f) >= 8.0f)
                 mMapBck[i][0].mFrame = 8.0f;
-            f = 1.0f + mMapBck[i][1].mFrame;
-            mMapBck[i][1].mFrame = f;
-            if (f >= 8.0f)
+            if ((mMapBck[i][1].mFrame += 1.0f) >= 8.0f)
                 mMapBck[i][1].mFrame = 8.0f;
-            f = 1.0f + mMapBck[i][2].mFrame;
-            mMapBck[i][2].mFrame = f;
-            if (f >= 60.0f)
+            if ((mMapBck[i][2].mFrame += 1.0f) >= 60.0f)
                 mMapBck[i][2].mFrame = 0.0f;
             if (mField264)
                 mMapBrk[i][0].mFrame = 1.0f;
             else
                 mMapBrk[i][0].mFrame = 1.0f;
-            f = 1.0f + mMapBrk[i][1].mFrame;
-            mMapBrk[i][1].mFrame = f;
-            if (f >= 60.0f)
+            if ((mMapBrk[i][1].mFrame += 1.0f) >= 60.0f)
                 mMapBrk[i][1].mFrame = 1.0f;
-            f = 1.0f + mMapBpk[i].mFrame;
-            mMapBpk[i].mFrame = f;
-            if (f >= 60.0f)
-                mMapBpk[i].mFrame = 0.0f;
+            if ((mMapBpk[i][0].mFrame += 1.0f) >= 60.0f)
+                mMapBpk[i][0].mFrame = 0.0f;
         }
         else {
-            f32 f = mMapBck[i][0].mFrame - 1.0f;
-            mMapBck[i][0].mFrame = f;
-            if (f <= 0.0f)
+            if ((mMapBck[i][0].mFrame -= 1.0f) <= 0.0f)
                 mMapBck[i][0].mFrame = 0.0f;
-            f = mMapBck[i][1].mFrame - 1.0f;
-            mMapBck[i][1].mFrame = f;
-            if (f <= 0.0f)
+            if ((mMapBck[i][1].mFrame -= 1.0f) <= 0.0f)
                 mMapBck[i][1].mFrame = 0.0f;
             mMapBck[i][2].mFrame = 0.0f;
             if (mField264)
@@ -557,28 +535,20 @@ void SceneMapSelect::calcAnm() {
             else
                 mMapBrk[i][0].mFrame = 1.0f;
             mMapBrk[i][1].mFrame = 0.0f;
-            mMapBpk[i].mFrame = 0.0f;
+            mMapBpk[i][0].mFrame = 0.0f;
         }
     }
 
     if (mField264) {
-        f32 f = 1.0f + mMainBck[1].mFrame;
-        mMainBck[1].mFrame = f;
-        if (f > 9.0f)
+        if ((mMainBck[1].mFrame += 1.0f) > 9.0f)
             mMainBck[1].mFrame = 9.0f;
-        f = 1.0f + mMainBck[2].mFrame;
-        mMainBck[2].mFrame = f;
-        if (f > 9.0f)
+        if ((mMainBck[2].mFrame += 1.0f) > 9.0f)
             mMainBck[2].mFrame = 9.0f;
     }
     else {
-        f32 f = mMainBck[1].mFrame - 1.0f;
-        mMainBck[1].mFrame = f;
-        if (f < 0.0f)
+        if ((mMainBck[1].mFrame -= 1.0f) < 0.0f)
             mMainBck[1].mFrame = 0.0f;
-        f = mMainBck[2].mFrame - 1.0f;
-        mMainBck[2].mFrame = f;
-        if (f < 0.0f)
+        if ((mMainBck[2].mFrame -= 1.0f) < 0.0f)
             mMainBck[2].mFrame = 0.0f;
     }
 }
