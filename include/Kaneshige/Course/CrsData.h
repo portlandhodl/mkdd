@@ -412,6 +412,7 @@ public:
     bool isDummyStartLineOn() const  { return mObjectData->dummyStartLineOn != 0; } 
     bool isSkyFollow() const { return mObjectData->skyMode != 0; }
     bool isSnowEnabled() const { return mObjectData->snowEnabled != 0; }
+    bool isSnow() const { return mObjectData->snowEnabled != 0; }
     bool isShaking() const { return mObjectData->shaking != 0; }
 
     LightParam *getLightParam(s16) const;

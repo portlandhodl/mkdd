@@ -72,23 +72,23 @@ void KartGame::DoChapterOne() {
     GetGeoObjMgr()->getJugem(0);
     if (_10 < 0xffff)
         _10++;
-    if (GetKartCtrl()->CheckJugemuSignal() || _10 > 20) {
+    if (!GetKartCtrl()->CheckJugemuSignal() && _10 > 20) {
         if (GetKartCtrl()->GetDriveCont(idx)->testTrigger(0x100) ||
             GetKartCtrl()->GetCoDriveCont(idx)->testTrigger(0x100)) {
             for (int i = 0; i < mgr->getCameraNumber(); i++)
                 GetKartCtrl()->getKartCam(i)->GetDemoCam()->DoExecution();
-        } else if (mgr->isJugemCountStart()) {
-            JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)41, idx, JGeometry::TVec3f(0.0f, 0.0f, 0.0f), 0);
-            body->getScene()->mChapter = 2;
-            body->_592 = 0;
-            body->_594 = 0;
-            GetKartCtrl()->_228 = 0;
-            GetKartCtrl()->SetPadClear(GetKartCtrl()->GetDriveCont(idx));
-            GetKartCtrl()->SetPadClear(GetKartCtrl()->GetCoDriveCont(idx));
-            SetRank();
-            if (mgr->getRaceMode() == 8 && body->mMyRank == 1)
-                GetKartCtrl()->getKartSound(idx)->DoAllVoice(37);
         }
+    } else if (mgr->isJugemCountStart()) {
+        JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)41, idx, JGeometry::TVec3f(0.0f, 0.0f, 0.0f), 0);
+        body->getScene()->mChapter = 2;
+        body->_592 = 0;
+        body->_594 = 0;
+        GetKartCtrl()->_228 = 0;
+        GetKartCtrl()->SetPadClear(GetKartCtrl()->GetDriveCont(idx));
+        GetKartCtrl()->SetPadClear(GetKartCtrl()->GetCoDriveCont(idx));
+        SetRank();
+        if (mgr->getRaceMode() == 8 && body->mMyRank == 1)
+            GetKartCtrl()->getKartSound(idx)->DoAllVoice(37);
     }
 }
 
@@ -198,7 +198,7 @@ void KartGame::DoChapterFour() {
         MakeWheelSpin();
         body->_590 &= ~1;
         GetKartCtrl()->getKartAnime(idx)->mFlags |= 0x10000;
-    } else if (body->getDamage()->TstSetDamage() && !(body->getDamage()->mFlags & 8)) {
+    } else if (!body->getDamage()->TstSetDamage() || !(body->getDamage()->mFlags & 8)) {
         GetKartCtrl()->getKartAnime(idx)->mFlags |= 0x4000;
         body->mCarStatus &= 0xfffffffffdffffffull;
     }
@@ -370,20 +370,20 @@ void KartGame::DoChapterSix() {
             cam->GetDemoCam()->InitID();
             cam->mFlags &= ~0x800;
         }
-    }
-    if (body->_59a == (s16)620 && (body->mGameStatus & 0x40)) {
-        int camNum = GetKartCtrl()->GetCameraNum(idx);
-        KartCam *cam = GetKartCtrl()->getKartCam(camNum);
-        cam->mArea.searchCamera(body->mPos);
-        cam->mCurCamIdx = cam->mArea.getCameraID();
-    }
-    if (body->_59a > (s16)620 && (body->mGameStatus & 0x40)) {
-        int camNum = GetKartCtrl()->GetCameraNum(idx);
-        KartCam *cam = GetKartCtrl()->getKartCam(camNum);
-        cam->mArea.searchCamera(body->mPos);
-        if (cam->mCurCamIdx != cam->mArea.getCameraID()) {
-            body->mGameStatus &= ~0x40;
-            cam->GetDemoCam()->InitID();
+        if (body->_59a == (s16)620 && (body->mGameStatus & 0x40)) {
+            int camNum = GetKartCtrl()->GetCameraNum(idx);
+            KartCam *cam = GetKartCtrl()->getKartCam(camNum);
+            cam->mArea.searchCamera(body->mPos);
+            cam->mCurCamIdx = cam->mArea.getCameraID();
+        }
+        if (body->_59a > (s16)620 && (body->mGameStatus & 0x40)) {
+            int camNum = GetKartCtrl()->GetCameraNum(idx);
+            KartCam *cam = GetKartCtrl()->getKartCam(camNum);
+            cam->mArea.searchCamera(body->mPos);
+            if (cam->mCurCamIdx != cam->mArea.getCameraID()) {
+                body->mGameStatus &= ~0x40;
+                cam->GetDemoCam()->InitID();
+            }
         }
     }
 }
@@ -582,11 +582,11 @@ void KartGame::DoStartGoalCtl() {
     case 6:
         DoChapterSix();
         break;
-    case 7:
-        DoChapterSeven();
-        break;
     case 8:
         DoStopItm();
+        break;
+    case 7:
+        DoChapterSeven();
         break;
     case 9:
         DoChapterBalloon();

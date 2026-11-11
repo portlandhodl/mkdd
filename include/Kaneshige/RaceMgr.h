@@ -184,7 +184,7 @@ public:
     KartDrawer *getKartDrawer(int idx) { return mRaceDrawer->getKartDrawer(idx); };
     MaskScreen *getMaskScreen() { return mRaceDrawer->getMaskScreen(); }
     int getCameraNumber() const { return getConsoleNumber(); }
-    s16 getZoomWinConsoleNo() const;
+    int getZoomWinConsoleNo() const;
     bool isZoomWinConsole() const;
 
     bool isCrsDemoMode() { return getRacePhase() == PHASE_CRS_DEMO; }

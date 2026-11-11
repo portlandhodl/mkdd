@@ -103,6 +103,7 @@ void KartRescue::SetPose(u8 kind) {
             mJugemPoint->getFrDirection(&_c8);
             _bc.y += 1800.0f;
         }
+        return;
     } else {
         if (mJugemPoint || _75 == 6) {
             pos.set(_bc);
@@ -176,11 +177,11 @@ bool KartRescue::SetJugemuPose(int idx, KartBody *body) {
     PSMTXMultVec(body->mPlayerPosMtx, &offs, &pos);
     JGeometry::TVec3f local;
     local.set(pos);
-    _d4.mMtx[0][3] = local.x;
-    _d4.mMtx[1][3] = local.y;
-    _d4.mMtx[2][3] = local.z;
+    _d4[0][3] = local.x;
+    _d4[1][3] = local.y;
+    _d4[2][3] = local.z;
     jugem->setPosition(local);
-    jugem->setRMtx(_d4);
+    jugem->setRMtx(*(JGeometry::TPos3f *)&_d4);
     return true;
 }
 
@@ -206,7 +207,7 @@ void KartRescue::DoMove(KartBody *body) {
     body->mPlayerPosMtx[0][3] += body->mPlayerPosMtx[0][1] * offset;
     body->mPlayerPosMtx[1][3] += body->mPlayerPosMtx[1][1] * offset;
     body->mPlayerPosMtx[2][3] += body->mPlayerPosMtx[2][1] * offset;
-    body->_2d8.scale(-250.0f);
+    body->_2d8.scale(0.15f);
     body->_2cc.zero();
 }
 
@@ -218,7 +219,7 @@ void KartRescue::SetHookPos(KartBody *body) {
 
 void KartRescue::DoCatch() {
     KartBody *body = mBody;
-    _80 = 1.0f;
+    _80 = 10.0f;
     _84 = 0.0f;
     mFlags = 0;
     SetPose(0);
@@ -230,30 +231,52 @@ void KartRescue::DoCatch() {
     }
 }
 
+void KartRescue::DoHang() {
+    KartBody *body = mBody;
+    TJugem *jugem = nullptr;
+    if (GetKartCtrl()->CheckCamera(body->mMynum)) {
+        int cam = GetKartCtrl()->GetCameraNum(body->mMynum);
+        if (GetKartCtrl()->getKartCam(cam)->GetCameraMode() != 2) {
+            GetKartCtrl()->getKartCam(cam)->SetFlag(0x10);
+        }
+        if (SetJugemuPose(cam, body)) {
+            jugem = GetGeoObjMgr()->getJugem(cam);
+        }
+    }
+    if (_77 <= 5) {
+        _77++;
+    }
+    _a4.y += 8.0f;
+    DoMove(body);
+    if (jugem) {
+        jugem->cutFishLine();
+    }
+}
+
 void KartRescue::DoTop() {
     KartBody *body = mBody;
     mFlags |= 0x20;
     SetPose(1);
-    _80 = 1.0f;
+    _80 = 10.0f;
     body->getThunder()->ClearThunder();
     _a4.set(body->mPos);
     if (GetKartCtrl()->CheckCamera(body->mMynum)) {
         int cam = GetKartCtrl()->GetCameraNum(body->mMynum);
-        _d4.mMtx[0][0] = body->_110[0][0];
-        _d4.mMtx[1][0] = body->_110[1][0];
-        _d4.mMtx[2][0] = body->_110[2][0];
-        _d4.mMtx[0][1] = body->_110[0][1];
-        _d4.mMtx[1][1] = body->_110[1][1];
-        _d4.mMtx[2][1] = body->_110[2][1];
-        _d4.mMtx[0][2] = body->_110[0][2];
-        _d4.mMtx[1][2] = body->_110[1][2];
-        _d4.mMtx[2][2] = body->_110[2][2];
-        _d4.mMtx[0][3] = 0.0f;
-        _d4.mMtx[1][3] = 0.0f;
-        _d4.mMtx[2][3] = 0.0f;
+        _d4[0][0] = body->_110[0][0];
+        _d4[1][0] = body->_110[1][0];
+        _d4[2][0] = body->_110[2][0];
+        _d4[0][1] = body->_110[0][1];
+        _d4[1][1] = body->_110[1][1];
+        _d4[2][1] = body->_110[2][1];
+        _d4[0][2] = body->_110[0][2];
+        _d4[1][2] = body->_110[1][2];
+        _d4[2][2] = body->_110[2][2];
+        _d4[0][3] = 0.0f;
+        _d4[1][3] = 0.0f;
+        _d4[2][3] = 0.0f;
         Mtx rot;
-        GetKartCtrl()->RotYMatrix(rot, 3.1415927f);
-        PSMTXConcat(_d4.mMtx, rot, _d4.mMtx);
+        GetKartCtrl()->RotYMatrix(rot, 3.14f);
+        PSMTXConcat(_d4, rot, _d4);
         SetJugemuPose(cam, body);
         if (GetKartCtrl()->getKartCam(cam)->GetCameraMode() == 2) {
             GetKartCtrl()->getKartCam(cam)->GetDemoCam()->InitID();
@@ -304,7 +327,7 @@ bool KartRescue::DoCheckEnd() {
         GetStEfctMgr()->setExhaustStopFlg(body->mMynum, false);
     }
     JPEffectPerformer::deleteKartEfctWet(body->mMynum);
-    body->mCarStatus &= (u64)(s32)0xffffbfff;
+    body->mCarStatus &= 0xffffffffffbfffffULL;
     body->_584 = 0;
     _76 = 0;
     if (GetKartCtrl()->CheckCamera(body->mMynum)) {
@@ -393,10 +416,7 @@ void KartRescue::DoRescueCrl() {
         DoCatch();
         _77 = 0;
         _76 = 1;
-        if (_75 == 4 || _75 == 3) {
-            break;
-        }
-        if (GetKartCtrl()->CheckCamera(body->mMynum) == 1) {
+        if (_75 != 4 && _75 != 3 && GetKartCtrl()->CheckCamera(body->mMynum) == 1) {
             if (_75 == 5) {
                 GETWipeManager()->setWipe(body->mMynum, 16, 0, 30, 70, JUTColor(0, 0, 0, 255));
             } else if (_75 == 1) {
@@ -417,7 +437,7 @@ void KartRescue::DoRescueCrl() {
     case 1:
         if (_75 == 4) {
             body->mShadowModel->clrVisibleAll();
-            _88 = GetKartCtrl()->fcnvge(_88, 1.0f, 100.0f, 100.0f);
+            _88 = GetKartCtrl()->fcnvge(_88, 10.0f, 1.0f, 1.0f);
             if (_88 >= 30.0f) {
                 _88 = 30.0f;
             }
@@ -447,9 +467,9 @@ void KartRescue::DoRescueCrl() {
     case 2:
         _77++;
         if (_75 == 0) {
-            _88 = GetKartCtrl()->fcnvge(_88, 0.0f, 50.0f, 50.0f);
+            _88 = GetKartCtrl()->fcnvge(_88, 0.0f, 2.0f, 2.0f);
         } else if (_75 == 5) {
-            _88 = GetKartCtrl()->fcnvge(_88, 0.0f, 1.0f, 1.0f);
+            _88 = GetKartCtrl()->fcnvge(_88, 0.0f, 10.0f, 10.0f);
         } else if (_75 == 3) {
             _88 = GetKartCtrl()->fcnvge(_88, 0.0f, 5.0f, 5.0f);
         } else if (_75 == 2) {
@@ -553,7 +573,7 @@ void KartRescue::DoRescueCrl() {
             _76 = 4;
             _77 = 0;
             mFlags &= ~0x40;
-            body->mCarStatus &= 0xffffffff8000ffffULL;
+            body->mCarStatus &= 0xffffffff7fffffffULL;
             mFlags &= ~0x20;
         }
         break;
@@ -587,10 +607,10 @@ void KartRescue::DoAfterRescueCrl() {
             mObj->getPosition(&dir);
             dir.sub(body->mPos);
             dir.normalize();
-            f32 inv = 1.0f / body->mSpeedScale;
+            f32 inv = -10.0f / body->mSpeedScale;
             body->mVel.y = inv;
-            body->mVel.x = dir.x * (0.15f / body->mSpeedScale);
-            body->mVel.z = dir.z * (0.15f / body->mSpeedScale);
+            body->mVel.x = dir.x * (8.0f / body->mSpeedScale);
+            body->mVel.z = dir.z * (8.0f / body->mSpeedScale);
         }
         body->mWg.y = 0.0f;
         body->getItem()->FallAllItem();

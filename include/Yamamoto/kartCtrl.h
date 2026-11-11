@@ -63,7 +63,7 @@ public:
     bool GetRightFTirePos(int, Vec *);
     bool GetLeftTirePos(int, Vec *);
     bool GetRightTirePos(int, Vec *);
-    int GetTirePos(int, int, Vec *);
+    bool GetTirePos(int, int, Vec *);
     f32 GeTireG(int);
     f32 GetCarSpeed(int);
     f32 GetCarRpm(int);

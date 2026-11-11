@@ -231,7 +231,7 @@ void KartStrat::DoPoseCrl() {
             v50.set(body->_32c);
             f32 d1 = v2c.dot(v50);
             if (v2c.y < 0.0f) {
-                v2c = v50;
+                v2c.set(v50);
             } else {
                 v2c.add(v50 * 0.6f * body->mSpeedScale);
             }
@@ -583,6 +583,7 @@ void KartStrat::DoAdjustment() {
         body->_2a8.zero();
         body->_284.zero();
         body->_2b4.zero();
+        return;
     } else if ((body->mCarStatus & 0x400) != 0) {
         if (body->_2b4.angle(body->_2a8) > 1.74444f) {
             if (body->_2b4.length() >= 50.0f) {
@@ -593,6 +594,7 @@ void KartStrat::DoAdjustment() {
         body->_2a8.zero();
         body->_284.zero();
         body->_2b4.zero();
+        return;
     } else {
         body->mEffctVel.add(body->_2b4);
         body->mEffctVel.y = 0.0f;
@@ -1156,12 +1158,10 @@ void KartStrat::DoAirCrl() {
                 GetJ3DEfctMgr()->setEffectKart(body->mMynum, 1, splashMtx);
                 GetKartCtrl()->getKartSound(body->mMynum)->DoKartDiveSound();
                 body->getStrat()->DoMotor(MotorManager::MotorType_15);
-            } else {
-                if (body->getTouchNum() >= 2) {
-                    if (dy >= 30.0f) {
-                        JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)3, body->mMynum, pos, 2);
-                        body->getGame()->_08 &= ~1;
-                    }
+            } else if (body->getTouchNum() >= 2) {
+                if (dy >= 30.0f) {
+                    JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)3, body->mMynum, pos, 2);
+                    body->getGame()->_08 &= ~1;
                 } else {
                     pos.y = body->mBodyGround.getWaterHeight();
                     JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)7, body->mMynum, pos, 2);
@@ -1278,9 +1278,9 @@ void KartStrat::DoSpeedCrl() {
     KartBody *body = mBody;
     if ((body->mGameStatus & 8) != 0) {
         DoComSpeedCrl();
-    } else {
-        DoDash();
+        return;
     }
+    DoDash();
     f32 f30 = 0.0f;
     if (body->_284.x != 0.0f || body->_284.y != 0.0f || body->_284.z != 0.0f) {
         f30 = 1.0f;
@@ -1426,46 +1426,45 @@ void KartStrat::DoComSpeedCrl() {
         f30 = 1.0f;
     }
     switch (body->_584) {
-    case 0:
-    case 6:
-    case 17:
+    case 1:
+    case 7:
     case 18:
         DoVelCrl(body->_3f0 / 2.16f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
-    case 1:
     case 2:
+    case 3:
         DoVelCrl(body->_3f0 / 2.16f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
-    case 3:
     case 4:
     case 5:
+    case 6:
         DoVelCrl(body->_3f0 / 2.16f / body->mSpeedScale);
-        body->_3ec = body->_454;
-        break;
-    case 15:
-        DoVelCrl(body->getPipe()->mSpeed / 2.16f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
     case 16:
+        DoVelCrl(body->getPipe()->mSpeed / 2.16f / body->mSpeedScale);
+        body->_3ec = body->_454;
+        break;
+    case 17:
         DoVelCrl(87.96296f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
-    case 12:
-    case 14:
+    case 13:
+    case 15:
         DoVelCrl(92.59259f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
-    case 7:
+    case 8:
         DoVelCrl(27.777777f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
-    case 8:
+    case 9:
         DoVelCrl(46.296295f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
-    case 11:
+    case 12:
         DoVelCrl(body->getCannon()->_14 / 2.16f / body->mSpeedScale);
         body->_3ec = body->_454;
         break;
@@ -1702,32 +1701,33 @@ void KartStrat::DoDash() {
         body->mCarStatus &= ~0x400000000ull;
         GetKartCtrl()->getKartAnime(num)->mFlags |= 0x1000000ull;
     }
-    if ((body->mCarStatus & 0x8000) != 0) {
-        if ((body->mCarStatus & 0x24000) != 0) {
-            if (body->mClass == 0) {
-                maxSpeed = 1.2f * body->_3f0;
-            } else {
-                maxSpeed = 1.3f * body->_3f0;
-            }
+    if ((body->mCarStatus & 0x8000) == 0) {
+        return;
+    }
+    if ((body->mCarStatus & 0x24000) != 0) {
+        if (body->mClass == 0) {
+            maxSpeed = 1.2f * body->_3f0;
         } else {
-            if (body->mClass == 0) {
-                maxSpeed = 1.55f * body->_3f0;
-            } else {
-                maxSpeed = 1.45f * body->_3f0;
-            }
+            maxSpeed = 1.3f * body->_3f0;
         }
-        if ((body->mCarStatus & 0x10000) != 0) {
-            body->mBoostTimer--;
-            body->mSpeedScale = body->_52c;
-            body->_3c8 = body->_3d0;
-            if (vlen == 0.0f && (body->mCarStatus & 0x4000400) == 0 && body->mBoostTimer >= body->_598 - 10 &&
-                body->getTouchNum() >= 1) {
-                if (flag != 0 || body->mBoostTimer >= body->_598 - 10) {
-                    vec.set(0.0f, 1.0f, 10.0f);
-                    PSMTXMultVecSR(body->_110, &vec, &body->mVel);
-                }
-                DashSpeedCtrl(maxSpeed);
+    } else {
+        if (body->mClass == 0) {
+            maxSpeed = 1.55f * body->_3f0;
+        } else {
+            maxSpeed = 1.45f * body->_3f0;
+        }
+    }
+    if ((body->mCarStatus & 0x10000) != 0) {
+        body->mBoostTimer--;
+        body->mSpeedScale = body->_52c;
+        body->_3c8 = body->_3d0;
+        if (vlen == 0.0f && (body->mCarStatus & 0x4000400) == 0 && body->mBoostTimer >= body->_598 - 10 &&
+            body->getTouchNum() >= 1) {
+            if (flag != 0 || body->mBoostTimer >= body->_598 - 10) {
+                vec.set(0.0f, 1.0f, 10.0f);
+                PSMTXMultVecSR(body->_110, &vec, &body->mVel);
             }
+            DashSpeedCtrl(maxSpeed);
         }
         if (body->mBoostTimer == 0) {
             body->mCarStatus |= 0x400000000ull;
@@ -1835,56 +1835,56 @@ int KartStrat::DoStatusCrl() {
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 2:
-        case 3:
+        case 0x12:
             kartBody->getCrash()->DoFreezeCrashCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 4:
+        case 7:
             kartBody->getCrash()->DoHalfSpinCrashCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 5:
+        case 0xf:
             kartBody->getCrash()->DotornadeCrashCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 6:
+        case 2:
+        case 3:
             kartBody->getCrash()->DoRollCrashCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 7:
+        case 5:
             kartBody->getCrash()->DoPitchCrashCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 8:
+        case 4:
             kartBody->getTumble()->DoAfterTumbleCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 9:
+        case 6:
             kartBody->getCrash()->DoBombCrashCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 0xc:
+        case 0xd:
             kartBody->getTumble()->DoShootCrashCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             break;
-        case 0xd:
+        case 8:
             DoWheelSpinCrl();
             DoAirCrl();
             DoSpeedCrl();
@@ -1893,13 +1893,13 @@ int KartStrat::DoStatusCrl() {
                 return 3;
             }
             break;
-        case 0xe:
+        case 9:
             kartBody->getRescue()->DoAfterRescueCrl();
             DoAirCrl();
             DoSpeedCrl();
             DoCalcSpeed();
             return 0;
-        case 0xf:
+        case 0xc:
             kartBody->getCannon()->DoAfterCannonCrl();
             DoAirCrl();
             DoSpeedCrl();
@@ -1917,7 +1917,7 @@ int KartStrat::DoStatusCrl() {
             DoSpeedCrl();
             DoCalcSpeed();
             return 0;
-        case 0x12:
+        case 0xe:
             kartBody->getDossin()->DoAfterDossinCrl();
             DoAirCrl();
             DoSpeedCrl();

@@ -279,7 +279,7 @@ bool KartCtrl::GetRightTirePos(int kartIndex, Vec *vec) {
     return GetTirePos(kartIndex, 2, vec);
 }
 
-int KartCtrl::GetTirePos(int kartIndex, int kartTireIndex, Vec *kartTireVect) {
+bool KartCtrl::GetTirePos(int kartIndex, int kartTireIndex, Vec *kartTireVect) {
     KartBody* kartBody = getKartBody(kartIndex);
     RaceMgr::getCurrentManager();
     
@@ -291,7 +291,7 @@ int KartCtrl::GetTirePos(int kartIndex, int kartTireIndex, Vec *kartTireVect) {
         + tireOffsetPos[idx];
     kartTireVect->z = (kartBody->mKartSus[kartOffset]->mWheel->getBaseTRMtx()[2][3] - kartBody->_2fc.z * kartBody->mKartSus[kartOffset]->mTireRadius);
     
-    return (u8)(kartBody->mKartSus[kartOffset]->_124 & 1);
+    return (kartBody->mKartSus[kartOffset]->_124 & 1) != 0;
 }
 
 f32 KartCtrl::GeTireG(int kartIndex) {
@@ -640,7 +640,7 @@ bool KartCtrl::CheckTandemItmRollingGet(int kartIndex) {
 
 void KartCtrl::SetObjectPos(int camIndex, JGeometry::TVec3f vecObjectPos) {
     KartDemoCam *kartDemoCam = getKartCam(camIndex)->GetDemoCam();
-    kartDemoCam->vec._8c.set(vecObjectPos);
+    kartDemoCam->_8c.set(vecObjectPos);
 }
 
 bool KartCtrl::CheckThunderBolt(int kartIndex) {

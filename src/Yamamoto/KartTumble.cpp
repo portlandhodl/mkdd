@@ -5,6 +5,7 @@
 #include "Sato/GeographyObjMgr.h"
 #include "Sato/ItemObjMgr.h"
 #include "Sato/JPEffectPerformer.h"
+#include "Shiraiwa/TKartThrower.h"
 #include "Yamamoto/kartBody.h"
 #include "Yamamoto/kartCtrl.h"
 
@@ -427,65 +428,61 @@ void KartTumble::MakePoiHanaTumble() {
     }
 
     if (!body->getChecker()->CheckCrash()) {
-    JGeometry::TVec3f throwDir;
-    JGeometry::TVec3f dir;
-    JGeometry::TVec3f normal;
-    JGeometry::TVec3f pos;
+        JGeometry::TVec3f throwDir;
+        JGeometry::TVec3f dir;
+        JGeometry::TVec3f normal;
+        JGeometry::TVec3f pos;
 
-    body->_584 = 13;
-    body->_588 = 0;
-    _5[0] = 0;
-    obj->getPosition(&pos);
-    obj->getColScaleRadius();
-    GetGeoObjMgr()->getKartHitDepthNormalObj(body->mMynum);
-    normal.set(*GetGeoObjMgr()->getKartHitRefVecNormalObj(body->mMynum));
-    obj->getVelocity(&dir);
+        body->_584 = 13;
+        body->_588 = 0;
+        _5[0] = 0;
+        obj->getPosition(&pos);
+        obj->getColScaleRadius();
+        GetGeoObjMgr()->getKartHitDepthNormalObj(body->mMynum);
+        normal.set(*GetGeoObjMgr()->getKartHitRefVecNormalObj(body->mMynum));
+        obj->getVelocity(&dir);
 
-    dir.y = 0;
-    pos.y = body->mPos.y;
-    throwDir.sub(pos, body->mPos);
-    throwDir.length();
-    body->_308.angle(throwDir);
-    dir.set(throwDir);
-    dir.scale(-1);
-    GetKartCtrl()->DevMatrixByVector(&_8, &dir, body->_110);
-    _8.y = 0;
-    _8.normalize();
+        dir.y = 0;
+        pos.y = body->mPos.y;
+        throwDir.sub(pos, body->mPos);
+        throwDir.length();
+        body->_308.angle(throwDir);
+        dir.set(throwDir);
+        dir.scale(-1);
+        GetKartCtrl()->DevMatrixByVector(&_8, &dir, body->_110);
+        _8.y = 0;
+        _8.normalize();
 
-    body->_594 = 0;
-    body->_4b4 = 0;
-    body->_4bc = 0.191888f;
-    body->mCarStatus |= 0x102000;
-    body->mCarStatus |= 0x800000000ULL;
-    body->getCrash()->SaveDir();
-    body->getGame()->MakeClear();
-    body->getDamage()->SetBigDamageAnime();
-    body->getItem()->FallItem();
-    body->mVel.zero();
-    body->_2cc.zero();
-    body->mWg.zero();
+        body->_594 = 0;
+        body->_4b4 = 0;
+        body->_4bc = 0.191888f;
+        body->mCarStatus |= 0x800100000ULL;
+        body->getCrash()->SaveDir();
+        body->getGame()->MakeClear();
+        body->getDamage()->SetBigDamageAnime();
+        body->getItem()->FallItem();
+        body->mVel.zero();
+        body->_2cc.zero();
+        body->mWg.zero();
 
-    JGeometry::TVec3f tmp;
-    void **vtbl = *(void ***)obj;
-    u32 rnd = ((u32 (*)(GeographyObj *))vtbl[0x84 / 4])(obj);
-    f32 rate = (f32)rnd;
-    rate *= 5;
-    vtbl = *(void ***)obj;
-    ((void (*)(GeographyObj *, JGeometry::TVec3f *, int))vtbl[0x80 / 4])(obj, &tmp, body->mMynum);
-    rate *= body->_3a4;
-    body->_2cc.x += rate * tmp.x;
-    body->_2cc.y += rate * tmp.y;
-    body->_2cc.z += rate * tmp.z;
+        JGeometry::TVec3f tmp;
+        f32 rate = ((TKartThrower *)obj)->getThrowPow();
+        rate *= 5.0f;
+        rate *= body->_3a4;
+        ((TKartThrower *)obj)->getThrowDir(&tmp, body->mMynum);
+        body->_2cc.x += rate * tmp.x;
+        body->_2cc.y += rate * tmp.y;
+        body->_2cc.z += rate * tmp.z;
 
-    _4 |= 1;
-    _14 = 120;
-    if (obj->getKind() == 0xd4a) {
-        GetKartCtrl()->getKartSound(body->mMynum)->DoShootSound();
-    }
-    GetKartCtrl()->getKartSound(body->mMynum)->DoShootVoice();
-    JPEffectPerformer::setEffect(JPEffectPerformer::Effect_Unknown0, body->mMynum, body->mPos, 1);
-    body->getStrat()->DoMotor((MotorManager::MotorType)12);
-    body->getCrash()->SetMatchlessTimer();
+        _4 |= 1;
+        _14 = 120;
+        if (obj->getKind() == 0xd4a) {
+            GetKartCtrl()->getKartSound(body->mMynum)->DoShootSound();
+        }
+        GetKartCtrl()->getKartSound(body->mMynum)->DoShootVoice();
+        JPEffectPerformer::setEffect(JPEffectPerformer::Effect_Unknown0, body->mMynum, body->mPos, 1);
+        body->getStrat()->DoMotor((MotorManager::MotorType)12);
+        body->getCrash()->SetMatchlessTimer();
     }
 }
 
@@ -547,7 +544,7 @@ void KartTumble::DoAfterTumbleCrl() {
             body->_588 = 1;
         }
 
-        GetKartCtrl()->ChaseFnumber(&body->_4b4, body->_4bc, 0.1f);
+        GetKartCtrl()->ChaseFnumber(&body->_4b4, body->_4bc, 0.8f);
 
         if ((_4 & 0x400ULL) == 0) {
             if (body->_594 <= 20) {

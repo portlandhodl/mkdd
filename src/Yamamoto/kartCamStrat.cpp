@@ -528,7 +528,7 @@ void KartCam::Second2ScreenPort(unsigned char idx) {
 }
 
 void KartCam::SetVictoryScreenPort(unsigned char idx) {
-    s16 zoom;
+    int zoom;
     RaceMgr *mgr = RaceMgr::getCurrentManager();
     int camNum = mgr->getCameraNumber();
     if (camNum == 1 || !mgr->isZoomWinConsole()) {
@@ -562,9 +562,9 @@ void KartCam::SetVictoryScreenPort(unsigned char idx) {
     }
 }
 
-inline s16 RaceMgr::getZoomWinConsoleNo() const { return mRaceDirector->getZoomWinConsoleNo(); }
+inline int RaceMgr::getZoomWinConsoleNo() const { return mRaceDirector->getZoomWinConsoleNo(); }
 
-inline s16 RaceDirector::getZoomWinConsoleNo() const { return mZoomWinCnsNo; }
+inline int RaceDirector::getZoomWinConsoleNo() const { return mZoomWinCnsNo; }
 
 inline bool RaceMgr::isZoomWinConsole() const { return mRaceDirector->isZoomWinConsole(); }
 
@@ -827,7 +827,9 @@ void KartCam::DoLookChase() {
     a.set(mTargetBody->_350.x, mTargetBody->_350.y + _17c, mTargetBody->_350.z);
     c.set(mTargetBody->mPlayerPosMtx[0][3], mTargetBody->mPlayerPosMtx[1][3], mTargetBody->mPlayerPosMtx[2][3]);
     b.sub(c, a);
-    if (mTargetBody->getRescue()->_75 != 4 || (mTargetBody->mCarStatus & 0x400000) == 0) {
+    if (mTargetBody->getRescue()->_75 == 4 && (mTargetBody->mCarStatus & 0x400000) != 0) {
+        mCameraLookPos.y = mCameraLookPos.y; // non-empty branch keeps the original branch layout
+    } else {
         GetKartCtrl()->ChaseFnumber(&mCameraLookPos.y, b.y, 0.89f);
     }
     mCameraLookPos.x = b.x;
@@ -1178,14 +1180,14 @@ void KartCam::InitDropRescueView() {
     _e6 = 0;
     SetFovyData();
     mCameraLookPos.set(mTargetBody->getRescue()->_a4);
-    mCameraLookPos.x += 20.0f * mTargetBody->getRescue()->_d4.mMtx[0][2];
-    mCameraLookPos.y += 20.0f * mTargetBody->getRescue()->_d4.mMtx[1][2];
-    mCameraLookPos.z += 20.0f * mTargetBody->getRescue()->_d4.mMtx[2][2];
+    mCameraLookPos.x += 20.0f * mTargetBody->getRescue()->_d4[0][2];
+    mCameraLookPos.y += 20.0f * mTargetBody->getRescue()->_d4[1][2];
+    mCameraLookPos.z += 20.0f * mTargetBody->getRescue()->_d4[2][2];
     mCameraLookPos.y += 100.0f;
     _218.y = -1.74444f;
     _218.x = 0.174444f;
     _218.z = 380.0f;
-    f32 yaw = _218.y + std::atan2f(mTargetBody->getRescue()->_d4.mMtx[0][2], mTargetBody->getRescue()->_d4.mMtx[2][2]);
+    f32 yaw = _218.y + std::atan2f(mTargetBody->getRescue()->_d4[0][2], mTargetBody->getRescue()->_d4[2][2]);
     GetKartCtrl()->PolarToCross((VecPtr)&mCameraLookPos, (VecPtr)&_200, _218.z, _218.x, yaw);
     _200.y -= 700.0f;
     mCameraPos.y = _200.y;
@@ -1209,7 +1211,7 @@ void KartCam::DropRescueView() {
         _218.y = GetKartCtrl()->fcnvge(_218.y, 0.0f, 0.01395552f, 0.01395552f);
         GetKartCtrl()->ChaseFnumber(&_218.z, mTargetBody->_4e4, 0.7f);
         GetKartCtrl()->ChaseFnumber(&_218.x, _1ac, 0.5f);
-        f32 yaw = _218.y + std::atan2f(mTargetBody->getRescue()->_d4.mMtx[0][2], mTargetBody->getRescue()->_d4.mMtx[2][2]);
+        f32 yaw = _218.y + std::atan2f(mTargetBody->getRescue()->_d4[0][2], mTargetBody->getRescue()->_d4[2][2]);
         GetKartCtrl()->PolarToCross((VecPtr)&mCameraLookPos, (VecPtr)&mCameraPos, _218.z, _218.x, yaw);
         _200.y += 0.2f * (mCameraPos.y - _200.y);
         mCameraPos.y = _200.y;
@@ -1220,12 +1222,12 @@ void KartCam::DropRescueView() {
         _164 = 0.0f;
     } else {
         mCameraLookPos.set(mTargetBody->getRescue()->_a4);
-        mCameraLookPos.x += 20.0f * mTargetBody->getRescue()->_d4.mMtx[0][2];
-        mCameraLookPos.y += 20.0f * mTargetBody->getRescue()->_d4.mMtx[1][2];
-        mCameraLookPos.z += 20.0f * mTargetBody->getRescue()->_d4.mMtx[2][2];
+        mCameraLookPos.x += 20.0f * mTargetBody->getRescue()->_d4[0][2];
+        mCameraLookPos.y += 20.0f * mTargetBody->getRescue()->_d4[1][2];
+        mCameraLookPos.z += 20.0f * mTargetBody->getRescue()->_d4[2][2];
         mCameraLookPos.y += 100.0f;
         _218.y = GetKartCtrl()->fcnvge(_218.y, 0.0f, 0.01395552f, 0.01395552f);
-        f32 yaw = _218.y + std::atan2f(mTargetBody->getRescue()->_d4.mMtx[0][2], mTargetBody->getRescue()->_d4.mMtx[2][2]);
+        f32 yaw = _218.y + std::atan2f(mTargetBody->getRescue()->_d4[0][2], mTargetBody->getRescue()->_d4[2][2]);
         GetKartCtrl()->PolarToCross((VecPtr)&mCameraLookPos, (VecPtr)&mCameraPos, _218.z, _218.x, yaw);
         mCameraPos.y = _200.y;
     }

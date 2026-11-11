@@ -33,7 +33,7 @@ public:
     void DoAfterRescueCrl();             // 0x8030249c
 
     // Inline/Unused
-    // void DoHang();
+    void DoHang();
 // private:
     JugemPoint *mJugemPoint; // 0
     KartBody *mBody;         // 4
@@ -56,7 +56,7 @@ public:
     JGeometry::TVec3f _b0; //
     JGeometry::TVec3f _bc; //
     JGeometry::TVec3f _c8; //
-    JGeometry::TPos3f _d4; // d4
+    Mtx _d4;                 // d4
 
 }; // 0x104
 

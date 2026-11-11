@@ -439,7 +439,7 @@ void KartGame::DoRoll() {
     f32 roll = DoWarmUpRoll();
     if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 30.0f || (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 40.0f && body->_3c8 == 0.0f))
         DoDriftClear();
-    if (GetKartCtrl()->GetCarSpeed(body->mMynum) < 80.0f && body->_510 > 2.44222f)
+    if (GetKartCtrl()->GetCarSpeed(body->mMynum) < 40.0f && body->_510 > 2.44222f)
         DoDriftClear();
     if (GetKartCtrl()->GetCarSpeed(body->mMynum) <= 80.0f && body->_3cc != 0.0f)
         DoDriftClear();
@@ -634,10 +634,8 @@ void KartGame::DoRollThrow() {
 
 bool KartGame::DoRollOver() {
     KartBody *body = mBody;
-    if (body->getTouchNum() != 0 && (body->mCarStatus & 0x41000) == 0) {
-        if (body->mGameStatus & 8) {
-            return false;
-        }
+    if (body->getTouchNum() == 0 || (body->mCarStatus & 0x41000) != 0 || (body->mGameStatus & 8)) {
+        return false;
     }
     return false;
 }
@@ -1181,7 +1179,7 @@ void KartGame::FrameWork(f32 speed, KartSus *sus1, KartSus *sus2) {
     KartBody *body = mBody;
     JGeometry::TVec3f force;
     f32 diff = sus1->_b4 - sus2->_b4;
-    f32 f = 0.313f * speed * (diff * (-14.0f * body->_3ac));
+    f32 f = 20.0f * speed * (diff * (7.0f * body->_3ac));
     force.set(body->_110[0][1] * f, body->_110[1][1] * f, body->_110[2][1] * f);
     body->DoForce(&sus2->_c0, &force);
     GetKartCtrl()->MulVector(&force, -1.0f, -1.0f, -1.0f);

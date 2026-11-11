@@ -45,7 +45,7 @@ void KartCannon::MakeCannon() {
 
     body->getDamage()->SetDriverEndDamageAnime();
     DoKeep();
-    _14 = 0;
+    _14 = 200.0f;
 
     if (GetKartCtrl()->CheckCamera(body->mMynum)) {
         int cam = GetKartCtrl()->GetCameraNum(body->mMynum);
@@ -192,10 +192,9 @@ void KartCannon::SetPose() {
     body->mPlayerPosMtx[1][3] += body->mPlayerPosMtx[1][1] * offset;
     body->mPlayerPosMtx[2][3] += body->mPlayerPosMtx[2][1] * offset;
 
-    body->_2f0.set(*(volatile f32 *)&right.x, *(volatile f32 *)&right.y, *(volatile f32 *)&right.z);
-    body->_2fc.set(*(volatile f32 *)&up.x, *(volatile f32 *)&up.y, *(volatile f32 *)&up.z);
-    body->_308.set(*(volatile f32 *)&forward.x, *(volatile f32 *)&forward.y, *(volatile f32 *)&forward.z);
-
+    body->_2f0.set(body->_110[0][0], body->_110[1][0], body->_110[2][0]);
+    body->_2fc.set(body->_110[0][1], body->_110[1][1], body->_110[2][1]);
+    body->_308.set(body->_110[0][2], body->_110[1][2], body->_110[2][2]);
 }
 
 void KartCannon::DoCatch() {
@@ -307,7 +306,7 @@ bool KartCannon::DoCheckEnd() {
             mFlags &= ~0x20;
         }
 
-        if (body->mPos.y - body->mBodyGround.getHeight() > 0) {
+        if (body->mPos.y - body->mBodyGround.getHeight() > 600.0f) {
             return 1;
         }
 
@@ -402,7 +401,7 @@ bool KartCannon::DoRainbowCheckEnd() {
     KartBody *body = mBody;
 
     if (body->mCarStatus & 0x8000000000ULL) {
-        if (body->mPos.y - body->mBodyGround.getHeight() > 0) {
+        if (body->mPos.y - body->mBodyGround.getHeight() > 600.0f) {
             return 1;
         }
 

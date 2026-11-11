@@ -71,7 +71,7 @@ public:
     void SetRaceCam();                          // 0x8030f7fc
     void SetNextID();                           // 0x8030f85c
     void DoExecution();                         // 0x8030f8ec
-    int GetStartID();                          // 0x8030f94c
+    bool GetStartID();                         // 0x8030f94c
     void InitStartID(bool);                     // 0x8030f9b0
     void StartDemoView();                       // 0x8030f9e8
     void InitStartMapCam();                     // 0x8030fa08
@@ -98,22 +98,15 @@ public:
     int mStartId;
     u8 _48[0x4c - 0x48];
     f32 _4c;
-    JGeometry::TVec3f _50;
+    Vec _50;
     u8 _5c[0x6c - 0x5c];
     f32 _6c;
     f32 mCamKartDiffLength;
     JGeometry::TVec3f _74;
-    union
-    {
-        Mtx mPosMtx;
-        struct
-        {
-            JGeometry::TVec3f _80;
-            JGeometry::TVec3f _8c;
-            JGeometry::TVec3f mCamKartDiff;
-            JGeometry::TVec3f _a4;
-        } vec;
-    };
+    JGeometry::TVec3f _80;
+    JGeometry::TVec3f _8c;
+    JGeometry::TVec3f mCamKartDiff;
+    JGeometry::TVec3f _a4;
     u8 _b0[0x110 - 0xb0];
 }; // 110
 

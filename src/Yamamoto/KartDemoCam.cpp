@@ -43,13 +43,13 @@ void KartDemoCam::ChaseFovy(const CrsData::Camera *camera) {
 }
 
 void KartDemoCam::DoInitCol() {
-    vec._80.set(mCam->mCameraPos);
+    _80.set(mCam->mCameraPos);
 }
 
 void KartDemoCam::DoCol() {
     CrsGround ground;
     JGeometry::TVec3f normal;
-    ground.search(mCam->mCameraPos, vec._80);
+    ground.search(mCam->mCameraPos, _80);
     u64 status = mBody->mCarStatus;
     if ((status & 0x400000ULL) == 0) {
         if (ground.getAttribute() == 2 || ground.getAttribute() == 0x12) {
@@ -65,7 +65,7 @@ void KartDemoCam::DoCol() {
             }
         }
     }
-    vec._80.set(mCam->mCameraPos);
+    _80.set(mCam->mCameraPos);
 }
 
 void KartDemoCam::InitFixCam() {
@@ -140,12 +140,12 @@ void KartDemoCam::InitFixChaseCam() {
     tmp.set(mBody->mPlayerPosMtx[0][3],
             mBody->mPlayerPosMtx[1][3],
             mBody->mPlayerPosMtx[2][3]);
-    vec.mCamKartDiff.sub(mCam->mCameraPos, tmp);
-    mCamKartDiffLength = vec.mCamKartDiff.length();
-    vec.mCamKartDiff.normalize();
-    mCam->mCameraPos.x = tmp.x + vec.mCamKartDiff.x * mCamKartDiffLength;
-    mCam->mCameraPos.y = tmp.y + vec.mCamKartDiff.y * mCamKartDiffLength;
-    mCam->mCameraPos.z = tmp.z + vec.mCamKartDiff.z * mCamKartDiffLength;
+    mCamKartDiff.sub(mCam->mCameraPos, tmp);
+    mCamKartDiffLength = mCamKartDiff.length();
+    mCamKartDiff.normalize();
+    mCam->mCameraPos.x = tmp.x + mCamKartDiff.x * mCamKartDiffLength;
+    mCam->mCameraPos.y = tmp.y + mCamKartDiff.y * mCamKartDiffLength;
+    mCam->mCameraPos.z = tmp.z + mCamKartDiff.z * mCamKartDiffLength;
     mCam->mCameraLookPos.set(mCam->mCameraPos);
     JGeometry::TVec3f dir;
     camera->getFrontDirection(&dir);
@@ -168,9 +168,9 @@ void KartDemoCam::DoFixChaseCam() {
     tmp.set(mBody->mPlayerPosMtx[0][3],
             mBody->mPlayerPosMtx[1][3],
             mBody->mPlayerPosMtx[2][3]);
-    mCam->mCameraPos.x = tmp.x + vec.mCamKartDiff.x * mCamKartDiffLength;
-    mCam->mCameraPos.y = tmp.y + vec.mCamKartDiff.y * mCamKartDiffLength;
-    mCam->mCameraPos.z = tmp.z + vec.mCamKartDiff.z * mCamKartDiffLength;
+    mCam->mCameraPos.x = tmp.x + mCamKartDiff.x * mCamKartDiffLength;
+    mCam->mCameraPos.y = tmp.y + mCamKartDiff.y * mCamKartDiffLength;
+    mCam->mCameraPos.z = tmp.z + mCamKartDiff.z * mCamKartDiffLength;
     mCam->mCameraLookPos.set(mCam->mCameraPos);
     JGeometry::TVec3f dir;
     camera->getFrontDirection(&dir);
@@ -191,12 +191,12 @@ void KartDemoCam::InitChaseCam() {
                              body->mPlayerPosMtx[1][3] + 30.0f,
                              body->mPlayerPosMtx[2][3]);
     camera->getPosition(&mCam->mCameraPos);
-    vec.mCamKartDiff.sub(mCam->mCameraPos, mCam->mCameraLookPos);
-    mCamKartDiffLength = vec.mCamKartDiff.length();
-    vec.mCamKartDiff.normalize();
-    mCam->mCameraPos.x = mCam->mCameraLookPos.x + vec.mCamKartDiff.x * mCamKartDiffLength;
-    mCam->mCameraPos.y = mCam->mCameraLookPos.y + vec.mCamKartDiff.y * mCamKartDiffLength;
-    mCam->mCameraPos.z = mCam->mCameraLookPos.z + vec.mCamKartDiff.z * mCamKartDiffLength;
+    mCamKartDiff.sub(mCam->mCameraPos, mCam->mCameraLookPos);
+    mCamKartDiffLength = mCamKartDiff.length();
+    mCamKartDiff.normalize();
+    mCam->mCameraPos.x = mCam->mCameraLookPos.x + mCamKartDiff.x * mCamKartDiffLength;
+    mCam->mCameraPos.y = mCam->mCameraLookPos.y + mCamKartDiff.y * mCamKartDiffLength;
+    mCam->mCameraPos.z = mCam->mCameraLookPos.z + mCamKartDiff.z * mCamKartDiffLength;
     mCam->SetFovy(camera->getFovy());
     DoInitCol();
     C_MTXLookAt(mCam->mMtx, (VecPtr)&mCam->mCameraPos, (VecPtr)&up, (VecPtr)&mCam->mCameraLookPos);
@@ -220,9 +220,9 @@ void KartDemoCam::DoChaseCam() {
     len *= 0.6f;
     dir.scale(len);
     mCam->mCameraLookPos.add(dir);
-    mCam->mCameraPos.x = mCam->mCameraLookPos.x + vec.mCamKartDiff.x * mCamKartDiffLength;
-    mCam->mCameraPos.y = mCam->mCameraLookPos.y + vec.mCamKartDiff.y * mCamKartDiffLength;
-    mCam->mCameraPos.z = mCam->mCameraLookPos.z + vec.mCamKartDiff.z * mCamKartDiffLength;
+    mCam->mCameraPos.x = mCam->mCameraLookPos.x + mCamKartDiff.x * mCamKartDiffLength;
+    mCam->mCameraPos.y = mCam->mCameraLookPos.y + mCamKartDiff.y * mCamKartDiffLength;
+    mCam->mCameraPos.z = mCam->mCameraLookPos.z + mCamKartDiff.z * mCamKartDiffLength;
     DoCol();
     C_MTXLookAt(mCam->mMtx, (VecPtr)&mCam->mCameraPos, (VecPtr)&up, (VecPtr)&mCam->mCameraLookPos);
     mCam->DegubCamera("DoChaseCam", 38);
@@ -878,8 +878,8 @@ void KartDemoCam::ObjectView() {
     if (_50.z < -1.395555f) {
         _50.z = -1.395555f;
     }
-    GetKartCtrl()->PolarToCross((VecPtr)&vec._8c, (VecPtr)&mCam->mCameraPos, _4c, _50.z, _50.y);
-    mCam->mCameraLookPos.set(vec._8c);
+    GetKartCtrl()->PolarToCross((VecPtr)&_8c, (VecPtr)&mCam->mCameraPos, _4c, _50.z, _50.y);
+    mCam->mCameraLookPos.set(_8c);
     C_MTXLookAt(mCam->mMtx, (VecPtr)&mCam->mCameraPos, (VecPtr)&up, (VecPtr)&mCam->mCameraLookPos);
     if (_3b == 0) {
         JUTReport(120, 80, "CAMERA");
@@ -1007,34 +1007,34 @@ void KartDemoCam::LiveViewChange() {
 void KartDemoCam::DemoView() {
     if (_38 & 0x80) {
         mCam->mCurCamIdx = RaceMgr::getManager()->getCourse()->getCrsData()->searchCameraID('mini');
-        return;
-    }
-    if (!(_38 & 0x40)) {
-        if (RaceMgr::getCurrentManager()->requestDemoCameraID() >= 0) {
-            mCam->mCurCamIdx = RaceMgr::getManager()->requestDemoCameraID();
-            _38 |= 0x40;
-            InitID();
-            return;
+    } else {
+        if (!(_38 & 0x40)) {
+            if (RaceMgr::getCurrentManager()->requestDemoCameraID() >= 0) {
+                mCam->mCurCamIdx = RaceMgr::getManager()->requestDemoCameraID();
+                _38 |= 0x40;
+                InitID();
+                return;
+            }
         }
-    }
-    if (!(mCam->mFlags & 0x100)) {
-        if (mBody->mGameStatus & 0x40) {
-            DemoGoalView();
-            return;
+        if (!(mCam->mFlags & 0x100)) {
+            if (mBody->mGameStatus & 0x40) {
+                DemoGoalView();
+                return;
+            }
         }
-    }
-    if (!(_38 & 0x40)) {
-        mCam->mArea.searchCamera(mBody->mPos);
-        LiveViewChange();
-        if (mCam->mArea.getCameraID() != mCam->mCurCamIdx) {
-            _38 &= ~0x10;
-            InitID();
-            return;
+        if (!(_38 & 0x40)) {
+            mCam->mArea.searchCamera(mBody->mPos);
+            LiveViewChange();
+            if (mCam->mArea.getCameraID() != mCam->mCurCamIdx) {
+                _38 &= ~0x10;
+                InitID();
+                return;
+            }
         }
-    }
-    if (RaceMgr::getCurrentManager()->isAwardDemoMode()) {
-        if (RaceMgr::getCurrentManager()->getAwardKartNo() == -1) {
-            mCam->mCurCamIdx = RaceMgr::getManager()->getCourse()->getCrsData()->searchCameraID('next');
+        if (RaceMgr::getCurrentManager()->isAwardDemoMode()) {
+            if (RaceMgr::getCurrentManager()->getAwardKartNo() == -1) {
+                mCam->mCurCamIdx = RaceMgr::getManager()->getCourse()->getCrsData()->searchCameraID('next');
+            }
         }
     }
     RaceMgr::getManager()->getCourse()->getCrsData()->getCameraData(mCam->mCurCamIdx);
@@ -1404,8 +1404,8 @@ void KartDemoCam::InitLastCam() {
     cam = mCam;
     f32 yaw = std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 3.14f;
     GetKartCtrl()->PolarToCross((VecPtr)&cam->mCameraLookPos, (VecPtr)&cam->mCameraPos, cam->_18c, cam->_1ac, yaw);
-    vec.mCamKartDiff.set(mCam->mCameraPos);
-    vec._a4.set(mCam->mCameraLookPos);
+    mCamKartDiff.set(mCam->mCameraPos);
+    _a4.set(mCam->mCameraLookPos);
     mCam->mCameraLookPos.set(jugem->getPosition());
     cam = mCam;
     look = &cam->mCameraLookPos;
@@ -1417,11 +1417,11 @@ void KartDemoCam::InitLastCam() {
     mCam->mPathData[0].set(mCam->mCameraPos);
     cam = mCam;
     yaw = std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 1.046666f;
-    GetKartCtrl()->PolarToCross((VecPtr)&vec._a4, (VecPtr)&cam->mPathData[1], 1.3f * cam->mTargetBody->_4e4, 0.0f, yaw);
+    GetKartCtrl()->PolarToCross((VecPtr)&_a4, (VecPtr)&cam->mPathData[1], 1.3f * cam->mTargetBody->_4e4, 0.0f, yaw);
     cam = mCam;
     yaw = std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 1.91888f;
-    GetKartCtrl()->PolarToCross((VecPtr)&vec._a4, (VecPtr)&cam->mPathData[2], cam->mTargetBody->_4e4, 0.0f, yaw);
-    mCam->mPathData[3].set(vec.mCamKartDiff);
+    GetKartCtrl()->PolarToCross((VecPtr)&_a4, (VecPtr)&cam->mPathData[2], cam->mTargetBody->_4e4, 0.0f, yaw);
+    mCam->mPathData[3].set(mCamKartDiff);
     mCam->_1b0 = 0.0f;
     mCam->_1b4 = 0.0f;
     mCam->mPathSpline->setAll(mCam->mPathData);
@@ -1458,7 +1458,7 @@ void KartDemoCam::LastCam() {
         }
         break;
     case 4: {
-        diff.sub(vec._a4, mCam->mCameraLookPos);
+        diff.sub(_a4, mCam->mCameraLookPos);
         f32 len = diff.length();
         GetKartCtrl()->ChaseFcnvge(&_6c, &_40, 0.08f, 3200);
         len *= _6c;
@@ -1607,12 +1607,12 @@ void KartDemoCam::DoExecution() {
     }
 }
 
-int KartDemoCam::GetStartID() {
+bool KartDemoCam::GetStartID() {
     mStartId = RaceMgr::getManager()->getCourse()->getCrsData()->getStartCameraID();
     if (mCam->mMode == 2) {
-        return 1;
+        return true;
     }
-    return (mStartId != -1) ? 1 : 0;
+    return mStartId != -1;
 }
 
 void KartDemoCam::InitStartID(bool isLast) {
