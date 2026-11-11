@@ -1404,7 +1404,7 @@ void Race2D::itemUseMain() {}
 
 void Race2D::decideItem(int no, u8 driverNo, int &item)
 {
-#line 268
+#line 4905
     JUT_MINMAX_ASSERT(0, no, 4);
     JUT_MINMAX_ASSERT(0, driverNo, 2);
 
@@ -1484,10 +1484,10 @@ void Race2D::decideItem(int no, u8 driverNo, int &item)
         if (itemKind == 0x15)
         {
             int kartNo = J2DManager::getStatus2Kart(no);
-#line 268
+#line 173
             JUT_MINMAX_ASSERT(0, kartNo, 8);
             KartInfo *ki = &gRaceInfo.mKartInfo[kartNo];
-#line 268
+#line 142
             JUT_MINMAX_ASSERT(0, driverNo, 2);
             const u16 *db = *(const u16 **)((u8 *)ki + (u8)driverNo * 8 + 8);
             if ((db ? *db : 0) == 8)
@@ -1496,10 +1496,10 @@ void Race2D::decideItem(int no, u8 driverNo, int &item)
         if (itemKind == 0xb)
         {
             int kartNo = J2DManager::getStatus2Kart(no);
-#line 268
+#line 173
             JUT_MINMAX_ASSERT(0, kartNo, 8);
             KartInfo *ki = &gRaceInfo.mKartInfo[kartNo];
-#line 268
+#line 142
             JUT_MINMAX_ASSERT(0, driverNo, 2);
             const u16 *db = *(const u16 **)((u8 *)ki + (u8)driverNo * 8 + 8);
             if ((db ? *db : 0) == 0xc)
