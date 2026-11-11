@@ -421,8 +421,9 @@ void DriverModel::initMtxCalc()
 {
     for (int i = 0; i < 0x98; i++) {
         if (mMtxCalcs[i] == nullptr) {
+            u32 mtxCalcType = getModelData()->getMtxCalcType();
 #line 836
-            JUT_ASSERT(getModelData()->getMtxCalcType() == J3DMdlDataFlag_MtxCalcTypeMaya);
+            JUT_ASSERT(mtxCalcType == J3DMdlDataFlag_MtxCalcTypeMaya);
             mMtxCalcs[i] = new KartMtxCalcBlendAnm();
         } else {
             ((KartMtxCalcBlendAnm *)mMtxCalcs[i])->reset();
@@ -483,36 +484,6 @@ void DriverModel::setShakeAnm2(StateEnum s, f32 a, int b, int c)
 
 void DriverModel::setShakeAnm3(StateEnum s, f32 a)
 {
-}
-
-static void driverPoolPad1(DriverModel *d)
-{
-    JUT_ASSERT_F(0 <= d->mState && d->mState < 152, "range over: %d <= mState=%d < %d", 0, d->mState, 152);
-}
-
-void DriverModel::setDriveAnm(f32 rate)
-{
-    switch (mState) {
-    case mcDrive:
-    case (StateEnum)9:
-    case (StateEnum)10:
-    case (StateEnum)11:
-    case (StateEnum)12:
-    case (StateEnum)120:
-        int i = 0;
-        for (; i < 2; i++) {
-            mAnmID = msAnmBlendList[0][i];
-#line 997
-            JUT_MINMAX_ASSERT(0, mAnmID, 82);
-            if (getAnmTransformPtr(mAnmID)) {
-                f32 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
-                mAnmFrame[mAnmID] = rate * frameMax + frameMax;
-            }
-        }
-        break;
-    default:
-        break;
-    }
 }
 
 void DriverModel::setTandemAnm(f32 a, f32 rate)
@@ -810,8 +781,8 @@ void DriverModel::Start1ShotAnm_base(DriversAnimator *animator, StateEnum state)
     for (int i = 0; i < 2; i++) {
         int anmID = msAnmBlendList[state][i];
         if (anmID != 0) {
-            f32 rate = getAnmTransformPtr(anmID)->getFrameMax() / 60.0f;
-            f32 minVal, maxVal;
+            f32 minVal, maxVal, rate;
+            rate = getAnmTransformPtr(anmID)->getFrameMax() / 60.0f;
             switch (state) {
             case (StateEnum)10:
             case (StateEnum)12:
@@ -835,7 +806,6 @@ void DriverModel::Start1ShotAnm_base(DriversAnimator *animator, StateEnum state)
             case (StateEnum)117:
                 minVal = 0.5f;
                 maxVal = 1.0f;
-                rate *= minVal;
                 break;
             case (StateEnum)51:
             case (StateEnum)52:
@@ -846,6 +816,7 @@ void DriverModel::Start1ShotAnm_base(DriversAnimator *animator, StateEnum state)
             case (StateEnum)139:
                 minVal = 1.0f;
                 maxVal = 0.0f;
+                rate *= maxVal;
                 break;
             case (StateEnum)38:
             case (StateEnum)41:
@@ -875,6 +846,37 @@ void DriverModel::Start1ShotAnm_base(DriversAnimator *animator, StateEnum state)
             animator->mOneShotAnm[i].start();
             animator->mOneShotAnm[i].update();
         }
+    }
+}
+
+
+static void driverPoolPad1(DriverModel *d)
+{
+    JUT_ASSERT_F(0 <= d->mState && d->mState < 152, "range over: %d <= mState=%d < %d", 0, d->mState, 152);
+}
+
+void DriverModel::setDriveAnm(f32 rate)
+{
+    switch (mState) {
+    case mcDrive:
+    case (StateEnum)9:
+    case (StateEnum)10:
+    case (StateEnum)11:
+    case (StateEnum)12:
+    case (StateEnum)120:
+        int i = 0;
+        for (; i < 2; i++) {
+            mAnmID = msAnmBlendList[0][i];
+#line 997
+            JUT_MINMAX_ASSERT(0, mAnmID, 82);
+            if (getAnmTransformPtr(mAnmID)) {
+                f32 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f;
+                mAnmFrame[mAnmID] = rate * frameMax + frameMax;
+            }
+        }
+        break;
+    default:
+        break;
     }
 }
 
@@ -1806,7 +1808,7 @@ void DriverModel::updateBlendCount()
             if (m_bb == blendTime) {
                 int nes = mState - 76;
 #line 1839
-                JUT_ASSERT(nes >= DriverModel::mcDrive);
+                JUT_ASSERT(nes >= mcDrive);
                 if (m_e8 == 0 && m_504 == 0) {
                     if (next_mState_Hokan != mState) {
                         if (nes < 104) {
@@ -1943,7 +1945,7 @@ void DriverModel::updateBlendCount()
             if (m_bb == blendTime) {
                 int nes = mState - 108;
 #line 1839
-                JUT_ASSERT(nes >= DriverModel::mcDrive);
+                JUT_ASSERT(nes >= mcDrive);
                 if (m_e8 == 0 && m_504 == 0) {
                     if (next_mState_Hokan != mState) {
                         if (nes < 104) {
@@ -1980,7 +1982,7 @@ void DriverModel::updateBlendCount()
             if (m_bb == blendTime) {
                 int nes = (mState - 113) * 3 + 50;
 #line 1839
-                JUT_ASSERT(nes >= DriverModel::mcDrive);
+                JUT_ASSERT(nes >= mcDrive);
                 if (m_e8 == 0 && m_504 == 0) {
                     if (next_mState_Hokan != mState) {
                         if (nes < 104) {
