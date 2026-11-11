@@ -7,7 +7,6 @@
 #include "JSystem/JUtility/JUTAssert.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Sato/JPEffectMgr.h"
-#include <JSystem/JAudio/JASFakeMatch2.h>
 #include "Sato/ObjUtility.h"
 #include "Shiraiwa/SiUtil.h"
 #include "Shiraiwa/Objects/MapObjGeyser.h"
@@ -53,6 +52,7 @@ const StateObserver::StateFuncSet<TMapObjGeyser> TMapObjGeyser::sTable[6] = {
 };
 
 static const f32 sDummy[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+#include <JSystem/JAudio/JASFakeMatch2.h>
 
 
 TMapObjGeyser::TMapObjGeyser(const CrsData::SObject &obj)
@@ -253,7 +253,7 @@ void TMapObjGeyser::reset()
     mActTime = mObjData->mParam1;
     if (mActTime == 0)
         mActTime = 300;
-    mAngle = (s16)(mObjData->mParam4 * 182.0444f);
+    mAngle = (s16)(mObjData->mParam4 * 182.04445f);
     mUnk198 = mScale.y * 1000.0f;
     mCycle = 0;
 
@@ -275,9 +275,14 @@ void TMapObjGeyser::reset()
 void TMapObjGeyser::changeAllState(u16 state)
 {
     setState(state);
-    u8 anm = sAnmTable[state];
-    if ((s8)anm != 5u)
-        mAnmPlayer.setAnm(anm);
+    u32 anm = (s8)sAnmTable[state];
+    if (anm != 5) {
+        if (anm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
+            mAnmPlayer._11 = sAnmTable[state];
+            mAnmPlayer._10 = 1;
+            mAnmPlayer._e |= 1;
+        }
+    }
 }
 
 void TMapObjGeyser::calc()
@@ -317,9 +322,8 @@ void TMapObjGeyser::getThrowDir(JGeometry::TVec3f *dir, s16 angle)
         }
         vec.normalize();
 
-        f32 sin = JMath::sincosTable_.sinShort(mAngle);
-        f32 cos = JMath::sincosTable_.cosShort(mAngle);
-        vec.set(vec.x * cos, sin, vec.z * cos);
+        vec.scale(JMath::sincosTable_.cosShort(mAngle));
+        vec.y = JMath::sincosTable_.sinShort(mAngle);
     }
     dir->set(vec);
 }
@@ -343,11 +347,12 @@ void TMapObjGeyser::getItemThrowDirPow(JGeometry::TVec3f *dir, f32 *pow, const I
     JGeometry::TVec3f vec;
     ipos.set(item.mPos);
     vec.sub(ipos, mPos);
+    vec.y = 0.0f;
     vec.normalize();
 
-    f32 sin = JMath::sincosTable_.sinShort(mAngle);
-    f32 cos = JMath::sincosTable_.cosShort(mAngle);
-    dir->set(vec.x * cos - vec.z * sin, sin, vec.x * sin + vec.z * cos);
+    vec.scale(JMath::sincosTable_.cosShort(mAngle));
+    vec.y = JMath::sincosTable_.sinShort(mAngle);
+    dir->set(vec);
 
     *pow = mObjData->mParam3 * 0.1f;
 }
@@ -364,16 +369,7 @@ void TMapObjGeyser::initFunc_Start()
 void TMapObjGeyser::doFunc_Start()
 {
     if (getStateCount() > mObjData->mParam2) {
-        setState(1);
-        u8 anm = sAnmTable[1];
-        s8 sAnm = anm;
-        if (sAnm != 5u) {
-            if (sAnm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
-                mAnmPlayer._11 = sAnmTable[1];
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 1;
-            }
-        }
+        changeAllState(1);
     }
 }
 
@@ -389,33 +385,29 @@ void TMapObjGeyser::initFunc_Wait()
 void TMapObjGeyser::doFunc_Wait()
 {
     if (checkChangeAct()) {
-        setState(2);
-        u8 anm = sAnmTable[2];
-        s8 sAnm = anm;
-        if (sAnm != 5u) {
-            if (sAnm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
-                mAnmPlayer._11 = sAnmTable[2];
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 1;
-            }
-        }
+        changeAllState(2);
     }
 }
 
 bool TMapObjGeyser::checkChangeAct()
 {
+    bool ret;
     if (RaceMgr::sRaceManager->mRaceInfo->mRaceMode != 1 && mObjData->mParam8 != 0) {
         mCycle++;
-        if (mCycle < sCheckCycle)
-            return false;
-        mCycle = 0;
-        s16 kartNo = SiUtil::searchNearKartCircle(mPos, (f32)mObjData->mParam5);
-        bool ret = false;
-        if (kartNo != -1)
-            ret = true;
-        return ret;
+        if (mCycle < sCheckCycle) {
+            ret = false;
+        } else {
+            mCycle = 0;
+            s16 kartNo = SiUtil::searchNearKartCircle(mPos, (f32)mObjData->mParam5);
+            if (kartNo != -1)
+                ret = true;
+            else
+                ret = false;
+        }
+    } else {
+        ret = getStateCount() > mActTime;
     }
-    return mActTime >= getStateCount();
+    return ret;
 }
 
 void TMapObjGeyser::initFunc_Act()
@@ -427,16 +419,7 @@ void TMapObjGeyser::initFunc_Act()
 void TMapObjGeyser::doFunc_Act()
 {
     if (getStateCount() > sActTime) {
-        setState(3);
-        u8 anm = sAnmTable[3];
-        s8 sAnm = anm;
-        if (sAnm != 5u) {
-            if (sAnm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
-                mAnmPlayer._11 = sAnmTable[3];
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 1;
-            }
-        }
+        changeAllState(3);
     }
 
     if (getStateCount() == sEfctEFEndFrame) {
@@ -465,16 +448,7 @@ void TMapObjGeyser::doFunc_JumpUp()
 {
     u8 id = mAnmPlayer.getCurAnmNumber();
     if (mAnmPlayer.mController->mTrans->getObjAnt(id)->mFrameCtrl.mState & 1) {
-        setState(4);
-        u8 anm = sAnmTable[4];
-        s8 sAnm = anm;
-        if (sAnm != 5u) {
-            if (sAnm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
-                mAnmPlayer._11 = sAnmTable[4];
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 1;
-            }
-        }
+        changeAllState(4);
     }
 
     getSoundMgr()->setSe(0x40047);
@@ -490,16 +464,7 @@ void TMapObjGeyser::doFunc_JumpStay()
 {
     u8 id = mAnmPlayer.getCurAnmNumber();
     if (mAnmPlayer.mController->mTrans->getObjAnt(id)->mFrameCtrl.mState & 1) {
-        setState(5);
-        u8 anm = sAnmTable[5];
-        s8 sAnm = anm;
-        if (sAnm != 5u) {
-            if (sAnm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
-                mAnmPlayer._11 = sAnmTable[5];
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 1;
-            }
-        }
+        changeAllState(5);
     }
 
     getSoundMgr()->setSe(0x40047);
@@ -516,16 +481,7 @@ void TMapObjGeyser::doFunc_JumpDown()
 {
     u8 id = mAnmPlayer.getCurAnmNumber();
     if (mAnmPlayer.mController->mTrans->getObjAnt(id)->mFrameCtrl.mState & 1) {
-        setState(1);
-        u8 anm = sAnmTable[1];
-        s8 sAnm = anm;
-        if (sAnm != 5u) {
-            if (sAnm != mAnmPlayer.mController->mTrans->mNowAnmNo) {
-                mAnmPlayer._11 = sAnmTable[1];
-                mAnmPlayer._10 = 1;
-                mAnmPlayer._e |= 1;
-            }
-        }
+        changeAllState(1);
     }
 
     getSoundMgr()->setSe(0x40047);
@@ -540,34 +496,7 @@ void TMapObjGeyser::doFunc_JumpDown()
 
 void TMapObjGeyserSearch::reset()
 {
-    resetObject();
-    _58 = 0;
-    mAnmPlayer.init(getAnmCtrl(), sAnmInfos, 4);
-
-    mBtk.mFrameCtrl.setFrame((f32)mBtk.mFrameCtrl.mStartFrame);
-    mBtk.mFrameCtrl.setRate(0.0f);
-    mBtk.mFrameCtrl.mState = 0;
-
-    mActTime = mObjData->mParam1;
-    if (mActTime == 0)
-        mActTime = 300;
-    mAngle = (s16)(mObjData->mParam4 * 182.0444f);
-    mUnk198 = mScale.y * 1000.0f;
-    mCycle = 0;
-
-    ResetState();
-
-    if (RaceMgr::sRaceManager->mRaceInfo->mRaceMode != 1 && mObjData->mParam8 != 0)
-        setState(1);
-    else
-        setState(0);
-
-    for (int i = 0; i < 6; i++)
-        mEmitters[i] = nullptr;
-
-    f32 bound = -sBoundHeight;
-    mColHeight = bound;
-    mColPos.zero();
+    TMapObjGeyser::reset();
     setState(1);
     mCycle = 0;
 }

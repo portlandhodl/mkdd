@@ -19,8 +19,8 @@ public:
     TMapObjGeyser(const CrsData::SObject &);
     virtual ~TMapObjGeyser();
 
-    virtual void InitExec();
     virtual void MoveExec();
+    virtual void InitExec();
     virtual const char *getBmdFileName();
     virtual void createColModel(J3DModelData *);
     virtual void createModel(JKRSolidHeap *, u32);
