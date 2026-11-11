@@ -18,6 +18,11 @@
 #include "Osako/SystemRecord.h"
 #include "Yamamoto/kartCtrl.h"
 #include "mathHelper.h"
+#include "JSystem/J2D/J2DAnmLoader.h"
+#include "JSystem/JKernel/JKRFileLoader.h"
+#include "Osako/system.h"
+#include "Kameda/SceneCourseSelect.h"
+#include "Kameda/Race2D.h"
 
 u8 Result2D::mDrawFlag;
 int Result2D::mResultSelector;
@@ -91,45 +96,352 @@ const u64 Result2D::mVSBattlePointTag[] = {
     'PPoint11', 'PPoint12', 
 };
 
-Result2D::Result2D(JKRHeap *) {
-    /*
-RaceMgr::getKartInfo(int) {}
-RaceMgr::getStatusNumber() const {}
-KartInfo::getDriverCharID(int) const {}
-J2DPicture::setCornerColor(JUTColor) {}
-KartInfo::getPad(int) {}
-KartInfo::isTagMode() const {}
-RaceInfo::getKartInfo(int) {}
-J2DPane::getScaleY() const {}
-J2DPane::getScaleX() const {}
-J2DAnmBase::setFrame(float) {}
-JKRGetNameResource(const char *, JKRFileLoader *) {}
-J2DPicture::setCornerColor(J2DPicture::TCornerColor) {}
-J2DPicture::getCornerColor(J2DPicture::TCornerColor &) {}
-Race2D::getRankPic(int, int) {}
-J2DManager::getRace2D() {}
-JUTColor::operator= (const JUTColor &) {}
-KartLocale::getLanguage() {}
-Kart2DCommon::getNumberTexture(Kart2DCommon::NumberTextureID) {}
-RaceMgr::getRaceLevel() const {}
-Kart2DCommon::getCupIconTexture(ERaceGpCup) {}
-Kart2DCommon::getCupNameTexture(ERaceGpCup) {}
-SequenceInfo::getCup() const {}
-Kart2DCommon::ptr() {}
-J2DPane::show() {}
-JGeometry::TVec2f::operator= (const JGeometry::TVec2f &) {}
-J2DPane::hide() {}
-JGeometry::TBox2f::TBox2(const JGeometry::TBox2f &) {}
-J2DScreen::set(const char *, JKRArchive *) {}
-J2DManager::getArchive() const {}
-GETJ2DManager() {}
-RaceMgr::getRaceMode() const {}
-RCMGetManager() {}
-System::getJ2DOrtho() {}
-Result2DHioNode::Result2DHioNode(const char *) {}
-Result2DParam::~Result2DParam() {}
-Result2D::data2D::data2D() {}
-    */
+static inline f32 *Result2D_center(Result2D::data2D *pane) {
+    return (f32 *)((u8 *)pane - 8);
+}
+
+Result2D::Result2D(JKRHeap *heap) {
+    mNode = new (heap) Result2DHioNode("Result2D");
+    mOrtho = System::getJ2DOrtho();
+
+    switch (RCMGetManager()->getRaceMode()) {
+    case GRAND_PRIX:
+    case AWARD_DEMO:
+    case STAFF_ROLL: {
+        mScreen = new (heap) J2DScreen();
+        for (int i = 0; i < 3; i++) {
+            mWinScreens[i] = new (heap) J2DScreen();
+        }
+        mEntries = 3;
+        mResultRaceScreen = new (heap) J2DScreen();
+        mResultLineScreen = new (heap) J2DScreen();
+        for (int i = 0; i < 8; i++) {
+            mRankScreens[i] = new (heap) J2DScreen();
+        }
+        for (int i = 0; i < 8; i++) {
+            mGetPointScreens[i] = new (heap) J2DScreen();
+        }
+
+        mScreen->set("OverScreen.blo", GETJ2DManager()->getArchive());
+        for (int i = 0; i < 3; i++) {
+            mWinScreens[i]->set("SetWordLine.blo", GETJ2DManager()->getArchive());
+        }
+        mResultRaceScreen->set("ResultLayout.blo", GETJ2DManager()->getArchive());
+        mResultLineScreen->set("ResultRace.blo", GETJ2DManager()->getArchive());
+        for (int i = 0; i < 8; i++) {
+            mRankScreens[i]->set("ResultLine.blo", GETJ2DManager()->getArchive());
+        }
+        for (int i = 0; i < 8; i++) {
+            mGetPointScreens[i]->set("GetPoint.blo", GETJ2DManager()->getArchive());
+        }
+
+        mSceneQuitPicture = (J2DPicture *)mScreen->search(mOverBackTag);
+        JUT_ASSERT(mSceneQuitPicture->getTypeID() == J2DPane_Picture);
+        JGeometry::TBox2f box(*mSceneQuitPicture->getBounds());
+        f32 *center = Result2D_center(&mSelPanes[0].parts[0]);
+        center[0] = (box.i.x + box.f.x) * 0.5f;
+        center[1] = (box.i.y + box.f.y) * 0.5f;
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 9; j++) {
+                J2DPicture *pic = (J2DPicture *)mWinScreens[i]->search(mSetWordLineTag[j]);
+                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+                mSelPanes[i].parts[j].mPane = pic;
+                JGeometry::TBox2f b(*pic->getBounds());
+                f32 *c = Result2D_center(&mSelPanes[i].parts[j]);
+                c[0] = (b.i.x + b.f.x) * 0.5f;
+                c[1] = (b.i.y + b.f.y) * 0.5f;
+            }
+            if (i != 0) {
+                mSelPanes[i].icon->hide();
+                mSelPanes[i].num->hide();
+            }
+        }
+
+        data2D *layout = (data2D *)((u8 *)this + 0x348);
+        for (int i = 0; i < 11; i++) {
+            J2DPicture *pic = (J2DPicture *)mResultRaceScreen->search(mResultLayoutTag[i]);
+            JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+            layout[i].mPane = pic;
+            JGeometry::TBox2f b(*pic->getBounds());
+            f32 *c = Result2D_center(&layout[i]);
+            c[0] = (b.i.x + b.f.x) * 0.5f;
+            c[1] = (b.i.y + b.f.y) * 0.5f;
+        }
+
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 20; j++) {
+                J2DPicture *pic = (J2DPicture *)mRankScreens[i]->search(mResultLineTag[j]);
+                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+                mLines[i][j].mPane = pic;
+                JGeometry::TBox2f b(*pic->getBounds());
+                f32 *c = Result2D_center(&mLines[i][j]);
+                c[0] = (b.i.x + b.f.x) * 0.5f;
+                c[1] = (b.i.y + b.f.y) * 0.5f;
+            }
+        }
+
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 4; j++) {
+                J2DPicture *pic = (J2DPicture *)mGetPointScreens[i]->search(mGetPointTag[j]);
+                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+                ((data2D *)&mRankRows[i])[j].mPane = pic;
+                JGeometry::TBox2f b(*pic->getBounds());
+                f32 *c = Result2D_center(&((data2D *)&mRankRows[i])[j]);
+                c[0] = (b.i.x + b.f.x) * 0.5f;
+                c[1] = (b.i.y + b.f.y) * 0.5f;
+            }
+        }
+
+        JGeometry::TVec2f *pos = (JGeometry::TVec2f *)((u8 *)this + 0x404);
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 8; j++) {
+                J2DPane *pane = mResultLineScreen->search((u64)'SetPos0' + ((u64)(i * 8 + j + 1) << 32));
+                pos[i * 8 + j] = pane->getBounds()->i;
+            }
+        }
+        for (int i = 0; i < 3; i++) {
+            J2DPane *pane = mResultLineScreen->search((u64)'RTr0' + ((u64)(i + 1) << 32));
+            ((f32 *)((u8 *)this + 0x3ec))[i] = pane->getBounds()->i.y;
+        }
+        for (int i = 0; i < 3; i++) {
+            J2DPicture *pic = (J2DPicture *)mResultLineScreen->search((u64)'CwhiteP' + ((u64)(i + 1) << 32));
+            JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+            J2DPicture::TCornerColor corner;
+            pic->getCornerColor(corner);
+            _3f8[i] = corner.mColor0;
+        }
+        for (int i = 0; i < 8; i++) {
+            J2DPane *pane = mResultRaceScreen->search((u64)'Pose0' + ((u64)(i + 1) << 32));
+            _3cc[i] = pane->getBounds()->i.y;
+        }
+        for (int i = 0; i < 2; i++) {
+            J2DPane *pane = mResultRaceScreen->search((u64)'R?' + ((u64)(i + 1) << 32));
+            ((f32 *)((u8 *)this + 0x3f0))[i] = pane->getBounds()->i.y;
+        }
+        for (int i = 0; i < 2; i++) {
+            J2DPane *pane = mResultRaceScreen->search((u64)'T?' + ((u64)(i + 1) << 32));
+            ((f32 *)((u8 *)this + 0x3f4))[i] = pane->getBounds()->i.y;
+        }
+        for (int i = 0; i < 2; i++) {
+            J2DPane *pane = mResultRaceScreen->search((u64)'C?' + ((u64)(i + 1) << 32));
+            ((f32 *)((u8 *)this + 0x3f4))[i] = pane->getBounds()->i.y;
+        }
+        break;
+    }
+    case VERSUS_RACE:
+    case BALLOON_BATTLE:
+    case BOMB_BATTLE:
+    case ESCAPE_BATTLE: {
+        mScreen = new (heap) J2DScreen();
+        for (int i = 0; i < 5; i++) {
+            mWinScreens[i] = new (heap) J2DScreen();
+        }
+        mEntries = 5;
+        (*(J2DScreen **)((u8 *)this + 0xdd8)) = new (heap) J2DScreen();
+        for (int r = 0; r < 2; r++) {
+            for (int i = 0; i < 4; i++) {
+                mScoreScreens[r][i] = new (heap) J2DScreen();
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            mPointScreens[i] = new (heap) J2DScreen();
+        }
+        for (int i = 0; i < 4; i++) {
+            mPointScreens2[i] = new (heap) J2DScreen();
+        }
+        for (int r = 0; r < 4; r++) {
+            for (int i = 0; i < 3; i++) {
+                _e1c[r * 3 + i].mPane = NULL;
+            }
+        }
+
+        mScreen->set("OverScreen.blo", GETJ2DManager()->getArchive());
+        for (int i = 0; i < 5; i++) {
+            mWinScreens[i]->set("SetWordLine.blo", GETJ2DManager()->getArchive());
+        }
+        (*(J2DScreen **)((u8 *)this + 0xdd8))->set("VS_Battle_Layout.blo", GETJ2DManager()->getArchive());
+        for (int r = 0; r < 2; r++) {
+            for (int i = 0; i < 4; i++) {
+                mScoreScreens[r][i]->set(r == 0 ? "VS_Battle_CharacterIndication.blo" : "VS_Battle_CharacterIndication2.blo", GETJ2DManager()->getArchive());
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            mPointScreens[i]->set("VS_Battle_Point.blo", GETJ2DManager()->getArchive());
+        }
+        for (int i = 0; i < 4; i++) {
+            mPointScreens2[i]->set("VS_Free_Point_1.blo", GETJ2DManager()->getArchive());
+        }
+        for (int r = 0; r < 4; r++) {
+            for (int i = 0; i < 3; i++) {
+                _e1c[r * 3 + i].mPane = (J2DPicture *)mPointScreens2[r]->search((u64)'PPoint1' + ((u64)(i + 1) << 32));
+            }
+        }
+
+        mSceneQuitPicture = (J2DPicture *)mScreen->search(mOverBackTag);
+        JUT_ASSERT(mSceneQuitPicture->getTypeID() == J2DPane_Picture);
+        {
+            JGeometry::TBox2f box(*mSceneQuitPicture->getBounds());
+            f32 *c = Result2D_center(&mSelPanes[0].parts[0]);
+            c[0] = (box.i.x + box.f.x) * 0.5f;
+            c[1] = (box.i.y + box.f.y) * 0.5f;
+        }
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 9; j++) {
+                J2DPicture *pic = (J2DPicture *)mWinScreens[i]->search(mSetWordLineTag[j]);
+                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+                mSelPanes[i].parts[j].mPane = pic;
+                JGeometry::TBox2f b(*pic->getBounds());
+                f32 *c = Result2D_center(&mSelPanes[i].parts[j]);
+                c[0] = (b.i.x + b.f.x) * 0.5f;
+                c[1] = (b.i.y + b.f.y) * 0.5f;
+            }
+            if (i != 0) {
+                mSelPanes[i].icon->hide();
+                mSelPanes[i].num->hide();
+            }
+        }
+
+        for (int r = 0; r < 2; r++) {
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 14; j++) {
+                    J2DPicture *pic = (J2DPicture *)mScoreScreens[r][i]->search(mVSBattleCharacterTag[j]);
+                    JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+                    mVSBattle[r][i][j].mPane = pic;
+                    JGeometry::TBox2f b(*pic->getBounds());
+                    f32 *c = Result2D_center(&mVSBattle[r][i][j]);
+                    c[0] = (b.i.x + b.f.x) * 0.5f;
+                    c[1] = (b.i.y + b.f.y) * 0.5f;
+                }
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 2; j++) {
+                J2DPicture *pic = (J2DPicture *)mPointScreens2[i]->search(mVSBattlePointTag[j]);
+                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+                mPointRows[i][j].mPane = pic;
+                JGeometry::TBox2f b(*pic->getBounds());
+                f32 *c = Result2D_center(&mPointRows[i][j]);
+                c[0] = (b.i.x + b.f.x) * 0.5f;
+                c[1] = (b.i.y + b.f.y) * 0.5f;
+            }
+        }
+        for (int i = 0; i < 2; i++) {
+            J2DPane *pane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'BLine0' + ((u64)(i + 1) << 32));
+            ((f32 *)((u8 *)this + 0xe4c))[i] = pane->getBounds()->i.y;
+        }
+        for (int i = 0; i < 2; i++) {
+            J2DPane *pane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'BLineT0' + ((u64)(i + 1) << 32));
+            ((f32 *)((u8 *)this + 0xe54))[i] = pane->getBounds()->i.y;
+        }
+        for (int i = 0; i < 2; i++) {
+            J2DPane *pane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'C?' + ((u64)(i + 1) << 32));
+            ((f32 *)((u8 *)this + 0xe58))[i] = pane->getBounds()->i.y;
+        }
+
+        JGeometry::TVec2f *tbl = (JGeometry::TVec2f *)((u8 *)this + 0x1b14);
+        J2DAnmBase *anm = (J2DAnmBase *)J2DAnmLoaderDataBase::load(JKRGetNameResource("VS_Battle_Layout.bck", GETJ2DManager()->getArchive()));
+        (*(J2DScreen **)((u8 *)this + 0xdd8))->setAnimation(anm);
+        J2DPane *linePane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'BLine01');
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 10; j++) {
+                anm->setFrame((f32)j);
+                (*(J2DScreen **)((u8 *)this + 0xdd8))->animation();
+                tbl[i * 10 + j].x = linePane->getScaleX();
+                tbl[i * 10 + j].y = linePane->getScaleY();
+            }
+        }
+        break;
+    }
+    case TIME_ATTACK: {
+        mScreenPw = new (heap) J2DScreen();
+        mScreen = new (heap) J2DScreen();
+        for (int i = 0; i < 6; i++) {
+            mWinScreens[i] = new (heap) J2DScreen();
+        }
+        mEntries = 6;
+        mScreenMG = new (heap) J2DScreen();
+        mScreenMG2 = new (heap) J2DScreen();
+        for (int i = 0; i < 5; i++) {
+            mTAScreens[i] = new (heap) J2DScreen();
+        }
+        for (int i = 5; i < 11; i++) {
+            mTAScreens[i] = new (heap) J2DScreen();
+        }
+
+        mScreenPw->set("Password.blo", GETJ2DManager()->getArchive());
+        mScreen->set("OverScreen.blo", GETJ2DManager()->getArchive());
+        for (int i = 0; i < 6; i++) {
+            mWinScreens[i]->set("SetWordLine.blo", GETJ2DManager()->getArchive());
+        }
+        mScreenMG->set("TANRLayout.blo", 0x104, GETJ2DManager()->getArchive());
+        mScreenMG2->set("TANRLapLine.blo", 0x104, GETJ2DManager()->getArchive());
+        for (int i = 0; i < 5; i++) {
+            mTAScreens[i]->set("TANRTimeLine.blo", 0x104, GETJ2DManager()->getArchive());
+        }
+        for (int i = 5; i < 11; i++) {
+            mTAScreens[i]->set("TANRSpark1.blo", 0x104, GETJ2DManager()->getArchive());
+        }
+
+        for (int i = 0; i < 6; i++) {
+            J2DPane *pane = mScreenMG->search((u64)'ReC0' + ((u64)(i + 1) << 32));
+            if (i < 5) {
+                pane->appendChild(mTAScreens[i]);
+            } else {
+                pane->appendChild(mScreenMG2);
+            }
+            pane->appendChild(mTAScreens[5 + (i < 5 ? i : 0)]);
+        }
+
+        J2DAnmBase *anm;
+        anm = (J2DAnmBase *)J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLayout.bck", GETJ2DManager()->getArchive()));
+        mTABest.namePics[0] = NULL;
+        mScreenMG->setAnimation(anm);
+        anm = (J2DAnmBase *)J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLayout.brk", GETJ2DManager()->getArchive()));
+        mScreenMG->setAnimation(anm);
+        for (int i = 0; i < 5; i++) {
+            mTALines[i].kartPic = (J2DPicture *)mScreenMG->search((u64)'T?' + ((u64)(i + 1) << 32));
+        }
+        (void)anm;
+
+        mSceneQuitPicture = (J2DPicture *)mScreen->search(mOverBackTag);
+        JUT_ASSERT(mSceneQuitPicture->getTypeID() == J2DPane_Picture);
+        {
+            JGeometry::TBox2f box(*mSceneQuitPicture->getBounds());
+            f32 *c = Result2D_center(&mSelPanes[0].parts[0]);
+            c[0] = (box.i.x + box.f.x) * 0.5f;
+            c[1] = (box.i.y + box.f.y) * 0.5f;
+        }
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 9; j++) {
+                J2DPicture *pic = (J2DPicture *)mWinScreens[i]->search(mSetWordLineTag[j]);
+                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
+                mSelPanes[i].parts[j].mPane = pic;
+                JGeometry::TBox2f b(*pic->getBounds());
+                f32 *c = Result2D_center(&mSelPanes[i].parts[j]);
+                c[0] = (b.i.x + b.f.x) * 0.5f;
+                c[1] = (b.i.y + b.f.y) * 0.5f;
+            }
+            if (i != 0) {
+                mSelPanes[i].icon->hide();
+                mSelPanes[i].num->hide();
+            }
+        }
+        for (int i = 0; i < 16; i++) {
+            J2DTextBox *box = (J2DTextBox *)mScreenPw->search((u64)'Pass_a' + i);
+            JUT_ASSERT(box->getTypeID() == J2DPane_TextBox);
+            mPassWDText[i] = box;
+        }
+        mSceneResultPicture2 = (J2DPicture *)mScreen->search(mOverBackTag);
+        JUT_ASSERT(mSceneResultPicture2->getTypeID() == J2DPane_Picture);
+        break;
+    }
+    default:
+        JUT_ASSERT(0);
+        break;
+    }
+
+    init();
 }
 
 #line 895
@@ -845,8 +1157,7 @@ void Result2D::calcMG() {
 void Result2D::calcPASSWD(KartGamePad *pad) {
     if (pad != NULL && getAnmEnd() && mPASSWDEnabled && !mPASSWDAccepted) {
         u16 code[9] = { 0x40, 0x20, 0x40, 0x20, 0x400, 0x800, 0x400, 0x800, 0x10 };
-        u32 trigger;
-        trigger = pad->getTrigger();
+        u32 trigger = pad->getTrigger();
         if (trigger != 0) {
             int idx = mPASSWDCount;
             if (code[idx] == trigger) {
@@ -1568,18 +1879,16 @@ void Result2D::setVS() {
 
 void Result2D::setTA() {
     int kartNo = J2DManager::getStatus2Kart(0);
-    KartInfo *info = gRaceInfo.getKartInfo(kartNo);
-    ECharID charID0 = info->getDriverCharID(0);
-    ECharID charID1 = info->getDriverCharID(1);
-    EKartID kartID = info->getKartID();
+    ECharID charID0 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
+    ECharID charID1 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
+    EKartID kartID = gRaceInfo.getKartInfo(kartNo)->getKartID();
     ECourseID course = ResMgr::msCourseID;
 
     TARecord rec((u8)charID0, (u8)charID1, (u8)kartID, (u8)course);
     rec.setName(&gSystemRecord.mDefaultName[0]);
+    rec.setRaceTime(RaceMgr::getManager()->getKartChecker(kartNo)->getTotalTime());
     TARecord lap((u8)charID0, (u8)charID1, (u8)kartID, (u8)course);
     lap.setName(&gSystemRecord.mDefaultName[0]);
-
-    rec.setRaceTime(RaceMgr::getManager()->getKartChecker(kartNo)->getTotalTime());
     lap.setRaceTime(*RaceMgr::getManager()->getKartChecker(kartNo)->getBestLapTime());
 
     if (RaceMgr::getManager()->getKartChecker(kartNo)->isBestTotalTimeRenewal(4)) {
@@ -1701,11 +2010,10 @@ void Result2D::setBattleCharacter() {
     int kartNo = -1;
 
     for (int i = 0; i < num; i++) {
-        int k = J2DManager::getStatus2Kart(i);
-        if (gSequenceInfo.getStartNo(k) == 0) {
+        if (gSequenceInfo.getStartNo(J2DManager::getStatus2Kart(i)) == 0) {
             mScoreScreens[0][i]->show();
             mScoreScreens[1][i]->hide();
-            kartNo = k;
+            kartNo = i;
         } else {
             mScoreScreens[0][i]->hide();
             mScoreScreens[1][i]->show();
@@ -1715,27 +2023,28 @@ void Result2D::setBattleCharacter() {
     int player = -1;
     KartInfo *info = gRaceInfo.getKartInfo(kartNo);
     if (*(KartGamePad **)((u8 *)info + 0xc) != NULL) {
-        player = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(kartNo)->getPad());
-        if (player == -1) {
-            player = 0;
+        int p = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(kartNo)->getPad());
+        if (p == -1) {
+            p = 0;
         }
-        if (player < 2) {
+        if (p < 2) {
             player = 0;
-        } else if (player < 4) {
+        } else if (p < 4) {
             player = 2;
         } else {
 #line 2799
             JUT_ASSERT(0);
         }
     } else {
-        player = gSequenceInfo.getPad2Player(info->getPad());
-        if (player == -1) {
-            player = 0;
+        int p = gSequenceInfo.getPad2Player(info->getPad());
+        if (p == -1) {
+            p = 0;
         }
+        player = p;
     }
 
-    J2DPicture *pic = (J2DPicture *)mScoreScreens[3][0]->search((u64)'C4_1P' + (player << 8));
     J2DPicture::TCornerColor corner;
+    J2DPicture *pic = (J2DPicture *)(*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'C4_1P' + (player << 8));
     pic->getCornerColor(corner);
 }
 
@@ -2083,8 +2392,12 @@ void Result2D::getMGColor(int player, JUTColor &color) {
     colors[3].set(0x95, 0x95, 0x4e, 0);
 
     int kartNo = J2DManager::getStatus2Kart(0);
-    KartInfo *info = RaceMgr::getManager()->getKartInfo(kartNo);
-    if (info->isTagMode() && player != 0) {
+    struct TPadCheck {
+        u8 _0[0xc];
+        KartGamePad *mPad;
+    };
+    TPadCheck *info = (TPadCheck *)RaceMgr::getManager()->getKartInfo(kartNo);
+    if (info->mPad != NULL && player != 0) {
         player++;
         if (player >= 4) {
             player = 3;
