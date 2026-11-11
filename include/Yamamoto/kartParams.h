@@ -27,6 +27,11 @@ struct TireOp
     f32 _0, _4, _8, _c, _10, _14, _18, _1c, _20, _24, _28, _2c, _30;
 }; // 34
 
+struct CamOp
+{
+    f32 _0, _4, _8;
+}; // c
+
 struct CubeParam
 {
     JGeometry::TVec3f _0[8];
@@ -147,7 +152,7 @@ extern CubeParam *CubeParamsData[21];
 // extern UNK babyCamOp;
 // extern UNK waruCamOp;
 // extern UNK kuppaCamOp;
-// extern UNK CameraOpData;
+extern CamOp *CameraOpData[21];
 extern f32 RescueSeaDepth[21];
 extern f32 floorDepth[21];
 extern f32 floorThunderDepth[21];

@@ -33,15 +33,15 @@ public:
     void DoCamera();
 
     // Start
-    // Inline/Unused
-    // void SetMTXLookAt(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TVec3f *);
-    // void SetCameraLookPos(JGeometry::TVec3f *);
-    // void SetCameraPos(JGeometry::TVec3f *);
-    // void RaceBackView();
-    // void InitParallelView();
-    // void InitHangRescueView();
-    // void InitLaunchView();
-    // void InitLandView();
+    // Unused
+    void SetMTXLookAt(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TVec3f *);
+    void SetCameraLookPos(JGeometry::TVec3f *);
+    void SetCameraPos(JGeometry::TVec3f *);
+    void RaceBackView();
+    void InitParallelView();
+    void InitHangRescueView();
+    void InitLaunchView();
+    void InitLandView();
 
     // MJB - These inlines used by KartCtrlInfo.
     inline f32 GetClipperScale() { return mClipperScale; }
@@ -74,7 +74,7 @@ public:
     void DoChangFovy();
     void DoLookChase();
     void DoYRotation();
-    void DoXRotation();
+    f32 DoXRotation();
     void DoDist();
     void DoCamPos(f32, JGeometry::TVec3f *);
     void OutView();
@@ -189,7 +189,8 @@ public:
     f32 mNear;                        // 150
     f32 mFar;                         // 154
     f32 _158;                         //
-    u8 _15c[0x164 - 0x15c];           //
+    f32 _15c;                         //
+    f32 _160;                         //
     f32 _164;                         //
     f32 mAspect;                      // 168
     f32 _16c;                         //
