@@ -11,9 +11,10 @@ public:
 
     virtual ~TMapObjSanboParts() {}
     virtual void calc();
+    virtual const char *getBmdFileName() = 0;
+    virtual bool acceptHidding() = 0;
     virtual void MoveExec();
     virtual void InitExec();
-    virtual bool acceptHidding() { return false; }
 
     void reset();
     void initFunc_Hide();
@@ -29,9 +30,8 @@ public:
     static f32 sBurstVelV;
     static f32 sRotRad;
 
-private:
-    JGeometry::TPos3f _158;
-    JGeometry::TVec3f _188;
+    JGeometry::TPos3f mRotVel;    // 158
+    JGeometry::TVec3f mBaseScale; // 188
 };
 
 class TMapObjSanboHead : public TMapObjSanboParts
@@ -40,7 +40,7 @@ public:
     TMapObjSanboHead(u32 id = 0x138d) : TMapObjSanboParts(id) {}
     virtual ~TMapObjSanboHead() {}
 
-    virtual const char *getBmdFileName();
+    virtual const char *getBmdFileName() { return "/Objects/Sanbo1_break_head.bmd"; }
     virtual bool acceptHidding();
 };
 
@@ -50,7 +50,7 @@ public:
     TMapObjSanboBody(u32 id = 0x138e) : TMapObjSanboParts(id) {}
     virtual ~TMapObjSanboBody() {}
 
-    virtual const char *getBmdFileName();
+    virtual const char *getBmdFileName() { return "/Objects/Sanbo1_break_body.bmd"; }
     virtual bool acceptHidding();
 };
 
