@@ -3627,7 +3627,7 @@ JUTColor Race2D::getBombColor(JUTColor c1, JUTColor c2)
 bool Race2D::isBombReach(int statusNo)
 {
     int kartNo = J2DManager::getStatus2Kart(statusNo);
-    int winPoint = (RCMGetManager()->getKartChecker(kartNo), getWinBombPoint());
+    int winPoint = (RCMGetManager()->getKartChecker(kartNo), KartChecker::getWinBombPoint());
     KartChecker *checker = RCMGetManager()->getKartChecker(kartNo);
     int bombPoint = checker->getBombPoint();
 
@@ -3642,7 +3642,7 @@ bool Race2D::isBombReach(int statusNo)
 bool Race2D::isBombWinner(int statusNo)
 {
     int kartNo = J2DManager::getStatus2Kart(statusNo);
-    int winPoint = (RCMGetManager()->getKartChecker(kartNo), getWinBombPoint());
+    int winPoint = (RCMGetManager()->getKartChecker(kartNo), KartChecker::getWinBombPoint());
     KartChecker *checker = RCMGetManager()->getKartChecker(kartNo);
     return checker->getBombPoint() == winPoint;
 }
@@ -4843,13 +4843,10 @@ void Race2D::getStartLapPos(int kartNo, int frame, f32 &x)
     {
         if (frame >= 10)
         {
-            if (frame >= 10)
-            {
-                if (frame < 50)
-                    frame = 10;
-                else
-                    frame -= 40;
-            }
+            if (frame >= 10 && frame < 50)
+                frame = 10;
+            else
+                frame -= 40;
         }
         if (frame < 0)
         {

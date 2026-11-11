@@ -749,8 +749,8 @@ void NetGameMgr::recvPad()
                 mSendBuf[0].mPad.mHeader.mTTL--;
                 mSendBuf[0].mLength = calcPadPktSize(mSendBuf[0].mPad);
                 sendNext(SEND_PRIORITY_0);
+                mPadState = 0;
             }
-            mPadState = 0;
         }
 
         if (pkt.mHeader.mNum == mNetworkCubes)

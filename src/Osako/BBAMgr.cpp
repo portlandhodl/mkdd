@@ -11,6 +11,7 @@
 #include "JSystem/JAudio/JASFakeMatch2.h"
 #include "dolphin/dvd.h"
 #include "dolphin/os.h"
+#include "mathHelper.h"
 
 extern "C" {
 void SOInit();
@@ -71,8 +72,6 @@ static struct {
 static HTTPServiceConfig sHTTPServiceConfig = {
     &sHTTPThread, sHttpThreadName, 0x4000, 0x14, &sHttpFile, 1,
 };
-
-static const u32 sUuidSeed[4] = {0, 0, 0, 0x3F800000};
 
 static SSDPSearchInfo sSearchInfo = {
     "upnp:rootdevice", (void (*)(const char *, const void *, const void *))NetGameMgr::callbackSearch,
@@ -423,8 +422,6 @@ void BBAMgr::createBasicDevice()
     memmove(name + 10, diskId->company, 2);
 
     UPnPCreateUuidFromName(uuid, UPnPUdnNameSpace, name, 12);
-    if (sUuidSeed[0] == mState)
-        ;
 
     sprintf(mRootDevice, "upnp:rootdevice");
     sprintf(mDeviceUuid, "uuid:%s", UPnPGetUuidString(uuid, uuidString));

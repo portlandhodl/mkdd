@@ -1229,213 +1229,213 @@ void SceneMenu::init()
             mInfo.mode = 9;
             mInfo.oldMode = 9;
         }
-    }
 
-    switch (gRaceInfo.mRaceMode)
-    {
-    case GRAND_PRIX:
-        mInfo._20 = 0;
-        break;
-    case TIME_ATTACK:
-        mInfo._20 = 2;
-        break;
-    case VERSUS_RACE:
-        mInfo._20 = 1;
-        break;
-    case BALLOON_BATTLE:
-        mInfo._20 = 3;
-        mMsgId = 0;
-        break;
-    case BOMB_BATTLE:
-        mInfo._20 = 3;
-        mMsgId = 2;
-        break;
-    case ESCAPE_BATTLE:
-        mInfo._20 = 3;
-        mMsgId = 1;
-        break;
-    default:
+        switch (gRaceInfo.mRaceMode)
+        {
+        case GRAND_PRIX:
+            mInfo._20 = 0;
+            break;
+        case TIME_ATTACK:
+            mInfo._20 = 2;
+            break;
+        case VERSUS_RACE:
+            mInfo._20 = 1;
+            break;
+        case BALLOON_BATTLE:
+            mInfo._20 = 3;
+            mMsgId = 0;
+            break;
+        case BOMB_BATTLE:
+            mInfo._20 = 3;
+            mMsgId = 2;
+            break;
+        case ESCAPE_BATTLE:
+            mInfo._20 = 3;
+            mMsgId = 1;
+            break;
+        default:
 #line 1702
-        JUT_ASSERT(0);
-    }
-
-    switch (gRaceInfo.mRaceLevel)
-    {
-    case 0:
-        mInfo.engineType = 0;
-        break;
-    case 1:
-        mInfo.engineType = 1;
-        break;
-    case 2:
-        mInfo.engineType = 2;
-        break;
-    case 3:
-        mInfo.engineType = 3;
-        break;
-    default:
-#line 1720
-        JUT_ASSERT(0);
-    }
-
-    for (int i = 0; i < gRaceInfo.mStatusNum; i++)
-    {
-        KartGamePad *pad = gRaceInfo.getKartInfo(i)->getPad();
-        if (pad)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                if (pad == gpaKartPad[j])
-                {
-                    mPlayerData[i].mCharNoF = j;
-                    mPlayerPadNo[j] = i;
-                }
-            }
+            JUT_ASSERT(0);
         }
-    }
 
-    for (int i = 0; i < gRaceInfo.mStatusNum; i++)
-    {
-        KartGamePad *pad = gRaceInfo.getKartInfo(i)->getPad(1);
-        if (pad)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                if (pad == gpaKartPad[j])
-                {
-                    mPlayerData[i].mCharNoB = j;
-                    mPlayerPadNo[j] = i;
-                }
-            }
-        }
-    }
-
-    mInfo.playerNum = 0;
-    for (int i = 0; i < gRaceInfo.mStatusNum; i++)
-    {
-        if (gRaceInfo.getKartInfo(i)->getPad(1))
-            mInfo.playerNum += 2;
-        else
-        {
-            mInfo.playerNum += 1;
-            mPlayerData[i].mCharNoB = mPlayerData[i].mCharNoF;
-        }
-    }
-    mInfo.playerNum -= 1;
-
-    mInfo.entryNum = gRaceInfo.mStatusNum;
-    mInfo.entryNum -= 1;
-
-    switch (mInfo.entryNum)
-    {
-    case 0:
-        switch (mInfo.playerNum)
+        switch (gRaceInfo.mRaceLevel)
         {
         case 0:
-            mInfo._18 = 0;
+            mInfo.engineType = 0;
             break;
         case 1:
-            mInfo._18 = 1;
+            mInfo.engineType = 1;
+            break;
+        case 2:
+            mInfo.engineType = 2;
+            break;
+        case 3:
+            mInfo.engineType = 3;
             break;
         default:
+#line 1720
+            JUT_ASSERT(0);
+        }
+
+        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+        {
+            KartGamePad *pad = gRaceInfo.getKartInfo(i)->getPad();
+            if (pad)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    if (pad == gpaKartPad[j])
+                    {
+                        mPlayerData[i].mCharNoF = j;
+                        mPlayerPadNo[j] = i;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+        {
+            KartGamePad *pad = gRaceInfo.getKartInfo(i)->getPad(1);
+            if (pad)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    if (pad == gpaKartPad[j])
+                    {
+                        mPlayerData[i].mCharNoB = j;
+                        mPlayerPadNo[j] = i;
+                    }
+                }
+            }
+        }
+
+        mInfo.playerNum = 0;
+        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+        {
+            if (gRaceInfo.getKartInfo(i)->getPad(1))
+                mInfo.playerNum += 2;
+            else
+            {
+                mInfo.playerNum += 1;
+                mPlayerData[i].mCharNoB = mPlayerData[i].mCharNoF;
+            }
+        }
+        mInfo.playerNum -= 1;
+
+        mInfo.entryNum = gRaceInfo.mStatusNum;
+        mInfo.entryNum -= 1;
+
+        switch (mInfo.entryNum)
+        {
+        case 0:
+            switch (mInfo.playerNum)
+            {
+            case 0:
+                mInfo._18 = 0;
+                break;
+            case 1:
+                mInfo._18 = 1;
+                break;
+            default:
 #line 1773
-            JUT_ASSERT(0);
-        }
-        break;
-    case 1:
-        switch (mInfo.playerNum)
-        {
+                JUT_ASSERT(0);
+            }
+            break;
         case 1:
-            mInfo._18 = 0;
-            break;
-        case 2:
-            mInfo._18 = 1;
-            break;
-        case 3:
-            mInfo._18 = 1;
-            break;
-        default:
+            switch (mInfo.playerNum)
+            {
+            case 1:
+                mInfo._18 = 0;
+                break;
+            case 2:
+                mInfo._18 = 1;
+                break;
+            case 3:
+                mInfo._18 = 1;
+                break;
+            default:
 #line 1789
-            JUT_ASSERT(0);
-        }
-        break;
-    case 2:
-        switch (mInfo.playerNum)
-        {
+                JUT_ASSERT(0);
+            }
+            break;
         case 2:
-            mInfo._18 = 0;
-            break;
-        case 3:
-            mInfo._18 = 2;
-            break;
-        default:
+            switch (mInfo.playerNum)
+            {
+            case 2:
+                mInfo._18 = 0;
+                break;
+            case 3:
+                mInfo._18 = 2;
+                break;
+            default:
 #line 1802
-            JUT_ASSERT(0);
-        }
-        break;
-    case 3:
-        switch (mInfo.playerNum)
-        {
+                JUT_ASSERT(0);
+            }
+            break;
         case 3:
-            mInfo._18 = 0;
+            switch (mInfo.playerNum)
+            {
+            case 3:
+                mInfo._18 = 0;
+                break;
+            default:
+#line 1812
+                JUT_ASSERT(0);
+            }
             break;
         default:
-#line 1812
+#line 1817
             JUT_ASSERT(0);
         }
-        break;
-    default:
-#line 1817
-        JUT_ASSERT(0);
-    }
 
-    if (seq == Scene::SCENE_COURSE || seq == Scene::SCENE_MAP_SELECT)
-    {
-        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+        if (seq == Scene::SCENE_COURSE || seq == Scene::SCENE_MAP_SELECT)
         {
-            ECharID charId = gRaceInfo.getKartInfo(i)->getDriverCharID(0);
-            for (int j = 0; j < 20; j++)
+            for (int i = 0; i < gRaceInfo.mStatusNum; i++)
             {
-                if (charId == mChara[j].mCharId)
+                ECharID charId = gRaceInfo.getKartInfo(i)->getDriverCharID(0);
+                for (int j = 0; j < 20; j++)
                 {
-                    mPlayerData[i].mCharF = j;
-                    break;
-                }
-            }
-        }
-
-        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
-        {
-            ECharID charId = gRaceInfo.getKartInfo(i)->getDriverCharID(1);
-            for (int j = 0; j < 20; j++)
-            {
-                if (charId == mChara[j].mCharId)
-                {
-                    mPlayerData[i].mCharB = j;
-                    break;
-                }
-            }
-        }
-
-        for (int i = 0; i < gRaceInfo.mStatusNum; i++)
-        {
-            mPlayerData[i].mCursor = -1;
-            if (mPlayerData[i].mCharF != -1 && mPlayerData[i].mCharB != -1)
-            {
-                mPlayerData[i].mState = 1;
-                EKartID kartId = gRaceInfo.getKartInfo(i)->getKartID();
-                int kartNo;
-                for (kartNo = 0; kartNo < 21; kartNo++)
-                {
-                    if (kartId == mKartIndex[kartNo])
+                    if (charId == mChara[j].mCharId)
+                    {
+                        mPlayerData[i].mCharF = j;
                         break;
+                    }
                 }
-                if (kartNo < 21)
-                    mPlayerData[i].mKart = kartNo;
-                else
-                    mPlayerData[i].mKart = getKart(mPlayerData[i].mCharF, mPlayerData[i].mCharB);
             }
-            mPlayerData[i].mState = 1;
+
+            for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+            {
+                ECharID charId = gRaceInfo.getKartInfo(i)->getDriverCharID(1);
+                for (int j = 0; j < 20; j++)
+                {
+                    if (charId == mChara[j].mCharId)
+                    {
+                        mPlayerData[i].mCharB = j;
+                        break;
+                    }
+                }
+            }
+
+            for (int i = 0; i < gRaceInfo.mStatusNum; i++)
+            {
+                mPlayerData[i].mCursor = -1;
+                if (mPlayerData[i].mCharF != -1 && mPlayerData[i].mCharB != -1)
+                {
+                    mPlayerData[i].mState = 1;
+                    EKartID kartId = gRaceInfo.getKartInfo(i)->getKartID();
+                    int kartNo;
+                    for (kartNo = 0; kartNo < 21; kartNo++)
+                    {
+                        if (kartId == mKartIndex[kartNo])
+                            break;
+                    }
+                    if (kartNo < 21)
+                        mPlayerData[i].mKart = kartNo;
+                    else
+                        mPlayerData[i].mKart = getKart(mPlayerData[i].mCharF, mPlayerData[i].mCharB);
+                }
+                mPlayerData[i].mState = 1;
+            }
         }
     }
 }
@@ -6031,6 +6031,7 @@ void SceneMenu::selectB(int no)
                 }
             }
         }
+    case 1:
         {
             int cellNo = -1;
             if (mPlayerData[padNo].mCharNoB == no && mPlayerData[padNo].mCharB != -1)

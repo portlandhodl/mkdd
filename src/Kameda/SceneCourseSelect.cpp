@@ -437,13 +437,13 @@ void SceneCourseSelect::calc() {
 
     if (mTimer2 < 21)
         mBpk[1].mFrame = mTimer2;
-    else
+    else {
         mBpk[1].mFrame = 0.0f;
-
-    if (mCup == 4)
-        mCoPict[1]->changeTexture(mCourseData[mGpStage][mCourse].copName, 0);
-    else
-        mCoPict[1]->changeTexture(mCourseData[mCup][mCourse].copName, 0);
+        if (mCup == 4)
+            mCoPict[1]->changeTexture(mCourseData[mGpStage][mCourse].copName, 0);
+        else
+            mCoPict[1]->changeTexture(mCourseData[mCup][mCourse].copName, 0);
+    }
 
     mTimer++;
 

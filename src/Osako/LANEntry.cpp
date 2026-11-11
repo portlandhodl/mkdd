@@ -185,13 +185,15 @@ void LANEntry::waitEntry() {
             mDelay = 0;
             changeNumberTexture(mTimer);
             startTimer();
-        } else if (mNum < 2 && removed) {
-            stopTimer();
-        }
-        if (mNum == 0 && canceled) {
-            mReceipt = 1;
-            GetGameAudioMain()->startSystemSe(0x20004);
-            endReceipt();
+        } else {
+            if (mNum < 2 && removed) {
+                stopTimer();
+            }
+            if (mNum == 0 && canceled) {
+                mReceipt = 1;
+                GetGameAudioMain()->startSystemSe(0x20004);
+                endReceipt();
+            }
         }
     }
 }

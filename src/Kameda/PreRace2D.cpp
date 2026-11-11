@@ -85,11 +85,11 @@ PreRace2D::PreRace2D(JKRHeap *heap)
     case STAFF_ROLL:
         setGP();
         break;
-    case TIME_ATTACK:
-        setTA();
-        break;
     case VERSUS_RACE:
         setVS();
+        break;
+    case TIME_ATTACK:
+        setTA();
         break;
     case BALLOON_BATTLE:
         setBalloon();

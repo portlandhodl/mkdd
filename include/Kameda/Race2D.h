@@ -210,7 +210,6 @@ public:
     static Race2D *mThis;                                                                           // 0x80416300
     static Task *mTask;                                                                             // 0x80416304
  public:
-     static int getWinBombPoint(); // helper mirroring KartChecker::getWinBombPoint
 
     J2DPicture *getSpecialItem(int status, int pos) {
 #line 463

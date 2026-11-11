@@ -400,7 +400,7 @@ void SceneGhostLoadSave::Card::error()
     mPanes[7]->mIsVisible = false;
     mPanes[8]->mIsVisible = false;
     mCourseText->mIsVisible = false;
-    mAnm[2]->setFrame(0.0f);
+    mAnm[2]->setFrame(1.0f);
 
     u32 msgID;
     switch (mError)
@@ -413,8 +413,8 @@ void SceneGhostLoadSave::Card::error()
     case 5: msgID = 28; break;
     case 6: msgID = 27; break;
     default:
-        JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "SceneGhostLoadSave.cpp", 847, "%s", "Card");
-OSPanic("SceneGhostLoadSave.cpp", 847, "Halt");
+#line 847
+        JUT_ASSERT(0);
         break;
     }
 

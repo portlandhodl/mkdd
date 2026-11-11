@@ -89,7 +89,7 @@ public:
         _318[kart]._18 = pad;
     }
     ECharID get_318_charId0(int kart) {
-#line 293
+#line 273
         JUT_MINMAX_ASSERT(0, kart, 2);
         return _318[kart]._0[0];
     }
@@ -101,14 +101,14 @@ public:
     }
 
     EKartID get_318_kartId(int kart) {
-#line 273
+#line 284
         JUT_MINMAX_ASSERT(0, kart, 2);
         return _318[kart]._8;
     }
 
     bool get_318_coop(int kart) {
-#line 226
-        JUT_MINMAX_ASSERT(0, kart, 8);
+#line 293
+        JUT_MINMAX_ASSERT(0, kart, 2);
         return _318[kart]._C[0];
     }
 
@@ -318,15 +318,17 @@ private:
     int _2b8[8];               // 2B8
     int _2d8[8];               // 2D8
     int _2f8[8];               // 2F8
-    struct {
-        ECharID _0[2];     // 00
-        EKartID _8;        // 08
-        bool _C[0x10 - 0xc]; // 0C
-        RaceTime mTime;    // 10
-        int _14;           // 14
-        KartGamePad *_18;  // 18
-        // Size: 0x1c
-    } _318[2];                 // 318
+    union {
+        struct {
+            ECharID _0[2];     // 00
+            EKartID _8;        // 08
+            bool _C[0x10 - 0xc]; // 0C
+            RaceTime mTime;    // 10
+            int _14;           // 14
+            KartGamePad *_18;  // 18
+            // Size: 0x1c
+        } _318[2];             // 318
+    };
 
 public:
     int _350;                  // 350 (number of [human] players?)

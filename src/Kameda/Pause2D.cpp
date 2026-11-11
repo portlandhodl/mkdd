@@ -428,7 +428,7 @@ void Pause2D::selectorMG(KartGamePad *pad) {
         case 4:
             mPauseSelector = 3;
             break;
-        case 7:
+        case 6:
             mPauseSelector = 4;
             break;
         case 8:

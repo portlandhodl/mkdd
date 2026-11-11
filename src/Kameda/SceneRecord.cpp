@@ -532,7 +532,7 @@ void SceneRecord::init_gp() {
 void SceneRecord::init_gpline() {
     mGpLineTimer = -1;
     mGpLineDir = 0;
-    mGpLinePhase = 0.0f;
+    mGpLinePhase = -1.0f;
     for (int i = 0; i < 4; i++) {
         mGpLineCursorPanes[i]->changeTexture(mBtiName_Level[i], 0);
         mGpLinePanes3[i]->changeTexture(Kart2DCommon::ptr()->getPartsLocName(0), 0);
@@ -567,7 +567,7 @@ void SceneRecord::init_taline() {
     int j;
     mTaLineTimer = -1;
     mTaLineDir = 0;
-    mTaLinePhase = 0.0f;
+    mTaLinePhase = -1.0f;
     for (i = 0; i < 5; i++)
         mTaLineRank[i]->changeTexture(mBtiName_Rank[i], 0);
     for (i = 0; i < 5; i++) {

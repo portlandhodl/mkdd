@@ -25,6 +25,7 @@ const char *cpaPowerName[4] = {
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
 Award2D::Award2D(JKRHeap *heap) {
+    int i;
     Kart2DCommon *common = Kart2DCommon::ptr();
     _24 = gSequenceInfo.mMapInfo.cup;
     _28 = gSequenceInfo.mLevel;
@@ -87,7 +88,7 @@ Award2D::Award2D(JKRHeap *heap) {
         pPane->changeTexture("GoTrophy.bti", 0);
     }
 
-    for (int i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) {
         pPane = (J2DPicture *)mScreen->search(0x706f7331ull + i);
         if (i == rank) {
 #line 156
@@ -125,7 +126,7 @@ Award2D::Award2D(JKRHeap *heap) {
     raceTime.get(&minutes, &seconds, &milliseconds);
 
     J2DPicture *pics[3];
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         pPane = (J2DPicture *)mScreen->search(0x74696d654e35ull + i);
 #line 199
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
@@ -133,7 +134,7 @@ Award2D::Award2D(JKRHeap *heap) {
     }
     common->changeNumberTexture(minutes, pics, 2, false, noTime);
 
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         pPane = (J2DPicture *)mScreen->search(0x74696d654e33ull + i);
 #line 208
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
@@ -141,7 +142,7 @@ Award2D::Award2D(JKRHeap *heap) {
     }
     common->changeNumberTexture(seconds, pics, 2, true, noTime);
 
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
         pPane = (J2DPicture *)mScreen->search(0x74696d654e30ull + i);
 #line 217
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
@@ -170,7 +171,7 @@ Award2D::Award2D(JKRHeap *heap) {
     JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
     pPane->changeTexture(common->getCupIconTexture((ERaceGpCup)_24), 0);
 
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
         pPane = (J2DPicture *)mScreen->search(0x506f696e7431ull + i);
 #line 250
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
@@ -188,7 +189,7 @@ Award2D::Award2D(JKRHeap *heap) {
     JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
     pPane->changeTexture((ResTIMG *)JKRFileLoader::getGlbResource(cpaPowerName[_28], arc), 0);
 
-    for (int i = 0; i < 9; i++) {
+    for (i = 0; i < 9; i++) {
         pPane = (J2DPicture *)mScreen->search(0x456630ull + i);
         pPane->setAnimation((J2DAnmTransform *)_4c);
 #line 272
@@ -196,14 +197,14 @@ Award2D::Award2D(JKRHeap *heap) {
         pPane->changeTexture(common->getPartName(2), 0);
     }
 
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         pPane = (J2DPicture *)mScreen->search(0x4e45556e64657231ull + i);
 #line 282
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
         pPane->changeTexture(common->getPartName(3), 0);
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
         pPane = (J2DPicture *)mScreen->search(0x4368615730ull + i);
 #line 292
         JUT_ASSERT(pPane->getTypeID() == J2DPaneType_Picture)
@@ -212,7 +213,7 @@ Award2D::Award2D(JKRHeap *heap) {
 
     if (_8) {
         J2DPane *slots[3];
-        for (int i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             slots[i] = mScreen->search(0x4e536c6f7431ull + i);
         }
         _30 = new (heap, 0) NameEntryHelper((J2DPane **)slots, _9, heap, (JUTGamePad *)_2c, false);
