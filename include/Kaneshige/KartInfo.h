@@ -122,7 +122,7 @@ public:
         return mKartCharacters[driverNo].getWeight();
     }
 
-    EKartID getKartID() const { return (mKartDB) ? mKartDB->id : cKartIDNone; }
+    EKartID getKartID() const { return (mKartDB) ? mKartDB->id : cKartIDNone; } const KartCharacter *getKartCharacter(int driverNo) const { return &mKartCharacters[driverNo]; }
     EKartWeight getKartWeight() const { return mKartDB ? mKartDB->weight : UNK_3; }
     int getWheelNumber() const { return mKartDB ? mKartDB->wheelCount : 0; }
     bool isComKart() const { return isComDriver(0); }
