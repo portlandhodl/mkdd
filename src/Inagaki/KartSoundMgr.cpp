@@ -342,23 +342,25 @@ void KartSoundMgr::checkAfterGoalVolume() {
         }
     }
     else if (_78 == 60) {
-        if (_12c == 0 && 0.35f == _124) {
+        f32 target = 0.35f;
+        if (_12c == 0 && _124 == target) {
         }
-        else if (_12c != 0 && 0.35f == _120) {
+        else if (_12c != 0 && _120 == target) {
         }
         else {
-            _120 = 0.35f;
+            _120 = target;
             _128 = (_124 - _120) / 61.0f;
             _12c = 61;
         }
     }
     else if (_78 == 360) {
-        if (_12c == 0 && 0.0f == _124) {
+        f32 target = 0.0f;
+        if (_12c == 0 && _124 == target) {
         }
-        else if (_12c != 0 && 0.0f == _120) {
+        else if (_12c != 0 && _120 == target) {
         }
         else {
-            _120 = 0.0f;
+            _120 = target;
             _128 = (_124 - _120) / 301.0f;
             _12c = 301;
         }
@@ -370,17 +372,20 @@ void KartSoundMgr::checkAfterGoalVolume() {
     if (_12c == 0) {
         changed = 0;
     }
-    else if (--_12c == 0) {
-        _124 = _120;
-        changed = 1;
-    }
-    else {
+    else if (--_12c != 0) {
         _124 = _124 - _128;
         changed = 1;
     }
+    else {
+        _124 = _120;
+        changed = 1;
+    }
 
-    if (changed && (int)mKartCount < 4) {
-        CustomAudience<4>::smCameraVolume[(int)mKartCount] = _124;
+    if (changed) {
+        f32 v = _124;
+        if ((int)mKartCount < 4) {
+            CustomAudience<4>::smCameraVolume[(int)mKartCount] = v;
+        }
     }
 }
 
@@ -406,7 +411,7 @@ void KartSoundMgr::setSlip(u8 wheelIdx, u8 p2, u8 p3, f32 depth) {
     u8 sel;
     switch (p2) {
     case 0x11:
-        if (mWaterDepth[wheelIdx] <= 0.0f) {
+        if (!(mWaterDepth[wheelIdx] <= 0.0f)) {
             goto water_slide;
         }
         switch (p3) {
@@ -671,14 +676,15 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
     if (area != nullptr) {
         if (_5c == 0) {
             f32 rate = area->getRate();
-            if (rate != 0.0f) {
+            f32 zero = 0.0f;
+            if (rate != zero) {
                 _6c = 0.8f * area->getEchoRate();
                 if (_6c > 0.8f) {
                     _6c = 0.8f;
                 }
             }
             else {
-                _6c = rate;
+                _6c = zero;
             }
         }
     }
@@ -688,8 +694,9 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
     }
 
     _88 = p1;
+    _84 = p2;
     if (p5 != 0) {
-        if (_84 < 1.0f) {
+        if (p2 < 1.0f) {
             p5 = false;
         }
     }
@@ -707,9 +714,6 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
             setConductSignal();
             setWaterCutoffPort(0);
             break;
-        case 1:
-            setConductRace(p5);
-            break;
         case 2:
             setConductOutOfCourse(currentLap);
             setWaterCutoffPort(0);
@@ -720,12 +724,6 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
                     }
                 }
             }
-            break;
-        case 3:
-            countGoalKart();
-            _8c = 1;
-            setConductAfterGoal(p5);
-            _5e = 1;
             break;
         case 4:
             setConductTrouble(p1, currentLap);
@@ -741,6 +739,15 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
                 }
             }
             break;
+        case 3:
+            countGoalKart();
+            _8c = 1;
+            setConductAfterGoal(p5);
+            _5e = 1;
+            break;
+        case 1:
+            setConductRace(p5);
+            break;
         case 5:
             if (_66 == 0) {
                 if (_63 != currentLap) {
@@ -750,6 +757,8 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
                 }
             }
             setConductPressed();
+            break;
+        case 6:
             break;
         }
     }
@@ -774,25 +783,17 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
                 }
             }
             break;
-        case 1: {
-            if (_63 != currentLap) {
-                _8e = 0;
-                _92 = 0;
-            }
-            setConductLocomotiveSpeed(true);
-            break;
-        }
-        case 3: {
+        case 3:
             countGoalKart();
             _8c = 1;
             _5e = 1;
+        case 1:
             if (_63 != currentLap) {
                 _8e = 0;
                 _92 = 0;
             }
             setConductLocomotiveSpeed(p5);
             break;
-        }
         case 5:
             if (_66 == 0) {
                 if (_63 != currentLap) {
@@ -802,6 +803,8 @@ void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u
                 }
             }
             setConductPressed();
+            break;
+        case 6:
             break;
         }
     }
@@ -859,25 +862,23 @@ void KartSoundMgr::setConductLocomotiveAccel() {
     }
 
     if (flag != 0) {
-        JAISoundHandles *handles = this;
-        JAISoundStarter *starter = JAISoundStarter::getInstance();
-
         u32 id = -(_96++ & 1) + 18;
 
+        JAISoundStarter *starter = JAISoundStarter::getInstance();
+        JAISoundHandles *handles = this;
         JAISoundHandle *handle = &(*handles)[3];
-
-        id += (_66 != 0) ? 0x14 : 0;
-        starter->startSound(id, handle, nullptr);
+        starter->startSound(id + ((_66 != 0) ? 0x14 : 0), handle, nullptr);
 
         if (*handle) {
             if (!(*handle)->getAudible()) {
                 u32 mask = _7c;
                 (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-                if (_80 != 0) {
+                u32 fade = _80;
+                if (fade != 0) {
                     JAISound *sound = handle->operator->();
                     sound->fader_.mIntensity = 0.0f;
-                    if (_80 != 0) {
-                        sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+                    if (fade != 0) {
+                        sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
                     }
                     else {
                         sound->fader_.forceIn();
@@ -904,84 +905,81 @@ void KartSoundMgr::setConductLocomotiveAccel() {
 }
 
 void KartSoundMgr::setConductLocomotiveSpeed(bool) {
-    if (_8e != 0) {
-        _8e--;
-        return;
-    }
-
     f32 engineRot = _84;
-    if (engineRot < 1.0f) {
-        engineRot = 1.0f;
-    }
-    if (engineRot > 130.0f) {
-        engineRot = 130.0f;
-    }
+    if (_8e == 0) {
+        if (engineRot < 1.0f) {
+            engineRot = 1.0f;
+        }
+        if (engineRot > 130.0f) {
+            engineRot = 130.0f;
+        }
 
-    _8e = (s16)((130.0f - engineRot) / 20.0f + 3.0f);
+        _8e = (s16)((130.0f - engineRot) / 20.0f + 3.0f);
 
-    JAISoundHandles *handles = this;
-    JAISoundStarter *starter = JAISoundStarter::getInstance();
+        u32 id = -(_96++ & 1) + 18;
 
-    u32 id = -(_96++ & 1) + 18;
+        JAISoundStarter *starter = JAISoundStarter::getInstance();
+        JAISoundHandles *handles = this;
+        JAISoundHandle *handle = &(*handles)[3];
+        starter->startSound(id + ((_66 != 0) ? 0x14 : 0), handle, nullptr);
 
-    JAISoundHandle *handle = &(*handles)[3];
-
-    id += (_66 != 0) ? 0x14 : 0;
-    starter->startSound(id, handle, nullptr);
-
-    if (*handle) {
-        if (!(*handle)->getAudible()) {
-            u32 mask = _7c;
-            (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-            if (_80 != 0) {
-                JAISound *sound = handle->operator->();
-                sound->fader_.mIntensity = 0.0f;
-                if (_80 != 0) {
-                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+        if (*handle) {
+            if (!(*handle)->getAudible()) {
+                u32 mask = _7c;
+                (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
+                u32 fade = _80;
+                if (fade != 0) {
+                    JAISound *sound = handle->operator->();
+                    sound->fader_.mIntensity = 0.0f;
+                    if (fade != 0) {
+                        sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
+                    }
+                    else {
+                        sound->fader_.forceIn();
+                    }
+                    _80 = 0;
                 }
-                else {
-                    sound->fader_.forceIn();
-                }
-                _80 = 0;
             }
         }
+
+        setEcho(handle, _6c);
+
+        JAISoundHandle *handle2 = &(*handles)[3];
+        if (*handle2) {
+            (*handle2)->getAuxiliary().moveVolume(0.7f * (engineRot / 130.0f) + 0.5f, 0);
+
+            f32 f30 = 1.0f;
+            if (engineRot < 100.0f) {
+                f30 = engineRot / 100.0f;
+            }
+            if (_5d != 0) {
+                f30 *= Parameters::getChibiPitch(id);
+            }
+
+            (*handle2)->getAuxiliary().movePitch(0.4f * f30 + 0.6f, 0);
+        }
     }
-
-    setEcho(handle, _6c);
-
-    JAISoundHandle *handle2 = &(*handles)[3];
-    if (*handle2) {
-        (*handle2)->getAuxiliary().moveVolume(0.7f * (engineRot / 130.0f) + 0.5f, 0);
-
-        f32 f30 = 1.0f;
-        if (engineRot < 100.0f) {
-            f30 = engineRot / 100.0f;
-        }
-        if (_5d != 0) {
-            f30 *= Parameters::getChibiPitch(id);
-        }
-
-        (*handle2)->getAuxiliary().movePitch(0.4f * f30 + 0.6f, 0);
+    else {
+        _8e--;
     }
 }
 
 void KartSoundMgr::setConductPressed() {
-    JAISoundHandles *handles = this;
     JAISoundStarter *starter = JAISoundStarter::getInstance();
+    JAISoundHandles *handles = this;
     JAISoundHandle *handle = &(*handles)[3];
-    u32 id = 0x13;
-    id += ((_66 != 0) ? -1 : 0) & 0x14;
-    starter->startSound(id, handle, nullptr);
+    starter->startSound(0x13 + ((_66 != 0) ? 0x14 : 0), handle, nullptr);
 
     if (*handle) {
         if (!(*handle)->getAudible()) {
             u32 mask = _7c;
             (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-            if (_80 != 0) {
+            u32 fade = _80;
+            if (fade != 0) {
                 JAISound *sound = handle->operator->();
                 sound->fader_.mIntensity = 0.0f;
-                if (_80 != 0) {
-                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+                if (fade != 0) {
+                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
                 }
                 else {
                     sound->fader_.forceIn();
@@ -1069,15 +1067,16 @@ void KartSoundMgr::setConductSignal() {
             }
             else {
                 u32 interval = SignalDownIntervalBase[_64] + Random::getSignalEngineRandomU32() % SignalDownIntervalWidth[_64];
-                if (_11c == 0 && _114 == 0.7f) {
+                f32 target = 0.7f;
+                if (_11c == 0 && _114 == target) {
                     goto signal_noop2;
                 }
-                if (_11c != 0 && _110 == 0.7f) {
+                if (_11c != 0 && _110 == target) {
                     goto signal_noop2;
                 }
-                _110 = 0.7f;
+                _110 = target;
                 if (interval == 0) {
-                    _114 = 0.7f;
+                    _114 = target;
                     goto signal_noop2;
                 }
                 interval++;
@@ -1106,24 +1105,24 @@ void KartSoundMgr::setConductSignal() {
         pitch = _114;
     }
 
-    int engineType = Parameters::getEngineType(_61);
-    u32 id = engineType + 8;
-    id += (_66 != 0) * 0x14;
+    u32 id = (u8)Parameters::getEngineType(_61) + 8;
 
     JAISoundStarter *starter = JAISoundStarter::getInstance();
     JAISoundHandles *handles = this;
     JAISoundHandle *handle = &(*handles)[3];
+    id += (_66 != 0) ? 0x14 : 0;
     starter->startSound(id, handle, nullptr);
 
     if (*handle) {
         if (!(*handle)->getAudible()) {
             u32 mask = _7c;
             (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-            if (_80 != 0) {
+            u32 fade = _80;
+            if (fade != 0) {
                 JAISound *sound = handle->operator->();
                 sound->fader_.mIntensity = 0.0f;
-                if (_80 != 0) {
-                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+                if (fade != 0) {
+                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
                 }
                 else {
                     sound->fader_.forceIn();
@@ -1171,24 +1170,24 @@ void KartSoundMgr::setConductOutOfCourse(u8 lap) {
         vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
     }
 
-    int engineType = Parameters::getEngineType(_61);
-    u32 id = engineType + 8;
-    id += (_66 != 0) * 0x14;
+    u32 id = (u8)Parameters::getEngineType(_61) + 8;
 
     JAISoundStarter *starter = JAISoundStarter::getInstance();
     JAISoundHandles *handles = this;
     JAISoundHandle *handle = &(*handles)[3];
+    id += (_66 != 0) ? 0x14 : 0;
     starter->startSound(id, handle, nullptr);
 
     if (*handle) {
         if (!(*handle)->getAudible()) {
             u32 mask = _7c;
             (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-            if (_80 != 0) {
+            u32 fade = _80;
+            if (fade != 0) {
                 JAISound *sound = handle->operator->();
                 sound->fader_.mIntensity = 0.0f;
-                if (_80 != 0) {
-                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+                if (fade != 0) {
+                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
                 }
                 else {
                     sound->fader_.forceIn();
@@ -1240,24 +1239,24 @@ void KartSoundMgr::setConductTrouble(f32 distance, u8 lap) {
         vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
     }
 
-    int engineType = Parameters::getEngineType(_61);
-    u32 id = engineType + 8;
-    id += (_66 != 0) * 0x14;
+    u32 id = (u8)Parameters::getEngineType(_61) + 8;
 
     JAISoundStarter *starter = JAISoundStarter::getInstance();
     JAISoundHandles *handles = this;
     JAISoundHandle *handle = &(*handles)[3];
+    id += (_66 != 0) ? 0x14 : 0;
     starter->startSound(id, handle, nullptr);
 
     if (*handle) {
         if (!(*handle)->getAudible()) {
             u32 mask = _7c;
             (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-            if (_80 != 0) {
+            u32 fade = _80;
+            if (fade != 0) {
                 JAISound *sound = handle->operator->();
                 sound->fader_.mIntensity = 0.0f;
-                if (_80 != 0) {
-                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+                if (fade != 0) {
+                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
                 }
                 else {
                     sound->fader_.forceIn();
@@ -1286,25 +1285,27 @@ void KartSoundMgr::setConductRace(bool flag) {
         0.0012000000f, 0.0012000000f, 0.0012000000f, 0.0012000000f,
         0.0012000000f,
     };
-    static const f32 UpEngineLoopStart[] = {
+    static const f32 UpEngineLoopStart[9] = {
         100639.0f, 133568.0f, 121677.0f, 89762.0f,
     };
-    static const f32 UpEngineLoopEnd[] = {
+    static const f32 UpEngineLoopEnd[9] = {
         113023.0f, 167266.0f, 138431.0f, 100738.0f,
     };
     static const f32 EngineAddKeisuuRaceDown[] = {
         0.00015f, 0.00015f, 0.00015f, 0.00015f,
         0.0006f, 0.0006f, 0.0006f, 0.0006f, 0.0006f,
     };
-    static const f32 DownEngineLoopStart[] = {
+    static const f32 DownEngineLoopStart[9] = {
         42032.0f, 57452.0f, 54457.0f, 33775.0f,
     };
-    static const f32 DownEngineLoopEnd[] = {
+    static const f32 DownEngineLoopEnd[9] = {
         93600.0f, 104350.0f, 79743.0f, 63943.0f,
     };
 
-    u32 loopCount = 0;
-    u8 engineType = Parameters::getEngineType(_61);
+    f32 pitch;
+    f32 vol;
+    u16 loopCount = 0;
+    int engineType = Parameters::getEngineType(_61);
 
     if (_e8[0] == 0x11 || _e8[1] == 0x11 || _e8[2] == 0x11 || _e8[3] == 0x11) {
         f32 wDepth = 215.0f;
@@ -1326,7 +1327,7 @@ void KartSoundMgr::setConductRace(bool flag) {
         if (wDepth == 0.0f) {
             loopCount = 0;
         } else {
-            loopCount = (u32)(s32)(127.0f - 126.0f * wDepth);
+            loopCount = 127.0f - 126.0f * wDepth;
         }
     }
 
@@ -1363,8 +1364,9 @@ void KartSoundMgr::setConductRace(bool flag) {
 
         f32 releaseDensity = -0.0016666667f * _84 + 0.3f;
         if (_a0 != 0.0f) {
+            s16 dec = 80.0f * _a0;
             if (_96 > -200) {
-                _96 -= (s16)(80.0f * _a0);
+                _96 -= dec;
             }
         }
         adjustEngine();
@@ -1372,48 +1374,44 @@ void KartSoundMgr::setConductRace(bool flag) {
             _fc = 0.0f;
         }
 
-        f32 mediaPitch = EngineKeisuuRaceUp[engineType] * _84 + EngineKeisuuRaceUp[engineType] * _88;
-        mediaPitch += (f32)(s16)_96 * EngineAddKeisuuRaceUp[engineType];
-        mediaPitch += 0.5f;
-        mediaPitch += releaseDensity;
-        mediaPitch += _f0;
-        mediaPitch += 0.02f * _fc;
+        pitch = 0.02f * _fc + (_f0 + (releaseDensity + (0.5f + ((f32)_96 * EngineAddKeisuuRaceUp[(u8)engineType] + (_88 * EngineKeisuuRaceUp[(u8)engineType] + _84 * EngineKeisuuRaceUp[(u8)engineType])))));
 
-        f32 vol = 1.4f;
+        vol = 1.4f;
         if (_84 < 40.0f) {
-            vol = 1.4f + -0.0075000003f * _84;
+            vol = -0.0075000003f * _84 + vol;
             vol = 0.3f + vol;
         }
 
         u32 num;
-        if (engineType < 4 && flag == 0) {
+        if ((u8)engineType < 4 && flag == 0) {
             num = 0;
         }
         else {
             num = 8;
         }
-        u32 id = engineType + num;
         if (_66 != 0) {
-            id += 0x14;
+            vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
         }
         if (loopCount != 0) {
             vol *= (0.5f + 0.5f * loopCount / 127.0f);
         }
+        u32 id = num + (u8)engineType;
 
         JAISoundStarter *starter = JAISoundStarter::getInstance();
         JAISoundHandles *handles = this;
         JAISoundHandle *handle = &(*handles)[3];
-        starter->startSound(id, handle, nullptr);
+        starter->startSound(id += (_66 != 0) ? 0x14 : 0, handle, nullptr);
 
         if (*handle) {
             if (!(*handle)->getAudible()) {
                 u32 mask = _7c;
                 (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-                if (_80 != 0) {
+                u32 fade = _80;
+                if (fade != 0) {
                     JAISound *sound = handle->operator->();
                     sound->fader_.mIntensity = 0.0f;
-                    if (_80 != 0) {
-                        sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+                    if (fade != 0) {
+                        sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
                     }
                     else {
                         sound->fader_.forceIn();
@@ -1428,28 +1426,26 @@ void KartSoundMgr::setConductRace(bool flag) {
         JAISoundHandle *handle2 = &(*handles)[3];
         if (*handle2) {
             if (_5d != 0) {
-                mediaPitch *= Parameters::getChibiPitch((*handle2)->getID());
+                pitch *= Parameters::getChibiPitch((*handle2)->getID());
                 vol *= 0.65f;
             }
             (*handle2)->getAuxiliary().moveVolume(vol, 0);
-            (*handle2)->getAuxiliary().movePitch(mediaPitch, 0);
+            (*handle2)->getAuxiliary().movePitch(pitch, 0);
             (*handle2)->getTrack()->writePort(10, loopCount);
         }
 
-        // cross fade to loop for water? no
-
-        JAISoundHandle *handle3 = &(*handles)[3];
-        if (*handle3) {
-            if (engineType < 4) {
-                u32 loopPoint = (u32)(_84 * (UpEngineLoopStart[engineType] / 150.0f) - 10000.0f);
-                f32 loopPointF = loopPoint;
-                if (loopPointF < 0.0f) {
-                    loopPointF = 0.0f;
-                }
-                if (loopPointF > UpEngineLoopEnd[engineType]) {
-                    loopPointF = UpEngineLoopEnd[engineType];
-                }
-                (*handle3)->getTrack()->mSkipSample = (u32)loopPointF;
+        if ((u8)engineType < 4) {
+            f32 loopPointF = (u32)(_84 * (UpEngineLoopStart[(u8)engineType] / 150.0f) - 10000.0f);
+            if (loopPointF < 0.0f) {
+                loopPointF = 0.0f;
+            }
+            if (loopPointF > UpEngineLoopEnd[(u8)engineType]) {
+                loopPointF = UpEngineLoopEnd[(u8)engineType];
+            }
+            u32 skip = loopPointF;
+            JAISoundHandle *handle3 = &(*handles)[3];
+            if (*handle3) {
+                (*handle3)->getTrack()->mSkipSample = skip;
             }
         }
     }
@@ -1461,52 +1457,45 @@ void KartSoundMgr::setConductRace(bool flag) {
         }
         adjustEngine();
 
-        f32 mediaPitch = EngineKeisuuRaceDown[engineType] * _84 + EngineKeisuuRaceDown[engineType] * _88;
-        mediaPitch += (f32)(s16)_96 * EngineAddKeisuuRaceDown[engineType];
-        mediaPitch += 0.7f;
-        mediaPitch += _f0;
+        pitch = _f0 + (0.7f + ((f32)_96 * EngineAddKeisuuRaceDown[(u8)engineType] + (_88 * EngineKeisuuRaceDown[(u8)engineType] + _84 * EngineKeisuuRaceDown[(u8)engineType])));
 
-        f32 vol;
-        if (engineType < 4) {
+        if ((u8)engineType < 4) {
             vol = 1.1f;
         }
         else {
             vol = 0.8f;
         }
         if (_84 < 40.0f) {
-            vol = -0.01f * _84 + vol;
-            vol = 0.4f + vol;
+            vol = 0.4f + (-0.01f * _84 + vol);
         }
 
         u32 num;
-        if (engineType < 4 && flag == 0) {
+        if ((u8)engineType < 4 && flag == 0) {
             num = 4;
         }
         else {
             num = 8;
         }
-        u32 id = engineType + num;
-        if (_66 != 0) {
-            id += 0x14;
-        }
         if (_66 != 0) {
             vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
         }
+        u32 id = num + (u8)engineType;
 
         JAISoundStarter *starter = JAISoundStarter::getInstance();
         JAISoundHandles *handles = this;
         JAISoundHandle *handle = &(*handles)[3];
-        starter->startSound(id, handle, nullptr);
+        starter->startSound(id += (_66 != 0) ? 0x14 : 0, handle, nullptr);
 
         if (*handle) {
             if (!(*handle)->getAudible()) {
                 u32 mask = _7c;
                 (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-                if (_80 != 0) {
+                u32 fade = _80;
+                if (fade != 0) {
                     JAISound *sound = handle->operator->();
                     sound->fader_.mIntensity = 0.0f;
-                    if (_80 != 0) {
-                        sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, _80);
+                    if (fade != 0) {
+                        sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
                     }
                     else {
                         sound->fader_.forceIn();
@@ -1521,26 +1510,26 @@ void KartSoundMgr::setConductRace(bool flag) {
         JAISoundHandle *handle2 = &(*handles)[3];
         if (*handle2) {
             if (_5d != 0) {
-                mediaPitch *= Parameters::getChibiPitch((*handle2)->getID());
+                pitch *= Parameters::getChibiPitch((*handle2)->getID());
                 vol *= 0.65f;
             }
             (*handle2)->getAuxiliary().moveVolume(vol, 0);
-            (*handle2)->getAuxiliary().movePitch(mediaPitch, 0);
+            (*handle2)->getAuxiliary().movePitch(pitch, 0);
             (*handle2)->getTrack()->writePort(10, loopCount);
         }
 
-        JAISoundHandle *handle3 = &(*handles)[3];
-        if (*handle3) {
-            if (engineType < 4) {
-                u32 loopPoint = (u32)(_84 * -(DownEngineLoopStart[engineType] / 150.0f) + DownEngineLoopStart[engineType] - 5000.0f);
-                f32 loopPointF = loopPoint;
-                if (loopPointF < 0.0f) {
-                    loopPointF = 0.0f;
-                }
-                if (loopPointF > DownEngineLoopEnd[engineType]) {
-                    loopPointF = DownEngineLoopEnd[engineType];
-                }
-                (*handle3)->getTrack()->mSkipSample = (u32)loopPointF;
+        if ((u8)engineType < 4) {
+            f32 loopPointF = (u32)(_84 * -(DownEngineLoopStart[(u8)engineType] / 150.0f) + DownEngineLoopStart[(u8)engineType] - 5000.0f);
+            if (loopPointF < 0.0f) {
+                loopPointF = 0.0f;
+            }
+            if (loopPointF > DownEngineLoopEnd[(u8)engineType]) {
+                loopPointF = DownEngineLoopEnd[(u8)engineType];
+            }
+            u32 skip = loopPointF;
+            JAISoundHandle *handle3 = &(*handles)[3];
+            if (*handle3) {
+                (*handle3)->getTrack()->mSkipSample = skip;
             }
         }
     }
