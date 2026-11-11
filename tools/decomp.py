@@ -31,7 +31,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from fndiff import disasm  # noqa: E402
+from fndiff import disasm, function_bounds, objdump_code  # noqa: E402
 from fntry import find_build  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -190,23 +190,11 @@ def suggest(symbol: str, candidates: list, n=5) -> list:
 
 
 def raw_disasm(obj: str, symbol: str) -> list:
-    r = subprocess.run(
-        [OBJDUMP, "-dr", "-j", ".text", obj], capture_output=True, text=True
-    )
-    lines = r.stdout.splitlines()
-    start = None
-    for i, line in enumerate(lines):
-        m = re.match(r"^[0-9a-f]+ <(.+)>:$", line)
-        if m and m.group(1) == symbol:
-            start = i
-            break
-    if start is None:
+    lines = objdump_code(obj, check=False)
+    bounds = function_bounds(lines, symbol)
+    if bounds is None:
         raise SystemExit(f"symbol not found: {symbol}")
-    end = len(lines)
-    for i in range(start + 1, len(lines)):
-        if re.match(r"^[0-9a-f]+ <.+>:$", lines[i]):
-            end = i
-            break
+    start, end = bounds
     return lines[start:end]
 
 
