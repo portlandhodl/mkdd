@@ -609,7 +609,7 @@ void Main::setInvincibleBgm(u8 kartNo, u8 type) {
         return;
     }
     if (_4b == 0) {
-        if (_68.isSoundAttached() && mState.bits.goalProcess) {
+        if (!_68.isSoundAttached() || mState.bits.goalProcess) {
             _78 = 0;
         }
         else {
@@ -900,7 +900,8 @@ void Main::fadeOutAll(u32 frames) {
     *streamParams = *((JAISeqMgr *)((u8 *)mMgr + 0x728))->getParams();
     if (streamParams->mTransition.mVolume.mCount != 0) {
         if (_6c.isSoundAttached()) {
-            _6c->getAuxiliary().moveVolume(_6c->getAuxiliary().mVolume * streamParams->mVolume, 0);
+            JAISoundParamsMove &aux = _6c->getAuxiliary();
+            _6c->getAuxiliary().moveVolume(aux.mVolume * streamParams->mVolume, 0);
         }
     }
     updateBgmVolume(0);

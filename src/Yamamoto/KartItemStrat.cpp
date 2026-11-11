@@ -340,7 +340,7 @@ void KartItem::DoTurtleReleaseDir(int back, int suc)
     u8 idx = mBody->mMynum;
     KartBody *body = mBody;
     if (back == 0) {
-        if (GetKartCtrl()->getKartPad(idx)->mItemStickY < 0.0f) {
+        if (GetKartCtrl()->getKartPad(idx)->mItemStickY < -0.1f) {
             GetKartCtrl()->getKartAnime(idx)->MakeThrowAnime(0, 1, suc);
             body->_57c |= 4;
         } else {
@@ -348,7 +348,7 @@ void KartItem::DoTurtleReleaseDir(int back, int suc)
             body->_57c |= 2;
         }
     } else {
-        if (GetKartCtrl()->getKartPad(idx)->mItemStickY > 0.0f) {
+        if (GetKartCtrl()->getKartPad(idx)->mItemStickY > 0.1f) {
             GetKartCtrl()->getKartAnime(idx)->MakeThrowAnime(1, 0, suc);
             body->_57c |= 2;
         } else {
@@ -362,7 +362,7 @@ void KartItem::DoBananaReleaseDir()
 {
     u8 idx = mBody->mMynum;
     KartBody *body = mBody;
-    if (GetKartCtrl()->getKartPad(idx)->mItemStickY > 0.0f) {
+    if (GetKartCtrl()->getKartPad(idx)->mItemStickY > 0.1f) {
         GetKartCtrl()->getKartAnime(idx)->MakeThrowAnime(1, 0, 0);
         body->_57c |= 2;
     } else {

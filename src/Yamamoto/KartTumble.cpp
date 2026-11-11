@@ -80,7 +80,7 @@ void KartTumble::MakeWanWanTumble(ItemObj *item) {
     body->getCrash()->SetMatchlessTimer();
 }
 
-DECL_WEAK void ItemObj::getPos(JGeometry::TVec3f *pos) { pos->set(mPos); }
+DECL_WEAK void ItemObj::getPos(JGeometry::TVec3f *pos) { *pos = mPos; }
 
 void KartTumble::MakeKameTumble(ItemObj *item) {
     KartBody *body = mBody;

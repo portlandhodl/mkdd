@@ -187,9 +187,9 @@ void KartSoundMgr::startSoundHandleNumber(u8 handleNum, u32 id, u32 fadeFrames) 
         else {
             sound->fader_.forceIn();
         }
-    }
 
-    setEcho(handle, _6c);
+        setEcho(handle, _6c);
+    }
 }
 
 void KartSoundMgr::dispose() {
@@ -221,9 +221,9 @@ void KartSoundMgr::startSoundEngine(u8 handleNo, u32 id) {
                 _80 = 0;
             }
         }
-    }
 
-    setEcho(handle, _6c);
+        setEcho(handle, _6c);
+    }
 }
 
 void KartSoundMgr::init() {
@@ -1515,9 +1515,9 @@ void KartSoundMgr::setBoundSe(f32 bound) {
     JAISoundHandle *handle = &(*handles)[4];
     if (*handle) {
         (*handle)->getAuxiliary().movePitch(0.5f * bound + 0.5f, 0);
-    }
-    if (*handle) {
-        (*handle)->getAuxiliary().moveVolume(bound * _124, 0);
+        if (*handle) {
+            (*handle)->getAuxiliary().moveVolume(bound * _124, 0);
+        }
     }
 
     setChibiPitch(handle);
