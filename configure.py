@@ -473,7 +473,7 @@ config.libs = [
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msgbuf.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/serpoll.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/dispatch.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msghndlr.c"),
+            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msghndlr.c", extra_cflags=["-sdata2", "0"]),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/support.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mutex_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/notify.c"),

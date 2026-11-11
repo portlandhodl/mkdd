@@ -120,21 +120,19 @@ TRKResult TRKSendACK(MessageBuffer*);
 static BOOL IsTRKConnected __attribute__((section(".data")));
 static u32 g_CurrentSequence __attribute__((section(".data")));
 
-static const char _s_pct02x[] __attribute__((section(".data"))) = "%02x ";
-static const char _s_nl[] __attribute__((section(".data"))) = "\n";
 void OutputData(void* data, int length)
 {
 	int i;
 	u8* datapointer = data;
 
 	for (i = 0; i < length; i++) {
-		MWTRACE(8, (char*)_s_pct02x, datapointer[i]);
+		MWTRACE(8, "%02x ", datapointer[i]);
 		if (i % 16 == 15) {
-			MWTRACE(8, (char*)_s_nl);
+			MWTRACE(8, "\n");
 		}
 	}
 
-	MWTRACE(8, (char*)_s_nl);
+	MWTRACE(8, "\n");
 }
 int GetTRKConnected(void)
 {
