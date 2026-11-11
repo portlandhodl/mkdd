@@ -73,6 +73,7 @@ struct SOUdpSocket {
     u8 unkDC[8];
     void* unkE4;
     u32 unkE8;
+    u8 unkEC[4];
 };
 
 struct SOTcpSocket {
@@ -154,7 +155,12 @@ extern u32 IPLimited;
 extern u8 __IFDefault[];
 extern u8 PPPLcpConf[];
 extern u8 PPPIpcpConf[];
-extern OSThreadQueue TCPInfoQueue;
+typedef struct SOInfoList {
+    TCPSocket* head;
+    TCPSocket* tail;
+} SOInfoList;
+
+extern SOInfoList TCPInfoQueue;
 
 extern char* IPNtoA(const u8* addr);
 extern void DNSClose(void* dns);
@@ -544,9 +550,6 @@ s32 SOStartup(SOConfig* config)
     s32 mtu;
     s32 rwin;
     s64 r2;
-    u8* buf;
-    void* handler;
-    s32 result;
 
     if (config->family != 0 || config->maxSockets != 256) {
         return SO_EINVAL;
@@ -565,6 +568,8 @@ s32 SOStartup(SOConfig* config)
         }
         if (mtu < 68) {
             mtu = 68;
+        } else if (mtu > 1500) {
+            mtu = 1500;
         }
     } else {
         mtu = 1500;
@@ -635,7 +640,7 @@ s32 SOStartup(SOConfig* config)
     if (!LowInitialized) {
         ARPRefresh(0);
     }
-    if (Flag & 0x10000) {
+    if (Flag & 0x8000) {
         IPAutoConfig(0);
     }
 
@@ -682,9 +687,6 @@ s32 SOCleanup(void)
     SOsock* node;
     SOTcpSocket* so;
     s32 s;
-    s32 ret;
-    u8* ptr;
-    u32 size;
     u32 linger[2];
 
     if (State != 1) {
@@ -705,16 +707,16 @@ s32 SOCleanup(void)
         case IP_PROTO_TCP:
             linger[0] = 1;
             linger[1] = 0;
-            __SOSetSockOpt(s, -1, SO_SO_LINGER, linger, 8);
+            __SOSetSockOpt(s, SO_SOL_SOCKET, SO_SO_LINGER, linger, 8);
             __SOClose(s);
             break;
         }
     }
 
-    so = TCPInfoQueue.head ? (SOTcpSocket*)TCPInfoQueue.head->link.next : NULL;
+    so = TCPInfoQueue.head ? (SOTcpSocket*)TCPInfoQueue.head->unk18 : NULL;
     while (so != NULL) {
-        SOTcpSocket* next = so->next ? (SOTcpSocket*)so->next : NULL;
-        if (so->tcp.outputCallback == (void*)LingerCallback) {
+        SOTcpSocket* next = so->tcp.unk18 ? (SOTcpSocket*)so->tcp.unk18 : NULL;
+        if (so->tcp.closeCallback == (void (*)(TCPSocket*, s32))LingerCallback) {
             TCPCancel(&so->tcp);
         }
         so = next;
@@ -722,7 +724,7 @@ s32 SOCleanup(void)
 
     GetNode(-1, NULL);
 
-    if (Flag & 0x10000) {
+    if (Flag & 0x8000) {
         IPAutoStop(0);
     }
     DNSClose(&Resolver);
@@ -787,6 +789,9 @@ s32 SOSocket(s32 domain, s32 type, s32 flags)
     s32 index;
     BOOL enabled;
 
+    tcp = NULL;
+    udp = NULL;
+
     if (State != 1) {
         return SO_ENOTINIT;
     }
@@ -802,9 +807,9 @@ s32 SOSocket(s32 domain, s32 type, s32 flags)
     enabled = OSDisableInterrupts();
     node = NULL;
     for (index = 0; index < 256; index++) {
-        if (SocketTable[index].ref == 0) {
-            SocketTable[index].ref = 2;
-            node = &SocketTable[index];
+        node = &SocketTable[index];
+        if (node->ref == 0) {
+            node->ref = 2;
             break;
         }
     }
@@ -813,16 +818,10 @@ s32 SOSocket(s32 domain, s32 type, s32 flags)
         return SO_ENOBUFS;
     }
 
-    rwin = Rwin;
-    if (rwin == 0) {
+rwin = Rwin; if (rwin == 0) {
         IPGetMtu(0, &mtu);
         rwin = (mtu - 40) << 1;
     }
-
-    tcp = NULL;
-    udp = NULL;
-    buf1 = NULL;
-    buf2 = NULL;
 
     switch (type) {
     case SO_STREAM:
@@ -925,15 +924,13 @@ static void LingerTimeout(OSAlarm* alarm, OSContext* context)
 
 static s32 __SOClose(s32 s)
 {
+    s32 result;
     SOsock* node;
-    TCPSocket* so;
-    SOTcpSocket* tcp;
     SOTcpSocket* next;
+    SOTcpSocket* tcp;
+    TCPSocket* so;
     SOTcpSocket* list;
     SOTcpSocket* tail;
-    u8* ptr;
-    u32 size;
-    s32 result;
     s32 linger;
     BOOL enabled;
     u32 optval[2];
@@ -1487,7 +1484,7 @@ s32 SORecvFrom(s32 s, void* buf, s32 len, u32 flags, u8* addr)
 
     switch (so->unk00[0]) {
     case IP_PROTO_UDP:
-        if (flags & 0xF) {
+        if (flags & 0xF & 0xFF) {
             PutNode(node);
             return SO_EBADR;
         }
@@ -1718,8 +1715,9 @@ static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
 
     switch (((u8*)so)[0]) {
     case IP_PROTO_UDP:
-        if (((u32)level >> 16) == 0xFFFF) {
+        {
         SOUdpSocket* udp = (SOUdpSocket*)so;
+        if (level == SO_SOL_SOCKET) {
         switch (opt) {
         case SO_SO_SNDBUF:
             result = SO_ENOMEM;
@@ -1735,8 +1733,8 @@ static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
                 result = -7;
                 goto done;
             }
-            UDPGetSendBuff(so, &old, &oldSize);
-            result = UDPSetSendBuff(so, buf, size + 88);
+            UDPGetSendBuff(udp, &old, &oldSize);
+            result = UDPSetSendBuff(udp, buf, size + 88);
             if (result == 0) {
                 if (old != NULL) {
                     SOFree(4, old, oldSize);
@@ -1759,8 +1757,8 @@ static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
                 result = -7;
                 goto done;
             }
-            UDPGetRecvBuff(so, &old, &oldSize);
-            result = UDPSetRecvBuff(so, buf, size);
+            UDPGetRecvBuff(udp, &old, &oldSize);
+            result = UDPSetRecvBuff(udp, buf, size);
             if (result == 0) {
                 if (old != NULL) {
                     SOFree(5, old, oldSize);
@@ -1771,11 +1769,13 @@ static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
             goto done;
         }
         }
-        result = UDPSetSockOpt(so, level, opt, val, len);
+        result = UDPSetSockOpt(udp, level, opt, val, len);
         goto done;
+        }
     case IP_PROTO_TCP:
-        if (((u32)level >> 16) == 0xFFFF) {
+        {
         SOTcpSocket* tcp = (SOTcpSocket*)so;
+        if (level == SO_SOL_SOCKET) {
         switch (opt) {
         case SO_SO_SNDBUF:
             result = SO_ENOMEM;
@@ -1827,8 +1827,9 @@ static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
             goto done;
         }
         }
-        result = TCPSetSockOpt(so, level, opt, val, len);
+        result = TCPSetSockOpt(&tcp->tcp, level, opt, val, len);
         goto done;
+        }
     default:
         PutNode(node);
         return SO_EBADF;
