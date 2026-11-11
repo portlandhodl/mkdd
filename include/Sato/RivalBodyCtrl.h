@@ -15,6 +15,8 @@ class CLPointControllerRivalKart : public CLPointController
 public:
     CLPointControllerRivalKart(RivalBodyCtrl *);
     virtual int findNextPointNo(CLPoint *);
+
+    RivalBodyCtrl *mBody; // 28
 };
 
 
@@ -101,12 +103,12 @@ public:
     JGeometry::TVec3f _28;                   // 28
     JGeometry::TVec3f _34;                   // 34
     JGeometry::TVec3f _40;                   // 40
-    u8 _4c[0x58 - 0x4c];                     // 4c
+    JGeometry::TVec3f _4c;                   // 4c
     JGeometry::TVec3f _58;                   // 58
     JGeometry::TVec3f _64;                   // 64
     JGeometry::TVec3f _70;                   // 70
     f32 _7c;                                 // 7c
-    s32 _80;                                 // 80
+    CLPoint * _80;                           // 80
     s32 _84;                                 // 84
     f32 mWidth;                              // 88
     f32 _8c;                                 // 8c
