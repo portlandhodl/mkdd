@@ -49,6 +49,12 @@ public:
     virtual TPakkunSupervisor *getSupervisor() { return sSupervisor; }
 
     void changeDamageProc();
+    u8 checkHeadDamage();
+    void thunderDown()
+    {
+        mDamageAdd = (s16)(getGeoRnd()->get_ufloat_1() * sThunderDamageRandeMax);
+        changeAllState(4);
+    }
     void changeAllState(u16);
     void setRotMtx(int, Mtx);
     void setHeadPos(Mtx);

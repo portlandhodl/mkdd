@@ -51,7 +51,7 @@ public:
 
     // Inline/Unused
     void init(u32, const JUTColor &, u8, u8);
-    void draw();
+    bool draw();
     void setupGX();
 
     static u8 sAlphaAccel;
@@ -95,7 +95,7 @@ public:
     void calc(const JGeometry::TVec3f &);
     bool isInside(const JGeometry::TVec2f &);
     void setPosition(const JGeometry::TVec2f &, const JGeometry::TVec2f &);
-    bool draw();
+    u8 draw();
     void drawFixCenter(TFlare &);
 
     // Inline/Unused
@@ -115,7 +115,7 @@ public:
 
 protected:
     JGeometry::TBox2f mScrnBounds; // 0x28
-    u8 mInside;                    // 0x38
+    bool mInside;                  // 0x38
     u8 _39[3];                     // 0x39
     int mCameraNo;                 // 0x3c
     f32 mAngle;                    // 0x40
@@ -133,11 +133,12 @@ protected:
 
 class TLensFlare : public TMapObjHioNode, public JKRDisposer {
 public:
+    friend class TLensFlareSupervisor;
     TLensFlare(const CrsData::SObject &); // 0x802b0558
     virtual ~TLensFlare();
     void reset();                         // 0x802b0758
     void calc();                          // 0x802b086c
-    bool draw(u32);                       // 0x802b08c8
+    u8 draw(u32);                         // 0x802b08c8
 
     // Inline/Unused
     void getBufferZ(u32);

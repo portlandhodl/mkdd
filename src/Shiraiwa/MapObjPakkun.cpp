@@ -24,6 +24,12 @@
 #include "Shiraiwa/SiUtil.h"
 #include "Yamamoto/kartCtrl.h"
 
+TAnmInfo TMapObjPakkun::sAnmInfos[3] = {
+    { "/Objects/Pakkun_wait.bca", nullptr, nullptr, 2, 10, 0, 1, 0 },
+    { "/Objects/Pakkun_attack.bca", nullptr, nullptr, 0, 10, 0, 0, 0 },
+    { "/Objects/Pakkun_damage.bca", nullptr, nullptr, 2, 30, 0, 0, 0 },
+};
+
 const u8 TMapObjPakkun::sAnmTable[5] = { 0, 0, 1, 0, 2 };
 
 f32 TMapObjPakkun::sThunderDamageRandeMax = 30.0f;
@@ -34,14 +40,7 @@ s16 TMapObjPakkun::sRestFrame = 60;
 s16 TMapObjPakkun::sSearchFrame = 30;
 const char *TMapObjPakkun::scRootJointName = "skil_root";
 const char *TMapObjPakkun::scHeadJointName = "kuki_4";
-JGeometry::TVec3f TMapObjPakkun::scHeadCenterOffset(-6.0f, 0.0f, 0.0f);
 TPakkunSupervisor *TMapObjPakkun::sSupervisor;
-
-TAnmInfo TMapObjPakkun::sAnmInfos[3] = {
-    { "/Objects/Pakkun_wait.bca", nullptr, nullptr, 2, 10, 0, 1, 0 },
-    { "/Objects/Pakkun_attack.bca", nullptr, nullptr, 0, 10, 0, 0, 0 },
-    { "/Objects/Pakkun_damage.bca", nullptr, nullptr, 2, 30, 0, 0, 0 },
-};
 
 StateObserver::StateFuncSet<TMapObjPakkun> TMapObjPakkun::sTable[5] = {
     { 0, &TMapObjPakkun::initFunc_Stand, &TMapObjPakkun::doFunc_Stand },
@@ -50,6 +49,15 @@ StateObserver::StateFuncSet<TMapObjPakkun> TMapObjPakkun::sTable[5] = {
     { 3, &TMapObjPakkun::initFunc_Rest, &TMapObjPakkun::doFunc_Rest },
     { 4, &TMapObjPakkun::initFunc_Damage, &TMapObjPakkun::doFunc_Damage },
 };
+JGeometry::TVec3f TMapObjPakkun::scHeadCenterOffset(73.0f, 0.0f, -6.0f);
+
+inline u8 TMapObjPakkun::checkHeadDamage()
+{
+    TMapObjPakkunColHead *head = mHead;
+    u8 damage = head->_14c;
+    head->_14c = 0;
+    return damage;
+}
 
 void TMapObjPakkunColHead::reset()
 {
@@ -68,11 +76,12 @@ void TMapObjPakkunColHead::reset()
 }
 void TMapObjPakkunColHead::createColModel(J3DModelData *modelData)
 {
-    createBoundsSphere(1500.0f, mScale.y);
+    createBoundsSphere(85.0f, mScale.y);
 }
 void TMapObjPakkunColHead::setScale(const JGeometry::TVec3f &scale)
 {
     mScale.set(scale);
+    getBounds(0)->setScale(scale);
 }
 
 void TMapObjPakkunColHead::doKartColCallBack(int kartNo)
@@ -84,7 +93,7 @@ void TMapObjPakkunColHead::doKartColCallBack(int kartNo)
 }
 bool TMapObjPakkunColHead::isDamage()
 {
-    return _14c != 0;
+    return _14c;
 }
 
 void TMapObjPakkunColHead::calc()
@@ -94,22 +103,25 @@ void TMapObjPakkunColHead::calc()
 }
 void TMapObjPakkunColHead::setPosition(const JGeometry::TVec3f &pos)
 {
+    mVel.sub(pos, mPos);
     mPos.set(pos);
 }
 
 void TMapObjPakkunColHead::getKartThrowDirPow(JGeometry::TVec3f *dir, f32 *pow, int kartNo)
 {
 #line 151
-    JUT_ASSERT(mPakkun != nullptr);
+    JUT_ASSERT_MSG(mPakkun != nullptr, "mBody != 0");
     if (dir == nullptr) {
         return;
     }
-    dir->sub(mPos, mPakkun->mPos);
+    JGeometry::TVec3f pakkunPos;
+    mPakkun->getPosition(&pakkunPos);
+    dir->sub(mPos, pakkunPos);
     dir->y = 0.0f;
-    if (dir->squared() <= JGeometry::TUtilf::epsilon()) {
-        *dir = mVel;
+    if (dir->isZero()) {
+        dir->set(mVel);
         dir->y = 0.0f;
-        if (dir->squared() <= JGeometry::TUtilf::epsilon()) {
+        if (dir->isZero()) {
             dir->set(1.0f, 0.0f, 0.0f);
         }
     }
@@ -120,24 +132,17 @@ void TMapObjPakkunColHead::checkItemHitting()
     if (!(mGeoObjFlag & 4)) {
         return;
     }
-    int kind = mColItemObj->mItemKind;
-    if (kind == 10) {
-        return;
+    switch (mColItemObj->mItemKind) {
+    case 0:
+    case 1:
+    case 2:
+    case 7:
+    case 8:
+    case 9:
+    case 11:
+        _14c = 1;
+        break;
     }
-    if (kind < 10) {
-        if (kind >= 3) {
-            if (kind >= 7) {
-                return;
-            }
-        }
-        else if (kind < 0) {
-            return;
-        }
-    }
-    else if (kind >= 12) {
-        return;
-    }
-    _14c = 1;
 }
 TMapObjPakkun::TMapObjPakkun(const CrsData::SObject &obj)
     : TMapObjHioNode(obj), StateObserver(), JKRDisposer(), mLink(this), mAnmPlayer()
@@ -183,7 +188,7 @@ void TMapObjPakkun::reset()
     }
     mAttackRadius = attack;
 
-    mDir.set(mRotMtx[0][2], mRotMtx[1][2], mRotMtx[2][2]);
+    mRotMtx.getZDir(mDir);
     mBaseMtx.set(mRotMtx);
     PSMTXIdentity((Mtx &)mInvBaseMtx);
     PSMTXInverse((Mtx &)mRotMtx, (Mtx &)mInvBaseMtx);
@@ -199,11 +204,7 @@ void TMapObjPakkun::reset()
     PSMTXScale(scale, 1.0f / mScale.x, 1.0f / mScale.y, 1.0f / mScale.z);
     PSMTXConcat((Mtx &)mInvScaleMtx, scale, (Mtx &)mInvScaleMtx);
 
-    TMapObjPakkunColHead *head = mHead;
-    head->mScale.x = mScale.x;
-    head->mScale.y = mScale.y;
-    head->mScale.z = mScale.z;
-    head->getBounds(0)->setScale(mScale);
+    mHead->setScale(mScale);
 }
 void TMapObjPakkun::calc()
 {
@@ -225,7 +226,7 @@ void TMapObjPakkun::createModel(JKRSolidHeap *heap, u32 viewNo)
 }
 void TMapObjPakkun::createColModel(J3DModelData *modelData)
 {
-    createBoundsCylinder(2500.0f, 1500.0f, mScale.x);
+    createBoundsCylinder(90.0f, 200.0f, mScale.x);
 }
 void TMapObjPakkun::InitExec()
 {
@@ -240,6 +241,12 @@ void TMapObjPakkun::MoveExec()
 void TMapObjPakkun::changeAllState(u16 state)
 {
     setState(state);
+    const u8 &anm = sAnmTable[state];
+    if ((s8)anm != mAnmPlayer.mController->getNowTransNo()) {
+        mAnmPlayer._11 = anm;
+        mAnmPlayer._10 = 1;
+        mAnmPlayer._e |= 1;
+    }
 }
 
 void TMapObjPakkun::doKartColCallBack(int kartNo)
@@ -252,13 +259,7 @@ void TMapObjPakkun::doKartColCallBack(int kartNo)
 }
 void TMapObjPakkun::changeDamageProc()
 {
-    u8 anmNo = 2;
-    register AnmController *ctrl = mAnmCtrl;
-    if (ctrl->mTrans != nullptr) {
-#line 353
-        JUT_MINMAX_ASSERT(0, anmNo, ctrl->mTrans->mMaxAnmNo);
-        ctrl->mTrans->changeBlendAnm(2, 1, 1);
-    }
+    mAnmCtrl->ChangeBlendTransAnm(2, 1, 1);
     setState(4);
 }
 void TMapObjPakkun::initFunc_Stand()
@@ -269,19 +270,14 @@ void TMapObjPakkun::initFunc_Stand()
 void TMapObjPakkun::doFunc_Stand()
 {
     checkItemHitting();
-    TMapObjPakkunColHead *head = mHead;
-    u8 hit = head->_14c;
-    head->_14c = 0;
-    if (hit != 0) {
+    if (checkHeadDamage()) {
         mDamageAdd = 0;
-        setState(4);
-        mAnmPlayer.setAnm(TMapObjPakkun::sAnmTable[4]);
+        changeAllState(4);
     }
     s16 kartNo = SiUtil::searchNearKartCircle(mPos, mSearchRadius);
     if (kartNo != -1) {
         mTargetKart = kartNo;
-        setState(1);
-        mAnmPlayer.setAnm(sAnmTable[1]);
+        changeAllState(1);
     }
 }
 void TMapObjPakkun::initFunc_Attack()
@@ -291,20 +287,15 @@ void TMapObjPakkun::initFunc_Attack()
 void TMapObjPakkun::doFunc_Attack()
 {
     checkItemHitting();
-    TMapObjPakkunColHead *head = mHead;
-    u8 hit = head->_14c;
-    head->_14c = 0;
-    if (hit != 0) {
+    if (checkHeadDamage()) {
         mDamageAdd = 0;
-        setState(4);
-        mAnmPlayer.setAnm(TMapObjPakkun::sAnmTable[4]);
+        changeAllState(4);
     }
     JGeometry::TVec3f pos;
     ObjUtility::getKartPos(mTargetKart, &pos);
     turnTo(pos, sTurnAttackScale);
     if (mAnmPlayer.isCurAnmReachEnd()) {
-        setState(3);
-        mAnmPlayer.setAnm(sAnmTable[3]);
+        changeAllState(3);
     }
 }
 void TMapObjPakkun::initFunc_Rest()
@@ -317,8 +308,7 @@ void TMapObjPakkun::doFunc_Rest()
     ObjUtility::getKartPos(mTargetKart, &pos);
     turnTo(pos, 1.0f);
     if (getStateCount() > (u32)sRestFrame) {
-        setState(1);
-        mAnmPlayer.setAnm(sAnmTable[1]);
+        changeAllState(1);
     }
 }
 void TMapObjPakkun::initFunc_Search()
@@ -332,8 +322,7 @@ void TMapObjPakkun::doFunc_Search()
         mSearchTimer = 0;
         mTargetKart = SiUtil::searchNearKartCircle(mPos, mSearchRadius);
         if (mTargetKart == -1) {
-            setState(0);
-            mAnmPlayer.setAnm(sAnmTable[0]);
+            changeAllState(0);
             return;
         }
     }
@@ -345,28 +334,61 @@ void TMapObjPakkun::doFunc_Search()
     turnTo(pos, 1.0f);
 
     JGeometry::TVec3f diff;
-    diff.sub(pos, mPos);
+    diff.sub(mPos, pos);
     f32 dist = diff.x * diff.x + diff.z * diff.z;
 
     if (RaceMgr::sRaceManager->mRaceInfo->mRaceMode != 1) {
         f32 attack = mAttackRadius * mAttackRadius;
         if (dist < attack) {
-            setState(2);
-            mAnmPlayer.setAnm(sAnmTable[2]);
+            changeAllState(2);
             return;
         }
     }
 
     f32 search = mSearchRadius * mSearchRadius;
     if (dist > search) {
-        setState(0);
-        mAnmPlayer.setAnm(sAnmTable[0]);
+        changeAllState(0);
     }
 }
 void TMapObjPakkun::turnTo(const JGeometry::TVec3f &pos, f32 scale)
 {
-    static JGeometry::TVec3f updir(-6.0f, 0.0f, 0.0f);
-    static s8 init;
+    JGeometry::TVec3f tgt;
+    JGeometry::TVec3f dir;
+    dir.set(mDir);
+    tgt.sub(pos, mPos);
+    tgt.normalize();
+    JGeometry::TVec3f diff;
+    diff.sub(tgt, dir);
+    f32 pow;
+    if (tgt.dot(dir) > 0.0f) {
+        pow = sTurnPow;
+    }
+    else {
+        pow = sTurnPowFar;
+    }
+    pow *= scale;
+    if (diff.length() > pow) {
+        diff.setLength(pow);
+    }
+    JGeometry::TVec3f newDir;
+    newDir.add(dir, diff);
+    if (newDir.isZero()) {
+        static JGeometry::TVec3f updir(0.0f, 1.0f, 0.0f);
+        JGeometry::TVec3f side;
+        side.cross(updir, dir);
+        dir.scaleAdd(0.01f, dir, side);
+    }
+    else {
+        dir.set(newDir);
+    }
+    dir.y = 0.0f;
+    dir.normalize();
+    mDir.set(dir);
+    JGeometry::TVec3f side;
+    JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
+    side.cross(up, dir);
+    mBaseMtx.setXYZDir(side, up, dir);
+    PSMTXConcat((Mtx &)mInvBaseMtx, (Mtx &)mBaseMtx, (Mtx &)mBaseMtx);
 }
 void TMapObjPakkun::setCallBack(const char *name, int (*func)(J3DJoint *, int))
 {
@@ -374,14 +396,33 @@ void TMapObjPakkun::setCallBack(const char *name, int (*func)(J3DJoint *, int))
     mModel.getModelData()->getJointNodePointer(idx)->mFunction = (J3DJointCallBack)func;
     mModel._14 = (u32 *)this;
 }
-void TMapObjPakkun::setRotMtx(int, Mtx mtx)
+void TMapObjPakkun::setRotMtx(int jointIndex, Mtx mtx)
 {
-    PSMTXCopy(mtx, (Mtx &)mRotMtx);
+    JGeometry::TPos3f copy;
+    copy.set(mtx);
+    copy.zeroTrans();
+
+    PSMTXConcat((Mtx &)mBaseMtx, (Mtx &)copy, (Mtx &)copy);
+    copy[0][3] = mtx[0][3];
+    copy[1][3] = mtx[1][3];
+    copy[2][3] = mtx[2][3];
+
+    PSMTXCopy((Mtx &)copy, mModel.getModel()->getAnmMtx(jointIndex));
+    PSMTXCopy((Mtx &)copy, mtx);
 }
 
 void TMapObjPakkun::setHeadPos(Mtx mtx)
 {
-    mHead->mPos.set(mtx[0][3], mtx[1][3], mtx[2][3]);
+    JGeometry::TVec3f pos;
+    JGeometry::TVec3f offset;
+    JGeometry::TPos3f copy;
+    pos.set(mtx[0][3], mtx[1][3], mtx[2][3]);
+    copy.set(mtx);
+    copy.zeroTrans();
+
+    PSMTXMultVecSR((Mtx &)copy, &scHeadCenterOffset, &offset);
+    pos.add(offset);
+    mHead->setPosition(pos);
 }
 
 int TMapObjPakkun::rotCallBack(J3DJoint *joint, int param)
@@ -392,18 +433,7 @@ int TMapObjPakkun::rotCallBack(J3DJoint *joint, int param)
         TMapObjPakkun *obj = (TMapObjPakkun *)((ExModel *)model->getUserArea())->_14;
         if (obj != nullptr) {
             Mtx &mtx = model->getAnmMtx(jointIndex);
-
-            JGeometry::TPos3f copy;
-            copy.set(mtx);
-            copy.zeroTrans();
-
-            PSMTXConcat((Mtx &)obj->mBaseMtx, (Mtx &)copy, (Mtx &)copy);
-            copy[0][3] = mtx[0][3];
-            copy[1][3] = mtx[1][3];
-            copy[2][3] = mtx[2][3];
-
-            PSMTXCopy((Mtx &)copy, obj->mModel.getModel()->getAnmMtx(jointIndex));
-            PSMTXCopy((Mtx &)copy, mtx);
+            obj->setRotMtx(jointIndex, mtx);
             PSMTXCopy(mtx, j3dSys.mCurrentMtx);
         }
     }
@@ -416,18 +446,7 @@ int TMapObjPakkun::headCallBack(J3DJoint *joint, int param)
         J3DModel *model = j3dSys._38;
         TMapObjPakkun *obj = (TMapObjPakkun *)((ExModel *)model->getUserArea())->_14;
         if (obj != nullptr) {
-            Mtx &mtx = model->getAnmMtx(jointIndex);
-
-            JGeometry::TVec3f offset;
-            JGeometry::TVec3f pos;
-            JGeometry::TPos3f copy;
-            pos.set(mtx[0][3], mtx[1][3], mtx[2][3]);
-            copy.set(mtx);
-            copy.zeroTrans();
-
-            PSMTXMultVecSR((Mtx &)copy, &scHeadCenterOffset, &offset);
-            obj->mHead->mPos.set(pos);
-            obj->mHead->mPos += offset;
+            obj->setHeadPos(model->getAnmMtx(jointIndex));
         }
     }
     return true;
@@ -437,32 +456,19 @@ void TMapObjPakkun::checkItemHitting()
     if (!(mGeoObjFlag & 4)) {
         return;
     }
-    int kind = mColItemObj->mItemKind;
-    if (kind == 10) {
-        return;
+    switch (mColItemObj->mItemKind) {
+    case 0:
+    case 1:
+    case 2:
+    case 7:
+    case 8:
+    case 9:
+    case 11:
+        mDamageAdd = 0;
+        mAnmCtrl->ChangeBlendTransAnm(2, 1, 1);
+        setState(4);
+        break;
     }
-    if (kind < 10) {
-        if (kind >= 3) {
-            if (kind >= 7) {
-                return;
-            }
-        }
-        else if (kind < 0) {
-            return;
-        }
-    }
-    else if (kind >= 12) {
-        return;
-    }
-    mDamageAdd = 0;
-    u8 anmNo = 2;
-    register AnmController *ctrl = mAnmCtrl;
-    if (ctrl->mTrans != nullptr) {
-#line 353
-        JUT_MINMAX_ASSERT(0, anmNo, ctrl->mTrans->mMaxAnmNo);
-        ctrl->mTrans->changeBlendAnm(2, 1, 1);
-    }
-    setState(4);
 }
 void TMapObjPakkun::initFunc_Damage()
 {
@@ -473,8 +479,7 @@ void TMapObjPakkun::initFunc_Damage()
 void TMapObjPakkun::doFunc_Damage()
 {
     if (getStateCount() > (u32)mDamageFrame) {
-        setState(0);
-        mAnmPlayer.setAnm(sAnmTable[0]);
+        changeAllState(0);
     }
 }
 TPakkunSupervisor::TPakkunSupervisor()
@@ -489,11 +494,7 @@ void TPakkunSupervisor::entry(TMapObjPakkun *obj)
 void TPakkunSupervisor::thunderDownAll()
 {
     for (JSUListIterator<TMapObjPakkun> it(mList.getFirst()); it != mList.getEnd(); it++) {
-        TMapObjPakkun *pakkun = it.getObject();
-        pakkun->mDamageAdd = (s16)(pakkun->getGeoRnd()->get_ufloat_1() * TMapObjPakkun::sThunderDamageRandeMax);
-        u8 anm = TMapObjPakkun::sAnmTable[4];
-        pakkun->setState(4);
-        pakkun->mAnmPlayer.setAnm(anm);
+        it->thunderDown();
     }
 }
 

@@ -14,6 +14,8 @@
 #include "Yamamoto/kartCamera.h"
 #include "Yamamoto/kartCtrl.h"
 
+static const f32 sDummy[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+
 const char *TLensFlareSupervisor::fileName[4] = {
     "/Objects/mk_LensFX01.bti",
     "/Objects/mk_LensFX02.bti",
@@ -58,31 +60,35 @@ u8 TFlareLine::sAlphaAccel = 2;
 u8 TFlareLine::sAlphaDecel = 4;
 f32 TFlareLine::sScrnScaleRange = 0.7f;
 
-#define CAMERA_ASSERT(n)                                                                                                     \
-    ((0 <= (n) && (n) < 4)                                                                                                  \
-         ? (void)0                                                                                                          \
-         : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "RaceMgr.h", 262, "range over: %d <= cameraNo=%d < %d", 0, (n), 4), \
-            OSPanic("RaceMgr.h", 262, "Halt")))
-
 TLensFlareSupervisor *TLensFlare::sSupervisor;
 
 
 
-TLensFlareScrn::TLensFlareScrn()
-{
-    mColor.set(0xffffffff);
-}
+TLensFlareScrn::TLensFlareScrn() {}
 
 TLensFlareScrn::~TLensFlareScrn() {}
 
 void TLensFlareScrn::init(u32 console, const JUTColor &color, u8 max, u8 min)
 {
     mConsole = console;
-    mColor = color;
-    mAlphaMax = max;
-    mAlphaMin = min;
+    mColor.set(color);
+    mColor.a = 0;
+    mAlpha = 0;
+    mPrevInside = false;
+    mState = 0;
+    u8 alpha = min;
+    if (alpha == 0) {
+        alpha = sAlphaMin;
+    }
+    mAlphaMin = alpha;
+    alpha = max;
+    if (alpha == 0) {
+        alpha = sAlphaMax;
+    }
+    mAlphaMax = alpha;
 }
 
+#pragma auto_inline off
 void TLensFlareScrn::calc(bool inside, f32 scale)
 {
     switch (mState) {
@@ -124,9 +130,51 @@ void TLensFlareScrn::calc(bool inside, f32 scale)
     SiUtil::getViewport(&mViewport, (u8)mConsole);
 }
 
-void TLensFlareScrn::draw() {}
+#pragma auto_inline reset
+bool TLensFlareScrn::draw()
+{
+    if (mColor.a == 0) {
+        return false;
+    }
+    setupGX();
+    GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+    GXPosition2f32(0.0f, 0.0f);
+    GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
+    GXPosition2f32(mViewport.f.x - mViewport.i.x, 0.0f);
+    GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
+    GXPosition2f32(mViewport.f.x - mViewport.i.x, mViewport.f.y - mViewport.i.y);
+    GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
+    GXPosition2f32(0.0f, mViewport.f.y - mViewport.i.y);
+    GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
+    return true;
+}
 
-void TLensFlareScrn::setupGX() {}
+void TLensFlareScrn::setupGX()
+{
+    GXSetCullMode(GX_CULL_BACK);
+    GXClearVtxDesc();
+    GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
+    GXSetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_F32, 0);
+    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+    GXSetNumChans(1);
+    GXSetChanCtrl(GX_COLOR0A0, GX_TRUE, GX_SRC_REG, GX_SRC_VTX, GX_LIGHT0, GX_DF_NONE, GX_AF_NONE);
+    GXSetChanCtrl(GX_COLOR1A1, GX_FALSE, GX_SRC_REG, GX_SRC_REG, GX_LIGHT_NULL, GX_DF_NONE, GX_AF_NONE);
+    GXColor black = { 0xff, 0xff, 0xff, 0xff };
+    GXSetChanAmbColor(GX_COLOR0A0, black);
+    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_ONE, GX_LO_NOOP);
+
+    Mtx mtx;
+    PSMTXIdentity(mtx);
+    GXLoadPosMtxImm(mtx, GX_PNMTX0);
+    GXSetCurrentMtx(GX_PNMTX0);
+    GXLoadTexMtxImm(mtx, GX_IDENTITY, GX_MTX3x4);
+    GXSetNumTexGens(0);
+    GXSetNumTevStages(1);
+    GXSetTexCoordGen2(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY, GX_FALSE, GX_PTIDENTITY);
+    GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+    GXSetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+}
 
 void TLensFlareScrn::frameIn()
 {
@@ -153,7 +201,10 @@ TLensFlareSupervisor::~TLensFlareSupervisor()
     delete[] mTexInfo;
 }
 
-void TLensFlareSupervisor::entry(TLensFlare *) {}
+void TLensFlareSupervisor::entry(TLensFlare *flare)
+{
+    mList.append(&flare->mLink);
+}
 
 void TLensFlareSupervisor::draw(u32 viewNo)
 {
@@ -198,17 +249,14 @@ void TLensFlareSupervisor::load()
 {
     for (int i = 0; i < 4; i++) {
         mTexInfo[i] = (ResTIMG *)ObjUtility::getPtrCourseArc((char *)fileName[i]);
-        if (mTexInfo[i] == nullptr) {
-            JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "LensFlare.cpp", 0x141, "%s", "mTexture[i] != 0");
-            OSPanic("LensFlare.cpp", 0x141, "mTexture[i] != 0");
-        }
+#line 321
+        JUT_ASSERT_MSG(mTexInfo[i] != 0, "mTexture[i] != 0");
     }
 }
 
-#pragma inline_depth(4)
-TFlareLine::TFlareLine(u32)
+TFlareLine::TFlareLine(u32 cameraNo)
 {
-    mCameraNo = 0;
+    mCameraNo = cameraNo;
     mFlares = new TFlare *[21];
     for (int i = 0; i < 21; i++) {
         if (sFlareInfo[i].type != 5) {
@@ -225,32 +273,34 @@ TFlareLine::~TFlareLine()
     delete[] mFlares;
 }
 
-void TFlareLine::setTexture(ResTIMG **, int) {}
+void TFlareLine::setTexture(ResTIMG **timg, int num)
+{
+    for (int i = 0; i < 21; i++) {
+        if (mFlares[i] != nullptr && sFlareInfo[i].type < num)
+            mFlares[i]->mTexture->storeTIMG(timg[sFlareInfo[i].type], (u8)0);
+    }
+}
 
 void TFlareLine::getBufferZ() {}
 
 void TFlareLine::reset(u8 a1, u8 r, u8 g, u8 b, u8 a5)
 {
-    SiUtil::getViewport(&mScrnBounds, mCameraNo, SiUtil::getDrawConsoleNum());
-    mColor.set(JUTColor(r, g, b, 0));
-    mConsole = mCameraNo;
-    mAlpha = 0;
-    mPrevInside = 0;
-    mState = 0;
-    mAlphaMin = a5 ? a5 : sAlphaMin;
-    mAlphaMax = a5 ? a5 : sAlphaMax;
-    mAlphaClamp = a1 ? a1 : sAlpha;
+    SiUtil::getViewport(&mScrnBounds, (u8)mCameraNo, SiUtil::getDrawConsoleNum());
+    init(mCameraNo, JUTColor(r, g, b, 0), a5, a5);
+    u8 clamp = a1;
+    if (clamp == 0) {
+        clamp = sAlpha;
+    }
+    mAlphaClamp = clamp;
     mInside = 0;
-    mCenterX = -1.0f;
     mAlpha2 = 0;
+    mCenterX = -1.0f;
     mCenterY = -1.0f;
     mScrnScale = 1.0f;
     resetFlares();
 }
 
-f32 TFlareLine::getAspectRate() { return 0.0f; }
-
-void TFlareLine::resetFlares()
+f32 TFlareLine::getAspectRate()
 {
     f32 aspect;
     switch (SiUtil::getDrawConsoleNum()) {
@@ -268,17 +318,18 @@ void TFlareLine::resetFlares()
         aspect = System::getPerspAspectDiv4() / aspect;
         break;
     default:
-        JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "LensFlare.cpp", 0x1d7, "%s", "illegal console Number.");
-        OSPanic("LensFlare.cpp", 0x1d7, "illegal console Number.");
+#line 471
+        JUT_ASSERT_MSG(0, "illegal console Number.");
         break;
     }
+    return aspect;
+}
 
-    f32 w = mScrnBounds.f.x - mScrnBounds.i.x;
-    f32 fw = aspect * System::get2DVpW();
-    f32 sx = w / fw;
-    f32 h = mScrnBounds.f.y - mScrnBounds.i.y;
-    f32 fh = System::get2DVpH();
-    f32 sy = h / fh;
+void TFlareLine::resetFlares()
+{
+    f32 aspect = getAspectRate();
+    f32 sx = mScrnBounds.getWidth() / (aspect * System::get2DVpW());
+    f32 sy = mScrnBounds.getHeight() / System::get2DVpH();
 
     for (int i = 0; i < 21; i++) {
         if (mFlares[i] == nullptr)
@@ -295,95 +346,67 @@ void TFlareLine::resetFlares()
     }
 }
 
+static inline bool isSameBox(const JGeometry::TBox2f &a, const JGeometry::TBox2f &b)
+{
+    return a.f.x == b.f.x && a.f.y == b.f.y && a.i.x == b.i.x && a.i.y == b.i.y;
+}
+
 void TFlareLine::calc(const JGeometry::TVec3f &pos)
 {
     JGeometry::TVec2f scrnPos;
     mBufferZ = SiUtil::getScreenPosCheckMirror(mCameraNo, pos, &scrnPos);
 
-    if (mBufferZ == (u32)-1) {
-        CAMERA_ASSERT(mCameraNo);
-        KartCam *cam = KartCtrl::getKartCtrl()->getKartCam(mCameraNo);
-        scrnPos.y = (f32)cam->GetVpPosv() - 1.0f;
-        scrnPos.x = (f32)cam->GetVpPosh() - 1.0f;
+    if (mBufferZ == 0xffffffff) {
+        KartCam *cam = RaceMgr::getManager()->getCamera(mCameraNo);
+        scrnPos.set((f32)cam->GetVpPosh() - 1.0f, (f32)cam->GetVpPosv() - 1.0f);
     }
 
     JGeometry::TBox2f viewport;
     SiUtil::getViewport(&viewport, (u8)mCameraNo);
 
-    if (viewport.f.x != mScrnBounds.f.x || viewport.f.y != mScrnBounds.f.y || viewport.i.x != mScrnBounds.i.x
-        || viewport.i.y != mScrnBounds.i.y) {
-        CAMERA_ASSERT(mCameraNo);
-
-        f32 aspect;
-        switch (SiUtil::getDrawConsoleNum()) {
-        case 1:
-            aspect = System::getPerspAspect();
-            aspect = System::getPerspAspect() / aspect;
-            break;
-        case 2:
-            aspect = System::getPerspAspect();
-            aspect = System::getPerspAspectDiv2() / aspect;
-            break;
-        case 3:
-        case 4:
-            aspect = System::getPerspAspect();
-            aspect = System::getPerspAspectDiv4() / aspect;
-            break;
-        default:
-            JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "LensFlare.cpp", 0x1d7, "%s", "illegal console Number.");
-            OSPanic("LensFlare.cpp", 0x1d7, "illegal console Number.");
-            break;
-        }
-
-        f32 sx = (viewport.f.x - viewport.i.x) / (aspect * System::get2DVpW());
-        f32 sy = (viewport.f.y - viewport.i.y) / System::get2DVpH();
+    if (!isSameBox(viewport, mScrnBounds)) {
+        f32 aspect = getAspectRate();
+        f32 sx = mScrnBounds.getWidth() / (aspect * System::get2DVpW());
+        f32 sy = mScrnBounds.getHeight() / System::get2DVpH();
         for (int i = 0; i < 21; i++) {
-            TFlare *flare = mFlares[i];
-            if (flare == nullptr)
-                continue;
-            flare->mRadius.x = sFlareInfo[i].scale * sx;
-            flare->mRadius.y = sFlareInfo[i].scale * sy;
+            if (mFlares[i] != nullptr) {
+                mFlares[i]->mRadius.x = sFlareInfo[i].scale * sx;
+                mFlares[i]->mRadius.y = sFlareInfo[i].scale * sy;
+            }
         }
-        mScrnBounds = viewport;
+        mScrnBounds.set(viewport.i, viewport.f);
     }
 
     mCenterX = scrnPos.x;
     mCenterY = scrnPos.y;
 
-    f32 cx = (mScrnBounds.i.x - mScrnBounds.f.x) * 0.5f + mScrnBounds.f.x;
-    f32 dx = cx - scrnPos.x;
-    f32 cy = (mScrnBounds.i.y - mScrnBounds.f.y) * 0.5f + mScrnBounds.f.y;
-    f32 dy = cy - scrnPos.y;
-    f32 radius = sOutRadius * ((mScrnBounds.f.y - mScrnBounds.i.y) / System::get2DVpH());
+    JGeometry::TVec2f center;
+    JGeometry::TVec2f dir;
+    center.x = (mScrnBounds.i.x - mScrnBounds.f.x) * 0.5f + mScrnBounds.f.x;
+    dir.x = center.x - scrnPos.x;
+    center.y = (mScrnBounds.i.y - mScrnBounds.f.y) * 0.5f + mScrnBounds.f.y;
+    f32 height = mScrnBounds.f.y - mScrnBounds.i.y;
+    dir.y = center.y - scrnPos.y;
+    f32 radius = sOutRadius * (height / System::get2DVpH());
 
-    if (radius != 0.0f) {
-        f32 d2 = dx * dx + dy * dy;
-        mScrnScale = d2 / (radius * radius);
-        if (mScrnScale > 1.0f)
-            mScrnScale = 1.0f;
-        else if (mScrnScale < 0.0f)
-            mScrnScale = 0.0f;
+    if (0.0f != radius) {
+        mScrnScale = dir.squared() / (radius * radius);
+        f32 scale = mScrnScale;
+        if (scale > 1.0f)
+            scale = 1.0f;
+        else if (scale < 0.0f)
+            scale = 0.0f;
+        mScrnScale = scale;
 
-        f32 len = dx * dx + dy * dy;
-        f32 inv;
-        if (JGeometry::TUtil<f32>::epsilon() < len)
-            inv = JGeometry::TUtil<f32>::inv_sqrt(len);
-        else
-            inv = len;
-        dx *= inv;
-        dy *= inv;
-
-        mAngle = JGeometry::TUtil<f32>::atan2(-dx, dy);
-
-        JGeometry::TVec2f offset(dx * sFlareInterval, dy * sFlareInterval);
-        JGeometry::TVec2f center(cx, cy);
-        setPosition(center, offset);
+        dir.normalize();
+        mAngle = atan2(-dir.x, dir.y);
+        dir.scale(sFlareInterval);
+        setPosition(center, dir);
 
         mInside = isInside(scrnPos);
         if (mInside) {
-            ZCaptureMgr *cap = RaceMgr::getManager()->mRaceDrawer->getCaptureMgr();
-            u32 z = cap->getZValue(8, mCameraNo);
-            cap->setPosition(8, mCameraNo, (s16)mCenterX, (s16)mCenterY);
+            u32 z = RaceMgr::getManager()->mRaceDrawer->getCaptureMgr()->getZValue(8, mCameraNo);
+            RaceMgr::getManager()->mRaceDrawer->getCaptureMgr()->setPosition(8, mCameraNo, (s16)mCenterX, (s16)mCenterY);
             if (z < mBufferZ)
                 mInside = 0;
         }
@@ -398,7 +421,7 @@ void TFlareLine::calc(const JGeometry::TVec3f &pos)
         else if (mAlpha2 > mAlphaClamp)
             mAlpha2 = mAlphaClamp;
 
-        f32 range = SiUtil::getNormalRange(__fabsf(mCenterX - cx), 0.0f, (mScrnBounds.f.x - mScrnBounds.i.x) * 0.5f);
+        f32 range = SiUtil::getNormalRange(JGeometry::TUtil<f32>::abs(mCenterX - center.x), 0.0f, 0.5f * mScrnBounds.getWidth());
         TLensFlareScrn::calc(mInside, 1.0f - sScrnScaleRange * range);
     }
 }
@@ -413,37 +436,29 @@ bool TFlareLine::isInside(const JGeometry::TVec2f &pos)
 
 void TFlareLine::setPosition(const JGeometry::TVec2f &pos, const JGeometry::TVec2f &)
 {
-    f32 dy = mCenterY - pos.y;
-    f32 dx = mCenterX - pos.x;
-    if (dy == 0.0f)
+    JGeometry::TVec2f dir(mCenterX, mCenterY);
+    dir -= pos;
+    if (0.0f == dir.y)
         return;
 
-    f32 ady = __fabsf(dy);
-    f32 interval = (2.0f * (sFlareInterval * ady)) / 21.0f;
-    f32 len = dx * dx + ady * ady;
-    f32 inv;
-    if (JGeometry::TUtil<f32>::epsilon() < len)
-        inv = JGeometry::TUtil<f32>::inv_sqrt(len);
-    else
-        inv = len;
-    f32 norm = ady * inv;
+    dir.y = __fabsf(dir.y);
+    f32 interval = (2.0f * (sFlareInterval * dir.y)) / 21.0f;
+    dir.normalize();
+    System::get2DVpH();
 
     for (int i = 0; i < 21; i++) {
-        TFlare *flare = mFlares[i];
-        if (flare == nullptr)
-            continue;
-        flare->mCenter.x = 0.0f;
-        flare->mCenter.y = (interval * (f32)i) / norm;
+        if (mFlares[i] != nullptr) {
+            mFlares[i]->mCenter.x = 0.0f;
+            mFlares[i]->mCenter.y = (interval * (f32)i) / dir.y;
+        }
     }
 }
 
-#pragma inline_depth(2)
-bool TFlareLine::draw()
+u8 TFlareLine::draw()
 {
     u8 drawn = 1;
-    KartCam *cam;
     if (mAlpha2 > 0) {
-        cam = RaceMgr::getManager()->getCamera(mCameraNo);
+        KartCam *cam = RaceMgr::getManager()->getCamera(mCameraNo);
 
         Mtx rot;
         PSMTXRotRad(rot, 0x5a, mAngle);
@@ -461,72 +476,20 @@ bool TFlareLine::draw()
         drawn = 0;
     }
 
-    u8 quad = 1;
-    if (mColor.a == 0) {
-        quad = 0;
-    } else {
-        GXSetCullMode(GX_CULL_BACK);
-        GXClearVtxDesc();
-        GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
-        GXSetVtxDesc(GX_VA_CLR0, GX_DIRECT);
-        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_F32, 0);
-        GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-        GXSetNumChans(1);
-        GXSetChanCtrl(GX_COLOR0A0, GX_TRUE, GX_SRC_REG, GX_SRC_VTX, GX_LIGHT0, GX_DF_NONE, GX_AF_NONE);
-        GXSetChanCtrl(GX_COLOR1A1, GX_FALSE, GX_SRC_REG, GX_SRC_REG, GX_LIGHT_NULL, GX_DF_NONE, GX_AF_NONE);
-        GXColor black = { 0xff, 0xff, 0xff, 0xff };
-        GXSetChanAmbColor(GX_COLOR0A0, black);
-        GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_ONE, GX_LO_NOOP);
-
-        Mtx mtx;
-        PSMTXIdentity(mtx);
-        GXLoadPosMtxImm(mtx, GX_PNMTX0);
-        GXSetCurrentMtx(GX_PNMTX0);
-        GXLoadTexMtxImm(mtx, GX_IDENTITY, GX_MTX3x4);
-        GXSetNumTexGens(0);
-        GXSetNumTevStages(1);
-        GXSetTexCoordGen2(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY, GX_FALSE, GX_PTIDENTITY);
-        GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
-        GXSetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
-
-        GXBegin(GX_QUADS, GX_VTXFMT0, 4);
-        GXPosition2f32(0.0f, 0.0f);
-        GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
-        GXPosition2f32(mViewport.f.x - mViewport.i.x, 0.0f);
-        GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
-        GXPosition2f32(mViewport.f.x - mViewport.i.x, mViewport.f.y - mViewport.i.y);
-        GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
-        GXPosition2f32(0.0f, mViewport.f.y - mViewport.i.y);
-        GXColor4u8(mColor.r, mColor.g, mColor.b, mColor.a);
-    }
-
-    return drawn | quad;
+    return drawn | TLensFlareScrn::draw();
 }
-#pragma inline_depth(4)
 
 void TFlareLine::drawFixCenter(TFlare &flare)
 {
     JUTTexture *tex = flare.mTexture;
-    f32 width = tex->getWidth();
-    f32 height = tex->getHeight();
-    f32 rx = flare.mRadius.x;
-    f32 ry = flare.mRadius.y;
-    f32 sx = sScale * (0.5f * (rx * width));
-    f32 sy = sScale * (0.5f * (ry * height));
+    f32 sx = sScale * (0.5f * (flare.mRadius.x * tex->getWidth()));
+    f32 sy = sScale * (0.5f * (flare.mRadius.y * tex->getHeight()));
     f32 x = flare.mCenter.x - 0.5f * sx;
     f32 y = flare.mCenter.y - 0.5f * sy;
 
     tex->load(GX_TEXMAP0);
-
-    GXColor color;
-    *(u32 *)&color = *(u32 *)&flare.mColor;
-    GXColor colorArg = color;
-    GXSetTevColor(GX_TEVREG0, colorArg);
-    u32 c2 = *(u32 *)&flare.mColor + mAlpha2;
-    GXColor color2;
-    *(u32 *)&color2 = c2;
-    GXColor color2Arg = color2;
-    GXSetTevColor(GX_TEVREG1, color2Arg);
+    GXSetTevColor(GX_TEVREG0, JUTColor((u32)flare.mColor));
+    GXSetTevColor(GX_TEVREG1, JUTColor((u32)flare.mColor + mAlpha2));
 
     if (flare.mAdditive)
         GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_C0, GX_CC_C1, GX_CC_TEXC, GX_CC_ZERO);
@@ -534,56 +497,45 @@ void TFlareLine::drawFixCenter(TFlare &flare)
         GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_TEXC, GX_CC_TEXC, GX_CC_TEXA, GX_CC_ZERO);
 
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
-    GXPosition3f32(x, y, 0.0f);
-    GXColor1u32(flare.mColor);
-    GXPosition3f32(x + sx, y, 0.0f);
-    GXColor1u32(flare.mColor);
-    GXPosition3f32(x + sx, y + sy, 0.0f);
-    GXColor1u32(flare.mColor);
-    GXPosition3f32(x, y + sy, 0.0f);
-    GXColor1u32(flare.mColor);
+    GXPosition2f32(x, y);
+    GXTexCoord2s8(0, 0);
+    GXPosition2f32(x + sx, y);
+    GXTexCoord2s8(2, 0);
+    GXPosition2f32(x + sx, y + sy);
+    GXTexCoord2s8(2, 2);
+    GXPosition2f32(x, y + sy);
+    GXTexCoord2s8(0, 2);
 }
 
-#pragma inline_depth(4)
 TLensFlare::TLensFlare(const CrsData::SObject &obj) : TMapObjHioNode(obj), JKRDisposer(), mLink(this)
 {
     if (sSupervisor == nullptr) {
         sSupervisor = new TLensFlareSupervisor();
     }
-    sSupervisor->mList.append(&mLink);
+    sSupervisor->entry(this);
     u8 num = SiUtil::getConsoleNum();
     mFlares = new TFlareLine[num];
 }
 
-#pragma inline_depth(0)
 void TLensFlare::reset()
 {
     resetObject();
     for (int i = 0; i < SiUtil::getConsoleNum(); i++) {
         mFlares[i].mCameraNo = i;
-        TFlareLine *flare = &mFlares[i];
-        ResTIMG **timg = sSupervisor->mTexInfo;
-        for (int j = 0; j < 21; j++) {
-            TFlareLine::TFlare *f = flare->mFlares[j];
-            if (f != nullptr && TFlareLine::sFlareInfo[j].type < 4)
-                f->mTexture->storeTIMG(timg[TFlareLine::sFlareInfo[j].type], (u8)0);
-        }
-        const CrsData::SObject *d = mObjData;
-        u8 a1 = d->mParam1;
-        u8 r = d->mParam2;
+        mFlares[i].setTexture(sSupervisor->mTexInfo, 4);
+        u8 a1 = mObjData->mParam1;
+        u8 r = mObjData->mParam2;
         if (r == 0)
             r = 192;
-        u8 g = d->mParam3;
+        u8 g = mObjData->mParam3;
         if (g == 0)
             g = 192;
-        u8 b = d->mParam4;
+        u8 b = mObjData->mParam4;
         if (b == 0)
             b = 192;
-        u8 a5 = d->mParam5;
-        mFlares[i].reset(a1, r, g, b, a5);
+        mFlares[i].reset(a1, r, g, b, mObjData->mParam5);
     }
 }
-#pragma inline_depth(4)
 
 void TLensFlare::calc()
 {
@@ -592,7 +544,7 @@ void TLensFlare::calc()
     }
 }
 
-bool TLensFlare::draw(u32 viewNo)
+u8 TLensFlare::draw(u32 viewNo)
 {
     return mFlares[viewNo].draw();
 }
