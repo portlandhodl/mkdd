@@ -456,7 +456,7 @@ public:
     void updateBlendCount_Func1(u8, u8);
     void updateBlendCount_Func2(u8);
     void updateBlendCount();
-    int updateSetBlendWeight_GetBlendTime(StateEnum);
+    u8 updateSetBlendWeight_GetBlendTime(StateEnum);
     f32 updateSetBlendWeight_Func1(u8, u8);
     void updateSetBlendWeight_FuncABCD(f32, f32, f32, f32);
     void updateSetBlendWeight_mStateThrow();

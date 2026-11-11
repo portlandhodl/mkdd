@@ -841,9 +841,8 @@ void DriverModel::StartAnimation2()
             return;
     }
 
-    s32 before_mState_Hokan = mBeforeState;
 #line 1439
-    JUT_MINMAX_ASSERT(0, before_mState_Hokan, 152);
+    JUT_ASSERT_F(0 <= mBeforeState && mBeforeState < 152, "range over: %d <= before_mState_Hokan=%d < %d", 0, mBeforeState, 152);
     if (m_ac != 0) {
         for (int i = 0; i < 2; i++) {
             int anmID = msAnmBlendList[mBeforeState][i];
@@ -1000,7 +999,7 @@ void DriverModel::StartAnimation(StateEnum state)
             case mcS072:
             case mcS075:
             case mcS076:
-                mBeforeState = mState;
+                mBeforeState = *(volatile s32 *)&mState;
                 mState = state;
                 break;
             default:
@@ -1223,7 +1222,8 @@ void DriverModel::updateFrame_base(DriversAnimator *animator, StateEnum state)
                 }
                 case mcS127: {
                     s16 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
-                    if (mAnmFrame[mAnmID] + DriverManager::ptr()->mBlendTimes[36] < frameMax)
+                    u8 blend = DriverManager::ptr()->mBlendTimes[36];
+                    if (mAnmFrame[mAnmID] + blend < frameMax)
                         Change_next_mState((StateEnum)(state - 63));
                     break;
                 }
@@ -1544,9 +1544,7 @@ void DriverModel::updateLoadCommand_Sound(int sndID)
 void DriverModel::updateLoad_Animation()
 {
 #line 2465
-    s32 next_mState = next_mState_Hokan;
-#line 2465
-    JUT_ASSERT_F(0 <= next_mState && next_mState < 152, "range over: %d <= next_mState=%d < %d", 0, next_mState, 152);
+    JUT_ASSERT_F(0 <= next_mState_Hokan && next_mState_Hokan < 152, "range over: %d <= next_mState=%d < %d", 0, next_mState_Hokan, 152);
     mAnimBufMgr->resetFrame();
 
     if ((u8)CheckDriverFlags_Hokan((StateEnum)next_mState_Hokan)) {
@@ -1574,7 +1572,7 @@ void DriverModel::updateLoad_Animation()
         case mcS054:
         case mcS126:
         case mcS127:
-            m_500 = mState;
+            m_500 = *(volatile s32 *)&mState;
             break;
         default:
             m_500 = 3;
@@ -1751,15 +1749,17 @@ int DriverModel::updateCheckRenew()
     JUT_ASSERT_F(0, "%s", "ARAM DMA not finished?(kawano).");
     return 0;
 }
-
 f64 DriverModel::BlendValue(f32 x)
 {
     f32 y;
-    if (x < 0.5f)
-        y = (f32)pow(2.0f * x, DriverManager::ptr()->_20) * 0.5f;
-    else
-        y = (1.0f - (f32)pow(1.0f - 2.0f * (x - 0.5f), DriverManager::ptr()->_20)) * 0.5f + 0.5f;
-    return y;
+    if (x < 0.5f) {
+        y = pow(2.0f * x, DriverManager::ptr()->_20);
+        return y *= 0.5f;
+    } else {
+        y = pow(1.0f - 2.0f * (x - 0.5f), DriverManager::ptr()->_20);
+        y = 1.0f - y;
+        return (y *= 0.5f) + 0.5f;
+    }
 }
 
 #line 2711
@@ -1772,7 +1772,7 @@ void DriverModel::updateBlendCount_Func1(u8 a, u8 b)
         s16 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
         s16 frame = getAnmTransformPtr(mAnmID)->getFrame() + 0.5f;
         s16 t0 = DriverManager::ptr()->mBlendTimes[a];
-        s16 t1 = DriverManager::ptr()->mBlendTimes[b];
+        s16 t1 = DriverManager::ptr()->getBlendTime(b);
         if (frameMax - frame <= t1)
             m_bb = frame - (frameMax - t1);
         else if (frame > t0)
@@ -1798,7 +1798,7 @@ void DriverModel::updateBlendCount()
             m_ba--;
     }
 
-    int blendTime = (u8)updateSetBlendWeight_GetBlendTime((StateEnum)mState);
+    int blendTime = updateSetBlendWeight_GetBlendTime((StateEnum)mState);
 
     switch (mState) {
     case mcS042:
@@ -2009,7 +2009,9 @@ f32 DriverModel::updateSetBlendWeight_Func1(u8 a, u8 b)
 #line 3019
 void DriverModel::updateSetBlendWeight_FuncABCD(f32 before, f32 cur, f32 rateInv, f32 rate)
 {
-    JUT_MINMAX_ASSERT(0, mState, 152);
+    s32 state = mState;
+#line 3021
+    JUT_ASSERT_F(0 <= state && state < 152, "range over: %d <= mState=%d < %d", 0, state, 152);
     s32 before_mState_Hokan = mBeforeState;
 #line 3022
     JUT_MINMAX_ASSERT(0, before_mState_Hokan, 152);
@@ -2035,7 +2037,7 @@ void DriverModel::updateSetBlendWeight_FuncABCD(f32 before, f32 cur, f32 rateInv
     mMtxCalcs[mState]->setWeight(3, m_754[3]);
 }
 
-int DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
+u8 DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
 {
     switch (stt) {
     case 0: case 1: case 3:
@@ -2049,7 +2051,10 @@ int DriverModel::updateSetBlendWeight_GetBlendTime(StateEnum stt)
     case 70: case 71: case 73: case 74:
         return DriverManager::ptr()->getBlendTime(2);
     case 75: case 76:
-        return m_e0 == 0 ? DriverManager::ptr()->getBlendTime(3) : DriverManager::ptr()->getBlendTime(4);
+        if (m_e0 == 0)
+            return DriverManager::ptr()->getBlendTime(3);
+        else
+            return DriverManager::ptr()->getBlendTime(4);
     case 77: case 78:
         return DriverManager::ptr()->getBlendTime(5);
     case 79: case 80:
@@ -2162,9 +2167,10 @@ void DriverModel::updateSetBlendWeight()
     s32 before_mState_Hokan = mBeforeState;
 #line 3240
     JUT_MINMAX_ASSERT(0, before_mState_Hokan, 152);
-    f32 rate = (f32)m_ba / (f32)DriverManager::ptr()->mBlendTimes[0];
+    DriverManager *mgr = DriverManager::ptr();
+    f32 rate = (f32)m_ba / (f32)mgr->mBlendTimes[0];
     f32 rateInv = 1.0f - rate;
-    int blendTime = (u8)updateSetBlendWeight_GetBlendTime((StateEnum)mState);
+    int blendTime = updateSetBlendWeight_GetBlendTime((StateEnum)mState);
 
     switch (mState) {
     case mcDrive:
@@ -2236,14 +2242,16 @@ void DriverModel::updateSetBlendWeight()
     case mcS072:
     case mcS073:
     case mcS074: {
+        f32 wInv;
         f32 w = BlendValue((f32)m_bb / blendTime);
-        f32 wInv = 1.0f - w;
+        wInv = 1.0f - w;
         updateSetBlendWeight_FuncABCD(wInv, w, rateInv, rate);
         break;
     }
     case mcS075:
     case mcS076: {
-        f32 w = BlendValue((f32)m_bb / blendTime);
+        f32 t = (f32)m_bb / blendTime;
+        f32 w = BlendValue(t);
         w *= DriverManager::ptr()->_28;
         f32 wInv = 1.0f - w;
         updateSetBlendWeight_FuncABCD(wInv, w, rateInv, rate);
@@ -2316,20 +2324,22 @@ void DriverModel::updateSetBlendWeight()
     case mcS143:
     case mcS144:
     case mcS145: {
-        u8 a = DriverManager::ptr()->mBlendTimes[8];
-        u8 b = DriverManager::ptr()->mBlendTimes[9];
-        f32 w = updateSetBlendWeight_Func1(a, b);
+        f32 w = updateSetBlendWeight_Func1(DriverManager::ptr()->getBlendTime(8), DriverManager::ptr()->getBlendTime(9));
         setBlendWeight4(this, rateInv * (1.0f - w), rate * (1.0f - w), w, 0.0f);
         mAnmID = msAnmBlendList[mState][0];
         if (mAnmID != 0 && getAnmTransformPtr(mAnmID)) {
             f32 frame = getAnmTransformPtr(mAnmID)->getFrame();
-            if ((s16)(frame + 0.5f) == DriverManager::ptr()->mBlendTimes[8]) {
+            if ((s16)(frame + 0.5f) == DriverManager::ptr()->getBlendTime(8)) {
                 int st;
                 switch (mState) {
                 case mcS144:
                 case mcS145:
                     st = 4;
                     break;
+                case mcS140:
+                case mcS141:
+                case mcS142:
+                case mcS143:
                 default:
                     st = 3;
                     break;
@@ -2349,6 +2359,7 @@ void DriverModel::updateSetBlendWeight()
     case mcS088:
     case mcS089:
     case mcS090: {
+        f32 wInv;
         f32 w;
         switch (mState) {
         case mcS085:
@@ -2356,21 +2367,17 @@ void DriverModel::updateSetBlendWeight()
         case mcS087:
         case mcS088:
         {
-            u8 a = DriverManager::ptr()->mBlendTimes[8];
-            u8 b = DriverManager::ptr()->mBlendTimes[9];
-            w = updateSetBlendWeight_Func1(a, b);
+            w = updateSetBlendWeight_Func1(DriverManager::ptr()->getBlendTime(8), DriverManager::ptr()->getBlendTime(9));
             break;
         }
         case mcS089:
         case mcS090:
         {
-            u8 a = DriverManager::ptr()->mBlendTimes[10];
-            u8 b = DriverManager::ptr()->mBlendTimes[11];
-            w = updateSetBlendWeight_Func1(a, b);
+            w = updateSetBlendWeight_Func1(DriverManager::ptr()->getBlendTime(10), DriverManager::ptr()->getBlendTime(11));
             break;
         }
         }
-        f32 wInv = 1.0f - w;
+        wInv = 1.0f - w;
         updateSetBlendWeight_FuncABCD(wInv, w, rateInv, rate);
         break;
     }
@@ -2378,13 +2385,11 @@ void DriverModel::updateSetBlendWeight()
     case mcS098:
     case mcS100:
     case mcS102: {
-        u8 a = DriverManager::ptr()->mBlendTimes[17];
-        u8 b = DriverManager::ptr()->mBlendTimes[18];
-        f32 w = updateSetBlendWeight_Func1(a, b);
+        f32 w = updateSetBlendWeight_Func1(DriverManager::ptr()->getBlendTime(17), DriverManager::ptr()->getBlendTime(18));
         mAnmID = msAnmBlendList[mState][0];
         if (mAnmID != 0 && getAnmTransformPtr(mAnmID)) {
             f32 frame = getAnmTransformPtr(mAnmID)->getFrame();
-            if ((s16)(frame + 0.5f) == DriverManager::ptr()->mBlendTimes[17]) {
+            if ((s16)(frame + 0.5f) == DriverManager::ptr()->getBlendTime(17)) {
                 int st = 3;
                 if (m_b8 != 0) {
                     if (IsItemWithTurn())
@@ -2404,19 +2409,17 @@ void DriverModel::updateSetBlendWeight()
         break;
     }
     case mcS105: {
-        u8 a = DriverManager::ptr()->mBlendTimes[21];
-        u8 b = DriverManager::ptr()->mBlendTimes[22];
-        f32 w = updateSetBlendWeight_Func1(a, b);
+        f32 w = updateSetBlendWeight_Func1(DriverManager::ptr()->getBlendTime(21), DriverManager::ptr()->getBlendTime(22));
         mAnmID = msAnmBlendList[mState][0];
         if (mAnmID != 0 && getAnmTransformPtr(mAnmID)) {
             f32 frame = getAnmTransformPtr(mAnmID)->getFrame();
-            if ((s16)(frame + 0.5f) == DriverManager::ptr()->mBlendTimes[21]) {
-                int st = 3;
+            if ((s16)(frame + 0.5f) == DriverManager::ptr()->getBlendTime(21)) {
+                StateEnum st = mcTandemB;
                 mMtxCalcs[mState]->setAnmTransform(0, getAnmTransformPtr(msAnmBlendList[st][0]));
                 mMtxCalcs[mState]->setAnmTransform(1, getAnmTransformPtr(msAnmBlendList[st][1]));
-                mBeforeState = st;
-                m_4f8 = st;
-                next_before_mState_Hokan = st;
+                mBeforeState = mcTandemB;
+                m_4f8 = mcTandemB;
+                next_before_mState_Hokan = mcTandemB;
             }
         }
         f32 wInv = 1.0f - w;
@@ -2433,7 +2436,7 @@ void DriverModel::updateSetBlendWeight()
         mAnmID = msAnmBlendList[mState][0];
         if (mAnmID != 0 && getAnmTransformPtr(mAnmID)) {
             f32 frame = getAnmTransformPtr(mAnmID)->getFrame();
-            if ((s16)(frame + 0.5f) > DriverManager::ptr()->mBlendTimes[18])
+            if ((s16)(frame + 0.5f) > DriverManager::ptr()->getBlendTime(18))
                 m_ba = 0;
         }
         break;
@@ -2547,8 +2550,7 @@ void DriverModel::update(u16 param)
             if (m_be <= 0) {
                 m_be = 1;
             } else {
-                u8 max = DriverManager::ptr()->_5b;
-                if (m_be < max)
+                if (m_be < DriverManager::ptr()->getDangerTime())
                     m_be++;
             }
         } else {
@@ -2746,7 +2748,7 @@ L_after:
         case mcS116:
         case mcS120:
         case mcS135:
-            StartAnimation((StateEnum)next_mState_Hokan);
+            StartAnimation((StateEnum)*(volatile s32 *)&next_mState_Hokan);
             m_504 = 1;
             break;
         }

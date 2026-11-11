@@ -95,6 +95,7 @@ public:
     u8 getSpeakFlag(int dataID) { return _7cc[dataID]; }
     u8 getHokanDamageCnt() { return _24; }
     int getBlendTime(int i) { return mBlendTimes[i]; }
+    int getDangerTime() { return _5b; }
 
     // Inline/Unused
     bool IsAllARAMDMAFinished();
