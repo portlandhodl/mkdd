@@ -1,5 +1,6 @@
 #include "Kameda/Pause2D.h"
 #include "Kameda/PauseManager.h"
+#include "Kaneshige/RaceMgr.h"
 #include "Inagaki/GameAudioMain.h"
 #include "JSystem/JMath/JMath.h"
 #include "mathHelper.h"
@@ -18,12 +19,42 @@ __declspec(weak) Pause2D::~Pause2D() {}
 Pause2D::Pause2D(JKRHeap *) {}
 
 void Pause2D::init() {
-    switch (0) {
+    mStatus = PAUSE_0;
+    _14 = -1;
+    _18 = 0;
+    for (int i = 0; i < 2; i++) {
+        mCounters[i] = 0;
+    }
+
+    switch (RCMGetManager()->getRaceMode()) {
+    case TIME_ATTACK:
+    case GRAND_PRIX:
+    case VERSUS_RACE:
+    case BALLOON_BATTLE:
+    case BOMB_BATTLE:
+    case ESCAPE_BATTLE:
+    case AWARD_DEMO:
+    case STAFF_ROLL:
+        mPauseSelector = 0;
+        break;
     default:
 #line 277
         JUT_ASSERT(0);
         break;
     }
+
+    mDrawState = 0;
+    mFrom[0] = mPos[0];
+    mTo[0] = mPos[0];
+    mFrom[1] = mPos[1];
+    mTo[1] = mPos[1];
+    mAnm->mCurrentFrame = 0.0f;
+    mAnm2->mCurrentFrame = 0.0f;
+    for (int i = 0; i < 6; i++) {
+        mSel[i].mVel = 0.0f;
+    }
+    mScreen->animation();
+    (this->*mDrawFunc)();
 }
 
 void Pause2D::draw() {
@@ -606,26 +637,12 @@ void Pause2D::setDrawMG() {
 void Pause2D::setDrawCommon() {
     for (int i = 0; i < 2; i++) {
         if (mDrawState < 8) {
-            f32 dx = (f32)(mTo[i].x - mFrom[i].x);
-            f32 dy = (f32)(mTo[i].y - mFrom[i].y);
-            f32 t = (f32)mDrawState;
-            f32 ax = (f32)(dx * t);
-            f32 ay = (f32)(dy * t);
-            mCur[i].x = mFrom[i].x + (f32)(ax * 0.125f);
-            mCur[i].y = mFrom[i].y + (f32)(ay * 0.125f);
+            mCur[i] = mFrom[i] + (mTo[i] - mFrom[i]) * (f32)mDrawState * 0.125f;
         } else {
             mFrom[i] = mTo[i];
             mCur[i] = mFrom[i];
         }
-
-        f32 x = mCur[i].x + mResultPic->mOffset.x;
-        J2DPicture *pic = mCenterPics[i];
-        f32 py = mResultPic->mOffset.y;
-        f32 cy = mCur[i].y;
-        f32 y = cy + py;
-        pic->mOffset.x = x;
-        pic->mOffset.y = y;
-        pic->calcMtx();
+        mCenterPics[i]->setOffset(mCur[i].x + mResultPic->getTranslateX(), mCur[i].y + mResultPic->getTranslateY());
         mCenterPics[i]->updateScale(mScales[1]);
     }
 

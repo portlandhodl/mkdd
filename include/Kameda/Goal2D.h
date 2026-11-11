@@ -61,11 +61,11 @@ private:
     J2DOrthoGraph *mOrtho[4];         // 04
     J2DScreen *mGoalScreen[4];        // 14
     J2DAnmTransform *mGoalAnm1[4];    // 24
-    J2DAnmTextureSRTKey *mGoalAnm2[4];// 34
+    J2DAnmTevRegKey *mGoalAnm2[4];    // 34
     J2DPicture *mGoalPane[4][2];      // 44
     J2DScreen *mRetireScreen[4];      // 64
     J2DAnmTransform *mRetireAnm1[4];  // 74
-    J2DAnmTextureSRTKey *mRetireAnm2[4]; // 84
+    J2DAnmTevRegKey *mRetireAnm2[4];  // 84
     J2DPicture *mRetirePane[4];       // 94
     Status mStatus[4];                // a4
     int mUnkE4;                       // e4

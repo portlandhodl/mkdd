@@ -18,7 +18,7 @@ bool Goal2D::mDrawEndFlag = false;
 
 Goal2DParam::Goal2DParam() : mUnk4(0), mFlag(true) {}
 
-Goal2DHioNode::Goal2DHioNode() : HioNode("Goal2D", &mParam, 0, 0) {}
+Goal2DHioNode::Goal2DHioNode() : HioNode("ゴール", &mParam, 0, 0) {}
 
 Goal2D::Goal2D(JKRHeap *heap) {
     mNode = new (heap, 0) Goal2DHioNode();
@@ -29,53 +29,28 @@ Goal2D::Goal2D(JKRHeap *heap) {
 
     switch (RCMGetManager()->getConsoleNumber()) {
     case 1: {
-        mOrtho[0] = new (heap, 0) J2DOrthoGraph(System::get3DVpX(), System::get3DVpY(), System::get3DVpW(), System::get3DVpH(), 0.0f, 1.0f);
-        f32 h = System::get3DScisH();
-        f32 w = System::get3DScisW();
-        f32 y = System::get3DScisY();
-        f32 x = System::get3DScisX();
-        JGeometry::TBox2f box(x, y, x + w, y + h);
-        mOrtho[0]->scissor(box);
+        mOrtho[0] = new (heap, 0) J2DOrthoGraph(System::get3DVpX(), System::get3DVpY(), System::get3DVpW(), System::get3DVpH(), -1.0f, 1.0f);
+        mOrtho[0]->scissor(System::get3DScisX(), System::get3DScisY(), System::get3DScisW(), System::get3DScisH());
         mStatus[0].mGoalPosX = System::get3DVpX();
         mStatus[0].mGoalPosY = System::get3DVpY();
         break;
     }
     case 2:
         for (u8 i = 0; i < 2; i++) {
-            mOrtho[i] = new (heap, 0) J2DOrthoGraph(System::get3DVpDiv2X(i), System::get3DVpDiv2Y(i), System::get3DVpDiv2W(i), System::get3DVpDiv2H(i), 0.0f, 1.0f);
-            f32 h = System::get3DVpDiv2H(i);
-            f32 w = System::get3DVpDiv2W(i);
-            f32 y = System::get3DVpDiv2Y(i);
-            f32 x = System::get3DVpDiv2X(i);
-            JGeometry::TBox2f box(x, y, x + w * 2.0f, y + h * 2.0f);
-            mOrtho[i]->setOrtho(box, 0.0f, 1.0f);
-            f32 sh = System::get3DScisDiv2H(i);
-            f32 sw = System::get3DScisDiv2W(i);
-            f32 sy = System::get3DScisDiv2Y(i);
-            f32 sx = System::get3DScisDiv2X(i);
-            JGeometry::TBox2f sbox(sx, sy, sx + sw, sy + sh);
-            mOrtho[i]->scissor(sbox);
+            mOrtho[i] = new (heap, 0) J2DOrthoGraph(System::get3DVpDiv2X(i), System::get3DVpDiv2Y(i), System::get3DVpDiv2W(i), System::get3DVpDiv2H(i), -1.0f, 1.0f);
+            mOrtho[i]->setOrtho(System::get3DVpDiv2X(i), System::get3DVpDiv2Y(i), System::get3DVpDiv2W(i) * 2.0f, System::get3DVpDiv2H(i) * 2.0f, -1.0f, 1.0f);
+            mOrtho[i]->scissor(System::get3DScisDiv2X(i), System::get3DScisDiv2Y(i), System::get3DScisDiv2W(i), System::get3DScisDiv2H(i));
             f32 px = System::get3DVpDiv2X(i);
-            mStatus[i].mGoalPosX = px + System::get3DVpDiv2W(i) * 0.5f;
+            mStatus[i].mGoalPosX = px + System::get3DVpDiv2W(i) / 2;
             mStatus[i].mGoalPosY = System::get3DVpDiv2Y(i);
         }
         break;
     case 3:
     case 4:
         for (u8 i = 0; i < 4; i++) {
-            mOrtho[i] = new (heap, 0) J2DOrthoGraph(System::get3DVpDiv4X(i), System::get3DVpDiv4Y(i), System::get3DVpDiv4W(i), System::get3DVpDiv4H(i), 0.0f, 1.0f);
-            f32 h = System::get3DVpDiv4H(i);
-            f32 w = System::get3DVpDiv4W(i);
-            f32 y = System::get3DVpDiv4Y(i);
-            f32 x = System::get3DVpDiv4X(i);
-            JGeometry::TBox2f box(x, y, x + w * 2.0f, y + h * 2.0f);
-            mOrtho[i]->setOrtho(box, 0.0f, 1.0f);
-            f32 sh = System::get3DScisDiv4H(i);
-            f32 sw = System::get3DScisDiv4W(i);
-            f32 sy = System::get3DScisDiv4Y(i);
-            f32 sx = System::get3DScisDiv4X(i);
-            JGeometry::TBox2f sbox(sx, sy, sx + sw, sy + sh);
-            mOrtho[i]->scissor(sbox);
+            mOrtho[i] = new (heap, 0) J2DOrthoGraph(System::get3DVpDiv4X(i), System::get3DVpDiv4Y(i), System::get3DVpDiv4W(i), System::get3DVpDiv4H(i), -1.0f, 1.0f);
+            mOrtho[i]->setOrtho(System::get3DVpDiv4X(i), System::get3DVpDiv4Y(i), System::get3DVpDiv4W(i) * 2.0f, System::get3DVpDiv4H(i) * 2.0f, -1.0f, 1.0f);
+            mOrtho[i]->scissor(System::get3DScisDiv4X(i), System::get3DScisDiv4Y(i), System::get3DScisDiv4W(i), System::get3DScisDiv4H(i));
             mStatus[i].mGoalPosX = System::get3DVpDiv4X(i);
             mStatus[i].mGoalPosY = System::get3DVpDiv4Y(i);
         }
@@ -91,7 +66,7 @@ Goal2D::Goal2D(JKRHeap *heap) {
         mGoalScreen[i]->set("goal.blo", 0x40000, J2DManager::getManager()->getArchive());
         mGoalAnm1[i] = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("goal.bck", J2DManager::getManager()->getArchive()));
         mGoalScreen[i]->setAnimation(mGoalAnm1[i]);
-        mGoalAnm2[i] = (J2DAnmTextureSRTKey *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("goal.brk", J2DManager::getManager()->getArchive()));
+        mGoalAnm2[i] = (J2DAnmTevRegKey *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("goal.brk", J2DManager::getManager()->getArchive()));
         mGoalScreen[i]->setAnimation(mGoalAnm2[i]);
     }
 
@@ -100,29 +75,29 @@ Goal2D::Goal2D(JKRHeap *heap) {
         mRetireScreen[i]->set("retire.blo", 0x40000, J2DManager::getManager()->getArchive());
         mRetireAnm1[i] = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("retire.bck", J2DManager::getManager()->getArchive()));
         mRetireScreen[i]->setAnimation(mRetireAnm1[i]);
-        mRetireAnm2[i] = (J2DAnmTextureSRTKey *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("retire.brk", J2DManager::getManager()->getArchive()));
+        mRetireAnm2[i] = (J2DAnmTevRegKey *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("retire.brk", J2DManager::getManager()->getArchive()));
         mRetireScreen[i]->setAnimation(mRetireAnm2[i]);
     }
 
     for (int i = 0; i < RCMGetManager()->getConsoleNumber(); i++) {
         for (int j = 0; j < 2; j++) {
-            J2DPicture *pane = (J2DPicture *)mGoalScreen[i]->search(0x504343545f303031ULL + j);
+            J2DPicture *pane = (J2DPicture *)mGoalScreen[i]->search(0x504943545f303031ULL + j);
 #line 158 "Goal2D.cpp"
             JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
             mGoalPane[i][j] = pane;
             if (RCMGetManager()->isRaceModeMiniGame()) {
-                pane->changeTexture("MiniGame2DWin00.bti", 0);
+                mGoalPane[i][j]->changeTexture("MiniGame2DWin00.bti", 0);
             }
         }
     }
 
     for (int i = 0; i < RCMGetManager()->getConsoleNumber(); i++) {
-        J2DPicture *pane = (J2DPicture *)mRetireScreen[i]->search(0x0052657469726542ULL);
+        J2DPicture *pane = (J2DPicture *)mRetireScreen[i]->search(0x5265746972653030ULL);
 #line 170 "Goal2D.cpp"
         JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
         mRetirePane[i] = pane;
         if (RCMGetManager()->isRaceModeMiniGame()) {
-            pane->changeTexture("MiniGame2DLose00.bti", 0);
+            mRetirePane[i]->changeTexture("MiniGame2DLose00.bti", 0);
             J2DPicture *pane2 = (J2DPicture *)mRetireScreen[i]->search(0x0052657469726542ULL);
             pane2->mIsVisible = false;
         }
@@ -199,15 +174,13 @@ void Goal2D::drawRetire() {
         return;
 
     for (int i = 0; i < RCMGetManager()->getStatusNumber(); i++) {
-        int status = J2DManager::getStatus2Kart(i);
-        KartChecker *checker = RCMGetManager()->getKartChecker(status);
-        if (checker->isGoal())
-            continue;
-        if (!mStatus[i].mGoalDraw)
-            continue;
-
-        mOrtho[i]->setPort();
-        mRetireScreen[i]->draw(mStatus[i].mGoalPosX, mStatus[i].mGoalPosY, mOrtho[i]);
+        KartChecker *checker = RCMGetManager()->getKartChecker(J2DManager::getStatus2Kart(i));
+        if (!checker->isGoal()) {
+            if (mStatus[i].mGoalDraw) {
+                mOrtho[i]->setPort();
+                mRetireScreen[i]->draw(mStatus[i].mGoalPosX, mStatus[i].mGoalPosY, mOrtho[i]);
+            }
+        }
     }
 }
 
@@ -299,49 +272,35 @@ void Goal2D::calc() {
 
             if (mStatus[i].mFrame == 1) {
                 f32 sx = 1.0f;
-                f32 sy = 1.0f;
+                f32 sy = sx;
                 JGeometry::TVec3f vec(0.0f, 0.0f, 0.0f);
                 switch (RCMGetManager()->getConsoleNumber()) {
                 case 1:
-                    vec.x = 304.0f;
-                    vec.y = 260.0f;
-                    vec.z = 0.0f;
+                    vec.set(304.0f, 260.0f, 0.0f);
                     break;
                 case 2:
-                    sx = 0.7f;
-                    sy = 0.7f;
-                    vec.x = 304.0f;
+                    sy = sx = 0.7f;
                     if (i == 0) {
-                        vec.y = 130.0f;
+                        vec.set(304.0f, 130.0f, 0.0f);
                     } else {
-                        vec.y = 355.0f;
+                        vec.set(304.0f, 355.0f, 0.0f);
                     }
-                    vec.z = 0.0f;
                     break;
                 case 3:
                 case 4:
-                    sx = 0.5f;
-                    sy = 0.5f;
+                    sy = sx = 0.5f;
                     switch (i) {
                     case 0:
-                        vec.x = 152.0f;
-                        vec.y = 130.0f;
-                        vec.z = 0.0f;
+                        vec.set(152.0f, 130.0f, 0.0f);
                         break;
                     case 1:
-                        vec.x = 456.0f;
-                        vec.y = 130.0f;
-                        vec.z = 0.0f;
+                        vec.set(456.0f, 130.0f, 0.0f);
                         break;
                     case 2:
-                        vec.x = 152.0f;
-                        vec.y = 355.0f;
-                        vec.z = 0.0f;
+                        vec.set(152.0f, 355.0f, 0.0f);
                         break;
                     case 3:
-                        vec.x = 456.0f;
-                        vec.y = 355.0f;
-                        vec.z = 0.0f;
+                        vec.set(456.0f, 355.0f, 0.0f);
                         break;
                     default:
 #line 415 "Goal2D.cpp"
@@ -431,9 +390,7 @@ void Goal2D::sequenceVS() {
 
     for (int i = 0; i < RCMGetManager()->getStatusNumber(); i++) {
         int kart = J2DManager::getStatus2Kart(i);
-        RaceMgr *rm = RCMGetManager();
-        KartChecker *checker = rm->getKartChecker(kart);
-        int rank = checker->getRank() - 1;
+        int rank = RCMGetManager()->getKartChecker(kart)->getRank() - 1;
         gSequenceInfo.inc_40(kart, rank);
     }
 }
