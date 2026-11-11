@@ -291,6 +291,7 @@ public:
     friend class Goal2D;
     friend class Award2D;
     friend class SceneMapSelect;
+    friend class PauseManager;
 
 private:
     friend class SceneGhostLoadSave;

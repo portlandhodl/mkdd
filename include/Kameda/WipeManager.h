@@ -73,6 +73,7 @@ public:
     void stopWipe(int idx) { mMoveFlag[idx] = false; }
     int getScreenCount() const { return mScrnCount; }
     TWipeCurtain *getWipeCurtain() { return mWipeCurtain; }
+    Mario *getMario() { return mMario; }
 
     static WipeManager *getManager() { return mThis; }
 

@@ -89,7 +89,7 @@ public:
     void setDrawVS(); // 0x8014cb58
     void setDrawTA(); // 0x8014cc10
     void setDrawMG(); // 0x8014cd94
-    int getResultSelector(); // 0x8014ce48
+    static int getResultSelector(); // 0x8014ce48
     void setRaceRank(); // 0x8014ce50
     void setGPRank(); // 0x8014d924
     void setVS(); // 0x8014df84
@@ -133,6 +133,9 @@ public:
     // Inline/Unused
     ~Result2D();
     void getCharPos(int);
+    static u8 getDrawFlag();
+    static void setDrawFlag(bool);
+    void set_1980(int v) { mLine._1980 = v; }
 private:
     Result2DHioNode *mNode;              // 0x000
     J2DGrafContext *mOrtho;              // 0x004
