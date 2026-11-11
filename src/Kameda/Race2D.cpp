@@ -840,7 +840,57 @@ bool Race2D::isBombWinner(int statusNo)
     return checker->getBombPoint() == winPoint;
 }
 
-void Race2D::setEffectPos(int) {}
+void Race2D::setEffectPos(int no)
+{
+    u8 *thisp = (u8 *)this;
+    int kart = J2DManager::getStatus2Kart(no);
+    JUT_MINMAX_ASSERT(0, kart, 8);
+    int win = KartChecker::getWinBombPoint();
+    JUT_MINMAX_ASSERT(0, kart, 8);
+
+    for (int i = 0; i < win; i++)
+    {
+        int eff = mBombMarkFrame[no][i];
+        f32 *src = (f32 *)(thisp + 0xb10 + no * 0x60 + i * 8);
+        f32 *dst = (f32 *)(thisp + 0xe40 + no * 0x30 + i * 8);
+        f32 x, y;
+
+        if (eff < 20)
+        {
+            x = src[0];
+            y = src[1];
+        }
+        else if (eff < 31)
+        {
+            f32 *base = (f32 *)(thisp + 0xdc0 + no * 0x20 + i * 8);
+            f32 t = (f32)(eff - 21) / 10.0f;
+            x = base[0] + (src[0] - base[0]) * t;
+            y = base[1] + (src[1] - base[1]) * t;
+        }
+        else
+        {
+            x = src[0];
+            y = src[1];
+        }
+
+        dst[0] = x;
+        dst[1] = y;
+
+        if (eff >= 20)
+        {
+            for (int k = 0; k < 3; k++)
+            {
+                u8 *node = *(u8 **)(thisp + 0xec0 + no * 0x30 + i * 0xc + k * 4);
+                if (node != NULL)
+                {
+                    *(f32 *)(node + 0xa4) = x;
+                    *(f32 *)(node + 0xa8) = y;
+                    *(f32 *)(node + 0xac) = 0.0f;
+                }
+            }
+        }
+    }
+}
 
 void Race2D::calcEscape() {}
 
@@ -1699,7 +1749,53 @@ void Race2D::itemGetInit()
     mTask->change(itemGetMain, mTask->mCurCB);
 }
 
-void Race2D::itemGetMain() {}
+void Race2D::itemGetMain()
+{
+    Task::TCB *tcb = mTask->mCurCB;
+    int frame = tcb->_10;
+    tcb->_10 = frame + 1;
+    int no = tcb->mExecIdx;
+    u8 slot = (u8)tcb->_28;
+
+    u8 *thisp = (u8 *)mThis;
+    f32 *cur = (f32 *)(thisp + 0x1d84 + no * 0x8e8 + slot * 8);
+    f32 *dst = (f32 *)(thisp + 0x1da4 + no * 0x8e8 + slot * 8);
+
+    if (frame < 15)
+    {
+#line 562
+        JUT_MINMAX_ASSERT(0, no, 4);
+#line 563
+        JUT_MINMAX_ASSERT(0, slot, 2);
+        f32 *target = (f32 *)(thisp + 0x1d94 + no * 0x8e8 + slot * 8);
+        f32 t = (f32)frame / 15.0f;
+        f32 x = target[0] + (cur[0] - target[0]) * t;
+        f32 y = target[1] + (cur[1] - target[1]) * t;
+#line 572
+        JUT_MINMAX_ASSERT(0, no, 4);
+#line 573
+        JUT_MINMAX_ASSERT(0, slot, 2);
+        dst[0] = x;
+        dst[1] = y;
+    }
+    else
+    {
+#line 572
+        JUT_MINMAX_ASSERT(0, no, 4);
+#line 573
+        JUT_MINMAX_ASSERT(0, slot, 2);
+        dst[0] = cur[0];
+        dst[1] = cur[1];
+        mTask->change(itemBlinkInit, mTask->mCurCB);
+    }
+
+#line 577
+    JUT_MINMAX_ASSERT(0, no, 4);
+#line 578
+    JUT_MINMAX_ASSERT(0, slot, 2);
+    *(int *)(thisp + 0x1db4 + no * 0x8e8 + slot * 4) = 15;
+    *(int *)(thisp + 0x1dbc + no * 0x8e8 + slot * 4) = 0;
+}
 
 void Race2D::itemSpecialInit() {
     mTask->mCurCB->_10 = 0;
