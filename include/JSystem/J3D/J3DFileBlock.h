@@ -131,7 +131,10 @@ struct J3DMaterialBlock : J3DFileBlockBase
 
 struct J3DMaterialBlock_v21 : J3DFileBlockBase
 {
-    u8 _08[0x70]; // _08
+    u16 mCount;   // _08
+    u8 _0A[0xA];  // _0A
+    void *_14;    // _14
+    u8 _18[0x60]; // _18
 };
 
 struct J3DMaterialDLBlock : J3DFileBlockBase

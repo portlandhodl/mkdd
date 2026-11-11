@@ -255,7 +255,10 @@ struct J3DMaterialInitData_v21 {
 };
 
 struct J3DMaterialFactory_v21 {
+    J3DMaterialFactory_v21(const J3DMaterialBlock_v21&);
+
     u16 countUniqueMaterials();
+    J3DMaterial* create(J3DMaterial*, int, u32) const;
     u8 newColorChanNum(int) const;
     u32 newTexGenNum(int) const;
     u8 newCullMode(int) const;

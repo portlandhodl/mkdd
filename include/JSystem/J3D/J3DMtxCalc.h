@@ -38,19 +38,36 @@ struct J3DMtxCalc {
 };
 
 struct J3DMtxCalcNoAnmBase : public J3DMtxCalc {
-    virtual ~J3DMtxCalcNoAnmBase() { } // _08 (weak)
+    virtual ~J3DMtxCalcNoAnmBase(); // _08 (weak)
 
     // _00 = VTBL
 };
 
 template <typename Calc, typename Init>
 struct J3DMtxCalcNoAnm : public J3DMtxCalcNoAnmBase {
-    virtual ~J3DMtxCalcNoAnm() { }                                                  // _08
-    virtual void init(const Vec& p1, const f32 (&p2)[3][4]) { Init::init(p1, p2); } // _24
-    virtual void calc() { Calc::calcTransform(mJoint->mTransformInfo); }            // _28
+    virtual ~J3DMtxCalcNoAnm();                                         // _08
+    virtual void init(const Vec& p1, const f32 (&p2)[3][4]);           // _24
+    virtual void calc();                                               // _28
 
     // _00 = VTBL
 };
+
+template <typename Calc, typename Init>
+J3DMtxCalcNoAnm<Calc, Init>::~J3DMtxCalcNoAnm()
+{
+}
+
+template <typename Calc, typename Init>
+void J3DMtxCalcNoAnm<Calc, Init>::init(const Vec& p1, const f32 (&p2)[3][4])
+{
+    Init::init(p1, p2);
+}
+
+template <typename Calc, typename Init>
+void J3DMtxCalcNoAnm<Calc, Init>::calc()
+{
+    Calc::calcTransform(mJoint->mTransformInfo);
+}
 
 struct J3DMtxCalcAnmBase : public J3DMtxCalc {
     /** @fabricated */
