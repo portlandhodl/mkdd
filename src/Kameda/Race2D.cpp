@@ -1,5 +1,9 @@
 #include "Kameda/Race2D.h"
 #include "Kameda/BombStart2D.h"
+#include "Kameda/CanNotSaveG2D.h"
+#include "Kameda/LapGhost2D.h"
+#include "JSystem/J2D/J2DAnmLoader.h"
+#include "JSystem/JParticle/JPAEmitter.h"
 #include "Kameda/J2DManager.h"
 #include "Kameda/K2DPicture.h"
 #include "Kaneshige/KartChecker.h"
@@ -18,6 +22,11 @@
 #include "std/math.h"
 #include "Kaneshige/Objects/GeoRabbitMark.h"
 #include "Osako/Kart2DCommon.h"
+#include "Osako/SystemRecord.h"
+#include "Osako/RaceApp.h"
+#include "Osako/PadRecorder.h"
+#include "Osako/KartPadRecord.h"
+#include "Kaneshige/RaceInfo.h"
 
 namespace std
 {
@@ -130,19 +139,19 @@ const char *Race2D::mCharacterName[] = {
     "pakkun.bti"
 };
 
-const u64 Race2D::mLapTag[] = {
+const u64 Race2D::mLapTag[4][4] = {
     'm1_lap', 'ml1_1', 'ml1_s1', 'ml1_2',
     'm2_lap', 'ml2_1', 'ml2_s1', 'ml2_2',
     'm3_lap', 'ml3_1', 'ml3_s1', 'ml3_2',
     'm4_lap', 'ml4_1', 'ml4_s1', 'ml4_2',
 };
-const u64 Race2D::mItemExTag[] = {
+const u64 Race2D::mItemExTag[4][4] = {
     'itm1bu', 'itm1fu', 'itm1bs', 'itm1fs',
     'itm2bu', 'itm2fu', 'itm2bs', 'itm2fs',
     'itm3bu', 'itm3fu', 'itm3bs', 'itm3fs',
     'itm4bu', 'itm4fu', 'itm4bs', 'itm4fs',
 };
-const u64 Race2D::mItemExDrawTag[] = {
+const u64 Race2D::mItemExDrawTag[4][2][6] = {
     'slot1bb', 'itm1bu', 'itm1bs', 'slot1b', 
     'slot1bh2', 'slot1bh1', 'slot1fb', 'itm1fu', 
     'itm1fs', 'slot1f', 'slot1fh2', 'slot1fh1', 
@@ -191,7 +200,7 @@ const char *Race2D::mItemName[] = {
     "item_kame_red.bti",
 };
 
-const u64 Race2D::mRankTag[] = {
+const u64 Race2D::mRankTag[4][8] = {
     'pos11', 'pos12', 'pos13', 'pos14', 
     'pos15', 'pos16', 'pos17', 'pos18', 
     'pos21', 'pos22', 'pos23', 'pos24', 
@@ -202,14 +211,14 @@ const u64 Race2D::mRankTag[] = {
     'pos45', 'pos46', 'pos47', 'pos48',
 };
 
-const u64 Race2D::mRankGoalTag[] = {
+const u64 Race2D::mRankGoalTag[2][8] = {
     'pos11g', 'pos12g', 'pos13g', 'pos14g', 
     'pos15g', 'pos16g', 'pos17g', 'pos18g', 
     'pos21g', 'pos22g', 'pos23g', 'pos24g', 
     'pos25g', 'pos26g', 'pos27g', 'pos28g', 
 };
 
-const u64 Race2D::mTimeDrawTag[] = {
+const u64 Race2D::mTimeDrawTag[2][10] = {
     'time17', 'time16', 'time15', 'time1t2', 
     'time14', 'time13', 'time1t1', 'time12', 
     'time11', 'time10', 'time27', 'time26', 
@@ -217,7 +226,7 @@ const u64 Race2D::mTimeDrawTag[] = {
     'time2t1', 'time22', 'time21', 'time20',
 };
 
-const u64 Race2D::mLapTimeDrawTag[] = {
+const u64 Race2D::mLapTimeDrawTag[2][9][11] = {
     'time16_1', 'time15_1', 'time14_1', 'time13_1', 
     'time12_1', 'time11_1', 'time10_1', 'time1t11', 
     'time1t21', 'Tl11', 'Tlapm1', 'time16_2', 
@@ -322,6 +331,7 @@ static int sPreShinePlayer;
 static RaceTime sBestLapTime;
 static u8 sPreThunder[8];
 
+
 Race2DParam::Race2DParam()
 {
     mFlag = 1;
@@ -331,40 +341,1409 @@ Race2DParam::Race2DParam()
     mS = 1.0f;
 }
 
-#pragma inline_depth(0)
-#pragma dont_inline on
-Race2D::Race2D(JKRHeap *)
+Race2D::Race2D(JKRHeap *heap) : mLapGhost(nullptr), mCanNotSave(nullptr), mBombStart(nullptr), mMaskScreen(nullptr)
 {
-    JGeometry::TVec2f tv(0.0f, 0.0f);
-    /*
-J2DPane::getTranslateY() const {}
-J2DPane::getTranslateX() const {}
-JUTColor::TColor(const JUTColor &) {}
-RaceMgr::getTotalLapNumber() const {}
-RaceMgr::getPlayerNumber() const {}
-RaceMgr::getKartNumber() const {}
-std::atan2(f32, f32) {}
-RCMGetCourse() {}
-JUTColor::TColor(u32) {}
-RaceMgr::isMirror() const {}
-Race2DParam::setS(f32) {}
-Race2DParam::setY(f32) {}
-Race2DParam::setX(f32) {}
-ResMgr::getCourseID() {}
-Race2DHioNode::getParam() {}
-JUTColor::set(_GXColor) {}
-J2DManager::getNetFlag() {}
-RaceMgr::getConsoleNumber() const {}
-Race2DHioNode::Race2DHioNode(const char *) {}
-Race2DParam::~Race2DParam() {}
-    */
+    mThis = this;
+    mHio = new (heap, 0) Race2DHioNode("レース２Ｄ");
+    mGrafContext = System::getJ2DOrtho();
+    if (RCMGetManager()->getRaceMode() == TIME_ATTACK) {
+        mLapGhost = new (heap, 0) LapGhost2D(heap);
+        mCanNotSave = new (heap, 0) CanNotSaveG2D(heap);
+    }
+    if (RCMGetManager()->getRaceMode() == BOMB_BATTLE)
+        mBombStart = new (heap, 0) BombStart2D(heap);
+
+    switch (RCMGetManager()->getConsoleNumber()) {
+    case 1: {
+        mScreen = new (heap, 0) J2DScreen();
+        mScreen->set("p1_race.blo", GETJ2DManager()->getArchive());
+        mAlarmScreen = new (heap, 0) J2DScreen();
+        mAlarmScreen->set("ItemAlarm.blo", GETJ2DManager()->getArchive());
+        J2DPane *pane = mAlarmScreen->search('ItAl01');
+#line 384
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        mAlarmPic0 = (J2DPicture *)pane;
+        JGeometry::TBox2f box(*mAlarmPic0->getBounds());
+        mAlarmPos0.x = box.i.x;
+        mAlarmPos0.y = box.i.y;
+        pane = mAlarmScreen->search('ItAlTx01');
+#line 392
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        mAlarmPic1 = (J2DPicture *)pane;
+        JGeometry::TBox2f box2(*mAlarmPic1->getBounds());
+        mAlarmPos1.x = box2.i.x;
+        mAlarmPos1.y = box2.i.y;
+        mAlarmX[0] = 434.0f;
+        break;
+    }
+    case 2: {
+        mScreen = new (heap, 0) J2DScreen();
+        mScreen->set("p2_race.blo", GETJ2DManager()->getArchive());
+        mAlarmScreen = new (heap, 0) J2DScreen();
+        mAlarmScreen->set("ItemAlarm.blo", GETJ2DManager()->getArchive());
+        J2DPane *pane = mAlarmScreen->search('ItAl02');
+#line 408
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        mAlarmPic0 = (J2DPicture *)pane;
+        JGeometry::TBox2f box(*mAlarmPic0->getBounds());
+        mAlarmPos0.x = box.i.x;
+        mAlarmPos0.y = box.i.y;
+        pane = mAlarmScreen->search('ItAlTx02');
+#line 416
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        mAlarmPic1 = (J2DPicture *)pane;
+        JGeometry::TBox2f box2(*mAlarmPic1->getBounds());
+        mAlarmPos1.x = box2.i.x;
+        mAlarmPos1.y = box2.i.y;
+        mAlarmX[0] = 224.0f;
+        mAlarmX[1] = 434.0f;
+        break;
+    }
+    case 3:
+    case 4: {
+        mScreen = new (heap, 0) J2DScreen();
+        mScreen->set("p4_race.blo", GETJ2DManager()->getArchive());
+        mMaskScreen = new (heap, 0) J2DScreen();
+        mMaskScreen->set("p4_Mask.blo", GETJ2DManager()->getArchive());
+        mAlarmScreen = new (heap, 0) J2DScreen();
+        mAlarmScreen->set("ItemAlarm.blo", GETJ2DManager()->getArchive());
+        J2DPane *pane = mAlarmScreen->search('ItAl03');
+#line 435
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        mAlarmPic0 = (J2DPicture *)pane;
+        JGeometry::TBox2f box(*mAlarmPic0->getBounds());
+        mAlarmPos0.x = box.i.x;
+        mAlarmPos0.y = box.i.y;
+        pane = mAlarmScreen->search('ItAlTx03');
+#line 443
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        mAlarmPic1 = (J2DPicture *)pane;
+        JGeometry::TBox2f box2(*mAlarmPic1->getBounds());
+        mAlarmPos1.x = box2.i.x;
+        mAlarmPos1.y = box2.i.y;
+        mAlarmX[0] = mAlarmX[1] = 224.0f;
+        mAlarmX[2] = mAlarmX[3] = 434.0f;
+        break;
+    }
+    default:
+#line 453
+        JUT_ASSERT(0);
+        break;
+    }
+
+    for (int i = 0; i < 20; i++)
+        mDriverTex[i] = (const ResTIMG *)J2DScreen::getNameResource(mDriverName[i]);
+    for (int i = 0; i < 8; i++) {
+        if (J2DManager::getNetFlag())
+            mPlayerTex[i] = (const ResTIMG *)J2DScreen::getNameResource(mLANPlayerName[i]);
+        else
+            mPlayerTex[i] = (const ResTIMG *)J2DScreen::getNameResource(mPlayerName[i]);
+    }
+    for (int i = 0; i < 20; i++)
+        mCharacterTex[i] = (const ResTIMG *)J2DScreen::getNameResource(mCharacterName[i]);
+    for (int i = 0; i < 9; i++)
+        mLapNumTex[i] = Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(i + 1));
+    for (int i = 0; i < 31; i++)
+        mItemTex[i] = (const ResTIMG *)J2DScreen::getNameResource(mItemName[i]);
+    for (int i = 0; i < 10; i++)
+        mNumberTex[i] = Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)i);
+    for (int i = 0; i < 10; i++)
+        mSpeedTex[i] = (const ResTIMG *)J2DScreen::getNameResource(mSpeedName[i]);
+
+    switch (RCMGetManager()->getConsoleNumber()) {
+    case 1:
+        mAlarm[0].mBase = System::get3DScisX();
+        mAlarm[0]._4 = System::get3DScisY();
+        mAlarm[0].mStep = System::get3DScisW();
+        mAlarm[0]._c = System::get3DScisH();
+        break;
+    case 2:
+        for (u8 i = 0; i < 2; i++) {
+            mAlarm[i].mBase = System::get3DScisDiv2X(i);
+            mAlarm[i]._4 = System::get3DScisDiv2Y(i);
+            mAlarm[i].mStep = System::get3DScisDiv2W(i);
+            mAlarm[i]._c = System::get3DScisDiv2H(i);
+        }
+        break;
+    case 3:
+    case 4:
+        for (u8 i = 0; i < 4; i++) {
+            mAlarm[i].mBase = System::get3DScisDiv4X(i);
+            mAlarm[i]._4 = System::get3DScisDiv4Y(i);
+            mAlarm[i].mStep = System::get3DScisDiv4W(i);
+            mAlarm[i]._c = System::get3DScisDiv4H(i);
+        }
+        break;
+    default:
+#line 510
+        JUT_ASSERT(0);
+        break;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 8; j++) {
+            mMark[i][j] = new (heap, 0) J2DPicture();
+            if (J2DManager::getNetFlag())
+                mMark[i][j]->changeTexture(mLANPlayerNumberName[j], 0);
+            else
+                mMark[i][j]->changeTexture(mPlayerNumberName[j], 0);
+            mMark[i][j]->setCornerColor(mPlayerNumberColor[j]);
+            if (!J2DManager::getNetFlag() && RCMGetManager()->getKartInfo(0)->isTagMode()) {
+                int idx = j;
+                if (idx != 0) {
+                    idx++;
+                    if (idx >= 8)
+                        idx = 7;
+                }
+                mMark[i][j]->changeTexture(mPlayerNumberName[idx], 0);
+                mMark[i][j]->setCornerColor(mPlayerNumberColor[idx]);
+            }
+        }
+    }
+
+    if (mScreen) {
+        if (RCMGetManager()->getConsoleNumber() == 1) {
+            for (int i = 0; i < 3; i++) {
+                J2DPane *pane = mScreen->search(mSpeedTag[i]);
+#line 538
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mSpeedPics[i] = (J2DPicture *)pane;
+            }
+            for (int i = 0; i < 7; i++) {
+                J2DPane *pane = mScreen->search(mSpeedChipTag[i]);
+#line 544
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mSpeedChipPics[i] = (J2DPicture *)pane;
+                mSpeedChipColor[i].set(mSpeedChipPics[i]->getWhite());
+            }
+            for (int i = 0; i < 11; i++) {
+                J2DPane *pane = mScreen->search(mSpeedDrawTag[i]);
+#line 551
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mSpeedDrawPics[i] = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mSpeedDrawPics[i]->getBounds());
+                mSpeedDrawPos[i].x = (box.i.x + box.f.x) / 2;
+                mSpeedDrawPos[i].y = (box.i.y + box.f.y) / 2;
+            }
+        }
+        if (RCMGetManager()->getConsoleNumber() == 4 && RCMGetManager()->getStatusNumber() == 3 && !J2DManager::getNetFlag()) {
+            J2DPane *pane = mScreen->search('demo');
+#line 564
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mDemoPic = (J2DPicture *)pane;
+            JGeometry::TBox2f box(*mDemoPic->getBounds());
+            mDemoPos = box.i;
+            ResTIMG *img = (ResTIMG *)ResMgr::getPtr(ResMgr::mcCourseNameBti);
+            if (img) {
+                mDemoPic->changeTexture(img, 0);
+                mDemoPic->show();
+            } else {
+                mDemoPic->hide();
+            }
+        }
+
+        Race2DParam *param = mHio->getParam();
+        switch (ResMgr::getCourseID()) {
+    case BABY_PARK:
+        mMapInfo.mMin.x = -16572.3f;
+        mMapInfo.mMin.y = -8286.1f;
+        mMapInfo.mMax.x = 16572.3f;
+        mMapInfo.mMax.y = 8286.1f;
+        mMapInfo.mRot = 3;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(23.0f);
+            param->setY(13.0f);
+            param->setS(0.8f);
+            break;
+        case 2:
+            param->setX(23.0f);
+            param->setY(-4.0f);
+            param->setS(0.8f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(-4.0f);
+            param->setS(0.8f);
+            break;
+        default:
+#line 606
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case PEACH_BEACH:
+    case REVERSE_1:
+        mMapInfo.mMin.x = -22321.36f;
+        mMapInfo.mMin.y = -34855.84f;
+        mMapInfo.mMax.x = 12534.399f;
+        mMapInfo.mMax.y = 34855.84f;
+        mMapInfo.mRot = 2;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            if (RCMGetManager()->isMirror())
+                param->setX(-7.0f);
+            else
+                param->setX(34.0f);
+            param->setY(16.0f);
+            param->setS(1.2f);
+            break;
+        case 2:
+            if (RCMGetManager()->isMirror())
+                param->setX(-7.0f);
+            else
+                param->setX(34.0f);
+            param->setY(-4.0f);
+            param->setS(1.2f);
+            break;
+        case 3:
+        case 4:
+            if (RCMGetManager()->isMirror())
+                param->setX(-27.0f);
+            else
+                param->setX(28.0f);
+            param->setY(0.0f);
+            param->setS(1.0f);
+            break;
+        default:
+#line 647
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case DAISY_CRUISER:
+        mMapInfo.mMin.x = -42000.0f;
+        mMapInfo.mMin.y = -20000.0f;
+        mMapInfo.mMax.x = 38000.0f;
+        mMapInfo.mMax.y = 20000.0f;
+        mMapInfo.mRot = 3;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(33.0f);
+            param->setY(13.0f);
+            param->setS(1.15f);
+            break;
+        case 2:
+            param->setX(29.0f);
+            param->setY(-2.0f);
+            param->setS(1.3f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(1.1f);
+            break;
+        default:
+#line 675
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case LUIGI_CIRCUIT:
+        mMapInfo.mMin.x = -18519.02f;
+        mMapInfo.mMin.y = -37634.348f;
+        mMapInfo.mMax.x = 16332.94f;
+        mMapInfo.mMax.y = 32069.701f;
+        mMapInfo.mRot = 2;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(6.0f);
+            param->setY(11.0f);
+            param->setS(1.2f);
+            break;
+        case 2:
+            param->setX(6.0f);
+            param->setY(-4.0f);
+            param->setS(1.2f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(1.0f);
+            break;
+        default:
+#line 703
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case MARIO_CIRCUIT:
+    case REVERSE_6:
+        mMapInfo.mMin.x = -19360.0f;
+        mMapInfo.mMin.y = -38720.0f;
+        mMapInfo.mMax.x = 19360.0f;
+        mMapInfo.mMax.y = 38720.0f;
+        mMapInfo.mRot = 2;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(5.0f);
+            param->setY(17.0f);
+            param->setS(1.15f);
+            break;
+        case 2:
+            param->setX(-5.0f);
+            param->setY(0.0f);
+            param->setS(1.3f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(1.0f);
+            break;
+        default:
+#line 732
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case YOSHI_CIRCUIT:
+    case REVERSE_3:
+        mMapInfo.mMin.x = -22050.0f;
+        mMapInfo.mMin.y = -43050.0f;
+        mMapInfo.mMax.x = 28350.0f;
+        mMapInfo.mMax.y = 57750.0f;
+        mMapInfo.mRot = 0;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(-11.0f);
+            param->setY(0.0f);
+            param->setS(1.25f);
+            break;
+        case 2:
+            param->setX(-12.0f);
+            param->setY(-27.0f);
+            param->setS(1.3f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(-24.0f);
+            param->setS(1.15f);
+            break;
+        default:
+#line 761
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case MUSHROOM_BRIDGE:
+    case REVERSE_2:
+        mMapInfo.mMin.x = -32285.6f;
+        mMapInfo.mMin.y = -16658.701f;
+        mMapInfo.mMax.x = 45813.0f;
+        mMapInfo.mMax.y = 22390.602f;
+        mMapInfo.mRot = 3;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(10.0f);
+            param->setY(14.0f);
+            param->setS(1.3f);
+            break;
+        case 2:
+            param->setX(5.0f);
+            param->setY(-7.0f);
+            param->setS(1.3f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(1.0f);
+            break;
+        default:
+#line 790
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case MUSHROOM_CITY:
+    case REVERSE_7:
+        mMapInfo.mMin.x = -35800.0f;
+        mMapInfo.mMin.y = -22500.0f;
+        mMapInfo.mMax.x = 54200.0f;
+        mMapInfo.mMax.y = 22500.0f;
+        mMapInfo.mRot = 3;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(17.0f);
+            param->setY(6.5f);
+            param->setS(1.15f);
+            break;
+        case 2:
+            param->setX(11.0f);
+            param->setY(-14.0f);
+            param->setS(1.3f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(-6.0f);
+            param->setS(1.05f);
+            break;
+        default:
+#line 819
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case WALUIGI_STADIUM:
+        mMapInfo.mMin.x = -25000.0f;
+        mMapInfo.mMin.y = -13000.0f;
+        mMapInfo.mMax.x = 27000.0f;
+        mMapInfo.mMax.y = 13000.0f;
+        mMapInfo.mRot = 1;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(9.0f);
+            param->setY(20.0f);
+            param->setS(1.0f);
+            break;
+        case 2:
+            param->setX(4.0f);
+            param->setY(-8.0f);
+            param->setS(1.1f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(0.9f);
+            break;
+        default:
+#line 847
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case WARIO_COLOSSEUM:
+        mMapInfo.mMin.x = -27000.0f;
+        mMapInfo.mMin.y = -14500.0f;
+        mMapInfo.mMax.x = 33000.0f;
+        mMapInfo.mMax.y = 15500.0f;
+        mMapInfo.mRot = 3;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(-5.0f);
+            param->setY(25.0f);
+            param->setS(1.1f);
+            break;
+        case 2:
+            param->setX(-5.0f);
+            param->setY(12.0f);
+            param->setS(1.2f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(-9.0f);
+            param->setS(0.9f);
+            break;
+        default:
+#line 875
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case DINO_DINO_JUNGLE:
+    case REVERSE_4:
+        mMapInfo.mMin.x = -53460.0f;
+        mMapInfo.mMin.y = -26730.0f;
+        mMapInfo.mMax.x = 35640.0f;
+        mMapInfo.mMax.y = 17820.0f;
+        mMapInfo.mRot = 3;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(-11.0f);
+            param->setY(14.0f);
+            param->setS(1.3f);
+            break;
+        case 2:
+            param->setX(-15.0f);
+            param->setY(-9.0f);
+            param->setS(1.5f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(-4.0f);
+            param->setS(1.1f);
+            break;
+        default:
+#line 904
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case DK_MOUNTAIN:
+        mMapInfo.mMin.x = -28636.72f;
+        mMapInfo.mMin.y = -68430.875f;
+        mMapInfo.mMax.x = 17479.201f;
+        mMapInfo.mMax.y = 23800.959f;
+        mMapInfo.mRot = 2;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(13.5f);
+            param->setY(18.0f);
+            param->setS(1.15f);
+            break;
+        case 2:
+            param->setX(7.0f);
+            param->setY(-4.0f);
+            param->setS(1.3f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(1.0f);
+            break;
+        default:
+#line 932
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case BOWSER_CASTLE:
+        mMapInfo.mMin.x = -32400.0f;
+        mMapInfo.mMin.y = -39600.0f;
+        mMapInfo.mMax.x = 7200.0f;
+        mMapInfo.mMax.y = 39600.0f;
+        mMapInfo.mRot = 0;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(-5.0f);
+            param->setY(17.0f);
+            param->setS(1.2f);
+            break;
+        case 2:
+            param->setX(-6.0f);
+            param->setY(-22.0f);
+            param->setS(1.3f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(-5.0f);
+            param->setS(0.9f);
+            break;
+        default:
+#line 960
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case RAINBOW_ROAD:
+        mMapInfo.mMin.x = -28797.12f;
+        mMapInfo.mMin.y = -54394.29f;
+        mMapInfo.mMax.x = 25597.17f;
+        mMapInfo.mMax.y = 54394.29f;
+        mMapInfo.mRot = 0;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(-4.0f);
+            param->setY(23.0f);
+            param->setS(1.25f);
+            break;
+        case 2:
+            param->setX(-4.0f);
+            param->setY(-2.0f);
+            param->setS(1.4f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(1.1f);
+            break;
+        default:
+#line 988
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case DRY_DRY_DESERT:
+    case REVERSE_8:
+        mMapInfo.mMin.x = -34715.9f;
+        mMapInfo.mMin.y = -63251.5f;
+        mMapInfo.mMax.x = 28535.7f;
+        mMapInfo.mMax.y = 63251.5f;
+        mMapInfo.mRot = 0;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(-12.0f);
+            param->setY(31.0f);
+            param->setS(1.35f);
+            break;
+        case 2:
+            param->setX(-12.0f);
+            param->setY(5.0f);
+            param->setS(1.35f);
+            break;
+        case 3:
+        case 4:
+            param->setX(3.0f);
+            param->setY(15.0f);
+            param->setS(1.35f);
+            break;
+        default:
+#line 1017
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case SHERBET_LAND:
+    case REVERSE_5:
+        mMapInfo.mMin.x = -15298.32f;
+        mMapInfo.mMin.y = -42345.68f;
+        mMapInfo.mMax.x = 29461.521f;
+        mMapInfo.mMax.y = 47174.0f;
+        mMapInfo.mRot = 0;
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            param->setX(-4.0f);
+            param->setY(13.0f);
+            param->setS(1.3f);
+            break;
+        case 2:
+            param->setX(-8.0f);
+            param->setY(-9.0f);
+            param->setS(1.4f);
+            break;
+        case 3:
+        case 4:
+            param->setX(0.0f);
+            param->setY(0.0f);
+            param->setS(1.15f);
+            break;
+        default:
+#line 1046
+            JUT_ASSERT(0);
+            break;
+        }
+        break;
+    case MINI_1:
+        mMapInfo.mMin.x = -7425.0f;
+        mMapInfo.mMin.y = -16250.0f;
+        mMapInfo.mMax.x = 8825.0f;
+        mMapInfo.mMax.y = 16250.0f;
+        mMapInfo.mRot = 0;
+        param->setS(1.3f);
+        break;
+    case MINI_2:
+        mMapInfo.mMin.x = -5750.0f;
+        mMapInfo.mMin.y = -11500.0f;
+        mMapInfo.mMax.x = 5750.0f;
+        mMapInfo.mMax.y = 11500.0f;
+        mMapInfo.mRot = 0;
+        param->setS(1.3f);
+        break;
+    case MINI_3:
+        mMapInfo.mMin.x = -9000.0f;
+        mMapInfo.mMin.y = -18000.0f;
+        mMapInfo.mMax.x = 9000.0f;
+        mMapInfo.mMax.y = 18000.0f;
+        mMapInfo.mRot = 0;
+        param->setS(1.3f);
+        break;
+    case MINI_5:
+        mMapInfo.mMin.x = -10500.0f;
+        mMapInfo.mMin.y = -21000.0f;
+        mMapInfo.mMax.x = 10500.0f;
+        mMapInfo.mMax.y = 21000.0f;
+        mMapInfo.mRot = 0;
+        param->setS(1.3f);
+        break;
+    case MINI_7:
+        mMapInfo.mMin.x = -8350.7f;
+        mMapInfo.mMin.y = -16701.3f;
+        mMapInfo.mMax.x = 8350.7f;
+        mMapInfo.mMax.y = 16701.3f;
+        mMapInfo.mRot = 0;
+        param->setS(1.3f);
+        break;
+    case MINI_8:
+        mMapInfo.mMin.x = -10500.0f;
+        mMapInfo.mMin.y = -21000.0f;
+        mMapInfo.mMax.x = 10500.0f;
+        mMapInfo.mMax.y = 21000.0f;
+        mMapInfo.mRot = 0;
+        param->setS(1.3f);
+        break;
+    case MINI_4:
+    case MINI_6:
+        mMapInfo.mMin.x = -12500.0f;
+        mMapInfo.mMin.y = -25000.0f;
+        mMapInfo.mMax.x = 12500.0f;
+        mMapInfo.mMax.y = 25000.0f;
+        mMapInfo.mRot = 0;
+        param->setS(1.3f);
+        break;
+    default:
+        mMapInfo.mMin.x = -18519.0f;
+        mMapInfo.mMin.y = -37634.4f;
+        mMapInfo.mMax.x = 16332.94f;
+        mMapInfo.mMax.y = 32069.7f;
+        mMapInfo.mRot = 2;
+        break;
+
+        }
+
+        J2DPane *pane = mScreen->search('course');
+#line 1119
+        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+        mCoursePic = (J2DPicture *)pane;
+        JGeometry::TBox2f box(*mCoursePic->getBounds());
+        mCoursePos.x = box.i.x;
+        mCoursePos.y = box.i.y;
+        ResTIMG *map = (ResTIMG *)ResMgr::getPtr(ResMgr::mcCourseMapBti);
+        if (map) {
+            mCoursePic->changeTexture(map, 0);
+            if (RCMGetManager()->isRaceModeMiniGame())
+                mCoursePic->setAlpha(170);
+            mCoursePic->show();
+        } else {
+            mCoursePic->hide();
+        }
+
+        mStartLinePic = new (heap, 0) J2DPicture();
+        mStartLinePic->changeTexture("StartLine1.bti", 0);
+        if (map) {
+            mStartLinePic->show();
+            mStartLinePic->setBlack(JUTColor(0x0000ff00));
+            mStartLinePic->setWhite(JUTColor(0xffffffff));
+            mStartLinePic->setBasePosition(J2DPOS_Center);
+        } else {
+            mStartLinePic->hide();
+        }
+        if (RCMGetManager()->isRaceModeMiniGame())
+            mStartLinePic->hide();
+
+        JGeometry::TVec3f startPos;
+        JGeometry::TVec3f startDir;
+        RCMGetCourse()->getStartLine(&startPos, &startDir);
+        startDir.z *= -1.0f;
+        if (RCMGetManager()->isMirror())
+            mStartLineRot = 180.0f * std::atan2(startDir.z, -startDir.x) / 3.1415927f;
+        else
+            mStartLineRot = 180.0f * std::atan2(startDir.z, startDir.x) / 3.1415927f;
+        getMapPos(mMapInfo.mRot, startPos, mStartLinePos);
+        mStartLineRot += 90.0f * mMapInfo.mRot;
+        mStartLineRot -= 90.0f;
+        if (mStartLineRot < 0.0f)
+            mStartLineRot += 360.0f;
+        if (mStartLineRot >= 360.0f)
+            mStartLineRot -= 360.0f;
+
+        for (int i = 0; i < RCMGetManager()->getKartNumber(); i++) {
+            mKartIcon[i] = new (heap, 0) J2DPicture();
+            if (RCMGetManager()->isRaceModeMiniGame())
+                mKartIcon[i]->changeTexture("BattleIcon.bti", 0);
+            else
+                mKartIcon[i]->changeTexture(mDriverTex[i], 0);
+            mKartIcon[i]->setBasePosition(J2DPOS_Center);
+        }
+        for (int i = 0; i < RCMGetManager()->getPlayerNumber(); i++) {
+            mPlayerIcon[i] = new (heap, 0) J2DPicture();
+            mPlayerIcon[i]->changeTexture(mPlayerTex[i], 0);
+            mPlayerIcon[i]->setCornerColor(mPlayerNumberColor[i]);
+            if (!J2DManager::getNetFlag() && RCMGetManager()->getKartInfo(0)->isTagMode()) {
+                int idx = i;
+                if (idx != 0) {
+                    idx++;
+                    if (idx >= 8)
+                        idx = 7;
+                }
+                mPlayerIcon[i]->changeTexture(mPlayerTex[idx], 0);
+                mPlayerIcon[i]->setCornerColor(mPlayerNumberColor[idx]);
+            }
+            if (RCMGetManager()->isRaceModeMiniGame())
+                mPlayerIcon[i]->hide();
+        }
+        mPlayerGIcon = new (heap, 0) J2DPicture();
+        mPlayerGIcon->changeTexture("Map_Icon_PlayerG.bti", 0);
+        mPlayerGIcon->setCornerColor(mPlayerNumberColor[8]);
+        mPlayerSGIcon = new (heap, 0) J2DPicture();
+        mPlayerSGIcon->changeTexture("Map_Icon_PlayerSG.bti", 0);
+        mPlayerSGIcon->setCornerColor(mPlayerNumberColor[9]);
+        if (RCMGetManager()->getRaceMode() == ESCAPE_BATTLE) {
+            mMapShinePic = new (heap, 0) J2DPicture();
+            mMapShinePic->changeTexture("MapShine00.bti", 0);
+            mMapShinePic->setWhite(JUTColor(0xffff00ff));
+            mBattleLightPic = new (heap, 0) J2DPicture();
+            mBattleLightPic->changeTexture("BattleIconLight.bti", 0);
+            mEscapeFrame = 0;
+        }
+
+        for (int i = 0; i < RCMGetManager()->getConsoleNumber(); i++) {
+            J2DPane *pane = mScreen->search(mLapTag[i][1]);
+#line 1219
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mLapPic[i] = (J2DPicture *)pane;
+            pane = mScreen->search(mLapTag[i][3]);
+#line 1225
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            ((J2DPicture *)pane)->changeTexture(mLapNumTex[RCMGetManager()->getTotalLapNumber() - 1], 0);
+            for (int j = 0; j < 4; j++) {
+                J2DPane *pane = mScreen->search(mLapTag[i][j]);
+#line 1230
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mLapPics[i][j] = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mLapPics[i][j]->getBounds());
+                mPlayerHUD[i].mLapPos[j].x = (box.i.x + box.f.x) / 2;
+                mPlayerHUD[i].mLapPos[j].y = (box.i.y + box.f.y) / 2;
+            }
+            for (int j = 0; j < 4; j++) {
+                J2DPane *pane = mScreen->search(mItemExTag[i][j]);
+#line 1240
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mItemExPics[i][j] = (J2DPicture *)pane;
+                mItemExPics[i][j]->show();
+            }
+            for (int k = 0; k < 2; k++) {
+                for (int j = 0; j < 6; j++) {
+                    J2DPane *pane = mScreen->search(mItemExDrawTag[i][k][j]);
+#line 1247
+                    JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                    mItemExDraw[i][k][j] = (J2DPicture *)pane;
+                    JGeometry::TBox2f box(*mItemExDraw[i][k][j]->getBounds());
+                    mItemExPos[i][k][j].x = (box.i.x + box.f.x) / 2;
+                    mItemExPos[i][k][j].y = (box.i.y + box.f.y) / 2;
+                    mItemExDraw[i][k][j]->show();
+                }
+            }
+            for (int k = 0; k < 2; k++) {
+                mSpecialItem[i][k] = new (heap, 0) J2DPicture();
+                mSpecialItem[i][k]->changeTexture("item_SpecialMozi2.bti", 0);
+                mSpecialItem[i][k]->setWhite(JUTColor(0xffff50ff));
+                mSpecialItem[i][k]->setBlack(JUTColor(0x32000000));
+            }
+            for (int k = 0; k < 2; k++) {
+                for (int j = 0; j < 6; j++) {
+                    mKiraPics[i][k][j] = new (heap, 0) J2DPicture();
+                    mKiraPics[i][k][j]->changeTexture("kirakira2.bti", 0);
+                    switch (j) {
+                    case 0:
+                    case 3:
+                        mKiraPics[i][k][j]->setBlack(JUTColor(0xff780000));
+                        break;
+                    case 1:
+                    case 4:
+                        mKiraPics[i][k][j]->setBlack(JUTColor(0xff00ff00));
+                        break;
+                    case 2:
+                    case 5:
+                        mKiraPics[i][k][j]->setBlack(JUTColor(0x00ffff00));
+                        break;
+                    default:
+#line 1286
+                        JUT_ASSERT(0);
+                        break;
+                    }
+                }
+            }
+            for (int k = 0; k < 2; k++) {
+                switch (RCMGetManager()->getConsoleNumber()) {
+                case 1:
+                    mPlayerHUD[i].mItemPos[k].x = mItemExPos[i][k][0].x;
+                    mPlayerHUD[i].mItemPos[k].y = mItemExPos[i][k][0].y;
+                    mPlayerHUD[i].mItemPos2[k].x = mItemExPos[i][k][0].x;
+                    mPlayerHUD[i].mItemPos2[k].y = mItemExPos[i][k][0].y - 90.0f;
+                    break;
+                case 2:
+                    switch (i) {
+                    case 0:
+                    case 1:
+                        mPlayerHUD[i].mItemPos[k].x = mItemExPos[i][k][0].x;
+                        mPlayerHUD[i].mItemPos[k].y = mItemExPos[i][k][0].y;
+                        mPlayerHUD[i].mItemPos2[k].x = mItemExPos[i][k][0].x - 90.0f;
+                        mPlayerHUD[i].mItemPos2[k].y = mItemExPos[i][k][0].y;
+                        break;
+                    default:
+#line 1310
+                        JUT_ASSERT(0);
+                        break;
+                    }
+                    break;
+                case 3:
+                case 4:
+                    switch (i) {
+                    case 0:
+                    case 2:
+                        mPlayerHUD[i].mItemPos[k].x = mItemExPos[i][k][0].x;
+                        mPlayerHUD[i].mItemPos[k].y = mItemExPos[i][k][0].y;
+                        mPlayerHUD[i].mItemPos2[k].x = mItemExPos[i][k][0].x - 90.0f;
+                        mPlayerHUD[i].mItemPos2[k].y = mItemExPos[i][k][0].y;
+                        break;
+                    case 1:
+                    case 3:
+                        mPlayerHUD[i].mItemPos[k].x = mItemExPos[i][k][0].x;
+                        mPlayerHUD[i].mItemPos[k].y = mItemExPos[i][k][0].y;
+                        mPlayerHUD[i].mItemPos2[k].x = mItemExPos[i][k][0].x + 90.0f;
+                        mPlayerHUD[i].mItemPos2[k].y = mItemExPos[i][k][0].y;
+                        break;
+                    default:
+#line 1332
+                        JUT_ASSERT(0);
+                        break;
+                    }
+                    break;
+                default:
+#line 1337
+                    JUT_ASSERT(0);
+                    break;
+                }
+            }
+            JGeometry::TVec2f zero(0.0f, 0.0f);
+            for (int j = 0; j < 10; j++)
+                mPlayerHUD[i].mTimePos[j] = zero;
+            for (int j = 0; j < 9; j++) {
+                for (int k = 0; k < 11; k++) {
+                    mPlayerHUD[i].mLapTimePos[j][k] = zero;
+                    mPlayerHUD[i].mLapTimePos2[j][k] = zero;
+                }
+            }
+            if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2) {
+                for (int j = 0; j < 10; j++) {
+                    J2DPane *pane = mScreen->search(mTimeDrawTag[i][j]);
+#line 1358
+                    JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                    _694x[i][j] = (J2DPicture *)pane;
+                    if (_694x[i][j]) {
+                        JGeometry::TBox2f box(*_694x[i][j]->getBounds());
+                        mPlayerHUD[i].mTimePos[j].x = (box.i.x + box.f.x) / 2;
+                        mPlayerHUD[i].mTimePos[j].y = (box.i.y + box.f.y) / 2;
+                    }
+                    if (i == 0 && j == 0)
+                        _694x[i][j]->getCornerColor(mTimeCornerColor);
+                }
+                for (int j = 0; j < 9; j++) {
+                    for (int k = 0; k < 11; k++) {
+                        J2DPane *pane = mScreen->search(mLapTimeDrawTag[i][j][k]);
+#line 1375
+                        JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                        mLapDigits[i][j][k] = (J2DPicture *)pane;
+                        if (mLapDigits[i][j][k]) {
+                            JGeometry::TBox2f box(*mLapDigits[i][j][k]->getBounds());
+                            mPlayerHUD[i].mLapTimePos[j][k].x = box.i.x;
+                            mPlayerHUD[i].mLapTimePos[j][k].y = box.i.y;
+                        }
+                        if (i == 0 && j == 0 && k == 0)
+                            mLapDigits[i][j][k]->getCornerColor(mLapTimeCornerColor);
+                    }
+                }
+                if (i == 1) {
+                    int lapNum = RCMGetManager()->getTotalLapNumber();
+                    if (lapNum > 9)
+                        lapNum = 9;
+                    for (int j = 0; j < 9; j++) {
+                        for (int k = 0; k < 10; k++)
+                            mPlayerHUD[i].mLapTimePos[j][k] = mPlayerHUD[i].mLapTimePos[j + 9 - lapNum][k];
+                    }
+                    for (int j = 0; j < 9; j++)
+                        mPlayerHUD[i].mLapTimePos[j][10].y = mPlayerHUD[i].mLapTimePos[0][0].y;
+                }
+            }
+            for (int j = 0; j < 8; j++) {
+                J2DPane *pane = mScreen->search(mRankTag[i][j]);
+#line 1407
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mRankDigits1[i][j] = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mRankDigits1[i][j]->getBounds());
+                mPlayerHUD[i].mRankPos[j].x = (box.i.x + box.f.x) / 2;
+                mPlayerHUD[i].mRankPos[j].y = (box.i.y + box.f.y) / 2;
+            }
+            if (RCMGetManager()->getConsoleNumber() == 2) {
+                for (int j = 0; j < 8; j++) {
+                    J2DPane *pane = mScreen->search(mRankGoalTag[i][j]);
+#line 1416
+                    JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                    mRankDigits2[i][j] = (J2DPicture *)pane;
+                    JGeometry::TBox2f box(*mRankDigits2[i][j]->getBounds());
+                    mPlayerHUD[i].mRankPos2[j].x = (box.i.x + box.f.x) / 2;
+                    mPlayerHUD[i].mRankPos2[j].y = (box.i.y + box.f.y) / 2;
+                    if (RCMGetManager()->getRaceMode() == VERSUS_RACE) {
+                        if (i == 0)
+                            mPlayerHUD[i].mRankPos[j].y -= 23.0f;
+                        else
+                            mPlayerHUD[i].mRankPos[j].y += 23.0f;
+                    }
+                }
+            }
+        }
+    }
+
+    if (RCMGetManager()->isRaceModeMiniGame()) {
+        for (int i = 0; i < RCMGetManager()->getConsoleNumber(); i++) {
+            for (int j = 0; j < 3; j++) {
+                for (int k = 0; k < 4; k++) {
+                    J2DPane *pane = mScreen->search('StarA11' + (i << 8) + (j << 16) + k);
+#line 1441
+                    JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                    mMiniPics[i][j][k] = (J2DPicture *)pane;
+                    JGeometry::TBox2f box(*pane->getBounds());
+                    mMiniPos[i][j][k].x = (box.i.x + box.f.x) / 2;
+                    mMiniPos[i][j][k].y = (box.i.y + box.f.y) / 2;
+                }
+            }
+        }
+        for (int i = 0; i < RCMGetManager()->getConsoleNumber(); i++) {
+            for (int j = 0; j < 2; j++) {
+                J2DPane *pane = mScreen->search(i + ('Star3DA1' + (j << 8)));
+#line 1453
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mStarPics[i][j] = (J2DPicture *)pane;
+                JUTColor color = mPlayerNumberColor[i];
+                color.a = 0;
+                mStarPics[i][j]->setBlack(color);
+            }
+        }
+        for (int i = 0; i < RCMGetManager()->getConsoleNumber(); i++) {
+            J2DPane *pane = mScreen->search('Shine1' + i);
+            mShineBase[i].x = pane->getTranslateX();
+            mShineBase[i].y = pane->getTranslateY();
+            mShineScreen[i] = new (heap, 0) J2DScreen();
+            mShineScreen[i]->set("ShineIndication.blo", GETJ2DManager()->getArchive());
+            for (int j = 0; j < 5; j++) {
+                J2DPane *pane = mShineScreen[i]->search(mShineTimeTag[j]);
+#line 1472
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mShinePics[i][j] = (J2DPicture *)pane;
+                mShinePos[j].x = pane->getTranslateX();
+                mShinePos[j].y = pane->getTranslateY();
+            }
+        }
+    }
+
+    J2DScreen *screen = nullptr;
+    J2DAnmTransform *anm = nullptr;
+    switch (RCMGetManager()->getConsoleNumber()) {
+    case 1:
+        screen = new (heap, 0) J2DScreen();
+        screen->set("p1_race.blo", 0x40000, GETJ2DManager()->getArchive());
+        anm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRGetNameResource("p1_race.bck", GETJ2DManager()->getArchive()));
+        screen->setAnimation(anm);
+        break;
+    case 2:
+        screen = new (heap, 0) J2DScreen();
+        screen->set("p2_race.blo", 0x40000, GETJ2DManager()->getArchive());
+        anm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRGetNameResource("p2_race.bck", GETJ2DManager()->getArchive()));
+        screen->setAnimation(anm);
+        break;
+    case 3:
+    case 4:
+        screen = new (heap, 0) J2DScreen();
+        screen->set("p4_race.blo", 0x40000, GETJ2DManager()->getArchive());
+        anm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRGetNameResource("p4_race.bck", GETJ2DManager()->getArchive()));
+        screen->setAnimation(anm);
+        break;
+    default:
+#line 1512
+        JUT_ASSERT(0);
+        break;
+    }
+    f32 ofs = 0.0f;
+    if (RCMGetManager()->isRaceModeMiniGame()) {
+        switch (RCMGetManager()->getConsoleNumber()) {
+        case 1:
+            ofs = 75.0f;
+            break;
+        case 2:
+            ofs = 40.0f;
+            break;
+        }
+    }
+    for (int i = 0; i < RCMGetManager()->getConsoleNumber(); i++) {
+        for (int k = 0; k < 2; k++) {
+            J2DPane *pane = screen->search(mItemExDrawTag[i][k][3]);
+            for (int f = 0; f < 39; f++) {
+                anm->setFrame(f);
+                screen->animation();
+                JGeometry::TBox2f box(*pane->getBounds());
+                mItemPos[i][k][f].x = (box.i.x + box.f.x) / 2 - ofs;
+                mItemPos[i][k][f].y = (box.i.y + box.f.y) / 2;
+                mItemPos[i][k][f].z = pane->getScaleX();
+            }
+        }
+    }
+    delete screen;
+
+    J2DScreen *charScreen = new (heap, 0) J2DScreen();
+    charScreen->set("CharacterIndication.blo", 0x40000, GETJ2DManager()->getArchive());
+    anm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRGetNameResource("CharacterIndication.bck", GETJ2DManager()->getArchive()));
+    charScreen->setAnimation(anm);
+    for (int k = 0; k < 2; k++) {
+        J2DPane *pane = charScreen->search('cw11' + k);
+        for (int f = 0; f < 39; f++) {
+            anm->setFrame(f);
+            charScreen->animation();
+            JGeometry::TBox2f box(*pane->getBounds());
+            mCharPos[k][f].x = (box.i.x + box.f.x) / 2;
+            mCharPos[k][f].y = (box.i.y + box.f.y) / 2;
+            mCharPos[k][f].z = pane->getScaleX();
+        }
+    }
+    delete charScreen;
+
+    if (RCMGetManager()->isRaceModeMiniGame()) {
+        J2DScreen *shineScreen = new (heap, 0) J2DScreen();
+        shineScreen->set("ShineIndication.blo", 0x40000, GETJ2DManager()->getArchive());
+        anm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRGetNameResource("ShineIndication.bck", GETJ2DManager()->getArchive()));
+        shineScreen->setAnimation(anm);
+        J2DPane *pane = shineScreen->search('ShineB');
+        for (int f = 0; f < 50; f++) {
+            anm->setFrame(f);
+            shineScreen->animation();
+            mSpecialItemScale[f] = pane->getScaleX();
+        }
+        delete shineScreen;
+    }
+
+    if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2) {
+        for (int i = 0; i < 8; i++) {
+            mCharWindow[i].mScreen = new (heap, 0) J2DScreen();
+            mCharWindow[i].mScreen->set("CharacterIndication.blo", GETJ2DManager()->getArchive());
+            for (int j = 0; j < 2; j++) {
+                J2DPane *pane = mCharWindow[i].mScreen->search('cw11' + j);
+#line 1602
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mCharWindow[i].mPics[j][0] = (J2DPicture *)pane;
+                if (i < RCMGetManager()->getPlayerNumber())
+                    mCharWindow[i].mPics[j][0]->changeTexture("chara_Window2.bti", 0);
+                pane = mCharWindow[i].mScreen->search('c11' + j);
+#line 1610
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mCharWindow[i].mPics[j][1] = (J2DPicture *)pane;
+            }
+            mCharWindow[i].mPane = mCharWindow[i].mScreen->search('posc1');
+        }
+        for (int i = 0; i < 8; i++) {
+            J2DPane *pane = mScreen->search('CI_01' + i);
+            mCharIconPos[i].x = pane->getTranslateX();
+            mCharIconPos[i].y = pane->getTranslateY();
+        }
+        JGeometry::TBox2f box1(*mCharWindow[0].mPics[1][1]->getBounds());
+        JGeometry::TBox2f box2(*mCharWindow[0].mPics[1][0]->getBounds());
+        mCharWindowOfs.x = (box1.i.x + box1.f.x) / 2 - (box2.i.x + box2.f.x) / 2;
+        mCharWindowOfs.y = (box1.i.y + box1.f.y) / 2 - (box2.i.y + box2.f.y) / 2;
+        JGeometry::TBox2f box3(*mCharWindow[0].mPane->getBounds());
+        mCharWindowCenter.x = (box3.i.x + box3.f.x) / 2;
+        mCharWindowCenter.y = (box3.i.y + box3.f.y) / 2;
+    }
+
+    mTask = new (heap, 0) Task(0x80);
+    init();
 }
-#pragma dont_inline reset
-#pragma inline_depth(4)
 
-void Race2D::init() {}
+void Race2D::init()
+{
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 8; j++) {
+            mMark[i][j]->setAlpha(0);
+            mMarkOrder[i][j] = 0;
+        }
+    }
 
-Race2D::~Race2D() {}
+    if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2) {
+        for (int i = 0; i < 2; i++) {
+            mAnmTA[i].mCount[0] = 0;
+            mAnmTA[i].mCount[1] = 0;
+            mAnmTA[i].mCount[2] = 0;
+            mAnmTA[i].mCount[3] = 0;
+            mAnmTA[i].mNum = 0;
+        }
+        for (int i = 0; i < RCMGetManager()->getStatusNumber(); i++) {
+            _694x[i][0]->changeTexture(mTimeLapName[0], 0);
+            for (int j = 0; j < 10; j++) {
+                _694x[i][j]->setAlpha(255);
+                _694x[i][j]->setBlack(JUTColor(0));
+                _694x[i][j]->setCornerColor(mTimeCornerColor);
+            }
+            for (int j = 0; j < 9; j++) {
+                for (int k = 0; k < 11; k++)
+                    mLapDigits[i][j][k]->setBlack(JUTColor(0));
+            }
+        }
+    }
+
+    for (int i = 0; i < RCMGetManager()->getStatusNumber(); i++) {
+        mPlayerHUD[i].mLap = 0;
+        mPlayerHUD[i]._24 = 1;
+        mPlayerHUD[i].mRaceTimeAvailable = 0;
+        mPlayerHUD[i].mDigits[0] = 0;
+        mPlayerHUD[i].mDigits[1] = 0;
+        mPlayerHUD[i].mDigits[2] = 0;
+        mPlayerHUD[i].mDigits[3] = 0;
+        mPlayerHUD[i].mDigits[4] = 0;
+        mPlayerHUD[i].mDigits[5] = 0;
+        mPlayerHUD[i].mDigits[6] = 0;
+        for (int j = 0; j < 9; j++) {
+            mPlayerHUD[i].mLapSlots[j].mAvailable = 0;
+            mPlayerHUD[i].mLapSlots[j].mDigits[0] = 0;
+            mPlayerHUD[i].mLapSlots[j].mDigits[1] = 0;
+            mPlayerHUD[i].mLapSlots[j].mDigits[2] = 0;
+            mPlayerHUD[i].mLapSlots[j].mDigits[3] = 0;
+            mPlayerHUD[i].mLapSlots[j].mDigits[4] = 0;
+            mPlayerHUD[i].mLapSlots[j].mDigits[5] = 0;
+            mPlayerHUD[i].mLapSlots[j].mDigits[6] = 0;
+        }
+        for (int k = 0; k < 2; k++) {
+            mPlayerHUD[i].mItem[k][0] = 16;
+            mPlayerHUD[i].mItem[k][1] = 16;
+            mPlayerHUD[i]._7f8[k] = false;
+            mPlayerHUD[i]._7fa[k] = true;
+            mPlayerHUD[i].mItemPos3[k].x = 0.0f;
+            mPlayerHUD[i].mItemPos3[k].y = 0.0f;
+            mSpecialItem[i][k]->mIsVisible = false;
+            for (int j = 0; j < 6; j++)
+                mKiraPics[i][k][j]->mIsVisible = false;
+        }
+        mPlayerHUD[i]._848 = 0;
+        mPlayerHUD[i]._84c = 0;
+        mPlayerHUD[i]._850 = 1;
+        mPlayerHUD[i]._8d4 = 0;
+        mPlayerHUD[i].mIsAlarm = false;
+        for (int j = 0; j < 4; j++)
+            mPlayerHUD[i].mAlarmAlpha[j] = 0;
+        mLapPic[i]->mIsVisible = true;
+        mLapPic[i]->setAlpha(255);
+        if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2) {
+            for (int j = 0; j < 9; j++) {
+                for (int k = 0; k < 11; k++) {
+                    mLapDigits[i][j][k]->setAlpha(0);
+                    mLapDigits[i][j][k]->mIsVisible = false;
+                    mPlayerHUD[i].mLapTimePos2[j][k].x = mPlayerHUD[i].mLapTimePos[j][k].x;
+                    mPlayerHUD[i].mLapTimePos2[j][k].y = mPlayerHUD[i].mLapTimePos[j][k].y;
+                }
+            }
+        }
+        for (int j = 0; j < 8; j++) {
+            mRankDigits1[i][j]->mIsVisible = true;
+            mRankDigits1[i][j]->setAlpha(255);
+        }
+        if (RCMGetManager()->getConsoleNumber() == 2) {
+            for (int j = 0; j < 8; j++) {
+                mRankDigits2[i][j]->mIsVisible = false;
+                mRankDigits2[i][j]->setAlpha(0);
+            }
+        }
+    }
+
+    if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2) {
+        for (int i = 0; i < RCMGetManager()->getKartNumber(); i++) {
+            mKartSlot[i]._0 = 0;
+            mKartSlot[i]._4 = 0;
+            mKartSlot[i]._8 = 1;
+            for (int j = 0; j < 2; j++) {
+                int charID = gRaceInfo.getKartInfo(i)->getDriverCharID(j);
+                if (charID > 0 && charID < 21)
+                    mCharWindow[i].mPics[j][1]->changeTexture(mCharacterTex[charID - 1], 0);
+            }
+            int rank = RCMGetManager()->getKartChecker(i)->getRank() - 1;
+            if (rank >= 0 && rank < RCMGetManager()->getKartNumber()) {
+                mCharWindow[i].mPos.x = mCharIconPos[rank].x;
+                mCharWindow[i].mPos.y = mCharIconPos[rank].y;
+                mCharWindow[i]._2c.x = mCharWindow[i].mPos.x;
+                mCharWindow[i]._2c.y = mCharWindow[i].mPos.y;
+                mCharWindow[i]._1c.x = mCharWindow[i]._2c.x;
+                mCharWindow[i]._1c.y = mCharWindow[i]._2c.y;
+                mCharWindow[i]._34[1] = 255;
+                mCharWindow[i]._34[2] = 255;
+                mCharWindow[i]._34[0] = 255;
+            } else {
+                mCharWindow[i].mPos.x = 0.0f;
+                mCharWindow[i].mPos.y = 0.0f;
+                mCharWindow[i]._2c.x = mCharWindow[i].mPos.x;
+                mCharWindow[i]._2c.y = mCharWindow[i].mPos.y;
+                mCharWindow[i]._1c.x = mCharWindow[i]._2c.x;
+                mCharWindow[i]._1c.y = mCharWindow[i]._2c.y;
+                mCharWindow[i]._34[1] = 255;
+                mCharWindow[i]._34[2] = 255;
+                mCharWindow[i]._34[0] = 255;
+            }
+        }
+        _4e9c[0] = 0;
+        _4e9c[1] = 0;
+    }
+
+    sChangeFrame = 0;
+    sColorIndex = 0;
+    for (int i = 0; i < 8; i++)
+        sSpinRotate[i] = 0.0f;
+    for (int i = 0; i < 4; i++)
+        sPreWhichDriver[i] = 0;
+    for (int i = 0; i < 8; i++)
+        sPreWhichDriver2[i] = 0;
+    for (int i = 0; i < 4; i++)
+        sPreLap[i] = 0;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 2; j++) {
+            sRollingFlag[i][j] = false;
+            sItemState[i][j] = 0;
+            sUseFlag[i][j] = false;
+        }
+    }
+    sPreShineFlag = false;
+    sPreShinePlayer = -1;
+    for (int i = 0; i < 4; i++) {
+        mBattleTimeCount[i] = 0;
+        mShineKind[i] = 0;
+        mBombWinFrame[i] = 0;
+        sPreBombPoint[i] = 0;
+        for (int j = 0; j < 4; j++) {
+            mBombMarkFrame[i][j] = 0;
+            for (int k = 0; k < 3; k++)
+                _ec0[i][j][k] = nullptr;
+        }
+        for (int j = 0; j < 4; j++) {
+            for (int k = 0; k < 2; k++)
+                _f80[i][j][k] = nullptr;
+        }
+    }
+    mTimeColorFrame = 0;
+    mBombColorFrame = 0;
+
+    if (RCMGetManager()->getRaceMode() == TIME_ATTACK) {
+        TARecord rec = *gSystemRecord.getBestLap(ResMgr::getCourseID());
+        if (rec.isValid())
+            sBestLapTime = rec.getRaceTime();
+        else
+            sBestLapTime = RaceTime();
+        mLapGhost->init();
+        mCanNotSave->init();
+    }
+    if (RCMGetManager()->getRaceMode() == BOMB_BATTLE)
+        mBombStart->init();
+
+    for (int i = 0; i < 4; i++) {
+        sPreRank[i] = -1;
+        sRankAnm[i] = 0;
+    }
+    for (int i = 0; i < 8; i++) {
+        sPreThunder[i] = 0;
+        sThunderAnm[i] = 0;
+    }
+
+    if (mMaskScreen)
+        mMaskScreen->search('P3Mask')->setAlpha(255);
+
+    mTask->init();
+    if (mScreen) {
+        mTask->make(calcLapInit, 0x8000);
+        mTask->make(calcItem, 0x8000);
+    }
+    mDrawFlag = false;
+    mIsEndBombDemo = false;
+    mGoalCount = 0;
+    mEscapeTimer = 0;
+    mEscapeTimer4 = 0;
+    mHideFrame = 0;
+}
+
+Race2D::~Race2D() { delete mHio; }
 
 void Race2D::drawPlayerMark()
 {
@@ -533,15 +1912,15 @@ void Race2D::drawAlarm()
             alarmX(status, pos.x);
 
             J2DPicture *pic = mAlarmPic0;
-            pic->setAlpha((u8)mPlayerHUD[status].mAlarmAlpha);
+            pic->setAlpha((u8)mPlayerHUD[status].mAlarmAlpha[0]);
             JGeometry::TBox2f *b = pic->getBounds();
-            ((K2DPicture *)pic)->drawK2D(pos.x + mAlarmPic0X, mAlarmX[status] + mAlarmPic0Y,
+            ((K2DPicture *)pic)->drawK2D(pos.x + mAlarmPos0.x, mAlarmX[status] + mAlarmPos0.y,
                                          b->getWidth(), b->getHeight(), true);
 
             pic = mAlarmPic1;
-            pic->setAlpha((u8)mPlayerHUD[status].mAlarmAlpha);
+            pic->setAlpha((u8)mPlayerHUD[status].mAlarmAlpha[0]);
             JGeometry::TBox2f *b2 = pic->getBounds();
-            ((K2DPicture *)pic)->drawK2D(pos.x + mAlarmPic1X, mAlarmX[status] + mAlarmPic1Y,
+            ((K2DPicture *)pic)->drawK2D(pos.x + mAlarmPos1.x, mAlarmX[status] + mAlarmPos1.y,
                                          b2->getWidth(), b2->getHeight(), true);
 
             drawn = true;
@@ -550,15 +1929,15 @@ void Race2D::drawAlarm()
 
         if (drawn)
         {
-            mPlayerHUD[status].mAlarmAlpha += 26;
-            if (mPlayerHUD[status].mAlarmAlpha > 255)
-                mPlayerHUD[status].mAlarmAlpha = 255;
+            mPlayerHUD[status].mAlarmAlpha[0] += 26;
+            if (mPlayerHUD[status].mAlarmAlpha[0] > 255)
+                mPlayerHUD[status].mAlarmAlpha[0] = 255;
         }
         else
         {
-            mPlayerHUD[status].mAlarmAlpha -= 13;
-            if (mPlayerHUD[status].mAlarmAlpha < 0)
-                mPlayerHUD[status].mAlarmAlpha = 0;
+            mPlayerHUD[status].mAlarmAlpha[0] -= 13;
+            if (mPlayerHUD[status].mAlarmAlpha[0] < 0)
+                mPlayerHUD[status].mAlarmAlpha[0] = 0;
         }
     }
 
@@ -567,10 +1946,10 @@ void Race2D::drawAlarm()
 
 void Race2D::anmTA(int no)
 {
-    JUTColor colorA = mAnmTAColor;
+    JUTColor colorA = mTimeCornerColor.mColor0;
     JUTColor colorB;
     J2DPicture::TCornerColor cornerB;
-    JUTColor colorB2 = mAnmTAColor;
+    JUTColor colorB2 = mTimeCornerColor.mColor0;
     JUTColor blackB2;
     JUTColor colorC;
     J2DPicture::TCornerColor cornerC;
@@ -591,7 +1970,7 @@ void Race2D::anmTA(int no)
         {
             mAnmTA[no].mCount[0] = 0;
             _694x[no][0]->changeTexture(mTimeLapName[0], 0);
-            JUTColor color = mAnmTAColor;
+            JUTColor color = mTimeCornerColor.mColor0;
             
             for (int i = 0; i < 10; i++)
             {
@@ -730,10 +2109,12 @@ void Race2D::getBestTimeColor(int frame, JUTColor &color, J2DPicture::TCornerCol
     color.g = (u8)(110.0f * t);
     color.b = 0;
     color.a = 0;
-    cornerColor.mColor0.set(255, 255, (u8)(127.0f * t + 128.0f), 255);
-    cornerColor.mColor1.set((u8)(177.0f * t + 78.0f), (u8)(255.0f * t), (u8)(128.0f * t), 255);
-    cornerColor.mColor2 = cornerColor.mColor1;
-    cornerColor.mColor3 = cornerColor.mColor0;
+    JUTColor c0(255, 255, (u8)(127.0f * t + 128.0f), 255);
+    JUTColor c1((u8)(177.0f * t + 78.0f), (u8)(255.0f * t), (u8)(128.0f * t), 255);
+    cornerColor.mColor0 = c0;
+    cornerColor.mColor1 = c1;
+    cornerColor.mColor2 = c1;
+    cornerColor.mColor3 = c0;
 }
 
 void Race2D::getBestLapColor(int frame, JUTColor &color)
@@ -761,8 +2142,61 @@ void Race2D::drawMiniGame()
     }
 }
 
-void Race2D::drawBomb() {
-    //KartChecker::getWinBombPoint() {}
+void Race2D::drawBomb()
+{
+    if (mIsEndBombDemo) {
+        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++) {
+            int kartNo = J2DManager::getStatus2Kart(status);
+            int win = (RCMGetManager()->getKartChecker(kartNo), KartChecker::getWinBombPoint());
+            RCMGetManager()->getKartChecker(kartNo);
+            u8 alpha = K2DPicture::mK2DGlobalAlpha;
+            if (isBombWinner(status))
+                K2DPicture::mK2DGlobalAlpha = 255;
+            for (int j = 0; j < win; j++) {
+                f32 scale = getBombScale(status, 0, j);
+                K2DPicture *pic = (K2DPicture *)mMiniPics[status][0][j];
+                f32 w = scale * pic->mPicture.getWidth();
+                f32 h = scale * pic->mPicture.getHeight();
+                pic->drawK2D(mMiniPos[status][0][j].x - w / 2, mMiniPos[status][0][j].y - h / 2, w, h, true);
+            }
+            if (isBombWinner(status))
+                K2DPicture::mK2DGlobalAlpha = alpha;
+        }
+        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++) {
+            int kartNo = J2DManager::getStatus2Kart(status);
+            int win = (RCMGetManager()->getKartChecker(kartNo), KartChecker::getWinBombPoint());
+            int point = RCMGetManager()->getKartChecker(kartNo)->getBombPoint();
+            u8 alpha = K2DPicture::mK2DGlobalAlpha;
+            if (isBombWinner(status))
+                K2DPicture::mK2DGlobalAlpha = 255;
+            for (int j = 0; j < point; j++) {
+                f32 scale = getBombScale(status, 1, j);
+                K2DPicture *pic = (K2DPicture *)mMiniPics[status][1][j];
+                f32 w = scale * pic->mPicture.getWidth();
+                f32 h = scale * pic->mPicture.getHeight();
+                pic->drawK2D(mMiniPos[status][1][j].x - w / 2, mMiniPos[status][1][j].y - h / 2, w, h, true);
+            }
+            if (isBombWinner(status))
+                K2DPicture::mK2DGlobalAlpha = alpha;
+        }
+        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++) {
+            int kartNo = J2DManager::getStatus2Kart(status);
+            int win = (RCMGetManager()->getKartChecker(kartNo), KartChecker::getWinBombPoint());
+            int point = RCMGetManager()->getKartChecker(kartNo)->getBombPoint();
+            u8 alpha = K2DPicture::mK2DGlobalAlpha;
+            if (isBombWinner(status))
+                K2DPicture::mK2DGlobalAlpha = 255;
+            for (int j = 0; j < point; j++) {
+                f32 scale = getBombScale(status, 2, j);
+                K2DPicture *pic = (K2DPicture *)mMiniPics[status][2][j];
+                f32 w = scale * pic->mPicture.getWidth();
+                f32 h = scale * pic->mPicture.getHeight();
+                pic->drawK2D(_e40[status][j].x - w / 2, _e40[status][j].y - h / 2, w, h, true);
+            }
+            if (isBombWinner(status))
+                K2DPicture::mK2DGlobalAlpha = alpha;
+        }
+    }
 }
 
 #pragma dont_inline on
@@ -914,38 +2348,99 @@ f32 Race2D::getStartShineTimeScale(int frame)
 
 void Race2D::drawCourse() {}
 
-#pragma inline_depth(0)
+static inline bool isGhostSavable()
+{
+    PadRecorder *recorder = RaceApp::ptr()->getPadRecorder();
+    if (recorder && (int)recorder->getFrame() <= MAX_INPUT_FRAME_COUNT)
+        return true;
+    return false;
+}
+
 void Race2D::calc()
 {
-    JGeometry::TVec2f v(1.0f, 2.0f);
-    Race2DHioNode hio("x");
-    int w = KartChecker::getWinBombPoint();
-    int a = RCMGetManager()->getPlayerNumber();
-    int b = RCMGetManager()->getKartNumber();
-    bool m = RCMGetManager()->isMirror();
-    int c = RCMGetManager()->getConsoleNumber();
-    int d = RCMGetManager()->getTotalLapNumber();
-    f32 x = mMaskScreen->getTranslateX();
-    f32 y = mMaskScreen->getTranslateY();
-    bool n = J2DManager::getNetFlag();
-    ECourseID e = ResMgr::getCourseID();
-    Course *course = RCMGetCourse();
-    Race2DHioNode *node = (Race2DHioNode *)this;
-    Race2DParam *param = node->getParam();
-    param->setX(x);
-    param->setY(y);
-    param->setS(1.0f);
-    JUTColor col;
-    _GXColor gx = { 0, 0, 0, 0 };
-    col.set(gx);
-    JUTColor col2(col);
-    JUTColor col3(0xffffffff);
-    f32 ang = std::atan2(1.0f, 2.0f);
-    a += b + c + d + n + e + course != 0;
-    a += w;
-    m = m && ang != 0.0f && col2.r != 0 && col3.r != 0 && v.x != 0.0f;
+    if (!(mHio->getParam()->mFlag & 1))
+        return;
+
+    mTask->run();
+    if (mScreen)
+        setLayoutData();
+    calcMiniGame();
+    calcPlayerMark();
+
+    if (mDrawFlag)
+        mEscapeTimer++;
+    if (mEscapeTimer < 20) {
+        if (RCMGetManager()->isRaceModeMiniGame())
+            K2DPicture::mK2DGlobalAlpha = mEscapeTimer * 255 / 20;
+        else
+            K2DPicture::mK2DGlobalAlpha = 255;
+    } else {
+        K2DPicture::mK2DGlobalAlpha = 255;
+        if (mEscapeTimer == 0x7fffffff)
+            mEscapeTimer = 0x7ffffffe;
+    }
+    if (GETJ2DManager()->isStartGo321()) {
+        if (++mEscapeTimer4 == 0x7fffffff)
+            mEscapeTimer4 = 0x7ffffffe;
+    }
+    if (mHideFrame != 0) {
+        if (mHideFrame++ < 20) {
+            K2DPicture::mK2DGlobalAlpha = 255 - mHideFrame * 255 / 20;
+        } else {
+            K2DPicture::mK2DGlobalAlpha = 0;
+            mHideFrame = 20;
+        }
+    }
+
+    if ((RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2) &&
+        !RCMGetManager()->isRaceModeMiniGame() && RCMGetManager()->getRaceMode() != VERSUS_RACE && !J2DManager::getNetFlag()) {
+        for (int status = 0; status < RCMGetManager()->getStatusNumber(); status++) {
+            KartChecker *checker = RCMGetManager()->getKartChecker(J2DManager::getStatus2Kart(status));
+            if (!checker->isGoal() && checker->isLapRenewal()) {
+                _694x[status][0]->changeTexture(mTimeLapName[1], 0);
+                for (int i = 0; i < 10; i++)
+                    _694x[status][i]->setCornerColor(mLapTimeCornerColor);
+                if (RCMGetManager()->getRaceMode() == TIME_ATTACK) {
+                    if (checker->getLapTime(checker->getLap() - 1).isLittle(sBestLapTime)) {
+                        mAnmTA[status].mCount[1] = 1;
+                        sBestLapTime = checker->getLapTime(checker->getLap() - 1);
+                    } else {
+                        mAnmTA[status].mCount[0] = 1;
+                    }
+                } else {
+                    mAnmTA[status].mCount[0] = 1;
+                }
+            }
+            if (checker->isGoal() && checker->isLapRenewal() && RCMGetManager()->getRaceMode() == TIME_ATTACK) {
+                if (checker->isBestTotalTimeRenewal(4))
+                    mAnmTA[status].mCount[2] = 1;
+                if (checker->getLapTime(checker->getLap() - 1).isLittle(sBestLapTime))
+                    sBestLapTime = checker->getLapTime(checker->getLap() - 1);
+                if (checker->isBestLapTimeRenewal()) {
+                    mAnmTA[status].mCount[3] = 1;
+                    for (int i = 0; i < RCMGetManager()->getTotalLapNumber(); i++) {
+                        RaceTime lapTime = checker->getLapTime(i);
+                        if (checker->getBestLapTime()->get() == lapTime.get())
+                            mAnmTA[status].mNum = i;
+                    }
+                }
+            }
+            anmTA(status);
+        }
+    }
+
+    if (RCMGetManager()->getRaceMode() == TIME_ATTACK) {
+        KartChecker *checker = RCMGetManager()->getKartChecker(J2DManager::getStatus2Kart(0));
+        if (!checker->isGoal() && checker->isLapRenewal() && !(gSystemRecord.mOptions & 8)) {
+            int lap = checker->getLap() - 1;
+            mLapGhost->start(checker->getLapSplit(lap), lap);
+        }
+        mLapGhost->calc();
+        if (!isGhostSavable())
+            mCanNotSave->setVisible(true);
+        mCanNotSave->calc();
+    }
 }
-#pragma inline_depth(4)
 
 void Race2D::calcPlayerMark()
 {
@@ -1076,61 +2571,33 @@ bool Race2D::isBombWinner(int statusNo)
     return checker->getBombPoint() == winPoint;
 }
 
-#pragma dont_inline on
-void Race2D::setEffectPos(int no)
+void Race2D::setEffectPos(int status)
 {
-    u8 *thisp = (u8 *)this;
-    int kart = J2DManager::getStatus2Kart(no);
-#line 267
-    JUT_MINMAX_ASSERT(0, kart, 8);
-    int win = KartChecker::getWinBombPoint();
-#line 267
-    JUT_MINMAX_ASSERT(0, kart, 8);
-
-    for (int i = 0; i < win; i++)
-    {
-        int eff = mBombMarkFrame[no][i];
-        f32 *src = (f32 *)(thisp + 0xb10 + no * 0x60 + i * 8);
-        f32 *dst = (f32 *)(thisp + 0xe40 + no * 0x30 + i * 8);
-        f32 x, y;
-
-        if (eff < 20)
-        {
-            x = src[0];
-            y = src[1];
-        }
-        else if (eff < 31)
-        {
-            f32 *base = (f32 *)(thisp + 0xdc0 + no * 0x20 + i * 8);
-            f32 t = (f32)(eff - 21) / 10.0f;
-            x = base[0] + (src[0] - base[0]) * t;
-            y = base[1] + (src[1] - base[1]) * t;
-        }
-        else
-        {
-            x = src[0];
-            y = src[1];
-        }
-
-        dst[0] = x;
-        dst[1] = y;
-
-        if (eff >= 20)
-        {
-            for (int k = 0; k < 3; k++)
-            {
-                u8 *node = *(u8 **)(thisp + 0xec0 + no * 0x30 + i * 0xc + k * 4);
-                if (node != NULL)
-                {
-                    *(f32 *)(node + 0xa4) = x;
-                    *(f32 *)(node + 0xa8) = y;
-                    *(f32 *)(node + 0xac) = 0.0f;
-                }
+    int kartNo = J2DManager::getStatus2Kart(status);
+    int win = (RCMGetManager()->getKartChecker(kartNo), KartChecker::getWinBombPoint());
+    RCMGetManager()->getKartChecker(kartNo);
+    for (int i = 0; i < win; i++) {
+        int frame = mBombMarkFrame[status][i];
+        if (frame < 20) {
+            _e40[status][i].x = mMiniPos[status][0][i].x;
+            _e40[status][i].y = mMiniPos[status][0][i].y;
+        } else if (frame < 31) {
+            _e40[status][i].x = _dc0[status][i].x + (frame - 21) * (mMiniPos[status][0][i].x - _dc0[status][i].x) / 10.0f;
+            _e40[status][i].y = _dc0[status][i].y + (frame - 21) * (mMiniPos[status][0][i].y - _dc0[status][i].y) / 10.0f;
+            for (int k = 0; k < 3; k++) {
+                if (_ec0[status][i][k])
+                    _ec0[status][i][k]->setGlobalTranslation(_e40[status][i].x, _e40[status][i].y, 0.0f);
+            }
+        } else {
+            _e40[status][i].x = mMiniPos[status][0][i].x;
+            _e40[status][i].y = mMiniPos[status][0][i].y;
+            for (int k = 0; k < 3; k++) {
+                if (_ec0[status][i][k])
+                    _ec0[status][i][k]->setGlobalTranslation(_e40[status][i].x, _e40[status][i].y, 0.0f);
             }
         }
     }
 }
-#pragma dont_inline reset
 
 void Race2D::calcEscape()
 {
@@ -1140,8 +2607,8 @@ void Race2D::calcEscape()
     getMapPos(0, markPos, dst);
     if (!RCMGetManager()->isAbleStart())
     {
-        mEscapeX = dst.x;
-        mEscapeY = dst.y;
+        mEscape.x = dst.x;
+        mEscape.y = dst.y;
     }
 
     int rabbitNo = -1;
@@ -1163,37 +2630,37 @@ void Race2D::calcEscape()
     {
         mEscapeFrame = (mEscapeFrame + 1) % 39;
         mTimeColorFrame = (mTimeColorFrame + 1) % 60;
-        f32 dx = mEscapeX - mEscapeTarget[rabbitNo].x;
-        f32 dy = mEscapeY - mEscapeTarget[rabbitNo].y;
+        f32 dx = mEscape.x - mEscapeTarget[rabbitNo].x;
+        f32 dy = mEscape.y - mEscapeTarget[rabbitNo].y;
         f32 dist = std::sqrtf(dx * dx + dy * dy);
         if (dist > 16.0f)
         {
             f32 f = 16.0f / dist;
             dst.x = f * dx + mEscapeTarget[rabbitNo].x;
             dst.y = f * dy + mEscapeTarget[rabbitNo].y;
-            mEscapeX = dst.x;
-            mEscapeY = dst.y;
+            mEscape.x = dst.x;
+            mEscape.y = dst.y;
         }
     }
     else
     {
         mEscapeFrame = 0;
         mTimeColorFrame = 0;
-        f32 dx = mEscapeX - dst.x;
-        f32 dy = mEscapeY - dst.y;
+        f32 dx = mEscape.x - dst.x;
+        f32 dy = mEscape.y - dst.y;
         f32 dist = std::sqrtf(dx * dx + dy * dy);
         if (dist > 1.0f)
         {
             f32 f = (dist - 1.0f) / dist;
             dst.x = dx * f + dst.x;
             dst.y = dy * f + dst.y;
-            mEscapeX = dst.x;
-            mEscapeY = dst.y;
+            mEscape.x = dst.x;
+            mEscape.y = dst.y;
         }
         else
         {
-            mEscapeX = dst.x;
-            mEscapeY = dst.y;
+            mEscape.x = dst.x;
+            mEscape.y = dst.y;
         }
     }
 
@@ -1488,131 +2955,76 @@ bool Race2D::isAlarm(int status)
     return ret;
 }
 
-void Race2D::getMapPos(int status, JGeometry::TVec3f &pos, JGeometry::TVec2f &dst)
+void Race2D::getMapPos(int rot, JGeometry::TVec3f &pos, JGeometry::TVec2f &dst)
 {
-    u8 *o = *(u8 **)((u8 *)this + 0x34c);
-    f32 wd = *(f32 *)(o + 40) - *(f32 *)(o + 32);
-    f32 hg = *(f32 *)(o + 44) - *(f32 *)(o + 36);
-    f32 a = *(f32 *)((u8 *)this + 0x1118);
-    f32 b = *(f32 *)((u8 *)this + 0x1110);
-    f32 c = *(f32 *)((u8 *)this + 0x111c);
-    f32 d = *(f32 *)((u8 *)this + 0x1114);
-    f32 e = *(f32 *)((u8 *)this + 0x1108);
-    f32 g = *(f32 *)((u8 *)this + 0x110c);
-    f32 *gfx = *(f32 **)((u8 *)this + 0x1b0);
-    f32 gx = gfx[20];
-    f32 gy = gfx[21];
-    f32 gs = gfx[22];
-    f32 f5 = a - b;
-    f32 f6 = c - d;
-
-    switch (status)
-    {
+    f32 w = mCoursePic->getWidth();
+    f32 h = mCoursePic->getHeight();
+    f32 rangeX = mMapInfo.mMax.x - mMapInfo.mMin.x;
+    f32 rangeY = mMapInfo.mMax.y - mMapInfo.mMin.y;
+    f32 baseX = mCoursePos.x;
+    f32 baseY = mCoursePos.y;
+    Race2DParam *param = mHio->getParam();
+    f32 ofsX = param->mX;
+    f32 ofsY = param->mY;
+    f32 scale = param->mS;
+    switch (rot) {
     case 0:
         if (RCMGetManager()->isMirror())
-        {
-            f32 q = (pos.x - b) / f5;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * (1.0f - q);
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * (1.0f - ((pos.x - mMapInfo.mMin.x) / rangeX));
         else
-        {
-            f32 q = (pos.x - b) / f5;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * q;
-        }
-        {
-            f32 q = (pos.z - d) / f6;
-            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
-            dst.y = off + hg * gs * q;
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * ((pos.x - mMapInfo.mMin.x) / rangeX);
+        dst.y = baseY + ofsY - 0.5f * h * (scale - 1.0f) + h * scale * ((pos.z - mMapInfo.mMin.y) / rangeY);
         break;
     case 1:
         if (RCMGetManager()->isMirror())
-        {
-            f32 q = (c - pos.z) / f6;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * (1.0f - q);
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * (1.0f - ((mMapInfo.mMax.y - pos.z) / rangeY));
         else
-        {
-            f32 q = (c - pos.z) / f6;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * q;
-        }
-        {
-            f32 q = (pos.x - b) / f5;
-            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
-            dst.y = off + hg * gs * q;
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * ((mMapInfo.mMax.y - pos.z) / rangeY);
+        dst.y = baseY + ofsY - 0.5f * h * (scale - 1.0f) + h * scale * ((pos.x - mMapInfo.mMin.x) / rangeX);
         break;
     case 2:
         if (RCMGetManager()->isMirror())
-        {
-            f32 q = (a - pos.x) / f5;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * q;
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * ((mMapInfo.mMax.x - pos.x) / rangeX);
         else
-        {
-            f32 q = (a - pos.x) / f5;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * q;
-        }
-        {
-            f32 q = (c - pos.z) / f6;
-            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
-            dst.y = off + hg * gs * q;
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * ((mMapInfo.mMax.x - pos.x) / rangeX);
+        dst.y = baseY + ofsY - 0.5f * h * (scale - 1.0f) + h * scale * ((mMapInfo.mMax.y - pos.z) / rangeY);
         break;
     case 3:
         if (RCMGetManager()->isMirror())
-        {
-            f32 q = (pos.z - d) / f6;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * (1.0f - q);
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * (1.0f - ((pos.z - mMapInfo.mMin.y) / rangeY));
         else
-        {
-            f32 q = (pos.z - d) / f6;
-            f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * q;
-        }
-        {
-            f32 q = (a - pos.x) / f5;
-            f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
-            dst.y = off + hg * gs * q;
-        }
+            dst.x = baseX + ofsX - 0.5f * w * (scale - 1.0f) + w * scale * ((pos.z - mMapInfo.mMin.y) / rangeY);
+        dst.y = baseY + ofsY - 0.5f * h * (scale - 1.0f) + h * scale * ((mMapInfo.mMax.x - pos.x) / rangeX);
         break;
     }
 }
 
-void Race2D::getCharacterInfo(int no, int which, f32 &x, f32 &y, f32 &z)
+void Race2D::getCharacterInfo(int type, int frame, f32 &x, f32 &y, f32 &z)
 {
 #line 4735
-    JUT_MINMAX_ASSERT(0, no, 2);
+    JUT_MINMAX_ASSERT(0, type, 2);
 #line 4736
-    JUT_MINMAX_ASSERT(0, which, 39);
-    x = mCharPos[1 - no][which].x;
-    y = mCharPos[1 - no][which].y;
-    z = mCharPos[1 - no][which].z;
+    JUT_MINMAX_ASSERT(0, frame, 39);
+    x = mCharPos[1 - type][frame].x;
+    y = mCharPos[1 - type][frame].y;
+    z = mCharPos[1 - type][frame].z;
 }
 
-void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTColor &color2, u8 &alpha)
+void Race2D::getCharacterClr(int kart, int type, int frame, JUTColor &color1, JUTColor &color2, u8 &alpha)
 {
 #line 4756
-    JUT_MINMAX_ASSERT(0, no, 8);
+    JUT_MINMAX_ASSERT(0, kart, 8);
 #line 4757
-    JUT_MINMAX_ASSERT(0, which, 2);
+    JUT_MINMAX_ASSERT(0, type, 2);
 #line 4758
-    JUT_MINMAX_ASSERT(0, type, 39);
+    JUT_MINMAX_ASSERT(0, frame, 39);
 
     int v0, v1, v2, v3, v4, v5;
     v0 = v1 = 125;
     v2 = v4 = 140;
     v3 = v5 = 255;
 
-    if (no == J2DManager::getStatus2Kart(0) || no == J2DManager::getStatus2Kart(1))
+    if (kart == J2DManager::getStatus2Kart(0) || kart == J2DManager::getStatus2Kart(1))
     {
         v0 = 255;
         v1 = 190;
@@ -1622,8 +3034,8 @@ void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTC
         v5 = 230;
     }
 
-    f32 t = type / 38.0f;
-    switch (1 - which)
+    f32 t = frame / 38.0f;
+    switch (1 - type)
     {
     case 1:
     {
@@ -1656,7 +3068,7 @@ void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTC
     }
 
     int u0, u1, u2, u3, u4, u5;
-    if (no == J2DManager::getStatus2Kart(0))
+    if (kart == J2DManager::getStatus2Kart(0))
     {
         u0 = 255;
         u1 = 128;
@@ -1665,7 +3077,7 @@ void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTC
         u4 = 93;
         u5 = 70;
     }
-    else if (no == J2DManager::getStatus2Kart(1))
+    else if (kart == J2DManager::getStatus2Kart(1))
     {
         if (RCMGetManager()->getKartInfo(0)->getPad(1) != NULL)
         {
@@ -1690,18 +3102,18 @@ void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTC
         return;
 
     alpha = 255;
-    int frame = *(int *)((u8 *)this + 0x4e9c);
-    f32 s = JMASCos((s16)(frame * 0xffff / 40 + 0x7fff));
+    int curFrame = *(int *)((u8 *)this + 0x4e9c);
+    f32 s = JMASCos((s16)(curFrame * 0xffff / 40 + 0x7fff));
     f32 f = 0.5f + -0.5f * s;
 
-    if (which == 0)
+    if (type == 0)
     {
         color1.r = (u8)(int)(u0 + f * (u1 - u0));
         color1.g = (u8)(int)(u2 + f * (u3 - u2));
         color1.b = (u8)(int)(u4 + f * (u5 - u4));
         color1.a = 255;
     }
-    else if (which == 1)
+    else if (type == 1)
     {
         color1.r = (u8)(int)(u0 + f * (u1 - u0));
         color1.g = (u8)(int)(u2 + f * (u3 - u2));
@@ -1710,24 +3122,20 @@ void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTC
     }
 }
 
-void Race2D::getItemInfo(int no, int type, int which, f32 &x, f32 &y, f32 &z)
+void Race2D::getItemInfo(int status, int type, int frame, f32 &x, f32 &y, f32 &z)
 {
 #line 4863
-    JUT_MINMAX_ASSERT(0, no, 4);
+    JUT_MINMAX_ASSERT(0, status, 4);
 #line 4864
     JUT_MINMAX_ASSERT(0, type, 2);
 #line 4865
-    JUT_MINMAX_ASSERT(0, which, 39);
-    x = mItemPos[no][type][which].x;
-    y = mItemPos[no][type][which].y;
-    z = mItemPos[no][type][which].z;
+    JUT_MINMAX_ASSERT(0, frame, 39);
+    x = mItemPos[status][type][frame].x;
+    y = mItemPos[status][type][frame].y;
+    z = mItemPos[status][type][frame].z;
 }
 
 void Race2D::getItemPos(int, int, JGeometry::TVec2f &) {}
-
-void Race2D::itemUseInit() {}
-
-void Race2D::itemUseMain() {}
 
 void Race2D::decideItem(int no, u8 driverNo, int &item)
 {
@@ -1845,8 +3253,7 @@ void Race2D::calcLapInit()
         if (tcb != NULL)
         {
             tcb->mExecIdx = i;
-            Task::TaskFunc f = calcLap;
-            mTask->change(f, tcb);
+            mTask->change(calcLap, tcb);
         }
     }
     curCB->mRequestKill = true;
@@ -1854,10 +3261,8 @@ void Race2D::calcLapInit()
 
 void Race2D::calcLap()
 {
-    int no = mTask->mCurCB->mExecIdx;
-    int kartNo = J2DManager::getStatus2Kart(no);
-    KartChecker *checker = RCMGetManager()->getKartChecker(kartNo);
-
+    int status = mTask->mCurCB->mExecIdx;
+    KartChecker *checker = RCMGetManager()->getKartChecker(J2DManager::getStatus2Kart(status));
     int lap = checker->getLap();
     if (lap < 0)
         lap = 0;
@@ -1866,68 +3271,41 @@ void Race2D::calcLap()
 
     int min, sec, ms;
     checker->getTotalTime().get(&min, &sec, &ms);
-
-    int d0 = min % 10;
-    int d1 = min / 10 % 10;
-    int d2 = sec % 10;
-    int d3 = sec / 10 % 10;
-    int d4 = ms % 10;
-    int d5 = ms / 10 % 10;
     int d6 = ms / 100 % 10;
-
-    u8 timeValid = (checker->getTotalTime().get() != MAX_TIME);
-
+    int d5 = ms / 10 % 10;
+    int d4 = ms % 10;
+    int d3 = sec / 10 % 10;
+    int d2 = sec % 10;
+    int d1 = min / 10 % 10;
+    int d0 = min % 10;
+    bool available = checker->getTotalTime().isAvailable();
     int dispLap = lap;
     if (lap > RCMGetManager()->getTotalLapNumber() - 1)
         dispLap = RCMGetManager()->getTotalLapNumber() - 1;
+    mThis->setRaceTime(status, available, dispLap, d0, d1, d2, d3, d4, d5, d6);
 
-    Race2DPlayerHUD *hud = &mThis->mPlayerHUD[no];
-    hud->mRaceTimeAvailable = timeValid;
-    hud->mLap = dispLap;
-    hud->mDigits[0] = d0;
-    hud->mDigits[1] = d1;
-    hud->mDigits[2] = d2;
-    hud->mDigits[3] = d3;
-    hud->mDigits[4] = d4;
-    hud->mDigits[5] = d5;
-    hud->mDigits[6] = d6;
-
-    if (lap != sPreLap[no] && lap != 0)
-    {
-        if (lap >= 1 && lap <= 10)
-        {
-            const RaceTime &lapTime = checker->getLapTime(lap - 1);
-            lapTime.get(&min, &sec, &ms);
-
-            u8 slotValid = (lapTime.get() != MAX_TIME);
-
-#line 268
-            JUT_MINMAX_ASSERT(0, no, 4);
-
-            Race2DLapSlot *slot = &hud->mLapSlots[lap];
-            slot->mAvailable = slotValid;
-            slot->mDigits[0] = min % 10;
-            slot->mDigits[1] = min / 10 % 10;
-            slot->mDigits[2] = sec % 10;
-            slot->mDigits[3] = sec / 10 % 10;
-            slot->mDigits[4] = ms % 10;
-            slot->mDigits[5] = ms / 10 % 10;
-            slot->mDigits[6] = ms / 100 % 10;
-
-#line 268
-            JUT_MINMAX_ASSERT(0, lap - 1, 9);
+    if (lap != sPreLap[status] && lap != 0) {
+        if (lap >= 1 && lap <= 10) {
+            checker->getLapTime(lap - 1).get(&min, &sec, &ms);
+            int l6 = ms / 100 % 10;
+            int l5 = ms / 10 % 10;
+            int l4 = ms % 10;
+            int l3 = sec / 10 % 10;
+            int l2 = sec % 10;
+            int l1 = min / 10 % 10;
+            int l0 = min % 10;
+            bool lapAvailable = checker->getLapTime(lap - 1).isAvailable();
+            mThis->setLapTime(status, lap - 1, lapAvailable, l0, l1, l2, l3, l4, l5, l6);
         }
         Task::TCB *tcb = mTask->make(NULL, 0x8000);
-        if (tcb != NULL)
-        {
-            tcb->mExecIdx = no;
+        if (tcb != NULL) {
+            tcb->mExecIdx = status;
             mTask->change(lapInit, tcb);
         }
     }
-    sPreLap[no] = lap;
+    sPreLap[status] = lap;
 
-    if (checker->isGoal() || RCMGetManager()->mRaceDirector->isRaceEnd())
-    {
+    if (checker->isGoal() || RCMGetManager()->mRaceDirector->isRaceEnd()) {
         if (checker->isGoal())
             mThis->mGoalCount++;
         if (RCMGetManager()->getConsoleNumber() == 1 || RCMGetManager()->getConsoleNumber() == 2)
@@ -1952,40 +3330,61 @@ void Race2D::lapTimeInit()
 {
     mTask->mCurCB->_10 = 0;
     int status = mTask->mCurCB->mExecIdx;
-    for (int lap = 0; lap < RCMGetManager()->getTotalLapNumber(); lap++)
-    {
+    for (int lap = 0; lap < RCMGetManager()->getTotalLapNumber(); lap++) {
         for (int i = 0; i < 11; i++)
-        {
-#line 484
-            JUT_MINMAX_ASSERT(0, status, 4);
-#line 485
-            JUT_MINMAX_ASSERT(0, lap, 9);
-#line 486
-            JUT_MINMAX_ASSERT(0, i, 11);
-            mThis->mLapDigits[status][lap][i]->mIsVisible = true;
-        }
+            mThis->getLapTimePic(status, lap, i)->mIsVisible = true;
     }
-    if (RCMGetManager()->getConsoleNumber() == 2)
-    {
-        for (int i = 0; i < 8; i++)
-        {
-#line 490
-            JUT_MINMAX_ASSERT(0, status, 4);
-#line 491
-            JUT_MINMAX_ASSERT(0, i, 8);
-            mThis->mRankDigits1[status][i]->setAlpha(0xff);
-
-#line 495
-            JUT_MINMAX_ASSERT(0, status, 4);
-#line 496
-            JUT_MINMAX_ASSERT(0, i, 8);
-            mThis->mRankDigits2[status][i]->setAlpha(0);
+    if (RCMGetManager()->getConsoleNumber() == 2) {
+        for (int i = 0; i < 8; i++) {
+            mThis->getRankPic(status, i)->setAlpha(255);
+            mThis->getRankGoalPic(status, i)->setAlpha(0);
         }
     }
     mTask->change(lapTimeMain, mTask->mCurCB);
 }
 
-void Race2D::lapTimeMain() {}
+void Race2D::lapTimeMain()
+{
+    Task::TCB *cb = mTask->mCurCB;
+    int status = cb->mExecIdx;
+    int frame = cb->_10++;
+    if (frame >= 15) {
+        for (int lap = 0; lap < 9; lap++) {
+            for (int tag = 0; tag < 11; tag++) {
+                JGeometry::TVec2f pos = mThis->getLapTimePos(status, lap, tag);
+                mThis->setLapTimePos2(status, lap, tag, pos);
+                mThis->getLapTimePic(status, lap, tag)->setAlpha(255);
+            }
+        }
+        if (RCMGetManager()->getConsoleNumber() == 2) {
+            for (int i = 0; i < 8; i++) {
+                mThis->getRankPic(status, i)->setAlpha(0);
+                mThis->getRankGoalPic(status, i)->setAlpha(255);
+            }
+        }
+        cb->mRequestKill = true;
+    } else {
+        int alpha = frame * 255 / 15;
+        for (int lap = 0; lap < 9; lap++) {
+            for (int tag = 0; tag < 11; tag++) {
+                JGeometry::TVec2f pos = mThis->getLapTimePos(status, lap, tag);
+                f32 y = mThis->getTimePosY(status);
+                JGeometry::TVec2f newPos;
+                newPos.x = pos.x;
+                newPos.y = y + frame * (pos.y - y) / 15.0f;
+                mThis->setLapTimePos2(status, lap, tag, newPos);
+                mThis->getLapTimePic(status, lap, tag)->setAlpha(alpha);
+            }
+        }
+        if (RCMGetManager()->getConsoleNumber() == 2) {
+            u8 a = alpha;
+            for (int i = 0; i < 8; i++) {
+                mThis->getRankPic(status, i)->setAlpha(255 - a);
+                mThis->getRankGoalPic(status, i)->setAlpha(a);
+            }
+        }
+    }
+}
 
 void Race2D::calcItem()
 {
@@ -2027,20 +3426,8 @@ void Race2D::calcItem()
                     {
                         mThis->decideItem(status, driver, item);
 
-#line 550
-                        JUT_MINMAX_ASSERT(0, status, 4);
-#line 551
-                        JUT_MINMAX_ASSERT(0, driver, 2);
-#line 553
-                        JUT_MINMAX_ASSERT(0, item, 0x1f);
-                        mThis->mPlayerHUD[status].mItem[driver].mShown = item;
-#line 550
-                        JUT_MINMAX_ASSERT(0, status, 4);
-#line 551
-                        JUT_MINMAX_ASSERT(0, driver, 2);
-#line 553
-                        JUT_MINMAX_ASSERT(0, item, 0x1f);
-                        mThis->mPlayerHUD[status].mItem[driver].mNew = item;
+                        mThis->setItem(status, driver, 0, item);
+                        mThis->setItem(status, driver, 1, item);
 
                         tcb->mExecIdx = status;
                         *(u8 *)&tcb->_28 = driver;
@@ -2074,7 +3461,64 @@ void Race2D::itemBlinkInit()
     mTask->change(itemBlink, mTask->mCurCB);
 }
 
-void Race2D::itemBlink() {}
+void Race2D::itemBlink()
+{
+    Task::TCB *cb = mTask->mCurCB;
+    int status = cb->mExecIdx;
+    u8 driver = *(u8 *)&cb->_28;
+    cb->_10++;
+    int count = (*(int *)&cb->_24)++;
+    int item;
+    mThis->decideItem(status, driver, item);
+    JGeometry::TVec2f pos = mThis->getItemPos(status, driver);
+    mThis->setItemPos3(status, driver, pos);
+    if (ItemObjMgr::getItemObjMgr()->getStockItem(J2DManager::getStatus2Kart(status), driver) == 16) {
+        mThis->setItem(status, driver, 0, 16);
+        cb->mRequestKill = true;
+        ItemObjMgr::getItemObjMgr()->tstItemUseTrigger(J2DManager::getStatus2Kart(status), driver);
+    } else {
+        if (count % 15 == 0) {
+            if (item == mThis->getItem(status, driver, 0)) {
+                count = 0;
+                *(int *)&cb->_24 = count;
+                mThis->setItem(status, driver, 1, item);
+                if (!cb->_2a[1])
+                    mThis->setItemFlag(status, driver, true);
+                if (cb->_2a[0]) {
+                    switch (item) {
+                    case 1:
+                    case 4:
+                    case 7:
+                    case 8:
+                    case 11:
+                    case 12:
+                    case 14:
+                    case 17:
+                    case 19:
+                    case 21:
+                    case 26:
+                    case 27: {
+                        Task::TCB *tcb = mTask->make(NULL, 0x8000);
+                        if (tcb != NULL) {
+                            tcb->mExecIdx = status;
+                            *(u8 *)&tcb->_28 = driver;
+                            mTask->change(itemSpecialInit, tcb);
+                        }
+                        break;
+                    }
+                    }
+                    cb->_2a[0] = 0;
+                }
+            } else {
+                int prev = mThis->getItem(status, driver, 0);
+                mThis->setItem(status, driver, 0, item);
+                mThis->setItem(status, driver, 1, prev);
+                cb->_2a[1] = 0;
+            }
+        }
+        mThis->setItemFrame(status, driver, 15, count);
+    }
+}
 
 void Race2D::itemGetInit()
 {
@@ -2197,13 +3641,17 @@ void Race2D::itemSpecialMain()
     obj = mThis->getSpecialItem(status, slot);
     (*(void (**)(u8 *, int))(*(u8 **)obj + 0x24))(obj, alpha);
 
-    if (frame < 90 && mThis->getItemShow(status, slot) != 16)
+    if (frame < 90 && mThis->getItem(status, slot, 0) != 16)
         return;
 
     obj = mThis->getSpecialItem(status, slot);
     obj[0xb0] = 0;
     tcb->mRequestKill = true;
 }
+
+void Race2D::itemUseInit() {}
+
+void Race2D::itemUseMain() {}
 
 void Race2D::setUsisi(int, ECharID) {}
 
@@ -2459,19 +3907,19 @@ void Race2D::getGoalRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
     switch (consoleNo)
     {
     case 1:
-        baseX = 101.0f - mPlayerHUD[kartNo].mGoalX;
-        baseY = 101.0f - mPlayerHUD[kartNo].mGoalY;
+        baseX = 101.0f - mPlayerHUD[kartNo].mRankPos[0].x;
+        baseY = 101.0f - mPlayerHUD[kartNo].mRankPos[0].y;
         break;
     case 2:
         switch (kartNo)
         {
         case 0:
-            baseX = 90.0f - mPlayerHUD[kartNo].mGoalX2;
-            baseY = 82.0f - mPlayerHUD[kartNo].mGoalY2;
+            baseX = 90.0f - mPlayerHUD[kartNo].mRankPos2[0].x;
+            baseY = 82.0f - mPlayerHUD[kartNo].mRankPos2[0].y;
             break;
         case 1:
-            baseX = 90.0f - mPlayerHUD[kartNo].mGoalX2;
-            baseY = 368.0f - mPlayerHUD[kartNo].mGoalY2;
+            baseX = 90.0f - mPlayerHUD[kartNo].mRankPos2[0].x;
+            baseY = 368.0f - mPlayerHUD[kartNo].mRankPos2[0].y;
             break;
         default:
 #line 6070
@@ -2484,20 +3932,20 @@ void Race2D::getGoalRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
         switch (kartNo)
         {
         case 0:
-            baseX = 78.0f - mPlayerHUD[kartNo].mGoalX;
-            baseY = 68.0f - mPlayerHUD[kartNo].mGoalY;
+            baseX = 78.0f - mPlayerHUD[kartNo].mRankPos[0].x;
+            baseY = 68.0f - mPlayerHUD[kartNo].mRankPos[0].y;
             break;
         case 1:
-            baseX = 529.0f - mPlayerHUD[kartNo].mGoalX;
-            baseY = 68.0f - mPlayerHUD[kartNo].mGoalY;
+            baseX = 529.0f - mPlayerHUD[kartNo].mRankPos[0].x;
+            baseY = 68.0f - mPlayerHUD[kartNo].mRankPos[0].y;
             break;
         case 2:
-            baseX = 78.0f - mPlayerHUD[kartNo].mGoalX;
-            baseY = 291.0f - mPlayerHUD[kartNo].mGoalY;
+            baseX = 78.0f - mPlayerHUD[kartNo].mRankPos[0].x;
+            baseY = 291.0f - mPlayerHUD[kartNo].mRankPos[0].y;
             break;
         case 3:
-            baseX = 529.0f - mPlayerHUD[kartNo].mGoalX;
-            baseY = 291.0f - mPlayerHUD[kartNo].mGoalY;
+            baseX = 529.0f - mPlayerHUD[kartNo].mRankPos[0].x;
+            baseY = 291.0f - mPlayerHUD[kartNo].mRankPos[0].y;
             break;
         default:
 #line 6098

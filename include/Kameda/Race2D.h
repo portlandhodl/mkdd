@@ -9,13 +9,20 @@
 #include "JSystem/JORReflexible.h"
 #include "Kameda/Task.h"
 #include "Kaneshige/HioMgr.h"
+#include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J2D/J2DScreen.h"
+#include "JSystem/JGeometry/Vec.h"
+
+class LapGhost2D;
+class JPABaseEmitter;
+class CanNotSaveG2D;
+class BombStart2D;
 
 #define RACE2D_ASSERT_RANGE(line, name, val, max) \
     (((0 <= (val)) && ((val) < (max))) ? (void)0 : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "Race2D.h", line, "range over: %d <= " #name "=%d < %d", 0, (val), (max)), OSPanic("Race2D.h", line, "Halt")))
 
 class Race2DParam : public JORReflexible {
 public:
-    // Inline/Unused
     Race2DParam();
     virtual ~Race2DParam() {}
 
@@ -44,11 +51,69 @@ class Race2D
 { 
 public:
     Race2D(JKRHeap *);                                                                            // 0x801531b8
+    J2DPicture *getLapTimePic(int status, int lap, int tag) {
+#line 484
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, lap, 9);
+        JUT_MINMAX_ASSERT(0, tag, 11);
+        return mLapDigits[status][lap][tag];
+    }
     J2DPicture *getRankPic(int status, int rank) {
 #line 490
         JUT_MINMAX_ASSERT(0, status, 4);
         JUT_MINMAX_ASSERT(0, rank, 8);
         return mRankDigits1[status][rank];
+    }
+    void setRaceTime(int status, bool available, int lap, int d0, int d1, int d2, int d3, int d4, int d5, int d6) {
+#line 502
+        JUT_MINMAX_ASSERT(0, status, 4);
+        mPlayerHUD[status].mRaceTimeAvailable = available;
+        mPlayerHUD[status].mLap = lap;
+        mPlayerHUD[status].mDigits[0] = d0;
+        mPlayerHUD[status].mDigits[1] = d1;
+        mPlayerHUD[status].mDigits[2] = d2;
+        mPlayerHUD[status].mDigits[3] = d3;
+        mPlayerHUD[status].mDigits[4] = d4;
+        mPlayerHUD[status].mDigits[5] = d5;
+        mPlayerHUD[status].mDigits[6] = d6;
+    }
+    void setLapTime(int status, int lap, bool available, int d0, int d1, int d2, int d3, int d4, int d5, int d6) {
+#line 520
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, lap, 9);
+        mPlayerHUD[status].mLapSlots[lap].mAvailable = available;
+        mPlayerHUD[status].mLapSlots[lap].mDigits[0] = d0;
+        mPlayerHUD[status].mLapSlots[lap].mDigits[1] = d1;
+        mPlayerHUD[status].mLapSlots[lap].mDigits[2] = d2;
+        mPlayerHUD[status].mLapSlots[lap].mDigits[3] = d3;
+        mPlayerHUD[status].mLapSlots[lap].mDigits[4] = d4;
+        mPlayerHUD[status].mLapSlots[lap].mDigits[5] = d5;
+        mPlayerHUD[status].mLapSlots[lap].mDigits[6] = d6;
+    }
+    J2DPicture *getRankGoalPic(int status, int rank) {
+#line 495
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        return mRankDigits2[status][rank];
+    }
+    f32 getTimePosY(int status) {
+#line 514
+        JUT_MINMAX_ASSERT(0, status, 4);
+        return mPlayerHUD[status].mTimePos[0].y;
+    }
+    JGeometry::TVec2f getLapTimePos(int status, int lap, int tag) {
+#line 532
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, lap, 9);
+        JUT_MINMAX_ASSERT(0, tag, 11);
+        return mPlayerHUD[status].mLapTimePos[lap][tag];
+    }
+    void setLapTimePos2(int status, int lap, int tag, JGeometry::TVec2f pos) {
+#line 538
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, lap, 9);
+        JUT_MINMAX_ASSERT(0, tag, 11);
+        mPlayerHUD[status].mLapTimePos2[lap][tag] = pos;
     }
     void init();                                                                                  // 0x80157714
     void drawPlayerMark();                                                                        // 0x8015838c
@@ -121,13 +186,13 @@ public:
     void getGoalRankRot(int, f32 &);                                                            // 0x80168cb4
     void getStartLapTimePos(int, int, f32 &);                                                   // 0x80168d1c
     void getGoalLapTimePos(int, int, f32 &);                                                    // 0x80168e30
-    static const u64 mLapTag[16];        // multidimensional?                                       // 0x8036fb10
-    static const u64 mItemExTag[16];     // multidimensional?                                       // 0x8036fb90
-    static const u64 mItemExDrawTag[48]; // multidimensional?                                       // 0x8036fc10
-    static const u64 mRankTag[32];                                                                  // 0x8036ff80
-    static const u64 mRankGoalTag[16];                                                              // 0x80370080
-    static const u64 mTimeDrawTag[20];                                                              // 0x80370100
-    static const u64 mLapTimeDrawTag[198];                                                          // 0x803701a0
+    static const u64 mLapTag[4][4];        // multidimensional?                                       // 0x8036fb10
+    static const u64 mItemExTag[4][4];     // multidimensional?                                       // 0x8036fb90
+    static const u64 mItemExDrawTag[4][2][6]; // multidimensional?                                       // 0x8036fc10
+    static const u64 mRankTag[4][8];                                                                  // 0x8036ff80
+    static const u64 mRankGoalTag[2][8];                                                              // 0x80370080
+    static const u64 mTimeDrawTag[2][10];                                                              // 0x80370100
+    static const u64 mLapTimeDrawTag[2][9][11];                                                          // 0x803701a0
     static const u64 mSpeedTag[3];                                                                  // 0x803707d0
     static const u64 mSpeedChipTag[7];                                                              // 0x803707e8
     static const u64 mSpeedDrawTag[11];                                                             // 0x80370820
@@ -154,12 +219,51 @@ public:
         RACE2D_ASSERT_RANGE(464, pos, pos, 2);
         return *(u8 **)(thisp + 0x4b4 + status * 8 + pos * 4);
     }
-    int getItemShow(int status, int driver)
-    {
-        Race2D *thisp = mThis;
-        RACE2D_ASSERT_RANGE(544, status, status, 4);
-        RACE2D_ASSERT_RANGE(545, driver, driver, 2);
-        return thisp->mPlayerHUD[status].mItem[driver].mShown;
+    int getItem(int status, int driver, int no) {
+#line 544
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, driver, 2);
+        JUT_MINMAX_ASSERT(0, no, 2);
+        return mPlayerHUD[status].mItem[driver][no];
+    }
+    void setItem(int status, int driver, int no, int item) {
+#line 550
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, driver, 2);
+        JUT_MINMAX_ASSERT(0, no, 2);
+        JUT_MINMAX_ASSERT(0, item, 31);
+        mPlayerHUD[status].mItem[driver][no] = item;
+    }
+    void setItemFlag(int status, int driver, bool flag) {
+#line 557
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, driver, 2);
+        mPlayerHUD[status]._7f8[driver] = flag;
+    }
+    JGeometry::TVec2f getItemPos(int status, int driver) {
+#line 562
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, driver, 2);
+        return mPlayerHUD[status].mItemPos[driver];
+    }
+    JGeometry::TVec2f getItemPos2(int status, int driver) {
+#line 567
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, driver, 2);
+        return mPlayerHUD[status].mItemPos2[driver];
+    }
+    void setItemPos3(int status, int driver, JGeometry::TVec2f pos) {
+#line 572
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, driver, 2);
+        mPlayerHUD[status].mItemPos3[driver] = pos;
+    }
+    void setItemFrame(int status, int driver, int interval, int count) {
+#line 577
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, driver, 2);
+        mPlayerHUD[status].mItemInterval[driver] = interval;
+        mPlayerHUD[status].mItemCount[driver] = count;
     }
     // Inline/Unused
     ~Race2D();
@@ -175,118 +279,157 @@ public:
 
     void endBombDemo() { mIsEndBombDemo = true; }
 public:
-    PLACEHOLDER_BYTES(0, 0xe4);
-    const class ResTIMG *mItemTex[32]; // 0xe4
-    PLACEHOLDER_BYTES(0x164, 0x1b0);
-    Race2DHioNode *mHio;   // 0x1b0
-    class J2DGrafContext *mGrafContext;   // 0x1b4
-    PLACEHOLDER_BYTES(0x1b8, 0x1c0);
-    class BombStart2D *mBombStart; // 0x1c0
-    struct Race2DAlarmParam {
+    const ResTIMG *mDriverTex[20];      // 0x0
+    const ResTIMG *mPlayerTex[8];       // 0x50
+    const ResTIMG *mCharacterTex[20];   // 0x70
+    const ResTIMG *mLapNumTex[9];       // 0xc0
+    const ResTIMG *mItemTex[31];        // 0xe4
+    const ResTIMG *mNumberTex[10];      // 0x160
+    const ResTIMG *mSpeedTex[10];       // 0x188
+    Race2DHioNode *mHio;                // 0x1b0
+    J2DOrthoGraph *mGrafContext;        // 0x1b4
+    LapGhost2D *mLapGhost;              // 0x1b8
+    CanNotSaveG2D *mCanNotSave;         // 0x1bc
+    BombStart2D *mBombStart;            // 0x1c0
+    struct {
         u32 mBase; // +0x0
         u32 _4;    // +0x4
         u32 mStep; // +0x8
         u32 _c;    // +0xc
-    } mAlarm[4];                   // 0x1c4
-    PLACEHOLDER_BYTES(0x204, 0x208);
-    class J2DPicture *mAlarmPic0; // 0x208
-    class J2DPicture *mAlarmPic1; // 0x20c
-    f32 mAlarmPic0X; // 0x210
-    f32 mAlarmPic0Y; // 0x214
-    f32 mAlarmPic1X; // 0x218
-    f32 mAlarmPic1Y; // 0x21c
-    f32 mAlarmX[4];  // 0x220
-    PLACEHOLDER_BYTES(0x230, 0x234);
-    class J2DScreen *mMaskScreen;         // 0x234
-    class J2DPicture *mMark[4][8]; // 0x238
-    int mMarkOrder[4][8];          // 0x2b8
-    PLACEHOLDER_BYTES(0x338, 0x594);
-    class J2DPicture *mRankDigits1[4][8]; // 0x594
-    class J2DPicture *mRankDigits2[4][8]; // 0x614
-    class J2DPicture *_694x[2][10];     // 0x694
-    // The lap digit table owner's tail overlaps the shine-vector storage
-    // (mLapDigits[3][8][6..10+] aliases 0xd00..): only laps 0..8, digits 0..10 are real pictures.
-    union Race2DLapShine {
-        class J2DPicture *mLapDigits[4][9][11]; // 0x6e4 lap time pane table
-        struct
-        {
-            u8 _0[0x61c];
-            JGeometry::TVec2f mShineBase[4]; // 0xd00
-            JGeometry::TVec2f mShinePos[5];  // 0xd20
-            int mBattleTimeCount[4];         // 0xd48 (calcTimeFrame state counters)
-            int mShineKind[4];               // 0xd58
-            int mTimeColorFrame;             // 0xd68
-            int mBombColorFrame;             // 0xd6c
-            int mBombWinFrame[4];            // 0xd70
-            int mBombMarkFrame[4][4];        // 0xd80
-        } mShine;
-    } mLapShine;                         // 0x6e4..0xdc0
-#define mLapDigits mLapShine.mLapDigits
-#define mShineBase mLapShine.mShine.mShineBase
-#define mShinePos mLapShine.mShine.mShinePos
-#define mBattleTimeCount mLapShine.mShine.mBattleTimeCount
-#define mShineKind mLapShine.mShine.mShineKind
-#define mTimeColorFrame mLapShine.mShine.mTimeColorFrame
-#define mBombColorFrame mLapShine.mShine.mBombColorFrame
-#define mBombWinFrame mLapShine.mShine.mBombWinFrame
-#define mBombMarkFrame mLapShine.mShine.mBombMarkFrame
-    PLACEHOLDER_BYTES(0xdc0, 0x1000);
-    JGeometry::TVec2f mMarkPos[4][8]; // 0x1000
-    PLACEHOLDER_BYTES(0x1100, 0x117c);
-    f32 mEscapeX;                        // 0x117c
-    f32 mEscapeY;                        // 0x1180
-    PLACEHOLDER_BYTES(0x1184, 0x1188);
-    int mEscapeFrame;                    // 0x1188
-    JGeometry::TVec2f mEscapeTarget[8];  // 0x118c
-    PLACEHOLDER_BYTES(0x11cc, 0x1540);
-    JUTColor mAnmTAColor; // 0x1540
-    PLACEHOLDER_BYTES(0x1544, 0x1560);
-    struct Race2DAnmTA {
+    } mAlarm[4];                        // 0x1c4
+    J2DScreen *mAlarmScreen;            // 0x204
+    J2DPicture *mAlarmPic0;             // 0x208
+    J2DPicture *mAlarmPic1;             // 0x20c
+    JGeometry::TVec2f mAlarmPos0;       // 0x210
+    JGeometry::TVec2f mAlarmPos1;       // 0x218
+    f32 mAlarmX[4];                     // 0x220
+    J2DScreen *mScreen;                 // 0x230
+    J2DScreen *mMaskScreen;             // 0x234
+    J2DPicture *mMark[4][8];            // 0x238
+    int mMarkOrder[4][8];               // 0x2b8
+    J2DScreen *mShineScreen[4];         // 0x338
+    J2DPicture *mDemoPic;               // 0x348
+    J2DPicture *mCoursePic;             // 0x34c
+    J2DPicture *mStartLinePic;          // 0x350
+    u8 _354[0x364 - 0x354];             // 0x354
+    J2DPicture *mLapPic[4];             // 0x364
+    J2DPicture *mLapPics[4][4];         // 0x374
+    J2DPicture *mItemExPics[4][4];      // 0x3b4
+    J2DPicture *mItemExDraw[4][2][6];   // 0x3f4
+    J2DPicture *mSpecialItem[4][2];     // 0x4b4
+    J2DPicture *mKiraPics[4][2][6];     // 0x4d4
+    J2DPicture *mRankDigits1[4][8];     // 0x594
+    J2DPicture *mRankDigits2[4][8];     // 0x614
+    J2DPicture *_694x[2][10];           // 0x694
+    J2DPicture *mLapDigits[2][9][11];   // 0x6e4
+    J2DPicture *mSpeedPics[3];          // 0x9fc
+    J2DPicture *mSpeedChipPics[7];      // 0xa08
+    J2DPicture *mSpeedDrawPics[11];     // 0xa24
+    J2DPicture *mMiniPics[4][3][4];     // 0xa50
+    JGeometry::TVec2f mMiniPos[4][3][4]; // 0xb10
+    J2DPicture *mStarPics[4][2];        // 0xc90
+    J2DPicture *mShinePics[4][5];       // 0xcb0
+    JGeometry::TVec2f mShineBase[4];    // 0xd00
+    JGeometry::TVec2f mShinePos[5];     // 0xd20
+    int mBattleTimeCount[4];            // 0xd48 (calcTimeFrame state counters)
+    int mShineKind[4];                  // 0xd58
+    int mTimeColorFrame;                // 0xd68
+    int mBombColorFrame;                // 0xd6c
+    int mBombWinFrame[4];               // 0xd70
+    int mBombMarkFrame[4][4];           // 0xd80
+    JGeometry::TVec2f _dc0[4][4];       // 0xdc0
+    JGeometry::TVec2f _e40[4][4];       // 0xe40
+    JPABaseEmitter *_ec0[4][4][3];      // 0xec0
+    JPABaseEmitter *_f80[4][4][2];      // 0xf80
+    JGeometry::TVec2f mMarkPos[4][8];   // 0x1000
+    JGeometry::TVec2f mDemoPos;         // 0x1100
+    JGeometry::TVec2f mCoursePos;       // 0x1108
+    struct {
+        JGeometry::TVec2f mMin; // +0x0
+        JGeometry::TVec2f mMax; // +0x8
+        int mRot;               // +0x10
+    } mMapInfo;                         // 0x1110
+    JGeometry::TVec2f mStartLinePos;    // 0x1124
+    f32 mStartLineRot;                  // 0x112c
+    J2DPicture *mKartIcon[8];           // 0x1130
+    J2DPicture *mPlayerIcon[8];         // 0x1150
+    J2DPicture *mPlayerGIcon;           // 0x1170
+    J2DPicture *mPlayerSGIcon;          // 0x1174
+    J2DPicture *mMapShinePic;           // 0x1178
+    JGeometry::TVec2f mEscape;          // 0x117c
+    J2DPicture *mBattleLightPic;        // 0x1184
+    int mEscapeFrame;                   // 0x1188
+    JGeometry::TVec2f mEscapeTarget[8]; // 0x118c
+    JGeometry::TVec2f mItemExPos[4][2][6]; // 0x11cc
+    JGeometry::TVec2f _134c[4][2][6];   // 0x134c
+    JUTColor mSpeedChipColor[7];        // 0x14cc
+    JGeometry::TVec2f mSpeedDrawPos[11]; // 0x14e8
+    J2DPicture::TCornerColor mTimeCornerColor;    // 0x1540
+    J2DPicture::TCornerColor mLapTimeCornerColor; // 0x1550
+    struct {
         int mCount[4];
         int mNum;
-    };
-    Race2DAnmTA mAnmTA[2]; // 0x1560
+    } mAnmTA[2]; // 0x1560
 
-    struct Race2DLapSlot {
-        u8 mAvailable;  // +0x00
-        u8 _1[3];       // +0x01
-        int mDigits[7]; // +0x04
-    };                        // size 0x20
-    struct Race2DPlayerHUD {
-        int mLap;              // +0x000
-        u8 _4[0x24];           // +0x004
-        u8 mRaceTimeAvailable; // +0x028
-        u8 _29[3];             // +0x029
-        int mDigits[7];        // +0x02c
-        u8 _48[0x30];          // +0x048
-        Race2DLapSlot mLapSlots[9]; // +0x078
-        u8 _198[0x7e8 - 0x198];
-        struct Race2DItemState { int mShown; int mNew; } mItem[2]; // +0x7e8
-        JGeometry::TVec2f mItemPos[2]; // +0x7f8
-        u8 _808[0x854 - 0x808];
-        f32 mGoalX;      // +0x854 (abs 0x1ddc)
-        f32 mGoalY;      // +0x858
-        u8 _85c[0x894 - 0x85c];
-        f32 mGoalX2;     // +0x894 (abs 0x1e1c)
-        f32 mGoalY2;     // +0x898
-        u8 _89c[0x8d5 - 0x89c];
-        bool mIsAlarm;   // +0x8d5 (abs 0x1e5d)
-        u8 _8d6[0x8d8 - 0x8d6];
-        int mAlarmAlpha; // +0x8d8
-        u8 _8dc[0x8e8 - 0x8dc];
-    };                              // size 0x8e8
-    Race2DPlayerHUD mPlayerHUD[4];  // 0x1588
-    int mGoalCount;                 // 0x3928
-    JGeometry::TVec3f mItemPos[4][2][39]; // 0x392c
-    JGeometry::TVec3f mCharPos[2][39];    // 0x47cc
-    f32 mSpecialItemScale[73];        // 0x4b74
-    PLACEHOLDER_BYTES(0x4c98, 0x4eb4);
-    int mEscapeTimer;                 // 0x4eb4
-    int mEscapeTimer4;                // 0x4eb8
-    int mHideFrame;  // 4ebc
-    bool mDrawFlag; // 4ec0
-    bool mIsEndBombDemo; // 4ec1
-    PLACEHOLDER_BYTES(0x4ec2, 0x4ec4);
+    struct {
+        int mLap;                           // +0x000
+        JGeometry::TVec2f mLapPos[4];       // +0x004
+        int _24;                            // +0x024
+        u8 mRaceTimeAvailable;              // +0x028
+        int mDigits[7];                     // +0x02c
+        JGeometry::TVec2f mTimePos[10];     // +0x048
+        struct {
+            u8 mAvailable;  // +0x00
+            int mDigits[7]; // +0x04
+        } mLapSlots[9];                     // +0x098
+        JGeometry::TVec2f mLapTimePos[9][11];  // +0x1b8
+        JGeometry::TVec2f mLapTimePos2[9][11]; // +0x4d0
+        int mItem[2][2];                    // +0x7e8
+        bool _7f8[2];                       // +0x7f8
+        bool _7fa[2];                       // +0x7fa
+        JGeometry::TVec2f mItemPos[2];      // +0x7fc
+        JGeometry::TVec2f mItemPos2[2];     // +0x80c
+        JGeometry::TVec2f mItemPos3[2];     // +0x81c
+        int mItemInterval[2];               // +0x82c
+        int mItemCount[2];                  // +0x834
+        u8 _83c[0x848 - 0x83c];             // +0x83c
+        int _848;                           // +0x848
+        int _84c;                           // +0x84c
+        int _850;                           // +0x850
+        JGeometry::TVec2f mRankPos[8];      // +0x854
+        JGeometry::TVec2f mRankPos2[8];     // +0x894
+        u8 _8d4;                            // +0x8d4
+        bool mIsAlarm;                      // +0x8d5
+        int mAlarmAlpha[4];                 // +0x8d8
+    } mPlayerHUD[4];                        // 0x1588
+    int mGoalCount;                         // 0x3928
+    Vec mItemPos[4][2][39];                 // 0x392c
+    Vec mCharPos[2][39];                    // 0x47cc
+    f32 mSpecialItemScale[50];              // 0x4b74
+    struct {
+        int _0;
+        int _4;
+        int _8;
+    } mKartSlot[8];                         // 0x4c3c
+    struct {
+        J2DScreen *mScreen;           // +0x00
+        J2DPicture *mPics[2][2];      // +0x04
+        J2DPane *mPane;               // +0x14
+        int _18;                      // +0x18
+        JGeometry::TVec2f _1c;        // +0x1c
+        JGeometry::TVec2f mPos;       // +0x24
+        JGeometry::TVec2f _2c;        // +0x2c
+        u8 _34[4];                    // +0x34
+    } mCharWindow[8];                       // 0x4c9c
+    JGeometry::TVec2f mCharIconPos[8];      // 0x4e5c
+    int _4e9c[2];                           // 0x4e9c
+    JGeometry::TVec2f mCharWindowOfs;       // 0x4ea4
+    JGeometry::TVec2f mCharWindowCenter;    // 0x4eac
+    int mEscapeTimer;                       // 0x4eb4
+    int mEscapeTimer4;                      // 0x4eb8
+    int mHideFrame;                         // 0x4ebc
+    bool mDrawFlag;                         // 0x4ec0
+    bool mIsEndBombDemo;                    // 0x4ec1
 };
 
 #endif // RACE2D_H
