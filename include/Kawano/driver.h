@@ -450,14 +450,14 @@ public:
     void updateLoad_Sound();
     void updateLoad();
     int updateCheckRenew_Animation();
-    void updateCheckRenew_Sound();
+    int updateCheckRenew_Sound();
     int updateCheckRenew();
-    void BlendValue(f32);
+    f64 BlendValue(f32);
     void updateBlendCount_Func1(u8, u8);
     void updateBlendCount_Func2(u8);
     void updateBlendCount();
     int updateSetBlendWeight_GetBlendTime(StateEnum);
-    void updateSetBlendWeight_Func1(u8, u8);
+    f32 updateSetBlendWeight_Func1(u8, u8);
     void updateSetBlendWeight_FuncABCD(f32, f32, f32, f32);
     void updateSetBlendWeight_mStateThrow();
     void updateSetBlendWeight();
@@ -676,8 +676,8 @@ public:
     void SetDriverOffsetPosition_Change(DriverData *);
     void SetDriverOffsetPosition_Demo(DriverData *);
 
-    static u8 msNext_mState_HokanDamages[2];
-    static const u32 msAnmBlendList[152][2]; // state -> 2 animation ids
+    static const s8 msNext_mState_HokanDamages[2];
+    static const s32 msAnmBlendList[152][2]; // state -> 2 animation ids
     static void *msAnmSabunList;
 
     GameAudio::CharacterSoundMgr *getCharSoundMgr() { return mCharSoundMgr; }

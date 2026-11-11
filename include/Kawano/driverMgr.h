@@ -98,7 +98,9 @@ public:
 private:
     f32 _18;
     f32 _1c;
+public:
     f32 _20;
+private:
     u8 _24;
 public:
     f32 _28;
