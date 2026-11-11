@@ -199,15 +199,171 @@ const u64 SceneOption::mTagSP_color[] = {
     'CSel1', 'CSel2',
 };
 
+const u64 SceneOption::mTag_all = 'NOpAll';
+const u64 SceneOption::mTag_submenu_bgm = 'NSbBGM1';
+const u64 SceneOption::mTag_osusume = 'SbLp_M1';
+
 SceneOption::SceneOption(JKRArchive *archive, JKRHeap *heap)
-    : Scene(archive, heap), mTitleLine(archive, heap, (char *)"option_title_line") {
+    : Scene(archive, heap), SceneTitleLine(archive, heap, "option_title_line") {
+    OSInitFastCast();
     SceneOption_ConstructerOption(heap);
     SceneOption_ConstructerBack(heap);
 }
 
-void SceneOption::SceneOption_ConstructerOption(JKRHeap *) {}
+void SceneOption::SceneOption_ConstructerOption(JKRHeap *heap) {
+    int i;
+    int j;
 
-void SceneOption::SceneOption_ConstructerSoundPlayer(JKRHeap *) {}
+    mScreen = new (heap, 0) J2DScreen();
+    mScreen->set("option.blo", 0x40000, mArchive);
+    mAnmTransform = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("option.bck", mArchive));
+    mScreen->setAnimation(mAnmTransform);
+
+    void *brk = JKRFileLoader::getGlbResource("option.brk", mArchive);
+    void *btk = JKRFileLoader::getGlbResource("option.btk", mArchive);
+    for (i = 0; i < 6; i++) {
+        for (j = 0; j < 2; j++) {
+            mCursorAnm[i].mAnm[j] = (J2DAnmTevRegKey *)J2DAnmLoaderDataBase::load(brk);
+            mCursorAnm[i].mAnm[j]->searchUpdateMaterialID(mScreen);
+        }
+        mMatAnm[i] = (J2DAnmTextureSRTKey *)J2DAnmLoaderDataBase::load(btk);
+        mMatAnm[i]->searchUpdateMaterialID(mScreen);
+    }
+    for (i = 0; i < 2; i++) {
+        mAnm10c[i] = (J2DAnmTextureSRTKey *)J2DAnmLoaderDataBase::load(btk);
+        mAnm10c[i]->searchUpdateMaterialID(mScreen);
+    }
+
+    mAllPane = mScreen->search(mTag_all);
+    mAllPane->setAnimation(mAnmTransform);
+    for (i = 0; i < 7; i++) {
+        mMenuPanes[i] = (J2DPicture *)mScreen->search(mTag_menu[i]);
+        mMenuPanes[i]->setAnimation(mAnmTransform);
+        mCursorPanes[i] = (J2DPicture *)mScreen->search(mTag_cursor[i]);
+        mCursorPanes[i]->setAnimation(mAnmTransform);
+    }
+    for (i = 0; i < 3; i++)
+        mSecretPanes[i] = mScreen->search(mTag_secret[i]);
+    for (i = 0; i < 6; i++) {
+        mSubmenuPanes[i] = (J2DPicture *)mScreen->search(mTag_submenu[i]);
+        mSubmenuPanes[i]->setAnimation(mAnmTransform);
+        mPane1b4[i] = mScreen->search(mTag_cursorl1[i]);
+        mPane1b4[i]->setAnimation(mAnmTransform);
+        mPane1cc[i] = mScreen->search(mTag_cursorr1[i]);
+        mPane1cc[i]->setAnimation(mAnmTransform);
+        mPane1e4[i] = mScreen->search(mTag_cursorl2[i]);
+        mPane1e4[i]->setAnimation(mAnmTransform);
+        mPane1fc[i] = mScreen->search(mTag_cursorr2[i]);
+        mPane1fc[i]->setAnimation(mAnmTransform);
+        mPane214[i] = mScreen->search(mTag_cursorl3[i]);
+        mPane214[i]->setAnimation(mCursorAnm[i].mAnm[0]);
+        mPane22c[i] = mScreen->search(mTag_cursorr3[i]);
+        mPane22c[i]->setAnimation(mCursorAnm[i].mAnm[1]);
+        mPane244[i] = mScreen->search(mTag_cursorl4[i]);
+        mPane244[i]->setAnimation(mMatAnm[i]);
+        mPane25c[i] = mScreen->search(mTag_cursorr4[i]);
+        mPane25c[i]->setAnimation(mMatAnm[i]);
+        if (i != 1) {
+            mPane274[i] = (J2DPicture *)mScreen->search(mTag_submenumoji[i]);
+            mPane274[i]->setAnimation(mAnmTransform);
+        }
+    }
+    mPane1a4 = (J2DPicture *)mScreen->search(mTag_submenu_bgm);
+    mPane1a4->setAnimation(mAnmTransform);
+    for (i = 0; i < 3; i++)
+        mPane1a8[i] = (J2DPicture *)mScreen->search(mTag_submenu_bgms[i]);
+    mPane28c = (J2DPicture *)mScreen->search(mTag_osusume);
+    mPane28c->setAnimation(mAnmTransform);
+    for (i = 0; i < 2; i++)
+        mColorPanes[i] = (J2DPicture *)mScreen->search(mTag_color[i]);
+    for (i = 0; i < 2; i++) {
+        mKnobPanes[i] = (J2DPicture *)mScreen->search(mTag_knob[i]);
+        mKnobPanes[i]->setAnimation(mAnmTransform);
+        mVolumePanes[i] = (J2DPicture *)mScreen->search(mTag_volume[i]);
+        mVolumePanes[i]->setAnimation(mAnm10c[i]);
+    }
+
+    if (System::getDisplay()->getFader()->mStatus == JUTFader::Status_Out) {
+        mState = 0;
+        mPrevState = 0;
+        mFadeTimer = 0;
+        if (System::getDisplay()->getFader())
+            System::getDisplay()->getFader()->startFadeIn(15);
+    } else {
+        mState = 1;
+        mPrevState = 1;
+    }
+    mMenuCursor = 0;
+    mSoundMode = 0;
+    mRumble = 1;
+    mOnOff2 = 1;
+    mBgmVolume = 20;
+    mSeVolume = 100;
+    mSPCursor = 0;
+    for (i = 0; i < 3; i++)
+        mSPValue[i] = 0;
+
+    mColor1[0] = mColorPanes[0]->getBlack();
+    mColor1[1] = mColorPanes[0]->getWhite();
+    mColor0[0] = mColorPanes[1]->getBlack();
+    mColor0[1] = mColorPanes[1]->getWhite();
+}
+
+void SceneOption::SceneOption_ConstructerSoundPlayer(JKRHeap *heap) {
+    int i;
+    int j;
+
+    mSPScreen = new (heap, 0) J2DScreen();
+    mSPScreen->set("soundplayer.blo", 0x40000, mArchive);
+    mSPAnmTransform = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("soundplayer.bck", mArchive));
+    mSPScreen->setAnimation(mSPAnmTransform);
+
+    void *brk = JKRFileLoader::getGlbResource("soundplayer.brk", mArchive);
+    void *btk = JKRFileLoader::getGlbResource("soundplayer.btk", mArchive);
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 2; j++) {
+            mSPCursorAnm[i].mAnm[j] = (J2DAnmTevRegKey *)J2DAnmLoaderDataBase::load(brk);
+            mSPCursorAnm[i].mAnm[j]->searchUpdateMaterialID(mSPScreen);
+        }
+        mSPMatAnm[i] = (J2DAnmTextureSRTKey *)J2DAnmLoaderDataBase::load(btk);
+        mSPMatAnm[i]->searchUpdateMaterialID(mSPScreen);
+    }
+
+    for (i = 0; i < 4; i++) {
+        mSPMenuPanes[i] = (J2DPicture *)mSPScreen->search(mTagSP_menu[i]);
+        mSPMenuPanes[i]->setAnimation(mSPAnmTransform);
+        mSPCursorPanes[i] = (J2DPicture *)mSPScreen->search(mTagSP_cursor[i]);
+        mSPCursorPanes[i]->setAnimation(mSPAnmTransform);
+    }
+    for (i = 0; i < 3; i++) {
+        mSPSubmenuPanes[i] = (J2DPicture *)mSPScreen->search(mTagSP_submenu[i]);
+        mSPSubmenuPanes[i]->setAnimation(mSPAnmTransform);
+        mSPPaneL1[i] = mSPScreen->search(mTagSP_cursorl1[i]);
+        mSPPaneL1[i]->setAnimation(mSPAnmTransform);
+        mSPPaneR1[i] = mSPScreen->search(mTagSP_cursorr1[i]);
+        mSPPaneR1[i]->setAnimation(mSPAnmTransform);
+        mSPPaneL2[i] = mSPScreen->search(mTagSP_cursorl2[i]);
+        mSPPaneL2[i]->setAnimation(mSPAnmTransform);
+        mSPPaneR2[i] = mSPScreen->search(mTagSP_cursorr2[i]);
+        mSPPaneR2[i]->setAnimation(mSPAnmTransform);
+        mSPPaneL3[i] = mSPScreen->search(mTagSP_cursorl3[i]);
+        mSPPaneL3[i]->setAnimation(mSPCursorAnm[i].mAnm[0]);
+        mSPPaneR3[i] = mSPScreen->search(mTagSP_cursorr3[i]);
+        mSPPaneR3[i]->setAnimation(mSPCursorAnm[i].mAnm[1]);
+        mSPPaneL4[i] = mSPScreen->search(mTagSP_cursorl4[i]);
+        mSPPaneL4[i]->setAnimation(mSPMatAnm[i]);
+        mSPPaneR4[i] = mSPScreen->search(mTagSP_cursorr4[i]);
+        mSPPaneR4[i]->setAnimation(mSPMatAnm[i]);
+        mSPNumeral1[i] = (J2DPicture *)mSPScreen->search(mTagSP_numeral1[i]);
+        mSPNumeral21[i] = (J2DPicture *)mSPScreen->search(mTagSP_numeral21[i]);
+        mSPNumeral22[i] = (J2DPicture *)mSPScreen->search(mTagSP_numeral22[i]);
+        mSPNumeral31[i] = (J2DPicture *)mSPScreen->search(mTagSP_numeral31[i]);
+        mSPNumeral32[i] = (J2DPicture *)mSPScreen->search(mTagSP_numeral32[i]);
+        mSPNumeral33[i] = (J2DPicture *)mSPScreen->search(mTagSP_numeral33[i]);
+    }
+    for (i = 0; i < 2; i++)
+        mSPColorPanes[i] = (J2DPicture *)mSPScreen->search(mTagSP_color[i]);
+}
 
 void SceneOption::SceneOption_ConstructerBack(JKRHeap *heap) {
     mBackScreen = new (heap, 0) J2DScreen();
@@ -236,7 +392,7 @@ void SceneOption::init() {
         mSceneType = Scene::SCENE_MAX;
     init_option();
     init_back();
-    mTitleLine.init_titleline(8);
+    init_titleline(8);
 }
 
 void SceneOption::init_option() {
@@ -307,18 +463,83 @@ void SceneOption::init_back() {
     mBackAnmFrame = 0;
 }
 
- SceneOption::~SceneOption() {}
+SceneOption::~SceneOption() {
+    delete mScreen;
+    delete mBackScreen;
+}
 
 void SceneOption::draw() {
     mOrtho->setPort();
     mBackScreen->draw(0.0f, 0.0f, mOrtho);
     mScreen->draw(0.0f, 0.0f, mOrtho);
-    mTitleLine.drawTitleLine(mOrtho);
+    drawTitleLine(mOrtho);
 }
 
-void SceneOption::calcAnmAll() {}
+void SceneOption::calcAnmAll() {
+    switch (mState) {
+    case 0:
+    case 1:
+        if (mMatCursorTimer > 80) {
+            mMatCursorTimer--;
+            if (mMatCursorTimer <= 80)
+                mMatCursorTimer = 9;
+        } else {
+            mMatCursorTimer++;
+            if (mMatCursorTimer < 0)
+                mMatCursorTimer = 0;
+            if (mMatCursorTimer > 9)
+                mMatCursorTimer = 9;
+        }
+        break;
+    case 2:
+        mMatCursorTimer++;
+        if (mMatCursorTimer > 9) {
+            if (mMatCursorTimer < 80)
+                mMatCursorTimer = 80;
+            if (mMatCursorTimer > 89)
+                mMatCursorTimer = 89;
+        }
+        break;
+    case 3:
+    case 4:
+        mMatCursorTimer++;
+        if (mMatCursorTimer < 80)
+            mMatCursorTimer = 80;
+        if (mMatCursorTimer > 89)
+            mMatCursorTimer = 89;
+        break;
+    }
 
-void SceneOption::calcAnmMenu() {}
+    mAnmTransform->setFrame((f32)mMatCursorTimer);
+    mAllPane->animationTransform();
+}
+
+void SceneOption::calcAnmMenu() {
+    int menuTimer = ++mMenuTimer;
+    if (menuTimer >= 90)
+        mMenuTimer = 0;
+    for (int i = 0; i < 7; i++) {
+        if (i == mMenuCursor) {
+            mMatMenuTimer[i]++;
+            mMenuPanes[i]->setBlackWhite(mColor1[0], mColor1[1]);
+        } else {
+            mMatMenuTimer[i]--;
+            mMenuPanes[i]->setBlackWhite(mColor0[0], mColor0[1]);
+        }
+        if (mMatMenuTimer[i] < 20)
+            mMatMenuTimer[i] = 20;
+        if (mMatMenuTimer[i] > 25)
+            mMatMenuTimer[i] = 25;
+        mAnmTransform->setFrame((f32)mMatMenuTimer[i]);
+        mMenuPanes[i]->animationTransform();
+        if (i < 6)
+            mSubmenuPanes[i]->animationTransform();
+        if (i == 1)
+            mPane1a4->animationTransform();
+        mAnmTransform->setFrame((f32)mMenuTimer);
+        mCursorPanes[i]->animationTransform();
+    }
+}
 
 void SceneOption::calcAnmCursor() {
     for (int i = 0; i < 6; i++) {
@@ -382,99 +603,26 @@ void SceneOption::calcAnmCursor() {
     }
 }
 
-void SceneOption::calcAnmVolume() {}
-
-void SceneOption::calcTexChange() {}
-
-void SceneOption::calcAnmSPAll() {}
-
-void SceneOption::calcAnmSPMenu() {}
-
-void SceneOption::calcAnmSPCursor() {}
-
-void SceneOption::calcAnmSPNumeral() {}
-
-void SceneOption::calcAnm() {
-    switch (mState) {
-    case 0:
-    case 1:
-        if (mMatCursorTimer > 80) {
-            mMatCursorTimer--;
-            if (mMatCursorTimer <= 80)
-                mMatCursorTimer = 9;
-        } else {
-            mMatCursorTimer++;
-            if (mMatCursorTimer < 0)
-                mMatCursorTimer = 0;
-            if (mMatCursorTimer > 9)
-                mMatCursorTimer = 9;
-        }
-        break;
-    case 2:
-        mMatCursorTimer++;
-        if (mMatCursorTimer > 9) {
-            if (mMatCursorTimer < 80)
-                mMatCursorTimer = 80;
-            if (mMatCursorTimer > 89)
-                mMatCursorTimer = 89;
-        }
-        break;
-    case 3:
-    case 4:
-        mMatCursorTimer++;
-        if (mMatCursorTimer < 80)
-            mMatCursorTimer = 80;
-        if (mMatCursorTimer > 89)
-            mMatCursorTimer = 89;
-        break;
-    }
-
-    mAnmTransform->setFrame((f32)mMatCursorTimer);
-    mSoundPlayerScreen->animationTransform();
-    int menuTimer = ++mMenuTimer;
-    if (menuTimer >= 90)
-        mMenuTimer = 0;
-
-    for (int i = 0; i < 7; i++) {
-        if (i == mMenuCursor) {
-            mMatMenuTimer[i]++;
-            mMenuPanes[i]->setBlackWhite(mColor1[0], mColor1[1]);
-        } else {
-            mMatMenuTimer[i]--;
-            mMenuPanes[i]->setBlackWhite(mColor0[0], mColor0[1]);
-        }
-        if (mMatMenuTimer[i] < 20)
-            mMatMenuTimer[i] = 20;
-        if (mMatMenuTimer[i] > 25)
-            mMatMenuTimer[i] = 25;
-        mAnmTransform->setFrame((f32)mMatMenuTimer[i]);
-        mMenuPanes[i]->animationTransform();
-        if (i < 6)
-            mSubmenuPanes[i]->animationTransform();
-        if (i == 1)
-            mPane1a4->animationTransform();
-        mAnmTransform->setFrame((f32)mMenuTimer);
-        mCursorPanes[i]->animationTransform();
-    }
-
-    calcAnmCursor();
+void SceneOption::calcAnmVolume() {
     mAnmTransform->setFrame((f32)(mBgmVolume * 99) / 20.0f + 100.0f);
     mKnobPanes[0]->animationTransform();
-    mAnmTransform->setFrame((f32)(mSeVolume * 99) / 20.0f + 100.0f);
+    mAnmTransform->setFrame((f32)(mSeVolume * 99) / 100.0f + 100.0f);
     mKnobPanes[1]->animationTransform();
+}
 
+void SceneOption::calcTexChange() {
     mPane274[0]->changeTexture(mBtiName_sound[mSoundMode], 0);
-    mPane274[1]->changeTexture(mBtiName_onOff[mRumble], 0);
-    mPane274[2]->changeTexture(mBtiName_onOff[mOnOff2], 0);
-    mPane274[3]->changeTexture(mBtiName_itemSlot[mItemSlot], 0);
+    mPane274[2]->changeTexture(mBtiName_onOff[mRumble], 0);
+    mPane274[3]->changeTexture(mBtiName_onOff[mOnOff2], 0);
+    mPane274[4]->changeTexture(mBtiName_itemSlot[mItemSlot], 0);
 
     if (mVsLap == 0) {
-        mPane274[4]->mIsVisible = 0;
-        mPane274[5]->mIsVisible = 1;
-    } else {
-        mPane274[4]->mIsVisible = 1;
         mPane274[5]->mIsVisible = 0;
-        mPane274[4]->changeTexture(Kart2DCommon::ptr()->getPartsLocName(mVsLap), 0);
+        mPane28c->mIsVisible = 1;
+    } else {
+        mPane274[5]->mIsVisible = 1;
+        mPane28c->mIsVisible = 0;
+        mPane274[5]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)mVsLap), 0);
     }
 
     if (mBgmVolume == 10) {
@@ -495,18 +643,35 @@ void SceneOption::calcAnm() {
         mPane1a8[2]->changeTexture(mBtiName_bgmsign[1], 0);
         num = mBgmVolume - 10;
     }
-    mPane1a8[1]->changeTexture(Kart2DCommon::ptr()->getPartsLocName(num), 0);
+    mPane1a8[1]->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)num), 0);
+}
+
+void SceneOption::calcAnmSPAll() {}
+
+void SceneOption::calcAnmSPMenu() {}
+
+void SceneOption::calcAnmSPCursor() {}
+
+void SceneOption::calcAnmSPNumeral() {}
+
+void SceneOption::calcAnm() {
+    calcAnmAll();
+    calcAnmMenu();
+    calcAnmCursor();
+    calcAnmVolume();
+    calcTexChange();
 
     int dir;
-    if (mState < 5) {
-        if (mState >= 3)
-            dir = -1;
-        else
-            dir = 1;
-    } else {
+    switch (mState) {
+    case 3:
+    case 4:
+        dir = -1;
+        break;
+    default:
         dir = 1;
+        break;
     }
-    mTitleLine.calcAnmTitleLine(dir);
+    calcAnmTitleLine(dir);
 }
 
 void SceneOption::calcMatAnmCursor() {
@@ -581,7 +746,7 @@ void SceneOption::calc() {
         break;
     default:
 #line 1259
-        JUT_ASSERT_F(0, "0", 0);
+        JUT_ASSERT_F(0, "%s", "0");
         break;
     }
     calcMatAnmCursor();
@@ -595,7 +760,7 @@ void SceneOption::calc() {
         mBackAnmFrame = 0;
     mBackAnm->setFrame((f32)mBackAnmFrame);
     mBackScreen->animation();
-    mTitleLine.calcMatAnmTitleLine();
+    calcMatAnmTitleLine();
     calcAnm();
     if (mRumbleTimer[0] > 0) {
         mRumbleTimer[0]--;
@@ -612,35 +777,332 @@ void SceneOption::fadeIn() {
     }
 }
 
-void SceneOption::isMenuExist(int) {}
+bool SceneOption::isMenuExist(int menu) {
+    if (menu < 4)
+        return true;
+    if (menu == 6)
+        return true;
+    if (mAnmEnable[menu - 4])
+        return true;
+    return false;
+}
 
-void SceneOption::option() {}
+void SceneOption::option() {
+    int prevSoundMode = mSoundMode;
+    mFadeTimer = 0;
+    switch (mMenuCursor) {
+    case 1:
+        int bgmVolume = mBgmVolume;
+        if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_LEFT)) {
+            if (mBgmVolume > 0)
+                mBgmVolume--;
+        } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_RIGHT)) {
+            if (mBgmVolume < 20)
+                mBgmVolume++;
+        }
+        if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_RIGHT)) {
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][1];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][2];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer2[mMenuCursor][1];
+                timer = 2;
+            }
+        }
+        if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_LEFT)) {
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][0];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][2];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer2[mMenuCursor][0];
+                timer = 2;
+            }
+        }
+        if (mBgmVolume != bgmVolume) {
+            GameAudio::Main::getAudio()->startSystemSe(0x20000);
+            GameAudio::Main::getAudio()->setMasterVolume(mBgmVolume - 10);
+        }
+        break;
+    }
 
-void SceneOption::soundplayer() {}
+    if (gpaGamePad[0]->testTrigger(JUTGamePad::A)) {
+        switch (mMenuCursor) {
+        case 6:
+            if (!SceneChange_ExitOption(0))
+                GameAudio::Main::getAudio()->startSystemSe(0x20002);
+            break;
+        }
+    } else if (gpaGamePad[0]->testTrigger(JUTGamePad::B)) {
+        GameAudio::Main::getAudio()->startSystemSe(0x20004);
+        SceneChange_ExitOption(1);
+    } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_UP)) {
+        while (true) {
+            GameAudio::Main::getAudio()->startSystemSe(0x20000);
+            if (--mMenuCursor < 0)
+                mMenuCursor = 6;
+            if (isMenuExist(mMenuCursor))
+                break;
+        }
+    } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_DOWN)) {
+        while (true) {
+            GameAudio::Main::getAudio()->startSystemSe(0x20000);
+            if (++mMenuCursor >= 7)
+                mMenuCursor = 0;
+            if (isMenuExist(mMenuCursor))
+                break;
+        }
+    } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_LEFT)) {
+        if (mMenuCursor != 1 && mMenuCursor < 6) {
+            if (mMenuCursor != 0)
+                GameAudio::Main::getAudio()->startSystemSe(0x2000c);
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][0];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][2];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer2[mMenuCursor][0];
+                timer = 2;
+            }
+            switch (mMenuCursor) {
+            case 2:
+                if (--mRumble < 0)
+                    mRumble = 1;
+                rumble(0);
+                break;
+            case 0:
+                if (--mSoundMode < 0)
+                    mSoundMode = 2;
+                break;
+            case 3:
+                if (--mOnOff2 < 0)
+                    mOnOff2 = 1;
+                break;
+            case 4:
+                if (--mItemSlot < 0)
+                    mItemSlot = 3;
+                break;
+            case 5:
+                if (--mVsLap < 0)
+                    mVsLap = 9;
+                break;
+            case 1:
+            case 6:
+                break;
+            default:
+#line 1519
+                JUT_ASSERT_F(0, "%s", "0");
+                break;
+            }
+        }
+    } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_RIGHT)) {
+        if (mMenuCursor != 1 && mMenuCursor < 6) {
+            if (mMenuCursor != 0)
+                GameAudio::Main::getAudio()->startSystemSe(0x2000c);
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][1];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer[mMenuCursor][2];
+                timer = 31;
+            }
+            {
+                int &timer = mSubCursorTimer2[mMenuCursor][1];
+                timer = 2;
+            }
+            switch (mMenuCursor) {
+            case 2:
+                if (++mRumble >= 2)
+                    mRumble = 0;
+                rumble(0);
+                break;
+            case 0:
+                if (++mSoundMode >= 3)
+                    mSoundMode = 0;
+                break;
+            case 3:
+                if (++mOnOff2 >= 2)
+                    mOnOff2 = 0;
+                break;
+            case 4:
+                if (++mItemSlot >= 4)
+                    mItemSlot = 0;
+                break;
+            case 5:
+                if (++mVsLap >= 10)
+                    mVsLap = 0;
+                break;
+            case 1:
+            case 6:
+                break;
+            default:
+#line 1574
+                JUT_ASSERT_F(0, "%s", "0");
+                break;
+            }
+        }
+    }
+
+    if (prevSoundMode != mSoundMode) {
+        GameAudio::Main::getAudio()->setOutputMode(getJASoundMode(mSoundMode));
+        GameAudio::Main::getAudio()->startSystemSe(0x20045);
+    }
+    switch (mState) {
+    case 1:
+        break;
+    case 3:
+        save();
+        break;
+    default:
+        nosave();
+        break;
+    }
+}
+
+void SceneOption::soundplayer() {
+    KartGamePad **pads = gpaGamePad;
+    if (pads[0]->testButton(JUTGamePad::MAINSTICK_RIGHT)) {
+        mSPHoldRight++;
+        if (mSPHoldRight > 168)
+            mSPHoldRight = 168;
+        if (mSPHoldRight > 84 && mSPCursor < 3) {
+            {
+                int add = mSPHoldRight >= 168 ? 2 : 1;
+                int &value = mSPValue[mSPCursor];
+                value += add;
+            }
+            {
+                int &value = mSPValue[mSPCursor];
+                int &max = mSPMax[mSPCursor];
+                if (value >= max)
+                    value = max;
+            }
+        }
+    } else {
+        mSPHoldRight = 0;
+    }
+    if (pads[0]->testButton(JUTGamePad::MAINSTICK_LEFT)) {
+        mSPHoldLeft++;
+        if (mSPHoldLeft > 168)
+            mSPHoldLeft = 168;
+        if (mSPHoldLeft > 84 && mSPCursor < 3) {
+            {
+                int sub = mSPHoldLeft >= 168 ? 2 : 1;
+                int &value = mSPValue[mSPCursor];
+                value -= sub;
+            }
+            int &value = mSPValue[mSPCursor];
+            if (value < 0)
+                value = 0;
+        }
+    } else {
+        mSPHoldLeft = 0;
+    }
+
+    if (pads[0]->testTrigger(JUTGamePad::A | JUTGamePad::START)) {
+        if (mSPCursor == 3) {
+            GameAudio::Main::getAudio()->startSystemSe(0x20004);
+            mState = 1;
+            mPrevState = 2;
+        }
+    } else if (pads[0]->testTrigger(JUTGamePad::B)) {
+        GameAudio::Main::getAudio()->startSystemSe(0x20004);
+        mState = 1;
+        mPrevState = 2;
+    } else if (pads[0]->testRepeat(JUTGamePad::MAINSTICK_UP)) {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        if (--mSPCursor < 0)
+            mSPCursor = 3;
+    } else if (pads[0]->testRepeat(JUTGamePad::MAINSTICK_DOWN)) {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
+        if (++mSPCursor >= 4)
+            mSPCursor = 0;
+    } else if (pads[0]->testRepeat(JUTGamePad::MAINSTICK_LEFT)) {
+        if (mSPCursor < 3) {
+            GameAudio::Main::getAudio()->startSystemSe(0x20000);
+            {
+                int &timer = mSPSubCursorTimer[mSPCursor][0];
+                timer = 31;
+            }
+            {
+                int &timer = mSPSubCursorTimer[mSPCursor][2];
+                timer = 31;
+            }
+            {
+                int &timer = mSPSubCursorTimer2[mSPCursor][0];
+                timer = 2;
+            }
+            if (mSPHoldLeft < 84) {
+                int &value = mSPValue[mSPCursor];
+                if (--value < 0)
+                    mSPValue[mSPCursor] = mSPMax[mSPCursor];
+            }
+        }
+    } else if (pads[0]->testRepeat(JUTGamePad::MAINSTICK_RIGHT)) {
+        if (mSPCursor < 3) {
+            GameAudio::Main::getAudio()->startSystemSe(0x20000);
+            {
+                int &timer = mSPSubCursorTimer[mSPCursor][1];
+                timer = 31;
+            }
+            {
+                int &timer = mSPSubCursorTimer[mSPCursor][2];
+                timer = 31;
+            }
+            {
+                int &timer = mSPSubCursorTimer2[mSPCursor][1];
+                timer = 2;
+            }
+            if (mSPHoldRight < 84) {
+                if (++mSPValue[mSPCursor] >= mSPMax[mSPCursor]) {
+                    int &value = mSPValue[mSPCursor];
+                    value = 0;
+                }
+            }
+        }
+    }
+}
 
 void SceneOption::nextScene() {
     if (mSceneType == Scene::SCENE_MAX) {
         AppMgr::deleteCurrentApp();
         MainMenuApp::call();
-    } else if (++mFadeTimer > 15) {
+        return;
+    }
+    if (++mFadeTimer > 15) {
         mSceneType = 0;
         if (SequenceApp::ptr()->ready((Scene::SceneType)mSceneType)) {
             GameAudio::Main::getAudio()->stopSequenceBgm(1);
             GameAudio::Main::getAudio()->stopSystemSe(0x20045);
             SequenceApp::ptr()->setNextScene((Scene::SceneType)mSceneType);
         }
+        if (mRumbleTimer[0] != 0)
+            rumbleOff(0);
     }
-    if (mRumbleTimer[0] != 0)
-        rumbleOff(0);
 }
 
 int SceneOption::getJASoundMode(int i) {
     int ret = 1;
     switch (i) {
-    case 1:
-        return 1;
     case 0:
         ret = 0;
+        break;
+    case 1:
+        ret = 1;
         break;
     case 2:
         ret = 2;
@@ -727,13 +1189,13 @@ void SceneOption::save() {
     case 0:
         gSystemRecord.mItemSlotType = 0;
         break;
-    case 1:
+    case 3:
         gSystemRecord.mItemSlotType = 1;
         break;
-    case 2:
+    case 1:
         gSystemRecord.mItemSlotType = 2;
         break;
-    case 3:
+    case 2:
         gSystemRecord.mItemSlotType = 3;
         break;
     }
