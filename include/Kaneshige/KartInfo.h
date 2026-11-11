@@ -130,7 +130,7 @@ public:
     bool isRealPlayerKart() const { return getPlayerKind(0) == 1; }
     bool isGhostKart() const { return getPlayerKind(0) == 4; }
     bool isPlayerKart() const { return !isComKart(); }
-    bool isTagMode() const { return (mKartCharacters) != 0; }
+    bool isTagMode() const { return !mKartCharacters[1].isComPlayer(); }
     int getWeight() const { return (mKartDB) ? mKartDB->weight : 3; }
 
     static const SCharDB cBabyMarioCharDB;

@@ -57,6 +57,7 @@ public:
     void setDrawFlag(bool flag) { mDrawFlag = flag; }
 
     JKRArchive *getArchive() const { return mArchive; }
+    Race2D *getRace2D() { return mRace; }
 
     static J2DManager *getManager() { return mThis; }
 

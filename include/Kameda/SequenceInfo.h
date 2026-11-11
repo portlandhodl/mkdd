@@ -259,6 +259,19 @@ public:
         return _2f8[rank];
     }
 
+    int getPrevRank(int rank) { // fabricated
+#line 245
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        int kart = _2d8[rank];
+        int i;
+        for (i = 0; i < 8; i++) {
+            if (kart == _2f8[i]) {
+                break;
+            }
+        }
+        return i;
+    }
+
     int get_3cc(int course) {
 #line 424
         JUT_MINMAX_ASSERT(0, course, 16);

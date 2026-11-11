@@ -26,13 +26,18 @@ public:
     void set(u8 charId1, u8 charId2, u8 kartId, u8 courseId, const char *name, RaceTime time);
 
     // Inline
-    bool isValid() { return ((mKartID < 0x15) &&
-                             ((mCharIDs[0] != 0) && mCharIDs[0] < 0x15) &&
-                             ((mCharIDs[1] != 0) && mCharIDs[1] < 0x15)); }
+    bool isValid() {
+        bool valid = false;
+        if (mKartID < 0x15 && mCharIDs[0] != 0 && mCharIDs[0] < 0x15 && mCharIDs[1] != 0 && mCharIDs[1] < 0x15) {
+            valid = true;
+        }
+        return valid;
+    }
     RaceTime getRaceTime() const { return mTime; }
     ECourseID getCourseID() const { return (ECourseID)mCourseID; }
     EKartID getKartID() const { return (EKartID)mKartID; }
     ECharID getCharID(int no) const { return (ECharID)mCharIDs[no]; }
+    const char *getName() const { return mName; } // fabricated
 
 private:
     u8 mCharIDs[2]; // 00

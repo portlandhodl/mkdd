@@ -44,7 +44,12 @@ class Race2D
 { 
 public:
     Race2D(JKRHeap *);                                                                            // 0x801531b8
-    J2DPicture *getRankPic(int, int);
+    J2DPicture *getRankPic(int status, int rank) {
+#line 490
+        JUT_MINMAX_ASSERT(0, status, 4);
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        return mRankDigits1[status][rank];
+    }
     void init();                                                                                  // 0x80157714
     void drawPlayerMark();                                                                        // 0x8015838c
     void drawMask();                                                                              // 0x801588b0

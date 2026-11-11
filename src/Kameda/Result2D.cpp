@@ -35,7 +35,7 @@ JUTColor Result2D::mWhiteColor[4][2] = {
     0xb4b4b4ff, 0xb4b4b4ff
 };
 
-u64 Result2D::mOverBackTag = 'OverBack';
+const u64 Result2D::mOverBackTag[1] = {'OverBack'};
 
 const char *Result2D::mRankName[] = {
     "position1_1.bti",
@@ -96,30 +96,26 @@ const u64 Result2D::mVSBattlePointTag[] = {
     'PPoint11', 'PPoint12', 
 };
 
-static inline f32 *Result2D_center(Result2D::data2D *pane) {
-    return (f32 *)((u8 *)pane - 8);
-}
-
 Result2D::Result2D(JKRHeap *heap) {
-    mNode = new (heap) Result2DHioNode("Result2D");
+    mNode = new (heap, 0) Result2DHioNode("リザルト表示");
     mOrtho = System::getJ2DOrtho();
 
     switch (RCMGetManager()->getRaceMode()) {
     case GRAND_PRIX:
     case AWARD_DEMO:
     case STAFF_ROLL: {
-        mScreen = new (heap) J2DScreen();
+        mScreen = new (heap, 0) J2DScreen();
         for (int i = 0; i < 3; i++) {
-            mWinScreens[i] = new (heap) J2DScreen();
+            mWinScreens[i] = new (heap, 0) J2DScreen();
         }
         mEntries = 3;
-        mResultRaceScreen = new (heap) J2DScreen();
-        mResultLineScreen = new (heap) J2DScreen();
+        mResultRaceScreen = new (heap, 0) J2DScreen();
+        mResultLineScreen = new (heap, 0) J2DScreen();
         for (int i = 0; i < 8; i++) {
-            mRankScreens[i] = new (heap) J2DScreen();
+            mRankScreens[i] = new (heap, 0) J2DScreen();
         }
         for (int i = 0; i < 8; i++) {
-            mGetPointScreens[i] = new (heap) J2DScreen();
+            mGetPointScreens[i] = new (heap, 0) J2DScreen();
         }
 
         mScreen->set("OverScreen.blo", GETJ2DManager()->getArchive());
@@ -135,124 +131,198 @@ Result2D::Result2D(JKRHeap *heap) {
             mGetPointScreens[i]->set("GetPoint.blo", GETJ2DManager()->getArchive());
         }
 
-        mSceneQuitPicture = (J2DPicture *)mScreen->search(mOverBackTag);
-        JUT_ASSERT(mSceneQuitPicture->getTypeID() == J2DPane_Picture);
-        JGeometry::TBox2f box(*mSceneQuitPicture->getBounds());
-        f32 *center = Result2D_center(&mSelPanes[0].parts[0]);
-        center[0] = (box.i.x + box.f.x) * 0.5f;
-        center[1] = (box.i.y + box.f.y) * 0.5f;
-
+        {
+            J2DPane *pane = mScreen->search(mOverBackTag[0]);
+#line 215
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mOverBack.mPane = (J2DPicture *)pane;
+            JGeometry::TBox2f box(*mOverBack.mPane->getBounds());
+            mOverBack.mCenter.x = (box.i.x + box.f.x) / 2;
+            mOverBack.mCenter.y = (box.i.y + box.f.y) / 2;
+        }
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 9; j++) {
-                J2DPicture *pic = (J2DPicture *)mWinScreens[i]->search(mSetWordLineTag[j]);
-                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-                mSelPanes[i].parts[j].mPane = pic;
-                JGeometry::TBox2f b(*pic->getBounds());
-                f32 *c = Result2D_center(&mSelPanes[i].parts[j]);
-                c[0] = (b.i.x + b.f.x) * 0.5f;
-                c[1] = (b.i.y + b.f.y) * 0.5f;
+                J2DPane *pane = mWinScreens[i]->search(mSetWordLineTag[j]);
+#line 224
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mSetWord[i][j].mPane = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mSetWord[i][j].mPane->getBounds());
+                mSetWord[i][j].mCenter.x = (box.i.x + box.f.x) / 2;
+                mSetWord[i][j].mCenter.y = (box.i.y + box.f.y) / 2;
             }
             if (i != 0) {
-                mSelPanes[i].icon->hide();
-                mSelPanes[i].num->hide();
+                mSetWord[i][7].mPane->hide();
+                mSetWord[i][8].mPane->hide();
             }
         }
-
-        data2D *layout = (data2D *)((u8 *)this + 0x348);
         for (int i = 0; i < 11; i++) {
-            J2DPicture *pic = (J2DPicture *)mResultRaceScreen->search(mResultLayoutTag[i]);
-            JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-            layout[i].mPane = pic;
-            JGeometry::TBox2f b(*pic->getBounds());
-            f32 *c = Result2D_center(&layout[i]);
-            c[0] = (b.i.x + b.f.x) * 0.5f;
-            c[1] = (b.i.y + b.f.y) * 0.5f;
+            J2DPane *pane = mResultRaceScreen->search(mResultLayoutTag[i]);
+#line 238
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mLayout[i].mPane = (J2DPicture *)pane;
+            JGeometry::TBox2f box(*mLayout[i].mPane->getBounds());
+            mLayout[i].mCenter.x = (box.i.x + box.f.x) / 2;
+            mLayout[i].mCenter.y = (box.i.y + box.f.y) / 2;
         }
-
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 20; j++) {
-                J2DPicture *pic = (J2DPicture *)mRankScreens[i]->search(mResultLineTag[j]);
-                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-                mLines[i][j].mPane = pic;
-                JGeometry::TBox2f b(*pic->getBounds());
-                f32 *c = Result2D_center(&mLines[i][j]);
-                c[0] = (b.i.x + b.f.x) * 0.5f;
-                c[1] = (b.i.y + b.f.y) * 0.5f;
+                J2DPane *pane = mRankScreens[i]->search(mResultLineTag[j]);
+#line 247
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mLines[i][j].mPane = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mLines[i][j].mPane->getBounds());
+                mLines[i][j].mCenter.x = (box.i.x + box.f.x) / 2;
+                mLines[i][j].mCenter.y = (box.i.y + box.f.y) / 2;
             }
         }
-
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 4; j++) {
-                J2DPicture *pic = (J2DPicture *)mGetPointScreens[i]->search(mGetPointTag[j]);
-                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-                ((data2D *)&mRankRows[i])[j].mPane = pic;
-                JGeometry::TBox2f b(*pic->getBounds());
-                f32 *c = Result2D_center(&((data2D *)&mRankRows[i])[j]);
-                c[0] = (b.i.x + b.f.x) * 0.5f;
-                c[1] = (b.i.y + b.f.y) * 0.5f;
+                J2DPane *pane = mGetPointScreens[i]->search(mGetPointTag[j]);
+#line 257
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mRankRows[i][j].mPane = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mRankRows[i][j].mPane->getBounds());
+                mRankRows[i][j].mCenter.x = (box.i.x + box.f.x) / 2;
+                mRankRows[i][j].mCenter.y = (box.i.y + box.f.y) / 2;
+            }
+        }
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 8; j++) {
+                J2DPane *pane = mResultLineScreen->search(j + ('Rposr01' + (i << 8)));
+                JGeometry::TBox2f box(*pane->getBounds());
+                _404[i][j] = box.i;
             }
         }
 
-        JGeometry::TVec2f *pos = (JGeometry::TVec2f *)((u8 *)this + 0x404);
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 8; j++) {
-                J2DPane *pane = mResultLineScreen->search((u64)'SetPos0' + ((u64)(i * 8 + j + 1) << 32));
-                pos[i * 8 + j] = pane->getBounds()->i;
+        void *courseName = ResMgr::getPtr(ResMgr::mcCourseNameBti);
+        if (courseName) {
+            mLayout[1].mPane->changeTexture((ResTIMG *)courseName, 0);
+            mLayout[1].mPane->show();
+        } else {
+            mLayout[1].mPane->hide();
+        }
+        mLayout[2].mPane->changeTexture(Kart2DCommon::ptr()->getCupNameTexture(SceneCourseSelect::mRaceGpCup[gSequenceInfo.getCup()]), 0);
+        mLayout[3].mPane->changeTexture(Kart2DCommon::ptr()->getCupIconTexture(SceneCourseSelect::mRaceGpCup[gSequenceInfo.getCup()]), 0);
+
+        switch (RCMGetManager()->getRaceLevel()) {
+        case LVL_50CC:
+            mLayout[4].mPane->hide();
+            mLayout[5].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)5), 0);
+            mLayout[6].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)0), 0);
+            if (KartLocale::getLanguage() == 2) {
+                mLayout[9].mPane->show();
             }
+            break;
+        case LVL_100CC:
+            mLayout[4].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)1), 0);
+            mLayout[5].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)0), 0);
+            mLayout[6].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)0), 0);
+            if (KartLocale::getLanguage() == 2) {
+                mLayout[9].mPane->show();
+            }
+            break;
+        case LVL_150CC:
+            mLayout[4].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)1), 0);
+            mLayout[5].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)5), 0);
+            mLayout[6].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)0), 0);
+            if (KartLocale::getLanguage() == 2) {
+                mLayout[9].mPane->show();
+            }
+            break;
+        case LVL_MIRROR:
+            mLayout[4].mPane->hide();
+            mLayout[5].mPane->hide();
+            mLayout[6].mPane->hide();
+            mLayout[7].mPane->hide();
+            mLayout[8].mPane->hide();
+            mLayout[10].mPane->show();
+            break;
+        default:
+#line 320
+            JUT_ASSERT(0);
+            break;
+        }
+
+        for (int i = 0; i < 8; i++) {
+            J2DPane *pane = mResultRaceScreen->search('SetPos01' + i);
+            JGeometry::TBox2f box(*pane->getBounds());
+            _3cc[i] = box.i.y;
         }
         for (int i = 0; i < 3; i++) {
-            J2DPane *pane = mResultLineScreen->search((u64)'RTr0' + ((u64)(i + 1) << 32));
-            ((f32 *)((u8 *)this + 0x3ec))[i] = pane->getBounds()->i.y;
+            J2DPane *pane = mResultRaceScreen->search('RTr01' + i);
+            JGeometry::TBox2f box(*pane->getBounds());
+            _3ec[i] = box.i.x;
         }
         for (int i = 0; i < 3; i++) {
-            J2DPicture *pic = (J2DPicture *)mResultLineScreen->search((u64)'CwhiteP' + ((u64)(i + 1) << 32));
-            JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-            J2DPicture::TCornerColor corner;
-            pic->getCornerColor(corner);
-            _3f8[i] = corner.mColor0;
+            J2DPane *pane = mResultRaceScreen->search('CwhiteP1' + i);
+#line 336
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            _3f8[i] = ((J2DPicture *)pane)->getWhite();
         }
         for (int i = 0; i < 8; i++) {
-            J2DPane *pane = mResultRaceScreen->search((u64)'Pose0' + ((u64)(i + 1) << 32));
-            _3cc[i] = pane->getBounds()->i.y;
+            J2DPicture::TCornerColor corner;
+            GETJ2DManager()->getRace2D()->getRankPic(0, i)->getCornerColor(corner);
+            mLines[i][7].mPane->setCornerColor(corner);
+            mLines[i][7].mPane->changeTexture(mRankName[i], 0);
+            mLines[i][17].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)SequenceInfo::RANKPOINT[i]), 0);
         }
         for (int i = 0; i < 2; i++) {
-            J2DPane *pane = mResultRaceScreen->search((u64)'R?' + ((u64)(i + 1) << 32));
-            ((f32 *)((u8 *)this + 0x3f0))[i] = pane->getBounds()->i.y;
+            J2DPane *pane = mRankScreens[0]->search('RPSet01' + i);
+            JGeometry::TBox2f box(*pane->getBounds());
+            _c44[i] = box.i;
         }
+        _dd4 = 224.0f;
+
+        J2DScreen *screen = new (heap, 0) J2DScreen();
+        screen->set("ResultLayout.blo", 0x40000, GETJ2DManager()->getArchive());
+        J2DAnmTransform *anm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRGetNameResource("ResultLayout.bck", GETJ2DManager()->getArchive()));
+        screen->setAnimation(anm);
         for (int i = 0; i < 2; i++) {
-            J2DPane *pane = mResultRaceScreen->search((u64)'T?' + ((u64)(i + 1) << 32));
-            ((f32 *)((u8 *)this + 0x3f4))[i] = pane->getBounds()->i.y;
+            J2DPane *pane = screen->search('RAniS01' + i);
+            for (int j = 0; j < 10; j++) {
+                anm->setFrame(j);
+                screen->animation();
+                mLineScaleTbl[i][j].v.x = pane->getScaleX();
+                mLineScaleTbl[i][j].v.y = pane->getScaleY();
+            }
         }
-        for (int i = 0; i < 2; i++) {
-            J2DPane *pane = mResultRaceScreen->search((u64)'C?' + ((u64)(i + 1) << 32));
-            ((f32 *)((u8 *)this + 0x3f4))[i] = pane->getBounds()->i.y;
+        delete screen;
+
+        for (int i = 0; i < 11; i++) {
+            mLayout[i].mPane->setAlpha(0);
         }
+        for (int i = 0; i < 3; i++) {
+            mRankIconPics[i] = (ResTIMG *)J2DScreen::getNameResource(mResultArrowName[i]);
+        }
+        mDrawFunc = &Result2D::drawGP;
+        mCalcFunc = &Result2D::setDrawGP;
+        mAutoFunc = &Result2D::selectorGP;
         break;
     }
     case VERSUS_RACE:
     case BALLOON_BATTLE:
     case BOMB_BATTLE:
     case ESCAPE_BATTLE: {
-        mScreen = new (heap) J2DScreen();
+        mScreen = new (heap, 0) J2DScreen();
         for (int i = 0; i < 5; i++) {
-            mWinScreens[i] = new (heap) J2DScreen();
+            mWinScreens[i] = new (heap, 0) J2DScreen();
         }
         mEntries = 5;
-        (*(J2DScreen **)((u8 *)this + 0xdd8)) = new (heap) J2DScreen();
-        for (int r = 0; r < 2; r++) {
-            for (int i = 0; i < 4; i++) {
-                mScoreScreens[r][i] = new (heap) J2DScreen();
+        mVSLayoutScreen = new (heap, 0) J2DScreen();
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 4; j++) {
+                mScoreScreens[i][j] = new (heap, 0) J2DScreen();
             }
         }
         for (int i = 0; i < 4; i++) {
-            mPointScreens[i] = new (heap) J2DScreen();
+            mPointScreens[i] = new (heap, 0) J2DScreen();
         }
         for (int i = 0; i < 4; i++) {
-            mPointScreens2[i] = new (heap) J2DScreen();
+            mPointScreens2[i] = new (heap, 0) J2DScreen();
         }
-        for (int r = 0; r < 4; r++) {
-            for (int i = 0; i < 3; i++) {
-                _e1c[r * 3 + i].mPane = NULL;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 3; j++) {
+                _e1c[i][j] = new (heap, 0) J2DScreen();
             }
         }
 
@@ -260,10 +330,14 @@ Result2D::Result2D(JKRHeap *heap) {
         for (int i = 0; i < 5; i++) {
             mWinScreens[i]->set("SetWordLine.blo", GETJ2DManager()->getArchive());
         }
-        (*(J2DScreen **)((u8 *)this + 0xdd8))->set("VS_Battle_Layout.blo", GETJ2DManager()->getArchive());
-        for (int r = 0; r < 2; r++) {
-            for (int i = 0; i < 4; i++) {
-                mScoreScreens[r][i]->set(r == 0 ? "VS_Battle_CharacterIndication.blo" : "VS_Battle_CharacterIndication2.blo", GETJ2DManager()->getArchive());
+        mVSLayoutScreen->set("VS_Battle_Layout.blo", GETJ2DManager()->getArchive());
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 4; j++) {
+                if (i == 0) {
+                    mScoreScreens[i][j]->set("VS_Battle_CharacterIndication.blo", GETJ2DManager()->getArchive());
+                } else {
+                    mScoreScreens[i][j]->set("VS_Battle_CharacterIndication2.blo", GETJ2DManager()->getArchive());
+                }
             }
         }
         for (int i = 0; i < 4; i++) {
@@ -272,101 +346,281 @@ Result2D::Result2D(JKRHeap *heap) {
         for (int i = 0; i < 4; i++) {
             mPointScreens2[i]->set("VS_Free_Point_1.blo", GETJ2DManager()->getArchive());
         }
-        for (int r = 0; r < 4; r++) {
-            for (int i = 0; i < 3; i++) {
-                _e1c[r * 3 + i].mPane = (J2DPicture *)mPointScreens2[r]->search((u64)'PPoint1' + ((u64)(i + 1) << 32));
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 3; j++) {
+                _e1c[i][j]->set("VS_Free_Point_n.blo", GETJ2DManager()->getArchive());
             }
         }
 
-        mSceneQuitPicture = (J2DPicture *)mScreen->search(mOverBackTag);
-        JUT_ASSERT(mSceneQuitPicture->getTypeID() == J2DPane_Picture);
         {
-            JGeometry::TBox2f box(*mSceneQuitPicture->getBounds());
-            f32 *c = Result2D_center(&mSelPanes[0].parts[0]);
-            c[0] = (box.i.x + box.f.x) * 0.5f;
-            c[1] = (box.i.y + box.f.y) * 0.5f;
+            J2DPane *pane = mScreen->search(mOverBackTag[0]);
+#line 448
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mOverBack.mPane = (J2DPicture *)pane;
+            JGeometry::TBox2f box(*mOverBack.mPane->getBounds());
+            mOverBack.mCenter.x = (box.i.x + box.f.x) / 2;
+            mOverBack.mCenter.y = (box.i.y + box.f.y) / 2;
         }
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 9; j++) {
-                J2DPicture *pic = (J2DPicture *)mWinScreens[i]->search(mSetWordLineTag[j]);
-                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-                mSelPanes[i].parts[j].mPane = pic;
-                JGeometry::TBox2f b(*pic->getBounds());
-                f32 *c = Result2D_center(&mSelPanes[i].parts[j]);
-                c[0] = (b.i.x + b.f.x) * 0.5f;
-                c[1] = (b.i.y + b.f.y) * 0.5f;
+                J2DPane *pane = mWinScreens[i]->search(mSetWordLineTag[j]);
+#line 457
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mSetWord[i][j].mPane = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mSetWord[i][j].mPane->getBounds());
+                mSetWord[i][j].mCenter.x = (box.i.x + box.f.x) / 2;
+                mSetWord[i][j].mCenter.y = (box.i.y + box.f.y) / 2;
             }
             if (i != 0) {
-                mSelPanes[i].icon->hide();
-                mSelPanes[i].num->hide();
+                mSetWord[i][7].mPane->hide();
+                mSetWord[i][8].mPane->hide();
             }
         }
-
-        for (int r = 0; r < 2; r++) {
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 14; j++) {
-                    J2DPicture *pic = (J2DPicture *)mScoreScreens[r][i]->search(mVSBattleCharacterTag[j]);
-                    JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-                    mVSBattle[r][i][j].mPane = pic;
-                    JGeometry::TBox2f b(*pic->getBounds());
-                    f32 *c = Result2D_center(&mVSBattle[r][i][j]);
-                    c[0] = (b.i.x + b.f.x) * 0.5f;
-                    c[1] = (b.i.y + b.f.y) * 0.5f;
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 14; k++) {
+                    J2DPane *pane = mScoreScreens[i][j]->search(mVSBattleCharacterTag[k]);
+#line 473
+                    JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                    mVSBattle[i][j][k].mPane = (J2DPicture *)pane;
+                    JGeometry::TBox2f box(*mVSBattle[i][j][k].mPane->getBounds());
+                    mVSBattle[i][j][k].mCenter.x = (box.i.x + box.f.x) / 2;
+                    mVSBattle[i][j][k].mCenter.y = (box.i.y + box.f.y) / 2;
                 }
             }
         }
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 2; j++) {
-                J2DPicture *pic = (J2DPicture *)mPointScreens2[i]->search(mVSBattlePointTag[j]);
-                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-                mPointRows[i][j].mPane = pic;
-                JGeometry::TBox2f b(*pic->getBounds());
-                f32 *c = Result2D_center(&mPointRows[i][j]);
-                c[0] = (b.i.x + b.f.x) * 0.5f;
-                c[1] = (b.i.y + b.f.y) * 0.5f;
+                J2DPane *pane = mPointScreens[i]->search(mVSBattlePointTag[j]);
+#line 484
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mPointRows[i][j].mPane = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mPointRows[i][j].mPane->getBounds());
+                mPointRows[i][j].mCenter.x = (box.i.x + box.f.x) / 2;
+                mPointRows[i][j].mCenter.y = (box.i.y + box.f.y) / 2;
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                J2DPane *pane = mPointScreens2[i]->search('Rank1_01' + j);
+#line 495
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                _1410[i][j].mPane = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*_1410[i][j].mPane->getBounds());
+                _1410[i][j].mCenter.x = (box.i.x + box.f.x) / 2;
+                _1410[i][j].mCenter.y = (box.i.y + box.f.y) / 2;
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 3; j++) {
+                for (int k = 0; k < 4; k++) {
+                    J2DPane *pane = _e1c[i][j]->search('RankN_01' + k);
+#line 507
+                    JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                    _14d0[i][j][k].mPane = (J2DPicture *)pane;
+                    JGeometry::TBox2f box(*_14d0[i][j][k].mPane->getBounds());
+                    _14d0[i][j][k].mCenter.x = (box.i.x + box.f.x) / 2;
+                    _14d0[i][j][k].mCenter.y = (box.i.y + box.f.y) / 2;
+                }
             }
         }
         for (int i = 0; i < 2; i++) {
-            J2DPane *pane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'BLine0' + ((u64)(i + 1) << 32));
-            ((f32 *)((u8 *)this + 0xe4c))[i] = pane->getBounds()->i.y;
+            J2DPane *pane = mVSLayoutScreen->search('YPoGame0' + i);
+            JGeometry::TBox2f box(*pane->getBounds());
+            _e4c[i] = box.i.y;
+        }
+        {
+            J2DPane *pane = mVSLayoutScreen->search('Rank0Y1');
+            JGeometry::TBox2f box(*pane->getBounds());
+            _e54 = box.i.y;
         }
         for (int i = 0; i < 2; i++) {
-            J2DPane *pane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'BLineT0' + ((u64)(i + 1) << 32));
-            ((f32 *)((u8 *)this + 0xe54))[i] = pane->getBounds()->i.y;
+            J2DPane *pane = mVSLayoutScreen->search('Rank1Y1' + i * 0x30000);
+            JGeometry::TBox2f box(*pane->getBounds());
+            _e58[i] = box.i.y;
         }
         for (int i = 0; i < 2; i++) {
-            J2DPane *pane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'C?' + ((u64)(i + 1) << 32));
-            ((f32 *)((u8 *)this + 0xe58))[i] = pane->getBounds()->i.y;
+            J2DPane *pane = mVSLayoutScreen->search('SetPoi00' + i);
+            JGeometry::TBox2f box(*pane->getBounds());
+            _e60[i] = box.i.y;
+        }
+        for (int i = 0; i < 2; i++) {
+            J2DPane *pane = mVSLayoutScreen->search('ChaSet01' + i);
+            JGeometry::TBox2f box(*pane->getBounds());
+            _e68[i] = box.i.y;
         }
 
-        JGeometry::TVec2f *tbl = (JGeometry::TVec2f *)((u8 *)this + 0x1b14);
-        J2DAnmBase *anm = (J2DAnmBase *)J2DAnmLoaderDataBase::load(JKRGetNameResource("VS_Battle_Layout.bck", GETJ2DManager()->getArchive()));
-        (*(J2DScreen **)((u8 *)this + 0xdd8))->setAnimation(anm);
-        J2DPane *linePane = (*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'BLine01');
         for (int i = 0; i < 2; i++) {
-            for (int j = 0; j < 10; j++) {
-                anm->setFrame((f32)j);
-                (*(J2DScreen **)((u8 *)this + 0xdd8))->animation();
-                tbl[i * 10 + j].x = linePane->getScaleX();
-                tbl[i * 10 + j].y = linePane->getScaleY();
+            for (int j = 0; j < RCMGetManager()->getStatusNumber(); j++) {
+                if (RCMGetManager()->isRaceModeMiniGame()) {
+                    mVSBattle[i][j][8].mPane->hide();
+                    mVSBattle[i][j][9].mPane->hide();
+                    mVSBattle[i][j][10].mPane->hide();
+                    mVSBattle[i][j][11].mPane->show();
+                    mVSBattle[i][j][12].mPane->show();
+                    mVSBattle[i][j][13].mPane->show();
+                } else {
+                    mVSBattle[i][j][8].mPane->show();
+                    mVSBattle[i][j][9].mPane->show();
+                    mVSBattle[i][j][10].mPane->show();
+                    mVSBattle[i][j][11].mPane->hide();
+                    mVSBattle[i][j][12].mPane->hide();
+                    mVSBattle[i][j][13].mPane->hide();
+                }
+                if (gRaceInfo.getKartInfo(j)->isTagMode()) {
+                    mVSBattle[i][j][5].mPane->hide();
+                    mVSBattle[i][j][6].mPane->show();
+                    mVSBattle[i][j][7].mPane->show();
+                    int player = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(j)->getPad(0));
+                    if (player == -1) {
+                        player = 0;
+                    }
+                    if (player >= 0 && player < 4) {
+                        mVSBattle[i][j][7].mPane->changeTexture(mPlayerNumberName[player], 0);
+                        mVSBattle[i][j][7].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][8].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][9].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][10].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][11].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][12].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][13].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                    }
+                    player = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(j)->getPad(1));
+                    if (player == -1) {
+                        player = 0;
+                    }
+                    if (player >= 0 && player < 4) {
+                        mVSBattle[i][j][6].mPane->changeTexture(mPlayerNumberName[player], 0);
+                        mVSBattle[i][j][6].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                    }
+                } else {
+                    mVSBattle[i][j][5].mPane->show();
+                    mVSBattle[i][j][6].mPane->hide();
+                    mVSBattle[i][j][7].mPane->hide();
+                    int player = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(j)->getPad(0));
+                    if (player == -1) {
+                        player = 0;
+                    }
+                    if (player >= 0 && player < 4) {
+                        mVSBattle[i][j][5].mPane->changeTexture(mPlayerNumberName[player], 0);
+                        mVSBattle[i][j][5].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][8].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][9].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][10].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][11].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][12].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                        mVSBattle[i][j][13].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                    }
+                }
+                if (i == 0) {
+                    mVSBattle[i][j][4].mPane->show();
+                } else {
+                    mVSBattle[i][j][4].mPane->hide();
+                }
+                int charID = gRaceInfo.getKartInfo(j)->getDriverCharID(0);
+                if (charID > 0 && charID < 21) {
+                    mVSBattle[i][j][3].mPane->changeTexture(Race2D::mCharacterName[charID - 1], 0);
+                }
+                charID = gRaceInfo.getKartInfo(j)->getDriverCharID(1);
+                if (charID > 0 && charID < 21) {
+                    mVSBattle[i][j][1].mPane->changeTexture(Race2D::mCharacterName[charID - 1], 0);
+                }
             }
+        }
+
+        for (int i = 0; i < 4; i++) {
+            J2DPicture::TCornerColor corner;
+            int player = i;
+            if (RCMGetManager()->getKartInfo(0)->isTagMode() && i != 0) {
+                player = i + 1;
+                if (player >= 4) {
+                    player = 3;
+                }
+            }
+            J2DPane *pane = mVSLayoutScreen->search('C4_1P' + (player << 8));
+#line 641
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            ((J2DPicture *)pane)->getCornerColor(corner);
+            mPointRows[i][0].mPane->setCornerColor(corner);
+            mPointRows[i][1].mPane->setCornerColor(corner);
+        }
+        for (int i = 0; i < 4; i++) {
+            int player = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(i)->getPad(0));
+            if (player == -1) {
+                player = 0;
+            }
+            if (RCMGetManager()->getKartInfo(0)->isTagMode() && player != 0) {
+                player++;
+                if (player >= 4) {
+                    player = 3;
+                }
+            }
+            if (player >= 0 && player < 4) {
+                _1410[i][0].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                _1410[i][1].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 3; j++) {
+                int player = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(i)->getPad(0));
+                if (player == -1) {
+                    player = 0;
+                }
+                if (RCMGetManager()->getKartInfo(0)->isTagMode() && player != 0) {
+                    player++;
+                    if (player >= 4) {
+                        player = 3;
+                    }
+                }
+                if (player >= 0 && player < 4) {
+                    _14d0[i][j][0].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                    _14d0[i][j][1].mPane->setCornerColor(Race2D::mPlayerNumberColor[player]);
+                    J2DPicture::TCornerColor corner;
+                    GETJ2DManager()->getRace2D()->getRankPic(0, j + 1)->getCornerColor(corner);
+                    _14d0[i][j][2].mPane->setCornerColor(corner);
+                    _14d0[i][j][3].mPane->setCornerColor(corner);
+                    _14d0[i][j][3].mPane->changeTexture(mRankName[j + 1], 0);
+                }
+            }
+        }
+
+        J2DScreen *screen = new (heap, 0) J2DScreen();
+        screen->set("VS_Battle_Layout.blo", 0x40000, GETJ2DManager()->getArchive());
+        J2DAnmTransform *anm = (J2DAnmTransform *)J2DAnmLoaderDataBase::load(JKRGetNameResource("VS_Battle_Layout.bck", GETJ2DManager()->getArchive()));
+        screen->setAnimation(anm);
+        J2DPane *pane = screen->search('RCIAni01');
+        for (int i = 0; i < 16; i++) {
+            anm->setFrame(i);
+            screen->animation();
+            _1bb4[i] = pane->getScaleX();
+        }
+        delete screen;
+
+        if (RCMGetManager()->isRaceModeMiniGame()) {
+            mDrawFunc = &Result2D::drawMG;
+            mCalcFunc = &Result2D::setDrawMG;
+            mAutoFunc = &Result2D::selectorMG;
+        } else {
+            mDrawFunc = &Result2D::drawVS;
+            mCalcFunc = &Result2D::setDrawVS;
+            mAutoFunc = &Result2D::selectorVS;
         }
         break;
     }
     case TIME_ATTACK: {
-        mScreenPw = new (heap) J2DScreen();
-        mScreen = new (heap) J2DScreen();
+        mScreenPw = new (heap, 0) J2DScreen();
+        mScreen = new (heap, 0) J2DScreen();
         for (int i = 0; i < 6; i++) {
-            mWinScreens[i] = new (heap) J2DScreen();
+            mWinScreens[i] = new (heap, 0) J2DScreen();
         }
         mEntries = 6;
-        mScreenMG = new (heap) J2DScreen();
-        mScreenMG2 = new (heap) J2DScreen();
+        mScreenMG = new (heap, 0) J2DScreen();
+        mScreenMG2 = new (heap, 0) J2DScreen();
         for (int i = 0; i < 5; i++) {
-            mTAScreens[i] = new (heap) J2DScreen();
+            mTAScreens[i] = new (heap, 0) J2DScreen();
         }
-        for (int i = 5; i < 11; i++) {
-            mTAScreens[i] = new (heap) J2DScreen();
+        for (int i = 0; i < 6; i++) {
+            mTAScreens[i + 5] = new (heap, 0) J2DScreen();
         }
 
         mScreenPw->set("Password.blo", GETJ2DManager()->getArchive());
@@ -374,69 +628,135 @@ Result2D::Result2D(JKRHeap *heap) {
         for (int i = 0; i < 6; i++) {
             mWinScreens[i]->set("SetWordLine.blo", GETJ2DManager()->getArchive());
         }
-        mScreenMG->set("TANRLayout.blo", 0x104, GETJ2DManager()->getArchive());
-        mScreenMG2->set("TANRLapLine.blo", 0x104, GETJ2DManager()->getArchive());
+        mScreenMG->set("TANRLayout.blo", 0x1040000, GETJ2DManager()->getArchive());
+        mScreenMG2->set("TANRLapLine.blo", 0x1040000, GETJ2DManager()->getArchive());
         for (int i = 0; i < 5; i++) {
-            mTAScreens[i]->set("TANRTimeLine.blo", 0x104, GETJ2DManager()->getArchive());
+            mTAScreens[i]->set("TANRTimeLine.blo", 0x1040000, GETJ2DManager()->getArchive());
         }
-        for (int i = 5; i < 11; i++) {
-            mTAScreens[i]->set("TANRSpark1.blo", 0x104, GETJ2DManager()->getArchive());
+        for (int i = 0; i < 6; i++) {
+            mTAScreens[i + 5]->set("TANRSpark1.blo", 0x1040000, GETJ2DManager()->getArchive());
         }
 
         for (int i = 0; i < 6; i++) {
-            J2DPane *pane = mScreenMG->search((u64)'ReC0' + ((u64)(i + 1) << 32));
+            J2DPane *pane = mScreenMG->search((u64)'Rec1' + i);
             if (i < 5) {
                 pane->appendChild(mTAScreens[i]);
             } else {
                 pane->appendChild(mScreenMG2);
             }
-            pane->appendChild(mTAScreens[5 + (i < 5 ? i : 0)]);
+            pane->appendChild(mTAScreens[i + 5]);
         }
 
-        J2DAnmBase *anm;
-        anm = (J2DAnmBase *)J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLayout.bck", GETJ2DManager()->getArchive()));
-        mTABest.namePics[0] = NULL;
-        mScreenMG->setAnimation(anm);
-        anm = (J2DAnmBase *)J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLayout.brk", GETJ2DManager()->getArchive()));
-        mScreenMG->setAnimation(anm);
+        _1744[0].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLayout.bck", GETJ2DManager()->getArchive()));
+        mScreenMG->setAnimation((J2DAnmTransform *)_1744[0].mAnm);
+        _17ac[0].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLayout.brk", GETJ2DManager()->getArchive()));
+        _17ac[0].mAnm->searchUpdateMaterialID(mScreenMG);
+        mScreenMG->setAnimation((J2DAnmTevRegKey *)_17ac[0].mAnm);
+        _1744[1].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLapLine.bck", GETJ2DManager()->getArchive()));
+        mScreenMG2->setAnimation((J2DAnmTransform *)_1744[1].mAnm);
+        _17ac[1].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRLapLine.brk", GETJ2DManager()->getArchive()));
+        _17ac[1].mAnm->searchUpdateMaterialID(mScreenMG2);
+        mScreenMG2->setAnimation((J2DAnmTevRegKey *)_17ac[1].mAnm);
         for (int i = 0; i < 5; i++) {
-            mTALines[i].kartPic = (J2DPicture *)mScreenMG->search((u64)'T?' + ((u64)(i + 1) << 32));
+            _1754[i].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRTimeLine.bck", GETJ2DManager()->getArchive()));
+            mTAScreens[i]->setAnimation((J2DAnmTransform *)_1754[i].mAnm);
         }
-        (void)anm;
+        for (int i = 0; i < 5; i++) {
+            _17bc[i].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRTimeLine.brk", GETJ2DManager()->getArchive()));
+            _17bc[i].mAnm->searchUpdateMaterialID(mTAScreens[i]);
+            mTAScreens[i]->setAnimation((J2DAnmTevRegKey *)_17bc[i].mAnm);
+        }
+        for (int i = 0; i < 6; i++) {
+            _177c[i].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRSpark1.bck", GETJ2DManager()->getArchive()));
+            mTAScreens[i + 5]->setAnimation((J2DAnmTransform *)_177c[i].mAnm);
+        }
+        for (int i = 0; i < 6; i++) {
+            _17e4[i].mAnm = J2DAnmLoaderDataBase::load(JKRGetNameResource("TANRSpark1.bpk", GETJ2DManager()->getArchive()));
+            _17e4[i].mAnm->searchUpdateMaterialID(mTAScreens[i + 5]);
+            mTAScreens[i + 5]->setAnimation((J2DAnmColor *)_17e4[i].mAnm);
+        }
 
-        mSceneQuitPicture = (J2DPicture *)mScreen->search(mOverBackTag);
-        JUT_ASSERT(mSceneQuitPicture->getTypeID() == J2DPane_Picture);
+        for (int i = 0; i < 16; i++) {
+            J2DPane *pane = mScreenPw->search('Pass_a' + i);
+#line 795
+            JUT_ASSERT(pane->getTypeID() == J2DPane_TextBox);
+            mPassWDText[i] = (J2DTextBox *)pane;
+        }
+
         {
-            JGeometry::TBox2f box(*mSceneQuitPicture->getBounds());
-            f32 *c = Result2D_center(&mSelPanes[0].parts[0]);
-            c[0] = (box.i.x + box.f.x) * 0.5f;
-            c[1] = (box.i.y + box.f.y) * 0.5f;
+            J2DPane *pane = mScreen->search(mOverBackTag[0]);
+#line 801
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mOverBack.mPane = (J2DPicture *)pane;
+            JGeometry::TBox2f box(*mOverBack.mPane->getBounds());
+            mOverBack.mCenter.x = (box.i.x + box.f.x) / 2;
+            mOverBack.mCenter.y = (box.i.y + box.f.y) / 2;
         }
         for (int i = 0; i < 6; i++) {
             for (int j = 0; j < 9; j++) {
-                J2DPicture *pic = (J2DPicture *)mWinScreens[i]->search(mSetWordLineTag[j]);
-                JUT_ASSERT(pic->getTypeID() == J2DPane_Picture);
-                mSelPanes[i].parts[j].mPane = pic;
-                JGeometry::TBox2f b(*pic->getBounds());
-                f32 *c = Result2D_center(&mSelPanes[i].parts[j]);
-                c[0] = (b.i.x + b.f.x) * 0.5f;
-                c[1] = (b.i.y + b.f.y) * 0.5f;
+                J2DPane *pane = mWinScreens[i]->search(mSetWordLineTag[j]);
+#line 810
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mSetWord[i][j].mPane = (J2DPicture *)pane;
+                JGeometry::TBox2f box(*mSetWord[i][j].mPane->getBounds());
+                mSetWord[i][j].mCenter.x = (box.i.x + box.f.x) / 2;
+                mSetWord[i][j].mCenter.y = (box.i.y + box.f.y) / 2;
             }
             if (i != 0) {
-                mSelPanes[i].icon->hide();
-                mSelPanes[i].num->hide();
+                mSetWord[i][7].mPane->hide();
+                mSetWord[i][8].mPane->hide();
             }
         }
-        for (int i = 0; i < 16; i++) {
-            J2DTextBox *box = (J2DTextBox *)mScreenPw->search((u64)'Pass_a' + i);
-            JUT_ASSERT(box->getTypeID() == J2DPane_TextBox);
-            mPassWDText[i] = box;
+
+        for (int i = 0; i < 3; i++) {
+            J2DPane *pane = mScreenMG2->search((u64)'BLN0' + i);
+#line 827
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mTABest.namePics[i] = (J2DPicture *)pane;
         }
-        mSceneResultPicture2 = (J2DPicture *)mScreen->search(mOverBackTag);
-        JUT_ASSERT(mSceneResultPicture2->getTypeID() == J2DPane_Picture);
+        for (int i = 0; i < 7; i++) {
+            J2DPane *pane = mScreenMG2->search((u64)'BLT0' + i);
+#line 833
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mTABest.msPics[i] = (J2DPicture *)pane;
+        }
+        for (int i = 0; i < 5; i++) {
+            J2DPicture::TCornerColor corner;
+            GETJ2DManager()->getRace2D()->getRankPic(0, i)->getCornerColor(corner);
+            J2DPane *pane = mTAScreens[i]->search('BTR1');
+#line 845
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            ((J2DPicture *)pane)->setCornerColor(corner);
+            ((J2DPicture *)pane)->changeTexture(mRankName[i], 0);
+            for (int j = 0; j < 3; j++) {
+                J2DPane *pane = mTAScreens[i]->search((u64)'BTN0' + j);
+#line 853
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mTALines[i].namePics[j] = (J2DPicture *)pane;
+            }
+            for (int j = 0; j < 3; j++) {
+                mTALines[i].idPics[j] = (J2DPicture *)mTAScreens[i]->search((u64)'BTW0' + j);
+            }
+            for (int j = 0; j < 3; j++) {
+                J2DPane *pane = mTAScreens[i]->search((u64)'BTC0' + j);
+#line 863
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                (&mTALines[i].kartPic)[j] = (J2DPicture *)pane;
+            }
+            for (int j = 0; j < 7; j++) {
+                J2DPane *pane = mTAScreens[i]->search((u64)'BTT0' + j);
+#line 869
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mTALines[i].msPics[j] = (J2DPicture *)pane;
+            }
+        }
+        mDrawFunc = &Result2D::drawTA;
+        mCalcFunc = &Result2D::setDrawTA;
+        mAutoFunc = &Result2D::selectorTA;
         break;
     }
     default:
+#line 879
         JUT_ASSERT(0);
         break;
     }
@@ -478,19 +798,19 @@ void Result2D::init() {
     }
 
     mDrawFlag = RaceMgr::getManager()->isReplayMode() ^ 1;
-    _197c = 0;
-    _1980 = 0;
-    _1984 = 0;
-    _1988 = 840.0f;
-    _198c = 0;
-    _1990 = 0;
-    _1994 = 0;
-    _1998 = 0;
+    mLine._197c = 0;
+    mLine._1980 = 0;
+    mLine._1984 = 0;
+    mLine._1988 = 840.0f;
+    mLine._198c = 0;
+    mLine._1990 = 0;
+    mLine._1994 = 0;
+    mLine._1998 = 0;
     for (int i = 0; i < 8; i++) {
-        mLinePoint[i] = SequenceInfo::RANKPOINT[i];
-        mLineYPos[i] = 840.0f;
+        mLine.mLinePoint[i] = SequenceInfo::RANKPOINT[i];
+        mLine.mLineYPos[i] = 840.0f;
         for (int j = 0; j < 2; j++) {
-            (&mLineScale[i].a)[j].set(1.0f, 1.0f);
+            mLine.mLineScale[i][j].set(1.0f, 1.0f);
         }
     }
     for (int i = 0; i < 4; i++) {
@@ -514,14 +834,11 @@ void Result2D::init() {
     }
     _1af4 = 0;
     _1af8 = 1.0f;
-    u64 ot = mOverBackTag;
     _1afc = 0;
     _1b00 = 0.0f;
     _1b04 = 0.0f;
     _1b08 = 0.0f;
-    J2DPane *pane;
-    pane = mScreen->search(ot);
-    pane->setAlpha(0);
+    mScreen->search(mOverBackTag[0])->setAlpha(0);
     _1744[0].mVal = 0.0f;
     _17ac[0].mVal = 0.0f;
     _1744[1].mVal = 0.0f;
@@ -565,45 +882,41 @@ void Result2D::drawGP() {
     case 0:
     case 1: {
         for (int i = 0; i < 8; i++) {
-            mRankScreens[i]->draw(_3f0 + mLineYPos[i], _3cc[i], mOrtho);
-            f32 *off = (f32 *)((u8 *)this + mResultState * 8);
-            f32 x = _3cc[i] + off[786];
-            f32 y = _3f0 + mLineYPos[i] + off[785];
-            mGetPointScreens[i]->draw(y, x, mOrtho);
+            mRankScreens[i]->draw(_3ec[1] + mLine.mLineYPos[i], _3cc[i], mOrtho);
+            mGetPointScreens[i]->draw(_c44[mResultState].x + (_3ec[1] + mLine.mLineYPos[i]), _3cc[i] + _c44[mResultState].y, mOrtho);
         }
         break;
     }
     case 2: {
-        f32 *baseY = (f32 *)((u8 *)&mRankRows[7].sub[2] + 4);
         if (gSequenceInfo.isEndGP()) {
             if (RaceMgr::getManager()->getPlayerNumber() == 1) {
-                mSelPanes[0].cursor->changeTexture("Mozi_Next_Com.bti", 0);
+                mSetWord[0][6].mPane->changeTexture("Mozi_Next_Com.bti", 0);
                 if (RaceMgr::getManager()->isReplayMode()) {
-                    mSelPanes[1].cursor->changeTexture("Mozi_First.bti", 0);
+                    mSetWord[1][6].mPane->changeTexture("Mozi_First.bti", 0);
                 } else {
-                    mSelPanes[1].cursor->changeTexture("Mozi_Replay.bti", 0);
+                    mSetWord[1][6].mPane->changeTexture("Mozi_Replay.bti", 0);
                 }
                 for (int i = 0; i < 2; i++) {
-                    mWinScreens[i]->draw(_1988, *baseY - 16.0f + 32.0f * i, mOrtho);
+                    mWinScreens[i]->draw(mLine._1988, _dd4 - 16.0f + 32.0f * i, mOrtho);
                 }
             }
         } else {
             if (RaceMgr::getManager()->getPlayerNumber() == 1) {
-                mSelPanes[0].cursor->changeTexture("Mozi_Next.bti", 0);
+                mSetWord[0][6].mPane->changeTexture("Mozi_Next.bti", 0);
                 if (RaceMgr::getManager()->isReplayMode()) {
-                    mSelPanes[1].cursor->changeTexture("Mozi_First.bti", 0);
+                    mSetWord[1][6].mPane->changeTexture("Mozi_First.bti", 0);
                 } else {
-                    mSelPanes[1].cursor->changeTexture("Mozi_Replay.bti", 0);
+                    mSetWord[1][6].mPane->changeTexture("Mozi_Replay.bti", 0);
                 }
-                mSelPanes[2].cursor->changeTexture("Mozi_Quit.bti", 0);
+                mSetWord[2][6].mPane->changeTexture("Mozi_Quit.bti", 0);
                 for (int i = 0; i < 3; i++) {
-                    mWinScreens[i]->draw(_1988, *baseY - 32.0f + 32.0f * i, mOrtho);
+                    mWinScreens[i]->draw(mLine._1988, _dd4 - 32.0f + 32.0f * i, mOrtho);
                 }
             } else {
-                mSelPanes[0].cursor->changeTexture("Mozi_Next.bti", 0);
-                mSelPanes[1].cursor->changeTexture("Mozi_Quit.bti", 0);
+                mSetWord[0][6].mPane->changeTexture("Mozi_Next.bti", 0);
+                mSetWord[1][6].mPane->changeTexture("Mozi_Quit.bti", 0);
                 for (int i = 0; i < 2; i++) {
-                    mWinScreens[i]->draw(_1988, *baseY - 32.0f + 32.0f * i, mOrtho);
+                    mWinScreens[i]->draw(mLine._1988, _dd4 - 16.0f + 32.0f * i, mOrtho);
                 }
             }
         }
@@ -615,40 +928,35 @@ void Result2D::drawGP() {
 void Result2D::drawVS() {
     int num = RaceMgr::getManager()->mRaceInfo->getStatusNumber();
 
-    f32 ypos[4];
     f32 xpos[4];
+    f32 ypos[4];
     for (int i = 0; i < num; i++) {
-        xpos[i] = 15.0f + 578.0f / i * (i + 1) + 578.0f / (num * 2);
-        ypos[i] = _e58 + (_e5c - _e58) / (num * 2) * (i + 1) + (_e5c - _e58) / ((num - 1) * 2);
+        xpos[i] = 15.0f + 578.0f / num * i + 578.0f / (num * 2);
+        ypos[i] = _e58[0] + (i * ((_e58[1] - _e58[0]) / (num - 1)) + (_e58[1] - _e58[0]) / ((num - 1) * 2));
     }
 
     mScreen->draw(0.0f, 0.0f, mOrtho);
 
     for (int row = 0; row < 2; row++) {
         for (int i = 0; i < num; i++) {
-            mScoreScreens[row][i]->draw(xpos[i], _e68, mOrtho);
+            mScoreScreens[row][i]->draw(xpos[i], _e68[0], mOrtho);
         }
     }
 
     for (int row = 0; row < num; row++) {
         mPointScreens2[row]->draw(xpos[row], _e54 + mVSPointYPos[row][0], mOrtho);
         for (int j = 0; j < num - 1; j++) {
-            J2DPane **pane = (J2DPane **)((u8 *)&_e1c[row]);
-            pane[j]->draw(xpos[row], mVSPointYPos[row][j + 1] + ypos[j], mOrtho, true, true);
+            _e1c[row][j]->draw(xpos[row], mVSPointYPos[row][j + 1] + ypos[j], mOrtho);
         }
     }
 
-    mSelPanes[0].cursor->changeTexture("Mozi_One_More_Race.bti", 0);
-    mSelPanes[1].cursor->changeTexture("Mozi_Change_Course.bti", 0);
-    mSelPanes[2].cursor->changeTexture("Mozi_Change_Character.bti", 0);
-    if (RCMGetManager()->isReplayMode()) {
-        mSelPanes[3].cursor->changeTexture("Mozi_First.bti", 0);
-    } else {
-        mSelPanes[3].cursor->changeTexture("Mozi_Replay.bti", 0);
-    }
+    mSetWord[0][6].mPane->changeTexture("Mozi_One_More_Race.bti", 0);
+    mSetWord[1][6].mPane->changeTexture("Mozi_Change_Course.bti", 0);
+    mSetWord[2][6].mPane->changeTexture("Mozi_Change_Character.bti", 0);
+    mSetWord[3][6].mPane->changeTexture("Mozi_Quit.bti", 0);
 
     for (int i = 0; i < 4; i++) {
-        mWinScreens[i]->draw(_1988, 304.0f + 32.0f * i, mOrtho);
+        mWinScreens[i]->draw(mLine._1988, 304.0f + 32.0f * i, mOrtho);
     }
 }
 
@@ -657,33 +965,33 @@ void Result2D::drawTA() {
     mScreenMG->draw(0.0f, 0.0f, mOrtho);
 
     if (gGhostFile.mGhostType == 3 && !(gSystemRecord.mOptions & 8)) {
-        mSelPanes[0].cursor->changeTexture("Mozi_One_More_Race.bti", 0);
-        mSelPanes[1].cursor->changeTexture("Mozi_Change_Course.bti", 0);
-        mSelPanes[2].cursor->changeTexture("Mozi_Change_Character.bti", 0);
+        mSetWord[0][6].mPane->changeTexture("Mozi_One_More_Race.bti", 0);
+        mSetWord[1][6].mPane->changeTexture("Mozi_Change_Course.bti", 0);
+        mSetWord[2][6].mPane->changeTexture("Mozi_Change_Character.bti", 0);
         if (RCMGetManager()->isReplayMode()) {
-            mSelPanes[3].cursor->changeTexture("Mozi_First.bti", 0);
+            mSetWord[3][6].mPane->changeTexture("Mozi_First.bti", 0);
         } else {
-            mSelPanes[3].cursor->changeTexture("Mozi_Replay.bti", 0);
+            mSetWord[3][6].mPane->changeTexture("Mozi_Replay.bti", 0);
         }
-        mSceneQuitPicture->changeTexture("Mozi_SaveGhost.bti", 0);
-        mSceneResultPicture2->changeTexture("Mozi_Quit.bti", 0);
+        mSetWord[4][6].mPane->changeTexture("Mozi_SaveGhost.bti", 0);
+        mSetWord[5][6].mPane->changeTexture("Mozi_Quit.bti", 0);
 
         for (int i = 0; i < 6; i++) {
-            mWinScreens[i]->draw(_1988, 144.0f + 32.0f * i, mOrtho);
+            mWinScreens[i]->draw(mLine._1988, 144.0f + 32.0f * i, mOrtho);
         }
     } else {
-        mSelPanes[0].cursor->changeTexture("Mozi_One_More_Race.bti", 0);
-        mSelPanes[1].cursor->changeTexture("Mozi_Change_Course.bti", 0);
-        mSelPanes[2].cursor->changeTexture("Mozi_Change_Character.bti", 0);
+        mSetWord[0][6].mPane->changeTexture("Mozi_One_More_Race.bti", 0);
+        mSetWord[1][6].mPane->changeTexture("Mozi_Change_Course.bti", 0);
+        mSetWord[2][6].mPane->changeTexture("Mozi_Change_Character.bti", 0);
         if (RCMGetManager()->isReplayMode()) {
-            mSelPanes[3].cursor->changeTexture("Mozi_First.bti", 0);
+            mSetWord[3][6].mPane->changeTexture("Mozi_First.bti", 0);
         } else {
-            mSelPanes[3].cursor->changeTexture("Mozi_Replay.bti", 0);
+            mSetWord[3][6].mPane->changeTexture("Mozi_Replay.bti", 0);
         }
-        mSceneQuitPicture->changeTexture("Mozi_Quit.bti", 0);
+        mSetWord[4][6].mPane->changeTexture("Mozi_Quit.bti", 0);
 
         for (int i = 0; i < 5; i++) {
-            mWinScreens[i]->draw(_1988, 160.0f + 32.0f * i, mOrtho);
+            mWinScreens[i]->draw(mLine._1988, 160.0f + 32.0f * i, mOrtho);
         }
     }
 
@@ -704,23 +1012,23 @@ void Result2D::drawMG() {
 
     for (int row = 0; row < 2; row++) {
         for (int i = 0; i < num; i++) {
-            mScoreScreens[row][i]->draw(ypos[i], _e6c, mOrtho);
+            mScoreScreens[row][i]->draw(ypos[i], _e68[1], mOrtho);
         }
     }
     for (int i = 0; i < num; i++) {
-        mPointScreens[i]->draw(ypos[i], _e64 + mMGPointYPos[i], mOrtho);
+        mPointScreens[i]->draw(ypos[i], _e60[1] + mMGPointYPos[i], mOrtho);
     }
 
-    mSelPanes[0].cursor->changeTexture("Mozi_One_More_Race.bti", 0);
-    mSelPanes[1].cursor->changeTexture("Mozi_Change_Map.bti", 0);
-    mSelPanes[2].cursor->changeTexture("Mozi_Change_Character.bti", 0);
-    mSelPanes[3].cursor->changeTexture("Mozi_Change_MiniGame.bti", 0);
-    mSceneQuitPicture->changeTexture("Mozi_Quit.bti", 0);
+    mSetWord[0][6].mPane->changeTexture("Mozi_One_More_Race.bti", 0);
+    mSetWord[1][6].mPane->changeTexture("Mozi_Change_Map.bti", 0);
+    mSetWord[2][6].mPane->changeTexture("Mozi_Change_Character.bti", 0);
+    mSetWord[3][6].mPane->changeTexture("Mozi_Change_MiniGame.bti", 0);
+    mSetWord[4][6].mPane->changeTexture("Mozi_Quit.bti", 0);
 
     f32 ybase = 288.0f;
     f32 xstep = 32.0f;
     for (int i = 0; i < 5; i++) {
-        mWinScreens[i]->draw(_1988, ybase + xstep * i, mOrtho);
+        mWinScreens[i]->draw(mLine._1988, ybase + xstep * i, mOrtho);
     }
 }
 
@@ -729,79 +1037,84 @@ void Result2D::calc(KartGamePad *pad) {
         return;
     }
 
-    if (pad != NULL && mResultState == 2 && _1988 == 0.0f && _1afc == 0) {
-        (this->*mAutoFunc)();
+    if (pad != NULL && mResultState == 2 && mLine._1988 == 0.0f && _1afc == 0) {
+        (this->*mAutoFunc)(pad);
     }
     (this->*mCalcFunc)();
 
     switch (mResultState) {
     case 0:
-        if (_197c < 0 || _197c > 0x168) {
-            _197c = 0;
+        if (mLine._197c < 0 || mLine._197c > 0x168) {
+            mLine._197c = 0;
         }
         calcRaceRank();
         setRaceRank();
-        if (_197c == 0xd7) {
-            _197c--;
+        if (mLine._197c == 0xd7) {
+            mLine._197c--;
         }
         if (pad->testTrigger(JUTGamePad::A)) {
-            if (_197c >= 0xcd && _197c < 0x127) {
-                _197c = 0x127;
+            if (mLine._197c >= 0xcd && mLine._197c < 0x127) {
+                mLine._197c = 0x127;
             }
         }
-        if (_197c == 0x168) {
+        if (mLine._197c == 0x168) {
             mResultState = 1;
-            _197c = -1;
+            mLine._197c = -1;
         }
         break;
     case 1:
-        if (_197c < 0 || _197c > 0xe6) {
-            _197c = 0;
+        if (mLine._197c < 0 || mLine._197c > 0xe6) {
+            mLine._197c = 0;
         }
         calcGPRank();
         setGPRank();
-        if (_197c == 0x55) {
-            _197c--;
+        if (mLine._197c == 0x55) {
+            mLine._197c--;
         }
         if (pad->testTrigger(JUTGamePad::A)) {
-            if (_197c >= 0x4b && _197c < 0xa5) {
-                _197c = 0xa5;
+            if (mLine._197c >= 0x4b && mLine._197c < 0xa5) {
+                mLine._197c = 0xa5;
             }
         }
-        if (_197c == 0xe6) {
+        if (mLine._197c == 0xe6) {
             mResultState = 3;
-            _197c = -1;
+            mLine._197c = -1;
         }
         break;
     case 2:
         switch (RCMGetManager()->mRaceInfo->getRaceMode()) {
-        case TIME_ATTACK:
-            if (_197c < 0) {
-                _197c = 0;
-            }
-            if (_197c == 0xb4) {
-                _197c--;
-            }
-            if (pad->testTrigger(JUTGamePad::A)) {
-                if (_197c >= 0x5a && _197c < 0xb4) {
-                    _197c = 0xb4;
-                }
-            }
-            if (_197c == 0xf0) {
-                CardAgent::ask(CardAgent::mcCommand3, 0);
-            }
-            if (_197c == 0xf1) {
-                if (CardAgent::msState == 0) {
-                    CardAgent::getPrintMemoryCard()->setStuff(0, 0, 0);
-                } else {
-                    _197c--;
-                }
-            }
-            calcTA(pad);
+        case GRAND_PRIX:
+        case AWARD_DEMO:
+        case STAFF_ROLL:
+            calcResult();
             break;
         case VERSUS_RACE:
             calcVS();
             setVS();
+            break;
+        case TIME_ATTACK:
+            if (mLine._197c < 0) {
+                mLine._197c = 0;
+            }
+            if (mLine._197c == 0xb4) {
+                mLine._197c--;
+            }
+            if (pad->testTrigger(JUTGamePad::A)) {
+                if (mLine._197c >= 0x5a && mLine._197c < 0xb4) {
+                    mLine._197c = 0xb4;
+                }
+            }
+            if (mLine._197c == 0xf0) {
+                CardAgent::ask(CardAgent::mcCommand3, 0);
+            }
+            if (mLine._197c == 0xf1) {
+                if (CardAgent::msState == 0) {
+                    CardAgent::getPrintMemoryCard()->setStuff(0, 0, 0);
+                } else {
+                    mLine._197c--;
+                }
+            }
+            calcTA(pad);
             break;
         case BALLOON_BATTLE:
         case BOMB_BATTLE:
@@ -809,18 +1122,13 @@ void Result2D::calc(KartGamePad *pad) {
             calcMG();
             setMG();
             break;
-        case GRAND_PRIX:
-        case AWARD_DEMO:
-        case STAFF_ROLL:
-            calcResult();
-            break;
         default:
             break;
         }
         break;
     default:
         mResultState = 2;
-        _197c = -1;
+        mLine._197c = -1;
         if (gSequenceInfo.isEndGP() && RCMGetManager()->mRaceInfo->getPlayerKartNumber() == 2) {
             struct PauseState {
                 u8 _0[0xf];
@@ -830,58 +1138,56 @@ void Result2D::calc(KartGamePad *pad) {
         }
         break;
     }
-    _197c++;
-    if (_1980 != 0) {
-        _1980++;
+    mLine._197c++;
+    if (mLine._1980 != 0) {
+        mLine._1980++;
     }
-    int c90 = _1990 + 1;
-    _1990 = c90;
+    int c90 = mLine._1990 + 1;
+    mLine._1990 = c90;
     if (c90 >= 50) {
-        _1990 = 0;
+        mLine._1990 = 0;
     }
-    int c94 = _1994 + 1;
-    _1994 = c94;
+    int c94 = mLine._1994 + 1;
+    mLine._1994 = c94;
     if (c94 >= 40) {
-        _1994 = 0;
+        mLine._1994 = 0;
     }
-    int c98 = _1998 + 1;
-    _1998 = c98;
+    int c98 = mLine._1998 + 1;
+    mLine._1998 = c98;
     if (c98 >= 60) {
-        _1998 = 0;
+        mLine._1998 = 0;
     }
-    _1984 += 10;
-    if (_1984 >= 128) {
-        _1984 = 128;
+    mLine._1984 += 10;
+    if (mLine._1984 >= 128) {
+        mLine._1984 = 128;
     }
-    if (_1980 != 0) {
-        _1984 -= (_1980 - 1) * 10;
-        if (_1984 < 0) {
-            _1984 = 0;
+    if (mLine._1980 != 0) {
+        mLine._1984 -= (mLine._1980 - 1) * 10;
+        if (mLine._1984 < 0) {
+            mLine._1984 = 0;
         }
     }
 
-    J2DPane *overBack = mScreen->search(mOverBackTag);
-    overBack->setAlpha((u8)_1984);
+    J2DPane *overBack = mScreen->search(mOverBackTag[0]);
+    overBack->setAlpha((u8)mLine._1984);
 
-    if (_1988 == 0.0f) {
-        int anm = _198c;
-        _198c = anm + 1;
+    if (mLine._1988 == 0.0f) {
+        int anm = mLine._198c;
+        mLine._198c = anm + 1;
         if (anm >= 30) {
-            _198c = 30;
+            mLine._198c = 30;
         }
     }
     if (_1afc < 8) {
-        f32 diff = _1b08 - _1b00;
-        _1b04 = _1b00 + (f32)_1afc * diff * 0.125f;
+        _1b04 = _1b00 + _1afc * (_1b08 - _1b00) / 8.0f;
     } else {
-        _1b00 = _1b08;
-        _1b04 = _1b08;
+        _1b04 = _1b00 = _1b08;
     }
     if (_1afc != 0) {
-        if (_1afc >= 8) {
-            _1afc = 0;
-        } else {
+        if (_1afc < 8) {
             _1afc++;
+        } else {
+            _1afc = 0;
         }
     }
     _1af4++;
@@ -889,72 +1195,65 @@ void Result2D::calc(KartGamePad *pad) {
 }
 
 void Result2D::calcRaceRank() {
-    int frame = _197c;
+    int frame = mLine._197c;
     getRaceRankLayoutAlpha(frame, mLayoutAlpha);
     for (int rank = 0; rank < 8; rank++) {
-        getRaceRankLinePos(frame, rank, mLineYPos[rank]);
-        getRaceRankLineScale(frame, rank, mLineScale[rank].a, mLineScale[rank].b);
+        getRaceRankLinePos(frame, rank, mLine.mLineYPos[rank]);
+        getRaceRankLineScale(frame, rank, mLine.mLineScale[rank][0], mLine.mLineScale[rank][1]);
     }
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 20; j++) {
-            JGeometry::TVec2f a = mLineScale[i].a;
+            JGeometry::TVec2f a = mLine.mLineScale[i][0];
             J2DPane *pane = mLines[i][j].mPane;
             pane->updateScale(a.x, a.y);
         }
     }
     for (int i = 0; i < 8; i++) {
-        JGeometry::TVec2f *sb = &mLineScale[i].b;
-        J2DPane *pane2 = mRankRows[i].main.mPane;
-        pane2->updateScale(sb->x, sb->y);
+        mRankRows[i][0].mPane->updateScale(mLine.mLineScale[i][1].x, mLine.mLineScale[i][1].y);
         for (int j = 0; j < 3; j++) {
-            J2DPane *sub = mRankRows[i].sub[j].mPane;
-            sub->updateScale(mLineScale[i].a.x, mLineScale[i].a.y);
+            mRankRows[i][j + 1].mPane->updateScale(mLine.mLineScale[i][0].x, mLine.mLineScale[i][0].y);
         }
     }
     int f = frame - 0x4b;
     if (f >= 0 && f < 0x64 && f % 10 == 9) {
         GameAudio::Main::getAudio()->startSystemSe(0x20033);
         for (int i = 0; i < 8; i++) {
-            if (mLinePoint[i] > 0) {
-                mLinePoint[i]--;
+            if (mLine.mLinePoint[i] > 0) {
+                mLine.mLinePoint[i]--;
             }
         }
     }
 }
 
 void Result2D::calcGPRank() {
-    int frame = _197c;
+    int frame = mLine._197c;
     getGPRankLayoutAlpha(frame, mLayoutAlpha);
     for (int rank = 0; rank < 8; rank++) {
-        getGPRankLinePos(frame, rank, mLineYPos[rank]);
-        getGPRankLineScale(frame, rank, mLineScale[rank].a, mLineScale[rank].b);
+        getGPRankLinePos(frame, rank, mLine.mLineYPos[rank]);
+        getGPRankLineScale(frame, rank, mLine.mLineScale[rank][0], mLine.mLineScale[rank][1]);
     }
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 20; j++) {
-            JGeometry::TVec2f a = mLineScale[i].a;
+            JGeometry::TVec2f a = mLine.mLineScale[i][0];
             J2DPane *pane = mLines[i][j].mPane;
             pane->updateScale(a.x, a.y);
         }
     }
     for (int i = 0; i < 8; i++) {
-        JGeometry::TVec2f &sb = mLineScale[i].b;
-        J2DPane *pane = mRankRows[i].main.mPane;
-        pane->updateScale(sb.x, sb.y);
+        mRankRows[i][0].mPane->updateScale(mLine.mLineScale[i][1].x, mLine.mLineScale[i][1].y);
         for (int j = 0; j < 3; j++) {
-            J2DPane *sub = mRankRows[i].sub[j].mPane;
-            sub->updateScale(mLineScale[i].a.x, mLineScale[i].a.y);
+            mRankRows[i][j + 1].mPane->updateScale(mLine.mLineScale[i][0].x, mLine.mLineScale[i][0].y);
         }
-        J2DPane *last = mLines[i][19].mPane;
-        last->updateScale(mLineScale[i].a.x, mLineScale[i].a.y);
+        mLines[i][19].mPane->updateScale(mLine.mLineScale[i][0].x, mLine.mLineScale[i][0].y);
     }
 }
 
 void Result2D::calcResult() {
-    getResultLinePos(_197c, _1988);
+    getResultLinePos(mLine._197c, mLine._1988);
 }
 
 void Result2D::calcVS() {
-    int frame = _197c;
+    int frame = mLine._197c;
     if (frame == 0xf) {
         GameAudio::Main::getAudio()->startSystemSe(0x2005d);
     }
@@ -974,40 +1273,30 @@ void Result2D::calcVS() {
             }
         }
     }
-    getResultLinePos(frame, _1988);
+    getResultLinePos(frame, mLine._1988);
 }
 
 void Result2D::calcTA(KartGamePad *pad) {
-    getResultLinePos(_197c, _1988);
-    f32 one = 1.0f;
+    getResultLinePos(mLine._197c, mLine._1988);
     if (_1ab0 || _1ab8) {
-        if (_197c < 60) {
-            _1744[0].mVal = (f32)_197c;
-        } else if (_197c < 180) {
+        if (mLine._197c < 60) {
+            _1744[0].mVal = (f32)mLine._197c;
+        } else if (mLine._197c < 180) {
             _1744[0].mVal = 70.0f;
-        } else if (_197c < 240) {
-            _1744[0].mVal = (f32)(_197c - 80);
+        } else if (mLine._197c < 240) {
+            _1744[0].mVal = (f32)(mLine._197c - 80);
         } else {
             _1744[0].mVal = 170.0f;
         }
-        f32 vzero = _17ac[0].mVal;
-        f32 v0 = vzero + one;
-        _17ac[0].mVal = v0;
-        if (v0 >= 80.0f) {
+        if ((_17ac[0].mVal += 1.0f) >= 40.0f) {
             _17ac[0].mVal = 0.0f;
         }
         if (_1ab8) {
-            f32 v1a = _1744[1].mVal;
-                f32 v1 = v1a + one;
-            _1744[1].mVal = v1;
-            if (v1 >= 80.0f) {
-                _1744[1].mVal = 0.0f;
+            if ((_1744[1].mVal += 1.0f) >= 41.0f) {
+                _1744[1].mVal = 1.0f;
             }
-            f32 v2a = _17ac[1].mVal;
-                f32 v2 = v2a + one;
-            _17ac[1].mVal = v2;
-            if (v2 >= 80.0f) {
-                _17ac[1].mVal = 0.0f;
+            if ((_17ac[1].mVal += 1.0f) >= 41.0f) {
+                _17ac[1].mVal = 1.0f;
             }
         } else {
             _1744[1].mVal = 0.0f;
@@ -1015,17 +1304,11 @@ void Result2D::calcTA(KartGamePad *pad) {
         }
         for (int i = 0; i < 5; i++) {
             if (_1ab0 && i == _1ab4) {
-                f32 s0a = _1754[i].mVal;
-                f32 s0 = s0a + one;
-                _1754[i].mVal = s0;
-                if (s0 >= 80.0f) {
-                    _1754[i].mVal = 0.0f;
+                if ((_1754[i].mVal += 1.0f) >= 41.0f) {
+                    _1754[i].mVal = 1.0f;
                 }
-                f32 s1a = _17bc[i].mVal;
-                f32 s1 = s1a + one;
-                _17bc[i].mVal = s1;
-                if (s1 >= 80.0f) {
-                    _17bc[i].mVal = 0.0f;
+                if ((_17bc[i].mVal += 1.0f) >= 41.0f) {
+                    _17bc[i].mVal = 1.0f;
                 }
             } else {
                 _1754[i].mVal = 0.0f;
@@ -1033,26 +1316,17 @@ void Result2D::calcTA(KartGamePad *pad) {
             }
         }
         for (int i = 0; i < 6; i++) {
-            f32 t0a = _177c[i].mVal;
-                f32 t0 = t0a + one;
-            _177c[i].mVal = t0;
-            if (t0 >= 160.0f) {
+            if ((_177c[i].mVal += 1.0f) >= 160.0f) {
                 _177c[i].mVal = 0.0f;
             }
-            if (_197c < 60) {
+            if (mLine._197c < 60) {
                 _17e4[i].mVal = 0.0f;
-            } else if (_197c < 180) {
-                f32 t1a = _17e4[i].mVal;
-                f32 t1 = t1a + one;
-                _17e4[i].mVal = t1;
-                if (t1 > 100.0f) {
-                    _17e4[i].mVal = 100.0f;
+            } else if (mLine._197c < 180) {
+                if ((_17e4[i].mVal += 1.0f) > 10.0f) {
+                    _17e4[i].mVal = 10.0f;
                 }
-            } else if (_197c < 240) {
-                f32 t1a = _17e4[i].mVal;
-                f32 t1 = t1a - one;
-                _17e4[i].mVal = t1;
-                if (t1 < 0.0f) {
+            } else if (mLine._197c < 240) {
+                if ((_17e4[i].mVal -= 1.0f) < 0.0f) {
                     _17e4[i].mVal = 0.0f;
                 }
             }
@@ -1084,6 +1358,8 @@ void Result2D::calcTA(KartGamePad *pad) {
         _17e4[i].mAnm->setFrame(_17e4[i].mVal);
     }
 
+    mScreenMG->animation();
+    mScreenMG2->animation();
     for (int i = 0; i < 5; i++) {
         mTAScreens[i]->animation();
     }
@@ -1133,7 +1409,7 @@ void Result2D::calcTA(KartGamePad *pad) {
 }
 
 void Result2D::calcMG() {
-    int frame = _197c;
+    int frame = mLine._197c;
     if (frame == 0xf) {
         GameAudio::Main::getAudio()->startSystemSe(0x2005d);
     }
@@ -1151,7 +1427,7 @@ void Result2D::calcMG() {
             }
         }
     }
-    getResultLinePos(_197c, _1988);
+    getResultLinePos(mLine._197c, mLine._1988);
 }
 
 void Result2D::calcPASSWD(KartGamePad *pad) {
@@ -1159,10 +1435,8 @@ void Result2D::calcPASSWD(KartGamePad *pad) {
         u16 code[9] = { 0x40, 0x20, 0x40, 0x20, 0x400, 0x800, 0x400, 0x800, 0x10 };
         u32 trigger = pad->getTrigger();
         if (trigger != 0) {
-            int idx = mPASSWDCount;
-            if (code[idx] == trigger) {
-                mPASSWDCount = idx + 1;
-                if (idx + 1 >= 9) {
+            if (trigger == code[mPASSWDCount]) {
+                if (++mPASSWDCount >= 9) {
                     GameAudio::Main::getAudio()->startSystemSe(0x2005d);
                     mPASSWDAccepted = true;
                     mPASSWDCount = 0;
@@ -1632,24 +1906,22 @@ int Result2D::getResultSelector() { return mResultSelector; }
 
 void Result2D::setRaceRank() {
     for (int i = 0; i < 11; i++) {
-        J2DPicture *pane = *(J2DPicture **)((u8 *)this + 0x350 + i * 12);
-        pane->setAlpha(mLayoutAlpha);
+        mLayout[i].mPane->setAlpha(mLayoutAlpha);
     }
     for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 11; j++) {
+        for (int j = 8; j < 19; j++) {
             mLines[i][j].mPane->mIsVisible = true;
         }
     }
 
     for (int i = 0; i < 8; i++) {
         int kartNo = gSequenceInfo.get_2b8(i);
-        int player;
-        if (kartNo < RaceMgr::getManager()->mRaceInfo->getStatusNumber()) {
-            player = -1;
+        if (kartNo < RaceMgr::getManager()->getPlayerNumber()) {
+            int player = -1;
             if (kartNo == J2DManager::getStatus2Kart(0)) {
                 player = 0;
             } else if (kartNo == J2DManager::getStatus2Kart(1)) {
-                if (gRaceInfo.getKartInfo(0)->getPad(1) != NULL) {
+                if (gRaceInfo.getKartInfo(0)->isTagMode()) {
                     player = 2;
                 } else {
                     player = 1;
@@ -1658,28 +1930,32 @@ void Result2D::setRaceRank() {
             JUTColor color;
             u8 alpha;
             getFrameClr(player, color, alpha);
-            for (int j = 0; j < 3; j++) {
-                mLines[i][j].mPane->mIsVisible = true;
-                mLines[i][j].mPane->setAlpha(alpha);
-                mLines[i][j].mPane->setBlack(mWhiteColor[player][0]);
-            }
-            mLines[i][5].mPane->setBlack(color);
-            mLines[i][3].mPane->setBlack(color);
+            mLines[i][0].mPane->mIsVisible = true;
+            mLines[i][1].mPane->mIsVisible = true;
+            mLines[i][2].mPane->mIsVisible = true;
+            mLines[i][0].mPane->setAlpha(alpha);
+            mLines[i][1].mPane->setAlpha(alpha);
+            mLines[i][2].mPane->setAlpha(alpha);
+            mLines[i][0].mPane->setWhite(mWhiteColor[player][0]);
+            mLines[i][1].mPane->setWhite(mWhiteColor[player][0]);
+            mLines[i][2].mPane->setWhite(mWhiteColor[player][0]);
+            mLines[i][5].mPane->setWhite(color);
+            mLines[i][3].mPane->setWhite(color);
         } else {
-            for (int j = 0; j < 3; j++) {
-                mLines[i][j].mPane->mIsVisible = false;
-            }
-            mLines[i][5].mPane->setBlack(mWhiteColor[3][0]);
-            mLines[i][3].mPane->setBlack(mWhiteColor[3][0]);
+            mLines[i][0].mPane->mIsVisible = false;
+            mLines[i][1].mPane->mIsVisible = false;
+            mLines[i][2].mPane->mIsVisible = false;
+            mLines[i][5].mPane->setWhite(mWhiteColor[3][0]);
+            mLines[i][3].mPane->setWhite(mWhiteColor[3][0]);
         }
 
-        ECharID charID0 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
-        if (charID0 > 0 && charID0 < 0x15) {
-            mLines[i][6].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID0), 0);
+        int charID = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
+        if (charID > 0 && charID < 21) {
+            mLines[i][6].mPane->changeTexture(Race2D::mCharacterName[charID - 1], 0);
         }
-        ECharID charID1 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
-        if (charID1 > 0 && charID1 < 0x15) {
-            mLines[i][4].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID1), 0);
+        charID = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
+        if (charID > 0 && charID < 21) {
+            mLines[i][4].mPane->changeTexture(Race2D::mCharacterName[charID - 1], 0);
         }
 
         for (int j = 0; j < 8; j++) {
@@ -1687,20 +1963,12 @@ void Result2D::setRaceRank() {
                 mLines[j][19].mPane->mIsVisible = false;
             } else {
                 mLines[j][19].mPane->mIsVisible = true;
-                mLines[j][19].mPane->mScale.set(0.0f, 0.0f);
-                mLines[j][19].mPane->calcMtx();
-                int kart = gSequenceInfo.get_2d8(j);
-                int idx = 0;
-                while (idx < 8) {
-                    if (kart == gSequenceInfo.get_2f8(idx)) {
-                        break;
-                    }
-                    idx++;
-                }
+                mLines[j][19].mPane->updateScale(0.0f);
+                int prev = gSequenceInfo.getPrevRank(j);
                 int icon;
-                if (player < idx) {
+                if (j < prev) {
                     icon = 0;
-                } else if (player > idx) {
+                } else if (j > prev) {
                     icon = 2;
                 } else {
                     icon = 1;
@@ -1709,9 +1977,9 @@ void Result2D::setRaceRank() {
             }
         }
 
-        int ms, sec, min;
-        RaceTime time = RaceMgr::getManager()->getKartChecker(kartNo)->getTotalTime();
-        if (time.get() != -1) {
+        const RaceTime &time = RaceMgr::getManager()->getKartChecker(kartNo)->getTotalTime();
+        if (time.isAvailable()) {
+            int min, sec, ms;
             time.get(&min, &sec, &ms);
             mLines[i][8].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(ms % 10)), 0);
             mLines[i][9].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((ms / 10) % 10)), 0);
@@ -1722,37 +1990,41 @@ void Result2D::setRaceRank() {
             mLines[i][14].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)((min / 10) % 10)), 0);
         } else {
             ResTIMG *dash = Kart2DCommon::ptr()->getAsciiTexture('-');
-            for (int j = 8; j < 15; j++) {
-                mLines[i][j].mPane->changeTexture(dash, 0);
-            }
+            mLines[i][8].mPane->changeTexture(dash, 0);
+            mLines[i][9].mPane->changeTexture(dash, 0);
+            mLines[i][10].mPane->changeTexture(dash, 0);
+            mLines[i][11].mPane->changeTexture(dash, 0);
+            mLines[i][12].mPane->changeTexture(dash, 0);
+            mLines[i][13].mPane->changeTexture(dash, 0);
+            mLines[i][14].mPane->changeTexture(dash, 0);
         }
 
-        int point = gSequenceInfo.getRankPoint(kartNo) - mLinePoint[i];
+        int point = gSequenceInfo.getRankPoint(kartNo) - mLine.mLinePoint[i];
         int hund = point / 100;
-        int tens = (point / 10) % 10;
         int ones = point % 10;
+        int tens = (point - hund * 100) / 10;
 
         if (hund != 0) {
             if (hund >= 0 && hund < 10) {
-                mRankRows[i].sub[2].mPane->mIsVisible = true;
-                mRankRows[i].sub[2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)hund), 0);
+                mRankRows[i][3].mPane->mIsVisible = true;
+                mRankRows[i][3].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)hund), 0);
             }
         } else {
-            mRankRows[i].sub[2].mPane->mIsVisible = false;
+            mRankRows[i][3].mPane->mIsVisible = false;
         }
         if (tens != 0) {
             if (tens >= 0 && tens < 10) {
-                mRankRows[i].sub[1].mPane->mIsVisible = true;
-                mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+                mRankRows[i][2].mPane->mIsVisible = true;
+                mRankRows[i][2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
             }
         } else if (hund != 0) {
-            mRankRows[i].sub[1].mPane->mIsVisible = true;
-            mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+            mRankRows[i][2].mPane->mIsVisible = true;
+            mRankRows[i][2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
         } else {
-            mRankRows[i].sub[1].mPane->mIsVisible = false;
+            mRankRows[i][2].mPane->mIsVisible = false;
         }
         if (ones >= 0 && ones < 10) {
-            mRankRows[i].sub[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)ones), 0);
+            mRankRows[i][1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)ones), 0);
         }
     }
 }
@@ -1760,23 +2032,22 @@ void Result2D::setRaceRank() {
 void Result2D::setGPRank() {
     int j;
     for (int i = 0; i < 11; i++) {
-        J2DPicture *pane = *(J2DPicture **)((u8 *)this + 0x350 + i * 12);
-        pane->setAlpha(mLayoutAlpha);
+        mLayout[i].mPane->setAlpha(mLayoutAlpha);
     }
     for (int i = 0; i < 8; i++) {
-        for (j = 0; j < 11; j++) {
+        for (j = 8; j < 19; j++) {
             mLines[i][j].mPane->mIsVisible = false;
         }
     }
 
     for (int i = 0; i < 8; i++) {
         int kartNo = gSequenceInfo.get_2d8(i);
-        if (kartNo < RaceMgr::getManager()->mRaceInfo->getStatusNumber()) {
+        if (kartNo < RaceMgr::getManager()->getPlayerNumber()) {
             int player = -1;
             if (kartNo == J2DManager::getStatus2Kart(0)) {
                 player = 0;
             } else if (kartNo == J2DManager::getStatus2Kart(1)) {
-                if (gRaceInfo.getKartInfo(0)->getPad(1) != NULL) {
+                if (gRaceInfo.getKartInfo(0)->isTagMode()) {
                     player = 2;
                 } else {
                     player = 1;
@@ -1785,56 +2056,60 @@ void Result2D::setGPRank() {
             JUTColor color;
             u8 alpha;
             getFrameClr(player, color, alpha);
-            for (j = 0; j < 3; j++) {
-                mLines[i][j].mPane->mIsVisible = true;
-                mLines[i][j].mPane->setAlpha(alpha);
-                mLines[i][j].mPane->setBlack(mWhiteColor[player][0]);
-            }
-            mLines[i][5].mPane->setBlack(color);
-            mLines[i][3].mPane->setBlack(color);
+            mLines[i][0].mPane->mIsVisible = true;
+            mLines[i][1].mPane->mIsVisible = true;
+            mLines[i][2].mPane->mIsVisible = true;
+            mLines[i][0].mPane->setAlpha(alpha);
+            mLines[i][1].mPane->setAlpha(alpha);
+            mLines[i][2].mPane->setAlpha(alpha);
+            mLines[i][0].mPane->setWhite(mWhiteColor[player][0]);
+            mLines[i][1].mPane->setWhite(mWhiteColor[player][0]);
+            mLines[i][2].mPane->setWhite(mWhiteColor[player][0]);
+            mLines[i][5].mPane->setWhite(color);
+            mLines[i][3].mPane->setWhite(color);
         } else {
-            for (j = 0; j < 3; j++) {
-                mLines[i][j].mPane->mIsVisible = false;
-            }
-            mLines[i][5].mPane->setBlack(mWhiteColor[3][0]);
-            mLines[i][3].mPane->setBlack(mWhiteColor[3][0]);
+            mLines[i][0].mPane->mIsVisible = false;
+            mLines[i][1].mPane->mIsVisible = false;
+            mLines[i][2].mPane->mIsVisible = false;
+            mLines[i][5].mPane->setWhite(mWhiteColor[3][0]);
+            mLines[i][3].mPane->setWhite(mWhiteColor[3][0]);
         }
 
-        ECharID charID0 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
-        if (charID0 > 0 && charID0 < 0x15) {
-            mLines[i][6].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID0), 0);
+        int charID = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
+        if (charID > 0 && charID < 21) {
+            mLines[i][6].mPane->changeTexture(Race2D::mCharacterName[charID - 1], 0);
         }
-        ECharID charID1 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
-        if (charID1 > 0 && charID1 < 0x15) {
-            mLines[i][4].mPane->changeTexture(Kart2DCommon::ptr()->getCharIconTexture(charID1), 0);
+        charID = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
+        if (charID > 0 && charID < 21) {
+            mLines[i][4].mPane->changeTexture(Race2D::mCharacterName[charID - 1], 0);
         }
 
-        int point = gSequenceInfo.get_298(kartNo);
+        int point = gSequenceInfo.getRankPoint(kartNo);
         int hund = point / 100;
-        int tens = (point / 10) % 10;
         int ones = point % 10;
+        int tens = (point - hund * 100) / 10;
 
         if (hund != 0) {
             if (hund >= 0 && hund < 10) {
-                mRankRows[i].sub[2].mPane->mIsVisible = true;
-                mRankRows[i].sub[2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)hund), 0);
+                mRankRows[i][3].mPane->mIsVisible = true;
+                mRankRows[i][3].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)hund), 0);
             }
         } else {
-            mRankRows[i].sub[2].mPane->mIsVisible = false;
+            mRankRows[i][3].mPane->mIsVisible = false;
         }
         if (tens != 0) {
             if (tens >= 0 && tens < 10) {
-                mRankRows[i].sub[1].mPane->mIsVisible = true;
-                mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+                mRankRows[i][2].mPane->mIsVisible = true;
+                mRankRows[i][2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
             }
         } else if (hund != 0) {
-            mRankRows[i].sub[1].mPane->mIsVisible = true;
-            mRankRows[i].sub[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
+            mRankRows[i][2].mPane->mIsVisible = true;
+            mRankRows[i][2].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)tens), 0);
         } else {
-            mRankRows[i].sub[1].mPane->mIsVisible = false;
+            mRankRows[i][2].mPane->mIsVisible = false;
         }
         if (ones >= 0 && ones < 10) {
-            mRankRows[i].sub[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)ones), 0);
+            mRankRows[i][1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)ones), 0);
         }
     }
 }
@@ -1843,36 +2118,27 @@ void Result2D::setVS() {
     int num = RaceMgr::getManager()->getStatusNumber();
     setBattleCharacter();
 
-    int num1 = num - 1;
     for (int i = 0; i < num; i++) {
         int point = gSequenceInfo.get_40(i, 0);
-        u8 *p1 = (u8 *)this + i * 48;
-        data2D *row = (data2D *)(p1 + 0x1418);
-        int digit = point % 10;
-        row[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)digit), 0);
-        row[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(point / 10)), 0);
+        _1410[i][0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(point % 10)), 0);
+        _1410[i][1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(point / 10)), 0);
 
-        int kartNo = J2DManager::getStatus2Kart(i);
-        if (gSequenceInfo.getStartNo(kartNo) == 0) {
+        if (gSequenceInfo.getStartNo(J2DManager::getStatus2Kart(i)) == 0) {
             JUTColor color;
             getVSColor(i, color);
-            row[0].mPane->setBlack(color);
-            row[1].mPane->setBlack(color);
+            _1410[i][0].mPane->setBlack(color);
+            _1410[i][1].mPane->setBlack(color);
             getFrameColor(color);
-            ((data2D *)((u8 *)this + 0xee4 + i * 168))->mPane->setBlack(color);
+            mVSBattle[0][i][9].mPane->setBlack(color);
         } else {
-            JUTColor color(0);
-            row[0].mPane->setBlack(color);
-            row[1].mPane->setBlack(color);
+            _1410[i][0].mPane->setBlack(JUTColor(0));
+            _1410[i][1].mPane->setBlack(JUTColor(0));
         }
 
-        for (int j = 0; j < num1; j++) {
+        for (int j = 0; j < num - 1; j++) {
             int p = gSequenceInfo.get_40(i, j + 1);
-            u8 *p2 = (u8 *)this + i * 144 + j * 48;
-            data2D *row2 = (data2D *)(p2 + 0x14d8);
-            int d = p % 10;
-            row2[0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)d), 0);
-            row2[1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(p / 10)), 0);
+            _14d0[i][j][0].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(p % 10)), 0);
+            _14d0[i][j][1].mPane->changeTexture(Kart2DCommon::ptr()->getNumberTexture((Kart2DCommon::NumberTextureID)(p / 10)), 0);
         }
     }
 }
@@ -1882,7 +2148,7 @@ void Result2D::setTA() {
     ECharID charID0 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(0);
     ECharID charID1 = gRaceInfo.getKartInfo(kartNo)->getDriverCharID(1);
     EKartID kartID = gRaceInfo.getKartInfo(kartNo)->getKartID();
-    ECourseID course = ResMgr::msCourseID;
+    ECourseID course = ResMgr::getCourseID();
 
     TARecord rec((u8)charID0, (u8)charID1, (u8)kartID, (u8)course);
     rec.setName(&gSystemRecord.mDefaultName[0]);
@@ -1900,72 +2166,72 @@ void Result2D::setTA() {
     }
 
     TARecord bestLap = *gSystemRecord.getBestLap(course);
-    if (bestLap.isValid() && bestLap.less(lap)) {
-        gSystemRecord.setBestLap(course, lap);
-        _1ab8 = 1;
-    } else if (bestLap.getRaceTime().get() != -1) {
+    if (bestLap.isValid()) {
+        if (bestLap.less(lap)) {
+            gSystemRecord.setBestLap(course, lap);
+            _1ab8 = 1;
+        }
+    } else if (RaceMgr::getManager()->getKartChecker(kartNo)->getBestLapTime()->isAvailable()) {
         gSystemRecord.setBestLap(course, lap);
         _1ab8 = 1;
     }
 
     if (_1ab0 || _1ab8) {
+        int min, sec, ms;
+        TARecord r;
+        Kart2DCommon *k2d = Kart2DCommon::ptr();
         for (int i = 0; i < 5; i++) {
-            TARecord *r = gSystemRecord.getTARecord(course, i);
-            TALinePics &pics = mTALines[i];
-            if (r->isValid()) {
-                Kart2DCommon::ptr()->changeStringTexture((const char *)r, pics.namePics, 3);
+            r = *gSystemRecord.getTARecord(course, i);
+            if (r.isValid()) {
+                k2d->changeStringTexture(r.getName(), mTALines[i].namePics, 3);
                 for (int j = 0; j < 3; j++) {
-                    pics.idPics[j]->mIsVisible = true;
+                    mTALines[i].idPics[j]->mIsVisible = true;
                 }
-                pics.charPic1->changeTexture(Kart2DCommon::ptr()->getCharIconTextureChecked(r->getCharID(0)), 0);
-                pics.charPic2->changeTexture(Kart2DCommon::ptr()->getCharIconTextureChecked(r->getCharID(1)), 0);
-                pics.kartPic->changeTexture(Kart2DCommon::ptr()->getKartIconTexture(r->getKartID()), 0);
-                RaceTime time = r->getRaceTime();
-                if (time.get() != -1) {
-                    int min, sec, ms;
-                    time.get(&min, &sec, &ms);
-                    Kart2DCommon::ptr()->changeNumberTexture(ms, pics.msPics, 3, true, false);
-                    Kart2DCommon::ptr()->changeNumberTexture(sec, pics.secPics, 2, true, false);
-                    Kart2DCommon::ptr()->changeNumberTexture(min, pics.minPics, 2, true, false);
+                mTALines[i].charPic2->changeTexture(k2d->getCharIconTextureChecked(r.getCharID(0)), 0);
+                mTALines[i].charPic1->changeTexture(k2d->getCharIconTextureChecked(r.getCharID(1)), 0);
+                mTALines[i].kartPic->changeTexture(k2d->getKartIconTexture(r.getKartID()), 0);
+                if (r.getRaceTime().isAvailable()) {
+                    r.getRaceTime().get(&min, &sec, &ms);
+                    k2d->changeNumberTexture(min, mTALines[i].minPics, 2, true, false);
+                    k2d->changeNumberTexture(sec, mTALines[i].secPics, 2, true, false);
+                    k2d->changeNumberTexture(ms, mTALines[i].msPics, 3, true, false);
                 } else {
-                    Kart2DCommon::ptr()->changeNumberTexture(0, pics.msPics, 3, true, true);
-                    Kart2DCommon::ptr()->changeNumberTexture(0, pics.secPics, 2, true, true);
-                    Kart2DCommon::ptr()->changeNumberTexture(0, pics.minPics, 2, true, true);
+                    k2d->changeNumberTexture(0, mTALines[i].minPics, 2, true, true);
+                    k2d->changeNumberTexture(0, mTALines[i].secPics, 2, true, true);
+                    k2d->changeNumberTexture(0, mTALines[i].msPics, 3, true, true);
                 }
             } else {
-                Kart2DCommon::ptr()->changeStringTexture("---", pics.namePics, 3);
+                k2d->changeStringTexture("---", mTALines[i].namePics, 3);
                 for (int j = 0; j < 3; j++) {
-                    pics.idPics[j]->mIsVisible = false;
+                    mTALines[i].idPics[j]->mIsVisible = false;
                 }
-                Kart2DCommon::ptr()->changeNumberTexture(0, pics.msPics, 3, true, true);
-                Kart2DCommon::ptr()->changeNumberTexture(0, pics.secPics, 2, true, true);
-                Kart2DCommon::ptr()->changeNumberTexture(0, pics.minPics, 2, true, true);
+                k2d->changeNumberTexture(0, mTALines[i].minPics, 2, true, true);
+                k2d->changeNumberTexture(0, mTALines[i].secPics, 2, true, true);
+                k2d->changeNumberTexture(0, mTALines[i].msPics, 3, true, true);
             }
         }
 
-        TARecord *best = gSystemRecord.getBestLap(course);
-        if (best->isValid()) {
-            Kart2DCommon::ptr()->changeStringTexture((const char *)best, mTABest.namePics, 3);
-            RaceTime time = best->getRaceTime();
-            if (time.get() != -1) {
-                int min, sec, ms;
-                time.get(&min, &sec, &ms);
-                Kart2DCommon::ptr()->changeNumberTexture(ms, mTABest.msPics, 3, true, false);
-                Kart2DCommon::ptr()->changeNumberTexture(sec, mTABest.secPics, 2, true, false);
-                Kart2DCommon::ptr()->changeNumberTexture(min, mTABest.minPics, 2, true, false);
+        r = *gSystemRecord.getBestLap(course);
+        if (r.isValid()) {
+            k2d->changeStringTexture(r.getName(), mTABest.namePics, 3);
+            if (r.getRaceTime().isAvailable()) {
+                r.getRaceTime().get(&min, &sec, &ms);
+                k2d->changeNumberTexture(min, mTABest.minPics, 2, true, false);
+                k2d->changeNumberTexture(sec, mTABest.secPics, 2, true, false);
+                k2d->changeNumberTexture(ms, mTABest.msPics, 3, true, false);
             } else {
-                Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.msPics, 3, true, true);
-                Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.secPics, 2, true, true);
-                Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.minPics, 2, true, true);
+                k2d->changeNumberTexture(0, mTABest.minPics, 2, true, true);
+                k2d->changeNumberTexture(0, mTABest.secPics, 2, true, true);
+                k2d->changeNumberTexture(0, mTABest.msPics, 3, true, true);
             }
         } else {
-            Kart2DCommon::ptr()->changeStringTexture("---", mTABest.namePics, 3);
-            Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.msPics, 3, true, true);
-            Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.secPics, 2, true, true);
-            Kart2DCommon::ptr()->changeNumberTexture(0, mTABest.minPics, 2, true, true);
+            k2d->changeStringTexture("---", mTABest.namePics, 3);
+            k2d->changeNumberTexture(0, mTABest.minPics, 2, true, true);
+            k2d->changeNumberTexture(0, mTABest.secPics, 2, true, true);
+            k2d->changeNumberTexture(0, mTABest.msPics, 3, true, true);
         }
     } else {
-        _197c = 0xf2;
+        mLine._197c = 242;
     }
 
     Password pw;
@@ -1998,9 +2264,8 @@ void Result2D::setMG() {
             getFrameColor(color);
             mVSBattle[0][i][12].mPane->setBlack(color);
         } else {
-            JUTColor color(0);
-            mPointRows[i][0].mPane->setBlack(color);
-            mPointRows[i][1].mPane->setBlack(color);
+            mPointRows[i][0].mPane->setBlack(JUTColor(0));
+            mPointRows[i][1].mPane->setBlack(JUTColor(0));
         }
     }
 }
@@ -2021,22 +2286,27 @@ void Result2D::setBattleCharacter() {
     }
 
     int player = -1;
-    KartInfo *info = gRaceInfo.getKartInfo(kartNo);
-    if (*(KartGamePad **)((u8 *)info + 0xc) != NULL) {
+    if (gRaceInfo.getKartInfo(kartNo)->isTagMode()) {
         int p = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(kartNo)->getPad());
         if (p == -1) {
             p = 0;
         }
-        if (p < 2) {
+        switch (p) {
+        case 0:
+        case 1:
             player = 0;
-        } else if (p < 4) {
+            break;
+        case 2:
+        case 3:
             player = 2;
-        } else {
+            break;
+        default:
 #line 2799
             JUT_ASSERT(0);
+            break;
         }
     } else {
-        int p = gSequenceInfo.getPad2Player(info->getPad());
+        int p = gSequenceInfo.getPad2Player(gRaceInfo.getKartInfo(kartNo)->getPad());
         if (p == -1) {
             p = 0;
         }
@@ -2044,7 +2314,7 @@ void Result2D::setBattleCharacter() {
     }
 
     J2DPicture::TCornerColor corner;
-    J2DPicture *pic = (J2DPicture *)(*(J2DScreen **)((u8 *)this + 0xdd8))->search((u64)'C4_1P' + (player << 8));
+    J2DPicture *pic = (J2DPicture *)mVSLayoutScreen->search((u64)'C4_1P' + (player << 8));
     pic->getCornerColor(corner);
 }
 
@@ -2182,8 +2452,8 @@ void Result2D::getResultLinePos(int frame, f32 &pos) {
     } else {
         pos = 0.0f;
     }
-    if (_1980 != 0) {
-        frame = _1980 - 1;
+    if (mLine._1980 != 0) {
+        frame = mLine._1980 - 1;
         if (frame < 0) {
             pos = 0.0f;
         } else if (frame < 10) {
@@ -2203,10 +2473,10 @@ void Result2D::getRaceRankLineScale(int frame, int no, JGeometry::TVec2f &scaleA
         scaleB.x = scaleB.y = 1.0f;
         scaleA.x = scaleA.y = 1.0f;
     } else if (rem < 10) {
-        scaleA.x = mLineScaleTblA[rem].x;
-        scaleA.y = mLineScaleTblA[rem].y;
-        scaleB.x = mLineScaleTblB[rem].x;
-        scaleB.y = mLineScaleTblB[rem].y;
+        scaleA.x = mLineScaleTbl[0][rem].v.x;
+        scaleA.y = mLineScaleTbl[0][rem].v.y;
+        scaleB.x = mLineScaleTbl[1][rem].v.x;
+        scaleB.y = mLineScaleTbl[1][rem].v.y;
     } else {
         scaleB.x = scaleB.y = 0.0f;
         scaleA.x = scaleA.y = 0.0f;
@@ -2252,10 +2522,10 @@ void Result2D::getGPRankLineScale(int frame, int no, JGeometry::TVec2f &scaleA, 
         scaleA.x = scaleA.y = 0.0f;
     } else if (rem < 10) {
         int idx = 9 - rem;
-        scaleA.x = mLineScaleTblA[idx].x;
-        scaleA.y = mLineScaleTblA[idx].y;
-        scaleB.x = mLineScaleTblB[idx].x;
-        scaleB.y = mLineScaleTblB[idx].y;
+        scaleA.x = mLineScaleTbl[0][idx].v.x;
+        scaleA.y = mLineScaleTbl[0][idx].v.y;
+        scaleB.x = mLineScaleTbl[1][idx].v.x;
+        scaleB.y = mLineScaleTbl[1][idx].v.y;
     } else {
         scaleB.x = scaleB.y = 1.0f;
         scaleA.x = scaleA.y = 1.0f;
@@ -2300,7 +2570,7 @@ void Result2D::getFrameClr(int player, JUTColor &color, u8 &alpha) {
     JUTColor c0 = mWhiteColor[player][0];
     JUTColor c1 = mWhiteColor[player][1];
 
-    f32 wave = -0.5f * JMACosShort((s16)(_1990 * (0x10000 - 1) / 50 + 0x7fff)) + 0.5f;
+    f32 wave = -0.5f * JMACosShort((s16)(mLine._1990 * (0x10000 - 1) / 50 + 0x7fff)) + 0.5f;
 
     color.r = c0.r + (c1.r - c0.r) * wave;
     color.g = c0.g + (c1.g - c0.g) * wave;
@@ -2322,7 +2592,7 @@ void Result2D::getVSPointYPos(int frame, int no, f32 &yPos) {
 }
 
 void Result2D::getMGPointYPos(int frame, f32 &yPos) {
-    f32 h = _3cc[0] - _e64;
+    f32 h = _3cc[0] - _e60[1];
     if (frame < 0) {
         yPos = h;
     } else if (frame < 10) {
@@ -2363,19 +2633,13 @@ void Result2D::getVSColor(int player, JUTColor &color) {
     colors[2].set(0x79, 0x82, 0x7d, 0);
     colors[3].set(0x95, 0x95, 0x4e, 0);
 
-    int kartNo = J2DManager::getStatus2Kart(0);
-    struct TPadCheck { // mirrors: KartInfo::mKartCharacters[1].mKartGamePad
-        u8 _0[0xc];
-        KartGamePad *mPad;
-    };
-    TPadCheck *info = (TPadCheck *)RaceMgr::getManager()->getKartInfo(kartNo);
-    if (info->mPad != NULL && player != 0) {
+    if (RaceMgr::getManager()->getKartInfo(J2DManager::getStatus2Kart(0))->isTagMode() && player != 0) {
         player++;
         if (player >= 4) {
             player = 3;
         }
     }
-    f32 wave = -0.5f * JMASCos((s16)(_1994 * (0x10000 - 1) / 40)) + 0.5f;
+    f32 wave = -0.5f * JMASCos((s16)(mLine._1994 * (0x10000 - 1) / 40)) + 0.5f;
     color.r = wave * colors[player].r;
     color.g = wave * colors[player].g;
     color.b = wave * colors[player].b;
@@ -2391,19 +2655,13 @@ void Result2D::getMGColor(int player, JUTColor &color) {
     colors[2].set(0x79, 0x82, 0x7d, 0);
     colors[3].set(0x95, 0x95, 0x4e, 0);
 
-    int kartNo = J2DManager::getStatus2Kart(0);
-    struct TPadCheck {
-        u8 _0[0xc];
-        KartGamePad *mPad;
-    };
-    TPadCheck *info = (TPadCheck *)RaceMgr::getManager()->getKartInfo(kartNo);
-    if (info->mPad != NULL && player != 0) {
+    if (RaceMgr::getManager()->getKartInfo(J2DManager::getStatus2Kart(0))->isTagMode() && player != 0) {
         player++;
         if (player >= 4) {
             player = 3;
         }
     }
-    f32 wave = -0.5f * JMASCos((s16)(_1994 * (0x10000 - 1) / 40)) + 0.5f;
+    f32 wave = -0.5f * JMASCos((s16)(mLine._1994 * (0x10000 - 1) / 40)) + 0.5f;
     color.r = wave * colors[player].r;
     color.g = wave * colors[player].g;
     color.b = wave * colors[player].b;
@@ -2411,7 +2669,7 @@ void Result2D::getMGColor(int player, JUTColor &color) {
 }
 
 void Result2D::getFrameColor(JUTColor &color) {
-    f32 fade = -0.5f * JMASCos((s16)(_1998 * (0x10000 - 1) / 60)) + 0.5f;
+    f32 fade = -0.5f * JMASCos((s16)(mLine._1998 * (0x10000 - 1) / 60)) + 0.5f;
     color.r = 255.0f - 255.0f * fade;
     color.g = 255.0f - 255.0f * fade;
     color.b = 255.0f - 255.0f * fade;
@@ -2433,15 +2691,15 @@ void Result2D::setScale(int sel) {
             if (arrowT > 8) {
                 mArrowTimer[i] = 8;
             }
-            J2DPane *cursor = mSelPanes[i].cursor;
+            J2DPane *cursor = mSetWord[i][6].mPane;
             cursor->mScale.x = sway;
             cursor->mScale.y = sway;
             cursor->calcMtx();
-            J2DPane *icon = mSelPanes[0].icon;
+            J2DPane *icon = mSetWord[0][7].mPane;
             icon->mScale.x = sway;
             icon->mScale.y = sway;
             icon->calcMtx();
-            J2DPane *num = mSelPanes[0].num;
+            J2DPane *num = mSetWord[0][8].mPane;
             num->mScale.x = sway;
             num->mScale.y = sway;
             num->calcMtx();
@@ -2450,23 +2708,23 @@ void Result2D::setScale(int sel) {
             if (arrowT < 0) {
                 mArrowTimer[i] = 0;
             }
-            J2DPane *cursor = mSelPanes[i].cursor;
+            J2DPane *cursor = mSetWord[i][6].mPane;
             cursor->mScale.x = 1.0f;
             cursor->mScale.y = 1.0f;
             cursor->calcMtx();
         }
-        f32 s = mArrowTimer[i] * 0.125f;
+        f32 s = mArrowTimer[i] / 8.0f;
         for (int j = 0; j <= 5; j++) {
-            J2DPane *pane = mSelPanes[i].parts[j].mPane;
+            J2DPane *pane = mSetWord[i][j].mPane;
             pane->mScale.x = s;
             pane->mScale.y = 1.0f;
             pane->calcMtx();
         }
     }
-    J2DPane *icon = mSelPanes[0].icon;
+    J2DPane *icon = mSetWord[0][7].mPane;
     icon->mOffset.y = _1b04;
     icon->calcMtx();
-    J2DPane *num = mSelPanes[0].num;
+    J2DPane *num = mSetWord[0][8].mPane;
     num->mOffset.y = _1b04;
     num->calcMtx();
 }
@@ -2481,24 +2739,10 @@ void Result2D::setGPClr() {
 
 bool Result2D::getAnmEnd() {
     bool ret = false;
-    if (_1988 == 0.0f && _198c >= 30) {
+    if (mLine._1988 == 0.0f && mLine._198c >= 30) {
         ret = true;
     }
     return ret;
 }
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
-J2DPicture *Race2D::getRankPic(int rank, int no) {
-#line 490
-    JUT_MINMAX_ASSERT(0, rank, 4);
-    JUT_MINMAX_ASSERT(0, no, 8);
-    return mRankDigits1[rank][no];
-}
-
-
-bool J2DScreen::set(const char *path, JKRArchive *archive) {
-    return set(path, 0, archive);
-}
-
-Result2DHioNode::Result2DHioNode(const char *name)
-: HioNode(name, &mParam, 0, 0) {}
