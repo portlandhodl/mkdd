@@ -51,7 +51,7 @@ public:
         mDeformData = nullptr;
     }
     
-    virtual ~J3DAnmObjCluster() {}
+    virtual ~J3DAnmObjCluster();
     virtual void anmFrameProc();
 
     void attach(J3DAnmCluster *);
