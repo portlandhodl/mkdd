@@ -3,14 +3,14 @@
 
 #include <dolphin/types.h>
 
-s32 HTTPCreateRequest(void* http, const char* method, const char* uri, const char* version);
-s32 HTTPCreateResponse(void* http, s32 status, const char* reason, const char* version);
-s32 HTTPAddHeader(void* http, const char* name, const char* value);
-s32 HTTPGetHeader(void* http, const char* name, char* value, s32 length);
-s32 HTTPGetParameter(void* http, const char* name, char* value, s32 length);
-s32 HTTPGetRequestURI(void* http, char* uri, s32 length);
-s32 HTTPGetMethod(void* http, char* method);
-s32 HTTPGetProtocol(void* http, char* protocol);
-s32 HTTPGetStatus(void* http);
+s32 HTTPCreateRequest(char* msg, const char* method, const char* uri, const char* version);
+s32 HTTPCreateResponse(char* msg, s32 status, const char* reason, const char* version);
+s32 HTTPAddHeader(char* msg, const char* name, const char* value);
+s32 HTTPGetHeader(char* msg, const char* name, char* value, s32 size);
+s32 HTTPGetParameter(char* msg, const char* name, char* value, s32 size);
+s32 HTTPGetRequestURI(char* msg, char* uri, s32 size);
+s32 HTTPGetMethod(char* msg, char* method);
+s32 HTTPGetProtocol(char* msg, char* protocol);
+s32 HTTPGetStatus(char* msg);
 
 #endif

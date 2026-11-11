@@ -18,26 +18,16 @@
 #define SSDP_HTTP_MAX 512
 #define SSDP_MULTICAST_ADDR (-268435462)
 
-static const u32 exp[3] = {0x8CA, 0x128E, 0x1C52};
-
 static char ServerString[0x40];
 static char LocationString[0x40];
 static char OutputBuffer[0x201];
 static char InputBuffer[0x201];
-static struct {
-    u32 mNotify;
-    u32 mResponse;
-    u32 mSearch;
-    u32 mExpire;
-    u32 mNotifySent;
-    u32 mOkSent;
-    u32 mSearchSent;
-} Stat;
+static SSDPStat Stat;
 
 static OSThreadQueue Event;
 static SSDPInfo* InfoTable;
 static s32 NumInfo;
-static s32 State;
+static volatile s32 State;
 static struct {
     SSDPSearchInfo* mHead;
     SSDPSearchInfo* mTail;
@@ -46,43 +36,78 @@ static u8 Ttl;
 static void (*Callback)(const char*, const void*);
 static u32 HostAddr;
 
-static int DoRequest(s32 sock, SOSockAddr* addr, const char* method);
-static int DoResponse(s32 sock, SOSockAddr* addr);
-static int SendNotify(s32 sock, SSDPInfo* info);
-static int DoRequest(s32 sock, SOSockAddr* addr, const char* method);
-static int DoResponse(s32 sock, SOSockAddr* addr);
-static int SendNotify(s32 sock, SSDPInfo* info);
-static int SendOk(s32 sock, SSDPInfo* info, SSDPEntry* entry);
-static int SendSearch(s32 sock, SSDPSearchInfo* info);
 static int SSDPLoop(s32 sock);
-static void* SSDPMain(void* arg);
+static OSTime ProcessSearchList(s32 sock, OSTime now);
 static void ClearSearchList(void);
-static OSTime ProcessSearchList(s32 sock, s32 unused, OSTime time);
 
-static void IsPrefix(void);
-static void Rotate(void);
-static void Backoff(void);
-static void SSDPSetTimer(void);
-static void SSDPCancelTimer(void);
-static void SSDPTickTimer(void);
-static void SSDPGetStat(void);
-static void SSDPClearStat(void);
+static BOOL IsPrefix(const char* prefix, const char* str)
+{
+    while (*prefix != '\0') {
+        if (*prefix != *str) {
+            return FALSE;
+        }
+        prefix++;
+        str++;
+    }
+    return TRUE;
+}
 
-#define SSDP_NEXT_TIME(dst, base, count, state) \
-    do { \
-        OSTick tick = OSGetTick(); \
-        u32 shift = tick & 31; \
-        u32 rotate = (tick << shift) | (tick >> (32 - shift)); \
-        u32 phase = rotate % (ticksPerMs * 2200); \
-        (dst) = (base) + (OSTime)((u32)((count) * (exp[3 - (state)] * ticksPerMs - phase)) / 10); \
-    } while (0)
+static u32 Rotate(u32 x, u32 n)
+{
+    return (x << n) | (x >> (32 - n));
+}
 
-static void IsPrefix(void) { }
-static void Rotate(void) { }
-static void Backoff(void) { }
-static void SSDPSetTimer(void) { }
-static void SSDPCancelTimer(void) { }
-static void SSDPTickTimer(void) { }
+static OSTime Backoff(s32 state, s32 count)
+{
+    static const u32 exp[3] = {2250, 4750, 7250};
+    u32 tick;
+    u32 r;
+
+    tick = OSGetTick();
+    r = Rotate(tick, tick % 32);
+    r %= OSMillisecondsToTicks(2200);
+    return count * (OSMillisecondsToTicks(exp[3 - state]) - r) / 10;
+
+}
+
+static void SSDPSetTimer(SSDPTimer* timer, s32 count)
+{
+    BOOL enabled;
+
+    enabled = OSDisableInterrupts();
+    timer->mCount = count;
+    timer->mState = 3;
+    timer->mStart = OSGetTime();
+    timer->mNext = timer->mStart + Backoff(timer->mState, timer->mCount);
+    OSRestoreInterrupts(enabled);
+}
+
+static void SSDPCancelTimer(SSDPTimer* timer)
+{
+    BOOL enabled;
+
+    enabled = OSDisableInterrupts();
+    timer->mState = 0;
+    OSRestoreInterrupts(enabled);
+}
+
+static OSTime SSDPTickTimer(SSDPTimer* timer, OSTime now)
+{
+    BOOL enabled;
+    OSTime next;
+
+    enabled = OSDisableInterrupts();
+    if (timer->mCount > 0 && timer->mState > 0) {
+        next = timer->mNext;
+        if (now >= next && --timer->mState > 0) {
+            timer->mNext = timer->mStart + Backoff(timer->mState, timer->mCount);
+        }
+    } else {
+        next = now + OSSecondsToTicks((OSTime)1800);
+    }
+    OSRestoreInterrupts(enabled);
+    return next;
+}
 
 static int SendNotify(s32 sock, SSDPInfo* info)
 {
@@ -91,8 +116,8 @@ static int SendNotify(s32 sock, SSDPInfo* info)
     s32 len;
 
     memset(&addr, 0, sizeof(addr));
-    addr.len = sizeof(addr);
     addr.family = AF_INET;
+    addr.len = sizeof(addr);
     *(u32*)addr.addr = SSDP_MULTICAST_ADDR;
     addr.port = 1900;
 
@@ -100,19 +125,19 @@ static int SendNotify(s32 sock, SSDPInfo* info)
         return -1;
     }
 
-    HTTPCreateRequest((void*)(ServerString + 128), "NOTIFY", "*", "HTTP/1.1");
-    HTTPAddHeader((void*)(ServerString + 128), "HOST", "239.255.255.250:1900");
+    HTTPCreateRequest(OutputBuffer, "NOTIFY", "*", "HTTP/1.1");
+    HTTPAddHeader(OutputBuffer, "HOST", "239.255.255.250:1900");
     if (State == SSDP_STATE_RUNNING) {
-        HTTPAddHeader((void*)(ServerString + 128), "CACHE-CONTROL", "max-age=1800");
-        HTTPAddHeader((void*)(ServerString + 128), "LOCATION", ServerString + 64);
-        HTTPAddHeader((void*)(ServerString + 128), "NT", info->mName);
-        HTTPAddHeader((void*)(ServerString + 128), "NTS", "ssdp:alive");
-        HTTPAddHeader((void*)(ServerString + 128), "SERVER", ServerString);
+        HTTPAddHeader(OutputBuffer, "CACHE-CONTROL", "max-age=1800");
+        HTTPAddHeader(OutputBuffer, "LOCATION", LocationString);
+        HTTPAddHeader(OutputBuffer, "NT", info->mName);
+        HTTPAddHeader(OutputBuffer, "NTS", "ssdp:alive");
+        HTTPAddHeader(OutputBuffer, "SERVER", ServerString);
     } else {
-        HTTPAddHeader((void*)(ServerString + 128), "NT", info->mName);
-        HTTPAddHeader((void*)(ServerString + 128), "NTS", "ssdp:byebye");
+        HTTPAddHeader(OutputBuffer, "NT", info->mName);
+        HTTPAddHeader(OutputBuffer, "NTS", "ssdp:byebye");
     }
-    len = HTTPAddHeader((void*)(ServerString + 128), "USN", info->mUuidName);
+    len = HTTPAddHeader(OutputBuffer, "USN", info->mUuidName);
     if (len <= 0) {
         return -1;
     }
@@ -123,31 +148,29 @@ static int SendNotify(s32 sock, SSDPInfo* info)
     }
 
     Stat.mNotifySent++;
-    return SOSendTo(sock, ServerString + 128, len, 0, (u8*)&addr);
+    return SOSendTo(sock, OutputBuffer, len, 0, (u8*)&addr);
 }
 
 static int SendOk(s32 sock, SSDPInfo* info, SSDPEntry* entry)
 {
     u32 local;
+    SOSockAddr addr;
     s32 len;
-    BOOL enabled;
 
     if (State != SSDP_STATE_RUNNING) {
         return -1;
     }
 
-    enabled = OSDisableInterrupts();
-    entry->mState = 0;
-    OSRestoreInterrupts(enabled);
-    entry->mSendCount = 0;
+    SSDPCancelTimer(&entry->mTimer);
+    entry->mTimer.mCount = 0;
 
-    HTTPCreateResponse((void*)(ServerString + 128), 200, "OK", "HTTP/1.1");
-    HTTPAddHeader((void*)(ServerString + 128), "CACHE-CONTROL", "max-age=1800");
-    HTTPAddHeader((void*)(ServerString + 128), "EXT", "");
-    HTTPAddHeader((void*)(ServerString + 128), "LOCATION", ServerString + 64);
-    HTTPAddHeader((void*)(ServerString + 128), "SERVER", ServerString);
-    HTTPAddHeader((void*)(ServerString + 128), "ST", info->mName);
-    len = HTTPAddHeader((void*)(ServerString + 128), "USN", info->mUuidName);
+    HTTPCreateResponse(OutputBuffer, 200, "OK", "HTTP/1.1");
+    HTTPAddHeader(OutputBuffer, "CACHE-CONTROL", "max-age=1800");
+    HTTPAddHeader(OutputBuffer, "EXT", "");
+    HTTPAddHeader(OutputBuffer, "LOCATION", LocationString);
+    HTTPAddHeader(OutputBuffer, "SERVER", ServerString);
+    HTTPAddHeader(OutputBuffer, "ST", info->mName);
+    len = HTTPAddHeader(OutputBuffer, "USN", info->mUuidName);
 
     UPnPGetHostAddr(&local);
     if (local != HostAddr) {
@@ -155,374 +178,228 @@ static int SendOk(s32 sock, SSDPInfo* info, SSDPEntry* entry)
     }
 
     Stat.mOkSent++;
-    return SOSendTo(sock, ServerString + 128, len, 0, entry->mAddr);
+    return SOSendTo(sock, OutputBuffer, len, 0, entry->mAddr);
 }
 
-static int DoRequest(s32 sock, SOSockAddr* addr, const char* method)
+static int DoRequest(char* msg, SOSockAddr* addr, char* method)
 {
     char uri[2];
-    char buf[24];
+    char host[24];
     char man[24];
     char mxbuf[12];
     char st[128];
-    char* p;
-    u32 mx;
+    BOOL all;
     s32 i;
-    s32 j;
-    int all;
-    u32 bus;
-    u32 ticksPerMs;
-    u32 slot;
-    u32 shift;
-    u32 tick;
-    u32 rotate;
-    u32 phase;
     SSDPInfo* info;
+    char* p;
+    s32 j;
+    s32 mx;
     SSDPEntry* entry;
 
-    HTTPGetRequestURI((void*)sock, uri, 2);
+    HTTPGetRequestURI(msg, uri, 2);
     if (strcmp(uri, "*") != 0) {
         return -1;
     }
-    HTTPGetHeader((void*)sock, "HOST", buf, 24);
-    if (strcmp(buf, "239.255.255.250:1900") != 0) {
+    HTTPGetHeader(msg, "HOST", host, 24);
+    if (strcmp(host, "239.255.255.250:1900") != 0) {
         return -1;
     }
 
-    if (stricmp(method, "M-SEARCH") != 0) {
-        if (stricmp(method, "NOTIFY") == 0) {
-            Stat.mNotify++;
-            if (Callback != NULL) {
-                Callback((const char*)sock, addr->addr);
-            }
-            return 0;
+    if (stricmp(method, "M-SEARCH") == 0) {
+        if (HTTPGetHeader(msg, "MAN", man, 24) <= 0 || stricmp(man, "\"ssdp:discover\"") != 0) {
+            return -1;
         }
-        return -1;
-    }
+        if (HTTPGetHeader(msg, "MX", mxbuf, 12) <= 0) {
+            return -1;
+        }
+        mx = 0;
+        for (p = mxbuf; isdigit(*p); p++) {
+            mx *= 10;
+            mx += *p - '0';
+        }
+        if (*p != '\0' || mx == 0) {
+            return -1;
+        }
+        if (mx > 10) {
+            mx = 10;
+        }
+        if (HTTPGetHeader(msg, "ST", st, 128) <= 0) {
+            return -1;
+        }
+        Stat.mSearch++;
+        all = (stricmp(st, "ssdp:all") == 0) ? TRUE : FALSE;
 
-    if (HTTPGetHeader((void*)sock, "MAN", man, 24) <= 0 || stricmp(man, "\"ssdp:discover\"") != 0) {
-        return -1;
-    }
-    if (HTTPGetHeader((void*)sock, "MX", mxbuf, 12) <= 0) {
-        return -1;
-    }
-    mx = 0;
-    p = mxbuf;
-    while (isdigit(*p)) {
-        mx = mx * 10 + (*p - '0');
-        p++;
-    }
-    if (*p != 0 || mx == 0) {
-        return -1;
-    }
-    if (mx > 10) {
-        mx = 10;
-    }
-    if (HTTPGetHeader((void*)sock, "ST", st, 128) <= 0) {
-        return -1;
-    }
-    Stat.mSearch++;
-    all = (stricmp(st, "ssdp:all") == 0);
-
-    bus = OS_BUS_CLOCK / 4;
-    ticksPerMs = bus / 1000;
-    slot = ticksPerMs * 2200;
-
-    for (i = 0; i < NumInfo; i++) {
-        info = &InfoTable[i];
-        if (!all) {
-            const char* a = st;
-            const char* b = info->mName;
-            int match = 1;
-            while (*a != 0) {
-                if (*a != *b) {
-                    match = 0;
-                    break;
+        for (i = 0; i < NumInfo; i++) {
+            info = &InfoTable[i];
+            if (all || IsPrefix(st, info->mName)) {
+                for (j = 0; j < SSDP_MAX_ENTRIES; j++) {
+                    entry = &info->mEntries[j];
+                    if (entry->mTimer.mCount == 0) {
+                        memmove(entry->mAddr, addr, addr->len);
+                        SSDPSetTimer(&entry->mTimer, mx);
+                        break;
+                    }
                 }
-                a++;
-                b++;
-            }
-            if (!match) {
-                continue;
+                if (j >= SSDP_MAX_ENTRIES) {
+                    Stat.mExpire++;
+                }
             }
         }
-        for (j = 0; j < SSDP_MAX_ENTRIES; j++) {
-            entry = &info->mEntries[j];
-            if (entry->mSendCount != 0) {
-                continue;
-            }
-            memmove(entry->mAddr, addr, addr->len);
-            entry->mSendCount = mx;
-            entry->mState = 3;
-            entry->mTime = OSGetTime();
-            shift = OSGetTick() & 31;
-            tick = OSGetTick();
-            rotate = (tick << shift) | (tick >> (32 - shift));
-            phase = rotate % slot;
-            entry->mNextTime = entry->mTime + (OSTime)((u32)(entry->mSendCount * (exp[3 - entry->mState] * ticksPerMs - phase)) / 10);
-            break;
+    } else if (stricmp(method, "NOTIFY") == 0) {
+        Stat.mNotify++;
+        if (Callback != NULL) {
+            Callback(msg, addr->addr);
         }
-        if (j == SSDP_MAX_ENTRIES) {
-            Stat.mExpire++;
-        }
+        return 0;
+    } else {
+        return -1;
     }
     return 0;
 }
 
-static int DoResponse(s32 sock, SOSockAddr* addr)
+static int DoResponse(char* msg, SOSockAddr* addr)
 {
     SSDPSearchInfo* search;
     SSDPSearchInfo* next;
-    SSDPSearchInfo* tmp;
-    const char* a;
-    const char* b;
-    BOOL match;
     s32 status;
     char st[128];
-    u32 dummy;
+    BOOL match;
 
-    status = HTTPGetStatus((void*)InputBuffer);
+    status = HTTPGetStatus(InputBuffer);
     if (status < 0 || status != 200) {
         return -1;
     }
-    if (HTTPGetHeader((void*)sock, "ST", st, 128) <= 0) {
+    if (HTTPGetHeader(msg, "ST", st, 128) <= 0) {
         return -1;
     }
     Stat.mResponse++;
 
-    dummy = 0;
-    (void)dummy;
     search = SearchList.mHead;
-    if (search == NULL) {
-        tmp = NULL;
-    } else {
-        tmp = search->mNext;
-    }
-    next = tmp;
+    next = (search == NULL) ? NULL : search->mNext;
     while (search != NULL) {
-        if (stricmp(search->mTarget, "ssdp:all") == 0) {
-            match = 1;
-        } else {
-            match = 0;
+        if ((stricmp(search->mTarget, "ssdp:all") == 0 ? TRUE : FALSE) || IsPrefix(search->mTarget, st)) {
+            search->mCallback(msg, addr->addr, search);
         }
-        if (!match) {
-            a = search->mTarget;
-            b = st;
-            while (*a != 0) {
-                if (*a != *b) {
-                    break;
-                }
-                a++;
-                b++;
-            }
-            if (*a == 0) {
-                match = 1;
-            }
-        }
-        if (match) {
-            search->mCallback((const char*)sock, addr->addr, search);
-        }
+
         search = next;
-        if (next == NULL) {
-            tmp = NULL;
-        } else {
-            tmp = next->mNext;
-        }
-        next = tmp;
+        next = (search == NULL) ? NULL : search->mNext;
     }
     return 0;
 }
 
 static int SSDPLoop(s32 sock)
 {
-    SOPollFd fd;
     SOSockAddr addr;
-    SSDPInfo* info;
-    SSDPEntry* entry;
+    char protocol[16];
+    char method[16];
+    SOPollFd fd;
     OSTime now;
     OSTime cycle;
     OSTime next;
-    OSTime rem;
     OSTime timeout;
-    u32 ticksPerSec;
-    u32 ticksPerMs;
-    u32 slot;
-    u32 count;
-    u32 state;
+    s32 result;
     s32 i;
     s32 j;
-    s32 result;
-    BOOL enabled;
-    char protocol[16];
-    char method[16];
-
-    ticksPerSec = OS_BUS_CLOCK / 4;
-    ticksPerMs = ticksPerSec / 1000;
-    slot = ticksPerMs * 2200;
+    SSDPInfo* info;
+    SSDPEntry* entry;
+    BOOL found;
 
     for (i = 0; i < NumInfo; i++) {
         info = &InfoTable[i];
-        enabled = OSDisableInterrupts();
-        info->mSendCount = 10;
-        info->mState = 3;
-        info->mEndTime = OSGetTime();
-        count = info->mSendCount;
-        state = info->mState;
-        SSDP_NEXT_TIME(info->mNextTime, info->mEndTime, count, state);
-        OSRestoreInterrupts(enabled);
+        SSDPSetTimer(&info->mTimer, 10);
     }
 
     fd.fd = sock;
-    fd.events = 0x0001;
+    fd.events = SO_POLLIN;
     cycle = OSGetTime();
 
-    for (;;) {
-        now = OSGetTime();
-        if (now < cycle) {
-            rem = cycle - now;
-            if (rem <= (OSTime)200 * ticksPerMs) {
-                timeout = rem;
-            } else {
-                timeout = rem % ((OSTime)100 * ticksPerMs) + (OSTime)100 * ticksPerMs;
+    while (State == SSDP_STATE_RUNNING || State == SSDP_STATE_STOPPING) {
+        timeout = cycle - OSGetTime();
+        if (0 < timeout) {
+            if (OSMillisecondsToTicks(200) < timeout) {
+                timeout = timeout % OSMillisecondsToTicks(100) + OSMillisecondsToTicks(100);
             }
             result = SOPoll(&fd, 1, timeout);
-            if (result < 0) {
-                return 0;
-            }
-            if (result != 0) {
-                memset(&addr, 0, sizeof(addr));
-                addr.len = sizeof(addr);
-                result = SORecvFrom(sock, InputBuffer, 513, 4, (u8*)&addr);
-                if (result == -39) {
-                    return 0;
-                }
-                if (State == SSDP_STATE_RUNNING && result > 0 && result <= SSDP_HTTP_MAX) {
-                    InputBuffer[result] = 0;
-                    if (strstr(InputBuffer, "\r\n\r\n") != NULL) {
-                        if (HTTPGetProtocol((void*)InputBuffer, protocol) > 0) {
-                            if (strcmp(protocol, "HTTP/1.1") == 0) {
-                                if (HTTPGetMethod((void*)InputBuffer, method) > 0) {
-                                    DoRequest(sock, &addr, method);
-                                } else {
-                                    DoResponse(sock, &addr);
-                                }
-                            }
-                        }
-                    }
-                }
-                if (State != SSDP_STATE_RUNNING) {
-                    if (State == SSDP_STATE_STOPPING) {
-                        continue;
-                    }
-                    ClearSearchList();
-                    return 0;
-                }
-                continue;
-            }
+        } else {
+            result = 0;
+        }
+        if (result < 0) {
+            return result;
         }
 
-        now = OSGetTime();
-        cycle = now + (OSTime)ticksPerSec * 1800;
-
-        for (i = 0; i < NumInfo; i++) {
-            info = &InfoTable[i];
-            if (now >= info->mTime) {
-                info->mTime = now + (OSTime)ticksPerSec * 1800 / 2;
-                info->mSendCount = 10;
-                info->mState = 3;
-                info->mEndTime = OSGetTime();
-                count = info->mSendCount;
-                state = info->mState;
-                SSDP_NEXT_TIME(info->mNextTime, info->mEndTime, count, state);
-            }
-
-            enabled = OSDisableInterrupts();
-            if (info->mSendCount > 0 && info->mState > 0) {
-                info->mSendCount--;
-                if (info->mSendCount > 0) {
-                    count = info->mSendCount;
-                    state = info->mState;
-                    SSDP_NEXT_TIME(info->mNextTime, info->mEndTime, count, state);
+        if (result == 0) {
+            now = OSGetTime();
+            cycle = now + OSSecondsToTicks((OSTime)1800);
+            for (i = 0; i < NumInfo; i++) {
+                info = &InfoTable[i];
+                if (now >= info->mTime) {
+                    info->mTime = now + OSSecondsToTicks((OSTime)1800) / 2;
+                    SSDPSetTimer(&info->mTimer, 10);
                 }
-            } else {
-                next = now + (OSTime)ticksPerSec * 1800;
-                info->mNextTime = next;
-            }
-            OSRestoreInterrupts(enabled);
-
-            if (now >= info->mNextTime) {
-                if (State == SSDP_STATE_RUNNING) {
+                next = SSDPTickTimer(&info->mTimer, now);
+                if (now >= next) {
                     SendNotify(sock, info);
                 }
-            }
-
-            next = info->mNextTime;
-            if (next < cycle) {
-            } else {
-                cycle = next;
-            }
-
-            if (State == SSDP_STATE_RUNNING) {
-                for (j = 0; j < SSDP_MAX_ENTRIES; j++) {
-                    entry = &info->mEntries[j];
-                    if (entry->mSendCount == 0) {
-                        continue;
-                    }
-
-                    enabled = OSDisableInterrupts();
-                    if (entry->mSendCount > 0 && entry->mState > 0) {
-                        entry->mState--;
-                        if (entry->mState > 0) {
-                            count = entry->mSendCount;
-                            state = entry->mState;
-                            SSDP_NEXT_TIME(entry->mNextTime, entry->mTime, count, state);
+                cycle = (cycle < next) ? cycle : next;
+                if (State == SSDP_STATE_RUNNING) {
+                    for (j = 0; j < SSDP_MAX_ENTRIES; j++) {
+                        entry = &info->mEntries[j];
+                        if (entry->mTimer.mCount != 0) {
+                            next = SSDPTickTimer(&entry->mTimer, now);
+                            if (now >= next) {
+                                SendOk(sock, info, entry);
+                            }
+                            cycle = (cycle < next) ? cycle : next;
                         }
-                    } else {
-                        next = now + (OSTime)ticksPerSec * 1800;
-                        entry->mNextTime = next;
-                    }
-                    OSRestoreInterrupts(enabled);
-
-                    if (now >= entry->mNextTime) {
-                        SendOk(sock, info, entry);
-                    }
-
-                    next = entry->mNextTime;
-                    if (next < cycle) {
-                    } else {
-                        cycle = next;
                     }
                 }
             }
-        }
-
-        if (State == SSDP_STATE_RUNNING) {
-            next = ProcessSearchList(sock, 0, now);
-            if (next < cycle) {
+            if (State == SSDP_STATE_RUNNING) {
+                next = ProcessSearchList(sock, now);
+                cycle = (cycle < next) ? cycle : next;
+            }
+        } else {
+            memset(&addr, 0, sizeof(addr));
+            addr.len = sizeof(addr);
+            result = SORecvFrom(sock, InputBuffer, sizeof(InputBuffer), SO_MSG_DONTWAIT, (u8*)&addr);
+            if (result == -39) {
+                return result;
+            }
+            if (State != SSDP_STATE_RUNNING || result <= 0 || SSDP_HTTP_MAX < result) {
+                continue;
+            }
+            InputBuffer[result] = '\0';
+            if (strstr(InputBuffer, "\r\n\r\n") == NULL) {
+                continue;
+            }
+            if (HTTPGetProtocol(InputBuffer, protocol) <= 0) {
+                continue;
+            }
+            if (strcmp(protocol, "HTTP/1.1") != 0) {
+                continue;
+            }
+            if (HTTPGetMethod(InputBuffer, method) > 0) {
+                DoRequest(InputBuffer, &addr, method);
             } else {
-                cycle = next;
+                DoResponse(InputBuffer, &addr);
             }
         }
 
         if (State == SSDP_STATE_STOPPING) {
-            s32 found = 0;
+            found = FALSE;
             for (i = 0; i < NumInfo; i++) {
-                if (InfoTable[i].mState > 0) {
-                    found = 1;
+                if (InfoTable[i].mTimer.mState > 0) {
+                    found = TRUE;
                     break;
                 }
             }
             if (!found) {
-                ClearSearchList();
-                return 0;
+                break;
             }
         }
-
-        if (State != SSDP_STATE_RUNNING && State != SSDP_STATE_STOPPING) {
-            ClearSearchList();
-            return 0;
-        }
     }
+    ClearSearchList();
+    return 0;
 }
 
 static void* SSDPMain(void* arg)
@@ -616,13 +493,14 @@ void SSDPInit(SSDPConfig* config)
 
 void SSDPStart(SSDPInfo* info, s32 numInfo)
 {
-    BOOL enabled;
+    s32 j;
     OSTime now;
     SSDPInfo* cur;
     SSDPEntry* entry;
     s32 i;
-    s32 j;
-    u32 ticksPerSec;
+    BOOL enabled;
+    OSTime t1;
+    OSTime t2;
 
     enabled = OSDisableInterrupts();
     if (State == SSDP_STATE_INITIALIZED) {
@@ -630,22 +508,15 @@ void SSDPStart(SSDPInfo* info, s32 numInfo)
         NumInfo = numInfo;
         SearchList.mTail = NULL;
         SearchList.mHead = NULL;
-
         now = OSGetTime();
-        ticksPerSec = OS_BUS_CLOCK / 4;
-
         for (i = 0; i < NumInfo; i++) {
-            InfoTable[i].mTime = now + (OSTime)ticksPerSec * 1800 / 2;
             cur = &InfoTable[i];
-            OSDisableInterrupts();
-            cur->mState = 0;
-            OSRestoreInterrupts(enabled);
+            cur->mTime = now + OSSecondsToTicks((OSTime)1800) / 2;
+            SSDPCancelTimer(&cur->mTimer);
             for (j = 0; j < SSDP_MAX_ENTRIES; j++) {
                 entry = &cur->mEntries[j];
-                OSDisableInterrupts();
-                entry->mState = 0;
-                OSRestoreInterrupts(enabled);
-                entry->mSendCount = 0;
+                SSDPCancelTimer(&entry->mTimer);
+                entry->mTimer.mCount = 0;
             }
         }
         State = SSDP_STATE_RUNNING;
@@ -656,16 +527,13 @@ void SSDPStart(SSDPInfo* info, s32 numInfo)
 
 void SSDPStop(void)
 {
-    SSDPInfo* info;
-    SSDPEntry* entry;
+    s32 j;
     BOOL enabled;
     u32 host;
-    u32 ticksPerMs;
-    u32 slot;
-    u32 count;
-    u32 state;
+    OSTime t1;
+    SSDPEntry* entry;
+    SSDPInfo* info;
     s32 i;
-    s32 j;
 
     if (State != SSDP_STATE_RUNNING) {
         return;
@@ -674,32 +542,16 @@ void SSDPStop(void)
     enabled = OSDisableInterrupts();
     State = SSDP_STATE_STOPPING;
     UPnPGetHostAddr(&host);
-
-    ticksPerMs = (OS_BUS_CLOCK / 4) / 1000;
-    slot = ticksPerMs * 2200;
-
     for (i = 0; i < NumInfo; i++) {
         info = &InfoTable[i];
         for (j = 0; j < SSDP_MAX_ENTRIES; j++) {
             entry = &info->mEntries[j];
-            OSDisableInterrupts();
-            entry->mState = 0;
-            OSRestoreInterrupts(enabled);
-            entry->mSendCount = 0;
+            SSDPCancelTimer(&entry->mTimer);
+            entry->mTimer.mCount = 0;
         }
-        OSDisableInterrupts();
-        info->mState = 0;
-        OSRestoreInterrupts(enabled);
-
+        SSDPCancelTimer(&info->mTimer);
         if (host == HostAddr) {
-            OSDisableInterrupts();
-            info->mSendCount = 10;
-            info->mState = 3;
-            info->mEndTime = OSGetTime();
-            count = info->mSendCount;
-            state = info->mState;
-            SSDP_NEXT_TIME(info->mNextTime, info->mEndTime, count, state);
-            OSRestoreInterrupts(enabled);
+            SSDPSetTimer(&info->mTimer, 10);
         }
     }
     OSRestoreInterrupts(enabled);
@@ -713,34 +565,11 @@ s32 SSDPGetState(void)
 void SSDPSearch(SSDPSearchInfo* info)
 {
     BOOL enabled;
-    BOOL level;
     SSDPSearchInfo* tail;
-    u32 ticksPerMs;
-    u32 slot;
-    u32 count;
-    u32 state;
-    u32 shift;
-    u32 tick;
-    u32 rotate;
-    u32 phase;
 
     enabled = OSDisableInterrupts();
     if (State == SSDP_STATE_RUNNING) {
-        level = OSDisableInterrupts();
-        info->mSendCount = 10;
-        info->mState = 3;
-        info->mTime = OSGetTime();
-        count = info->mSendCount;
-        state = info->mState;
-        tick = OSGetTick();
-        shift = tick & 31;
-        ticksPerMs = (OS_BUS_CLOCK / 4) / 1000;
-        slot = ticksPerMs * 2200;
-        rotate = (tick << shift) | (tick >> (32 - shift));
-        phase = rotate % slot;
-        info->mNextTime = info->mTime + (OSTime)((u32)(count * (exp[3 - state] * ticksPerMs - phase)) / 10);
-        OSRestoreInterrupts(level);
-
+        SSDPSetTimer(&info->mTimer, 10);
         tail = SearchList.mTail;
         if (tail == NULL) {
             SearchList.mHead = info;
@@ -770,11 +599,11 @@ static int SendSearch(s32 sock, SSDPSearchInfo* info)
         return -1;
     }
 
-    HTTPCreateRequest((void*)(ServerString + 128), "M-SEARCH", "*", "HTTP/1.1");
-    HTTPAddHeader((void*)(ServerString + 128), "HOST", "239.255.255.250:1900");
-    HTTPAddHeader((void*)(ServerString + 128), "MAN", "\"ssdp:discover\"");
-    HTTPAddHeader((void*)(ServerString + 128), "MX", "10");
-    len = HTTPAddHeader((void*)(ServerString + 128), "ST", info->mTarget);
+    HTTPCreateRequest(OutputBuffer, "M-SEARCH", "*", "HTTP/1.1");
+    HTTPAddHeader(OutputBuffer, "HOST", "239.255.255.250:1900");
+    HTTPAddHeader(OutputBuffer, "MAN", "\"ssdp:discover\"");
+    HTTPAddHeader(OutputBuffer, "MX", "10");
+    len = HTTPAddHeader(OutputBuffer, "ST", info->mTarget);
     if (len <= 0) {
         return -1;
     }
@@ -785,127 +614,91 @@ static int SendSearch(s32 sock, SSDPSearchInfo* info)
     }
 
     Stat.mSearchSent++;
-    return SOSendTo(sock, ServerString + 128, len, 0, (u8*)&addr);
+    return SOSendTo(sock, OutputBuffer, len, 0, (u8*)&addr);
 }
 
-static OSTime ProcessSearchList(s32 sock, s32 unused, OSTime time)
+static inline void RemoveSearch(SSDPSearchInfo* info)
+{
+    BOOL enabled;
+    SSDPSearchInfo* prev;
+    SSDPSearchInfo* next;
+
+    enabled = OSDisableInterrupts();
+    next = info->mNext;
+    prev = info->mPrev;
+    if (next == NULL) {
+        SearchList.mTail = prev;
+    } else {
+        next->mPrev = prev;
+    }
+    if (prev == NULL) {
+        SearchList.mHead = next;
+    } else {
+        prev->mNext = next;
+    }
+    OSRestoreInterrupts(enabled);
+}
+
+static OSTime ProcessSearchList(s32 sock, OSTime now)
 {
     SSDPSearchInfo* search;
     SSDPSearchInfo* next;
-    SSDPSearchInfo* tmp;
-    OSTime end;
-    OSTime now;
-    OSTime target;
+    OSTime cycle;
+    OSTime t;
     BOOL enabled;
-    u32 ticksPerSec;
-    u32 ticksPerMs;
-    u32 slot;
-    u32 count;
-    u32 state;
-    u32 shift;
-    u32 tick;
-    u32 rotate;
-    u32 phase;
-
-    (void)unused;
+    OSTime unused;
 
     enabled = OSDisableInterrupts();
-    ticksPerSec = OS_BUS_CLOCK / 4;
-    now = time;
-    target = now + (OSTime)ticksPerSec * 1800;
+    cycle = now + OSSecondsToTicks((OSTime)1800);
     search = SearchList.mHead;
-    next = search != NULL ? search->mNext : NULL;
-    ticksPerMs = ticksPerSec / 1000;
-    slot = ticksPerMs * 2200;
-
+    next = (search == NULL) ? NULL : search->mNext;
     while (search != NULL) {
         OSRestoreInterrupts(enabled);
-        enabled = OSDisableInterrupts();
-
-        if (search->mSendCount > 0 && search->mState > 0) {
-            if (now >= search->mNextTime) {
-                search->mState--;
-                if (search->mState > 0) {
-                    count = search->mSendCount;
-                    state = search->mState;
-                    shift = OSGetTick() & 31;
-                    tick = OSGetTick();
-                    rotate = (tick << shift) | (tick >> (32 - shift));
-                    phase = rotate % slot;
-                    search->mNextTime = search->mTime + (OSTime)((u32)((count * (exp[3 - state] * ticksPerMs - phase)) / 10));
-                }
-            }
-        } else {
-            search->mNextTime = now + (OSTime)ticksPerSec * 1800;
-        }
-        OSRestoreInterrupts(enabled);
-
-        if (now >= search->mNextTime) {
+        t = SSDPTickTimer(&search->mTimer, now);
+        if (now >= t) {
             SendSearch(sock, search);
         }
-
-        if (search->mNextTime < target) {
-            target = search->mNextTime;
-        }
-
-        end = search->mTime + (OSTime)search->mSendCount * ticksPerSec;
-        if (now >= end) {
-            OSDisableInterrupts();
-            if (search->mPrev == NULL) {
-                SearchList.mHead = search->mNext;
-            } else {
-                search->mPrev->mNext = search->mNext;
-            }
-            if (search->mNext == NULL) {
-                SearchList.mTail = search->mPrev;
-            } else {
-                search->mNext->mPrev = search->mPrev;
-            }
-            OSRestoreInterrupts(enabled);
-            OSDisableInterrupts();
-            search->mState = 0;
-            OSRestoreInterrupts(enabled);
+        cycle = (cycle < t) ? cycle : t;
+        if (now >= search->mTimer.mStart + OSSecondsToTicks(search->mTimer.mCount)) {
+            RemoveSearch(search);
+            SSDPCancelTimer(&search->mTimer);
             search->mCallback(NULL, NULL, search);
         }
-        OSDisableInterrupts();
+        enabled = OSDisableInterrupts();
         search = next;
-        if (next == NULL) {
-            tmp = NULL;
-        } else {
-            tmp = next->mNext;
-        }
-        next = tmp;
+        next = (search == NULL) ? NULL : search->mNext;
     }
     OSRestoreInterrupts(enabled);
+    return cycle;
+}
 
-    return target;
+static inline SSDPSearchInfo* DequeueSearch(void)
+{
+    SSDPSearchInfo* info;
+    SSDPSearchInfo* next;
+
+    info = SearchList.mHead;
+    next = info->mNext;
+    if (next == NULL) {
+        SearchList.mTail = NULL;
+    } else {
+        next->mPrev = NULL;
+    }
+    SearchList.mHead = next;
+    return info;
 }
 
 static void ClearSearchList(void)
 {
     SSDPSearchInfo* search;
-    SSDPSearchInfo* next;
-    SSDPSearchInfo* cur;
     BOOL enabled;
-    s32 dummy;
 
-    dummy = 0;
-    (void)dummy;
     enabled = OSDisableInterrupts();
-    for (search = SearchList.mHead; search != NULL; search = SearchList.mHead) {
-        next = search->mNext;
-        cur = search;
-        if (next == NULL) {
-            SearchList.mTail = NULL;
-        } else {
-            next->mPrev = NULL;
-        }
-        SearchList.mHead = next;
+    while ((search = SearchList.mHead) != NULL) {
+        DequeueSearch();
         OSRestoreInterrupts(enabled);
-        enabled = OSDisableInterrupts();
-        cur->mState = 0;
-        OSRestoreInterrupts(enabled);
-        cur->mCallback(NULL, NULL, cur);
+        SSDPCancelTimer(&search->mTimer);
+        search->mCallback(NULL, NULL, search);
         enabled = OSDisableInterrupts();
     }
     OSRestoreInterrupts(enabled);
@@ -916,7 +709,7 @@ const char* SSDPGetServerName(void)
     return ServerString;
 }
 
-s32 SSDPGetCacheControlMaxAge(void* http)
+s32 SSDPGetCacheControlMaxAge(char* http)
 {
     char value[24];
     char maxAge[24];
@@ -943,5 +736,20 @@ s32 SSDPGetCacheControlMaxAge(void* http)
     return max;
 }
 
-static void SSDPGetStat(void) { }
-static void SSDPClearStat(void) { }
+void SSDPGetStat(SSDPStat* stat)
+{
+    BOOL enabled;
+
+    enabled = OSDisableInterrupts();
+    memcpy(stat, &Stat, sizeof(SSDPStat));
+    OSRestoreInterrupts(enabled);
+}
+
+void SSDPClearStat(void)
+{
+    BOOL enabled;
+
+    enabled = OSDisableInterrupts();
+    memset(&Stat, 0, sizeof(SSDPStat));
+    OSRestoreInterrupts(enabled);
+}
