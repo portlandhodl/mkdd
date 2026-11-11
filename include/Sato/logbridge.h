@@ -274,7 +274,10 @@ class BridgeNodeManager : public JSUPtrList
 {
 public:
     BridgeNodeManager() : JSUPtrList(), mNodes(0), mNodePos(0) {}
-    ~BridgeNodeManager() {}
+    ~BridgeNodeManager() {
+        delete[] mNodes;
+        delete[] mNodePos;
+    }
 
     void setPosition(JGeometry::TVec3f &, JGeometry::TVec3f &, u32);
 
@@ -290,13 +293,23 @@ class StringBridge : public ExGeographyObj
 public:
     StringBridge(const CrsData::SObject &);
 
-    virtual ~StringBridge();
+    virtual ~StringBridge() {
+        delete[] mBridgeNodeMgr[0].mNodes;
+        delete[] mBridgeNodeMgr[0].mNodePos;
+        delete[] mBridgeNodeMgr[1].mNodes;
+        delete[] mBridgeNodeMgr[1].mNodePos;
+        delete[] _28c;
+        delete[] _290;
+        delete[] _294;
+        delete[] _298;
+        delete[] _29c;
+    }
 
     void reset();
     void init();
     void setParam();
     void loadmodel_base(J3DModelData *);
-    virtual void createColModel(J3DModelData *);
+    virtual void createColModel(J3DModelData *modelData) { mExBounds = new ObjColBlock(modelData, mScale); }
     virtual void loadmodel(J3DModelData *modelData);
     virtual void createModel(JKRSolidHeap *, u32);
     virtual void makeSharedDL();
@@ -306,6 +319,7 @@ public:
     virtual void simpleDraw(u32);
     void simpleDrawString(u32);
     void updateString();
+    virtual const char *getLopeBmdFileName();
     virtual void calcMtx(Mtx, JGeometry::TVec3f, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void calcBridgeModelMtx(Mtx, JGeometry::TVec3f, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void calcStringMtx(Mtx, JGeometry::TVec3f &, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
@@ -326,8 +340,7 @@ public:
     f32 getplaneHeight(stPlaneParam &, JGeometry::TVec3f, u32, const JGeometry::TVec3f &, f32 &);
     f32 getRightnodeVelRatio(const JGeometry::TVec3f &);
     virtual const char *getBmdFileName();
-    virtual const char *getLopeBmdFileName();
-    virtual f32 getMaxHeight() const;
+    virtual f32 getMaxHeight() const { return _264; }
 
     BridgeNodeManager mBridgeNodeMgr[2]; // 0x170
     f32 _1b0;                             // 0x1B0
@@ -343,6 +356,7 @@ public:
     JGeometry::TVec3f _26c;               // 0x26C
     u16 _278;                             // 0x278
     u16 _27a;                             // 0x27A
+    u16 _27c;                             // 0x27C
     u8 _27e;                              // 0x27E
     u32 _280;                             // 0x280
     u8 _284;                              // 0x284
