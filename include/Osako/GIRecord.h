@@ -5,8 +5,11 @@
 
 class GIRecord {
 public:
+    GIRecord() {}
     GIRecord(TARecord &record);
     bool isValid();
+
+    TARecord &getRecord() { return mRecord; } // fabricated
 
 private:
     TARecord mRecord;

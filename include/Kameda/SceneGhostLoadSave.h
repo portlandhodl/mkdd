@@ -68,7 +68,7 @@ public:
         void frameIn();
         void frameOut();
         void selected();
-        void selectable();
+        bool selectable();
         void savable();
         bool hasGhost()
         {
@@ -104,7 +104,7 @@ public:
         J2DPane *mPanes[9]; // 0x0ffc
         J2DPicture *mPicturesA[3]; // 0x1020
         J2DPicture *mPicturesB[3]; // 0x102c
-        J2DTextBox *mCourseText; // 0x1038
+        J2DPicture *mCourseText; // 0x1038
         J2DTextBox *mInfoText; // 0x103c
         J2DAnmTransform *mAnm[7]; // 0x1040
         s16 mFrame0; // 0x105c
@@ -131,8 +131,7 @@ public:
     public:
         J2DScreen *mScreen; // 0x00
         GhostFileInfo *mInfo; // 0x04
-        J2DPane *mPane0; // 0x08
-        J2DPane *mPane1; // 0x0c
+        J2DPane *mPanes[2]; // 0x08
         J2DPicture *mPictures[26]; // 0x10
         J2DAnmTransform *mAnim; // 0x78
         s16 mFrame; // 0x7c
@@ -206,7 +205,7 @@ public:
         s32 mSelectState; // 0x04
         s32 mSelect; // 0x08
         J2DPane *mPanes[5]; // 0x0c
-        J2DPane *mMenuPane; // 0x20
+        J2DPicture *mMenuPane; // 0x20
         J2DAnmTransform *mAnm[4]; // 0x24
         s16 mFrame0; // 0x34
         s16 mFrame1; // 0x36
@@ -327,6 +326,7 @@ public:
     friend class Card;
     friend class SelectSlot;
     friend class GDIndexLayoutVC;
+    friend class QuitBtn;
 private:
     int _c; // 0x0c
     int _10; // 0x10

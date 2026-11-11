@@ -19,10 +19,6 @@
 #include "Osako/kartPad.h"
 #include "dolphin/os.h"
 
-#pragma dont_inline on
-static J2DPicture::TCornerColor makeCornerColor() { return J2DPicture::TCornerColor(); }
-#pragma dont_inline off
-
 
 const u64 SceneRecord::mTagRecord_cursor[] = {
     'TrCurs1', 'TrCurs2', 'TrCurs3', 
@@ -40,21 +36,24 @@ const u64 SceneRecord::mTagRecord_submenu[] = {
     'NRecCo1', 'NRecCo2',
 };
 
-const u64 SceneRecord::mTagRecord_submenu2[] = {
-    'RecCo1', 'NRecS1Ls', 'NRecS1Rs', 'RecCo2',
-    'NRecS2Ls', 'NRecS2Rs',
+const u64 SceneRecord::mTagRecord_submenu2[][3] = {
+    {'RecCo1', 'NRecS1Ls', 'NRecS1Rs'},
+    {'RecCo2', 'NRecS2Ls', 'NRecS2Rs'},
 };
 
-const u64 SceneRecord::mTagRecord_submenucursor[] = {
-    'NRecS1L', 'NRecS1R', 'NRecS2L', 'NRecS2R',
+const u64 SceneRecord::mTagRecord_submenucursor[][2] = {
+    {'NRecS1L', 'NRecS1R'},
+    {'NRecS2L', 'NRecS2R'},
 };
 
-const u64 SceneRecord::mTagRecord_submenucursor2[] = {
-    'RecSL1L', 'RecSL1R', 'RecSL2L', 'RecSL2R',
+const u64 SceneRecord::mTagRecord_submenucursor2[][2] = {
+    {'RecSL1L', 'RecSL1R'},
+    {'RecSL2L', 'RecSL2R'},
 };
 
-const u64 SceneRecord::mTagRecord_submenucursor3[] = {
-    'RecSB1L', 'RecSB1R', 'RecSB2L', 'RecSB2R',
+const u64 SceneRecord::mTagRecord_submenucursor3[][2] = {
+    {'RecSB1L', 'RecSB1R'},
+    {'RecSB2L', 'RecSB2R'},
 };
 
 const u64 SceneRecord::mTagRecordGP_all[] = {
@@ -218,21 +217,252 @@ const u64 SceneRecord::mModeTag[] = {
     'mc_betu', 'm_pice',
 };
 
-SceneRecord::SceneRecord(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap), mTitleLine(heap) {
-    J2DPicture::TCornerColor color = makeCornerColor();
+SceneRecord::SceneRecord(JKRArchive *archive, JKRHeap *heap) : Scene(archive, heap), SceneTitleLine(archive, heap, "record_title_line") {
+    OSInitFastCast();
+    SceneRecord_ConstructerMenu(heap);
+    SceneRecord_ConstructerGP(heap);
+    SceneRecord_ConstructerGPLine(heap);
+    SceneRecord_ConstructerTA(heap);
+    SceneRecord_ConstructerTALine(heap);
+    SceneRecord_ConstructerBack(heap);
+
+    if (System::getDisplay()->getFader()->getStatus() == JUTFader::Status_Out) {
+        mState = 0;
+        mPrevState = 0;
+        if (System::getDisplay()->getFader())
+            System::getDisplay()->getFader()->startFadeIn(15);
+        mFadeTimer = 0;
+    } else {
+        mState = 1;
+        mPrevState = 1;
+    }
+
+    _094 = 0;
+    mMenuCursor = 0;
+    mGpCursor = 0;
+    mGpIndex = 0;
+    mTaCursor = 0;
+    mTaIndex = 0;
 }
 
-void SceneRecord::SceneRecord_ConstructerMenu(JKRHeap *) {}
+void SceneRecord::SceneRecord_ConstructerMenu(JKRHeap *heap) {
+    int i;
+    int j;
+    mMenuScreen = new (heap, 0) J2DScreen();
+    mMenuScreen->set("SelectRecord.blo", 0x40000, mArchive);
+    mMenuAnm0 = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("SelectRecord.bck", mArchive));
+    mMenuScreen->setAnimation((J2DAnmTransform *)mMenuAnm0);
+    mMenuAnm1 = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("SelectRecord.bpk", mArchive));
+    mMenuAnm1->searchUpdateMaterialID(mMenuScreen);
+    void *brk = JKRFileLoader::getGlbResource("SelectRecord.brk", mArchive);
+    void *btk = JKRFileLoader::getGlbResource("SelectRecord.btk", mArchive);
+    mSubAnm2 = J2DAnmLoaderDataBase::load(btk);
+    mSubAnm2->searchUpdateMaterialID(mMenuScreen);
+    for (i = 0; i < 3; i++) {
+        mMenuAnm2[i] = J2DAnmLoaderDataBase::load(brk);
+        mMenuAnm2[i]->searchUpdateMaterialID(mMenuScreen);
+    }
+    for (i = 0; i < 2; i++) {
+        mSubAnm3[i] = J2DAnmLoaderDataBase::load(btk);
+        mSubAnm3[i]->searchUpdateMaterialID(mMenuScreen);
+        for (j = 0; j < 2; j++) {
+            mSubAnm[i][j] = J2DAnmLoaderDataBase::load(brk);
+            mSubAnm[i][j]->searchUpdateMaterialID(mMenuScreen);
+        }
+    }
 
-void SceneRecord::SceneRecord_ConstructerGP(JKRHeap *) {}
+    mRecordPane = (J2DPicture *)mMenuScreen->search('NRecord');
+    mRecordPane->setAnimation((J2DAnmTransform *)mMenuAnm0);
 
-void SceneRecord::SceneRecord_ConstructerGPLine(JKRHeap *) {}
+    for (i = 0; i < 3; i++) {
+        mMenuCursorPanes[i] = (J2DPicture *)mMenuScreen->search(mTagRecord_cursor[i]);
+        mMenuCursorPanes[i]->setAnimation((J2DAnmTransform *)mMenuAnm0);
+        mMenuCursorPanes[i]->setAnimation((J2DAnmColor *)mMenuAnm1);
+        mMenuBarPanes[i] = (J2DPicture *)mMenuScreen->search(mTagRecord_menu[i]);
+        mMenuBarPanes[i]->setAnimation((J2DAnmTransform *)mMenuAnm0);
+        mMenuBarPanes[i]->setAnimation((J2DAnmTevRegKey *)mMenuAnm2[i]);
+        mMenuSubPanes[i] = (J2DPicture *)mMenuScreen->search(mTagRecord_menubar[i]);
+        mMenuSubPanes[i]->setAnimation((J2DAnmTextureSRTKey *)mSubAnm2);
+        mMenuSubPanes[i]->setAnimation((J2DAnmTevRegKey *)mMenuAnm2[i]);
+    }
 
-void SceneRecord::SceneRecord_ConstructerTA(JKRHeap *) {}
+    for (i = 0; i < 2; i++) {
+        mSubCursorPanes0[i] = (J2DPicture *)mMenuScreen->search(mTagRecord_submenu[i]);
+        mSubCursorPanes0[i]->setAnimation((J2DAnmTransform *)mMenuAnm0);
+        for (j = 0; j < 3; j++) {
+            mSubCursorPanes1[i][j] = (J2DPicture *)mMenuScreen->search(mTagRecord_submenu2[i][j]);
+            mSubCursorPanes1[i][j]->setAnimation((J2DAnmTransform *)mMenuAnm0);
+        }
+        for (j = 0; j < 2; j++) {
+            mSubCursorPanes2[i][j] = (J2DPicture *)mMenuScreen->search(mTagRecord_submenucursor[i][j]);
+            mSubCursorPanes2[i][j]->setAnimation((J2DAnmTransform *)mMenuAnm0);
+            mSubCursorPanes3[i][j] = (J2DPicture *)mMenuScreen->search(mTagRecord_submenucursor2[i][j]);
+            mSubCursorPanes3[i][j]->setAnimation((J2DAnmTextureSRTKey *)mSubAnm3[i]);
+            mSubCursorPanes4[i][j] = (J2DPicture *)mMenuScreen->search(mTagRecord_submenucursor3[i][j]);
+            mSubCursorPanes4[i][j]->setAnimation((J2DAnmTevRegKey *)mSubAnm[i][j]);
+        }
+    }
+}
 
-void SceneRecord::SceneRecord_ConstructerTALine(JKRHeap *) {}
+void SceneRecord::SceneRecord_ConstructerGP(JKRHeap *heap) {
+    int i;
+    mGpScreen = new (heap, 0) J2DScreen();
+    mGpScreen->set("GPLayout.blo", 0x40000, mArchive);
+    mGpAnm0 = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("GPLayout.bck", mArchive));
+    mGpScreen->setAnimation((J2DAnmTransform *)mGpAnm0);
+    mGpAnm1 = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("GPLayout.btk", mArchive));
+    mGpAnm1->searchUpdateMaterialID(mGpScreen);
+    void *brk = JKRFileLoader::getGlbResource("GPLayout.brk", mArchive);
+    for (i = 0; i < 2; i++) {
+        mGpAnm2[i] = J2DAnmLoaderDataBase::load(brk);
+        mGpAnm2[i]->searchUpdateMaterialID(mGpScreen);
+    }
 
-void SceneRecord::SceneRecord_ConstructerBack(JKRHeap *) {}
+    for (i = 0; i < 3; i++) {
+        mGpAllPanes[i] = (J2DPicture *)mGpScreen->search(mTagRecordGP_all[i]);
+        mGpAllPanes[i]->setAnimation((J2DAnmTransform *)mGpAnm0);
+    }
+
+    for (i = 0; i < 2; i++) {
+        mGpCursorPanes[i] = (J2DPicture *)mGpScreen->search(mTagRecordGP_cursor[i]);
+        mGpCursorPanes[i]->setAnimation((J2DAnmTransform *)mGpAnm0);
+        mGpCursorPanes2[i] = (J2DPicture *)mGpScreen->search(mTagRecordGP_cursor2[i]);
+        mGpCursorPanes2[i]->setAnimation((J2DAnmTransform *)mGpAnm0);
+        mGpPanes[i] = (J2DPicture *)mGpScreen->search(mTagRecordGP_cursor3[i]);
+        mGpPanes[i]->setAnimation((J2DAnmTevRegKey *)mGpAnm2[i]);
+        mGpPanes2[i] = (J2DPicture *)mGpScreen->search(mTagRecordGP_cursorbtk[i]);
+        mGpPanes2[i]->setAnimation((J2DAnmTextureSRTKey *)mGpAnm1);
+    }
+
+    mGpReOpPane = (J2DPicture *)mGpScreen->search('GDCoName');
+    mGpReOpPane->setAnimation((J2DAnmTransform *)mGpAnm0);
+
+    for (i = 0; i < 4; i++) {
+        mGpLinePanes[i] = (J2DPicture *)mGpScreen->search(mTagRecordGP_linepostag[i]);
+        mGpLinePos[i].set(mGpLinePanes[i]->getTranslateX(), mGpLinePanes[i]->getTranslateY());
+        mGpLinePanes2[i] = (J2DPicture *)mGpScreen->search(mTagRecordGP_linepostag2[i]);
+        mGpLinePos2[i].set(mGpLinePanes2[i]->getTranslateX(), mGpLinePanes2[i]->getTranslateY());
+    }
+}
+
+void SceneRecord::SceneRecord_ConstructerGPLine(JKRHeap *heap) {
+    int i;
+    int j;
+    for (i = 0; i < 4; i++) {
+        mGpLineScreen[i] = new (heap, 0) J2DScreen();
+        mGpLineScreen[i]->set("GPLine.blo", 0x40000, mArchive);
+    }
+    mGpLineAnm = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("GPLine.bck", mArchive));
+
+    for (i = 0; i < 4; i++) {
+        mGpLineScreen[i]->setAnimation((J2DAnmTransform *)mGpLineAnm);
+        mGpLineAllPanes[i] = (J2DPicture *)mGpLineScreen[i]->search('NLine');
+        mGpLineAllPanes[i]->setAnimation((J2DAnmTransform *)mGpLineAnm);
+        mGpLineCursorPanes[i] = (J2DPicture *)mGpLineScreen[i]->search('PowM');
+        mGpLineCursorPanes2[i] = (J2DPicture *)mGpLineScreen[i]->search('Trophy');
+        for (j = 0; j < 7; j++)
+            mGpLinePts[i][j] = (J2DPicture *)mGpLineScreen[i]->search(mTagRecordGPLine_time[j]);
+        for (j = 0; j < 2; j++)
+            mGpLineColon[i][j] = (J2DPicture *)mGpLineScreen[i]->search(mTagRecordGPLine_quotation[j]);
+        for (j = 0; j < 3; j++)
+            mGpLineChar[i][j] = (J2DPicture *)mGpLineScreen[i]->search(mTagRecordGPLine_point[j]);
+        mGpLinePanes3[i] = (J2DPicture *)mGpLineScreen[i]->search('PointM');
+        mGpLineName[i] = (J2DPicture *)mGpLineScreen[i]->search('GPCha3');
+        mGpLineName2[i] = (J2DPicture *)mGpLineScreen[i]->search('GPCha2');
+        mGpLineName3[i] = (J2DPicture *)mGpLineScreen[i]->search('GPCha1');
+        for (j = 0; j < 3; j++)
+            mGpLineCharWin[i][j] = (J2DPicture *)mGpLineScreen[i]->search(mTagRecordGPLine_charawindow[j]);
+        for (j = 0; j < 3; j++)
+            mGpLineCharWin2[i][j] = (J2DPicture *)mGpLineScreen[i]->search(mTagRecordGPLine_name[j]);
+        mGpLineTag[i] = (J2DPicture *)mGpLineScreen[i]->search('TagMark');
+    }
+}
+
+void SceneRecord::SceneRecord_ConstructerTA(JKRHeap *heap) {
+    int i;
+    mTaScreen = new (heap, 0) J2DScreen();
+    mTaScreen->set("TALayout.blo", 0x40000, mArchive);
+    mTaAnm0 = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("TALayout.bck", mArchive));
+    mTaScreen->setAnimation((J2DAnmTransform *)mTaAnm0);
+    mTaAnm1 = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("TALayout.btk", mArchive));
+    mTaAnm1->searchUpdateMaterialID(mTaScreen);
+    void *brk = JKRFileLoader::getGlbResource("TALayout.brk", mArchive);
+    for (i = 0; i < 2; i++) {
+        mTaAnm2[i] = J2DAnmLoaderDataBase::load(brk);
+        mTaAnm2[i]->searchUpdateMaterialID(mTaScreen);
+    }
+
+    for (i = 0; i < 3; i++) {
+        mTaAllPanes[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_all[i]);
+        mTaAllPanes[i]->setAnimation((J2DAnmTransform *)mTaAnm0);
+    }
+
+    for (i = 0; i < 2; i++) {
+        mTaCursorPanes[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_cursor[i]);
+        mTaCursorPanes[i]->setAnimation((J2DAnmTransform *)mTaAnm0);
+        mTaCursorPanes2[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_cursor2[i]);
+        mTaCursorPanes2[i]->setAnimation((J2DAnmTransform *)mTaAnm0);
+        mTaPanes[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_cursor3[i]);
+        mTaPanes[i]->setAnimation((J2DAnmTevRegKey *)mTaAnm2[i]);
+        mTaPanes2[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_cursorbtk[i]);
+        mTaPanes2[i]->setAnimation((J2DAnmTextureSRTKey *)mTaAnm1);
+    }
+
+    mTaReOpPane = (J2DPicture *)mTaScreen->search('TACoN');
+    mTaReOpPane->setAnimation((J2DAnmTransform *)mTaAnm0);
+
+    for (i = 0; i < 3; i++) {
+        mTaChar[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_character[i]);
+        mTaCharWin[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_characterwindow[i]);
+    }
+    for (i = 0; i < 7; i++)
+        mTaBestLap[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_bestlap[i]);
+    for (i = 0; i < 3; i++)
+        mTaName[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_name[i]);
+    for (i = 0; i < 2; i++)
+        mTaColon[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_quotation[i]);
+
+    for (i = 0; i < 5; i++) {
+        mTaRank[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_linepostag[i]);
+        mTaLinePos[i].set(mTaRank[i]->getTranslateX(), mTaRank[i]->getTranslateY());
+        mTaLineColorPanes[i] = (J2DPicture *)mTaScreen->search(mTagRecordTA_linecolor[i]);
+        mTaLineColorPanes[i]->getCornerColor(mTaLineColor[i]);
+    }
+}
+
+void SceneRecord::SceneRecord_ConstructerTALine(JKRHeap *heap) {
+    int i;
+    int j;
+    for (i = 0; i < 5; i++) {
+        mTaLineScreen[i] = new (heap, 0) J2DScreen();
+        mTaLineScreen[i]->set("TALine.blo", 0x40000, mArchive);
+    }
+    mTaLineAnm = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("TALine.bck", mArchive));
+
+    for (i = 0; i < 5; i++) {
+        mTaLineScreen[i]->setAnimation((J2DAnmTransform *)mTaLineAnm);
+        mTaLineRank[i] = (J2DPicture *)mTaLineScreen[i]->search('TTRank');
+        mTaLineRank[i]->setAnimation((J2DAnmTransform *)mTaLineAnm);
+        mTaLineRank[i]->setCornerColor(mTaLineColor[i]);
+        for (j = 0; j < 7; j++)
+            mTaLineChar[i][j] = (J2DPicture *)mTaLineScreen[i]->search(mTagRecordTALine_time[j]);
+        for (j = 0; j < 2; j++)
+            mTaLineColon[i][j] = (J2DPicture *)mTaLineScreen[i]->search(mTagRecordTALine_quotation[j]);
+        for (j = 0; j < 3; j++) {
+            mTaLineTime[i][j] = (J2DPicture *)mTaLineScreen[i]->search(mTagRecordTALine_character[j]);
+            mTaLineQuote[i][j] = (J2DPicture *)mTaLineScreen[i]->search(mTagRecordTALine_characterwindow[j]);
+        }
+        for (j = 0; j < 3; j++)
+            mTaLineCharWin[i][j] = (J2DPicture *)mTaLineScreen[i]->search(mTagRecordTALine_name[j]);
+    }
+}
+
+void SceneRecord::SceneRecord_ConstructerBack(JKRHeap *heap) {
+    mBackScreen = new (heap, 0) J2DScreen();
+    mBackScreen->set("RecordBack.blo", 0x1040000, mArchive);
+    mBackAnm = J2DAnmLoaderDataBase::load(JKRFileLoader::getGlbResource("RecordBack.btk", mArchive));
+    mBackScreen->setAnimation((J2DAnmTextureSRTKey *)mBackAnm);
+}
 
 void SceneRecord::init() {
     GameAudio::Main::getAudio()->startSequenceBgm(0x1000003);
@@ -259,7 +489,7 @@ void SceneRecord::init() {
     init_ta();
     init_taline();
     init_back();
-    mTitleLine.init_titleline(7);
+    init_titleline(7);
 
     mModeCount = 3;
     mLevelCount = 12;
@@ -272,14 +502,16 @@ void SceneRecord::init() {
 }
 
 void SceneRecord::init_mode() {
+    int i;
+    int j;
     mModeCursor = -1;
     mMatCursorTimer = 0;
-    for (int i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++)
         mMatMenuTimer[i] = 0;
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         mSubCursorTimer[i] = 20;
-        for (int j = 0; j < 3; j++)
-            mSubCursorTimer2[i * 3 + j] = 29;
+        for (j = 0; j < 3; j++)
+            mSubCursorTimer2[i][j] = 29;
         mSubCursorTimer3[i] = 40;
         mSubCursorTimer4[i] = 0;
     }
@@ -298,20 +530,20 @@ void SceneRecord::init_gp() {
 
 void SceneRecord::init_gpline() {
     mGpLineTimer = -1;
-    mGpLinePhase = 0.0f;
     mGpLineDir = 0;
+    mGpLinePhase = 0.0f;
     for (int i = 0; i < 4; i++) {
         mGpLineCursorPanes[i]->changeTexture(mBtiName_Level[i], 0);
         mGpLinePanes3[i]->changeTexture(Kart2DCommon::ptr()->getPartsLocName(0), 0);
-        mGpLineColon[i * 2]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon1), 0);
-        mGpLineColon[i * 2 + 1]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon2), 0);
+        mGpLineColon[i][0]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon1), 0);
+        mGpLineColon[i][1]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon2), 0);
         for (int j = 0; j < 3; j++)
-            mGpLineCharWin[i * 3 + j]->changeTexture(mBtiName_characterwindow, 0);
+            mGpLineCharWin[i][j]->changeTexture(mBtiName_characterwindow, 0);
     }
-    if (gSystemRecord.isGameUnlocked(SystemRecord::Mirror))
-        mGpLineScreen[3]->show();
-    else
+    if (!gSystemRecord.isGameUnlocked(SystemRecord::Mirror))
         mGpLineScreen[3]->hide();
+    else
+        mGpLineScreen[3]->show();
 }
 
 void SceneRecord::init_ta() {
@@ -330,15 +562,18 @@ void SceneRecord::init_ta() {
 }
 
 void SceneRecord::init_taline() {
+    int i;
+    int j;
     mTaLineTimer = -1;
-    mTaLinePhase = 0.0f;
     mTaLineDir = 0;
-    for (int i = 0; i < 5; i++) {
+    mTaLinePhase = 0.0f;
+    for (i = 0; i < 5; i++)
         mTaLineRank[i]->changeTexture(mBtiName_Rank[i], 0);
-        mTaLineColon[i * 2]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon1), 0);
-        mTaLineColon[i * 2 + 1]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon2), 0);
-        for (int j = 0; j < 3; j++)
-            mTaLineCharWin[i * 3 + j]->changeTexture(mBtiName_characterwindow, 0);
+    for (i = 0; i < 5; i++) {
+        mTaLineColon[i][0]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon1), 0);
+        mTaLineColon[i][1]->changeTexture((ResTIMG *)ResMgr::getPtr(ResMgr::mcArcMRAMLoc, mBtiName_colon2), 0);
+        for (j = 0; j < 3; j++)
+            mTaLineQuote[i][j]->changeTexture(mBtiName_characterwindow, 0);
     }
 }
 
@@ -358,34 +593,36 @@ SceneRecord::~SceneRecord() {
 }
 
 void SceneRecord::draw() {
+    int i;
     mOrtho->setPort();
     mBackScreen->draw(0.0f, 0.0f, mOrtho);
     mMenuScreen->draw(0.0f, 0.0f, mOrtho);
     mGpScreen->draw(0.0f, 0.0f, mOrtho);
 
     int count = 0;
-    for (int i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         GPRecord rec = gSystemRecord.getGPRecord((ERaceGpCup)ConvNum2ERace(mGpIndex), (ERaceLevel)i);
         if ((rec.mFlags & 2) && rec.isValid())
             count++;
     }
 
-    for (int i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         if (count != 0)
-            mGpLineScreen[i]->draw(mGpLineX[i * 2], mGpLineX[i * 2 + 1], mOrtho);
+            mGpLineScreen[i]->draw(mGpLinePos[i].x, mGpLinePos[i].y, mOrtho);
         else
-            mGpLineScreen[i]->draw(mGpLineY[i * 2], mGpLineY[i * 2 + 1], mOrtho);
+            mGpLineScreen[i]->draw(mGpLinePos2[i].x, mGpLinePos2[i].y, mOrtho);
     }
 
     mTaScreen->draw(0.0f, 0.0f, mOrtho);
-    for (int i = 0; i < 5; i++)
-        mTaLineScreen[i]->draw(mTaLineX[i * 2], mTaLineX[i * 2 + 1], mOrtho);
-    mTitleLine.drawTitleLine(mOrtho);
+    for (i = 0; i < 5; i++)
+        mTaLineScreen[i]->draw(mTaLinePos[i].x, mTaLinePos[i].y, mOrtho);
+    drawTitleLine(mOrtho);
 }
 
 void SceneRecord::calcAnmRecordAll() {}
 
 void SceneRecord::calcAnmRecordCursor() {
+    int j;
     int i;
     for (i = 0; i < 3; i++) {
         if (mMenuCursor == i)
@@ -422,14 +659,14 @@ void SceneRecord::calcAnmRecordCursor() {
         if (mSubCursorTimer3[i] > 69)
             mSubCursorTimer3[i] = 40;
         mMenuAnm0->setFrame((f32)mSubCursorTimer3[i]);
-        for (int j = 0; j < 2; j++)
-            mSubCursorPanes2[i * 2 + j]->animationTransform();
+        for (j = 0; j < 2; j++)
+            mSubCursorPanes2[i][j]->animationTransform();
 
-        for (int j = 0; j < 3; j++) {
-            int *t = &mSubCursorTimer2[i * 3 + j];
+        for (j = 0; j < 3; j++) {
+            int *t = &mSubCursorTimer2[i][j];
             if (*t <= 29) {
                 mMenuAnm0->setFrame(30.0f);
-                mSubCursorPanes1[i * 3 + j]->animationTransform();
+                mSubCursorPanes1[i][j]->animationTransform();
                 *t = 29;
             } else {
                 (*t)++;
@@ -441,7 +678,7 @@ void SceneRecord::calcAnmRecordCursor() {
                 } else {
                     mMenuAnm0->setFrame((f32)*t);
                 }
-                mSubCursorPanes1[i * 3 + j]->animationTransform();
+                mSubCursorPanes1[i][j]->animationTransform();
             }
         }
     }
@@ -562,7 +799,9 @@ void SceneRecord::calcAnmRecordGPLineEtc() {}
 
 void SceneRecord::calcTexChangeRecordGP() {}
 
+#pragma dont_inline on
 void SceneRecord::calcTexChangeRecordGPLine(ERaceLevel) {}
+#pragma dont_inline off
 
 void SceneRecord::calcAnmRecordTAAll() {}
 
@@ -673,22 +912,28 @@ void SceneRecord::calcAnmRecordTALineAll() {
         mTaLineRank[i]->animationTransform();
 }
 
+#pragma dont_inline on
 void SceneRecord::calcTexChangeRecordTA() {}
+#pragma dont_inline off
 
+#pragma dont_inline on
 void SceneRecord::calcTexChangeRecordTALine(int) {}
+#pragma dont_inline off
 
 void SceneRecord::calcAnm() {
-    if (mState >= 2)
-        goto dec;
-    if (mState >= 0) {
+    int i;
+    switch (mState) {
+    case 0:
+    case 1:
         mModeCursor++;
         if (mModeCursor > 7)
             mModeCursor = 7;
-    } else {
-dec:
+        break;
+    default:
         mModeCursor--;
         if (mModeCursor < 0)
             mModeCursor = 0;
+        break;
     }
     mMenuAnm0->setFrame((f32)mModeCursor);
     mRecordPane->animationTransform();
@@ -707,15 +952,14 @@ dec:
         break;
     }
     mGpAnm0->setFrame((f32)mGpTimer);
-    for (int i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++)
         mGpAllPanes[i]->animationTransform();
     calcAnmRecordGPCursor();
     calcAnmRecordGPLineAll();
 
-    for (int i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         GPRecord rec = gSystemRecord.getGPRecord((ERaceGpCup)ConvNum2ERace(mGpIndex), (ERaceLevel)i);
-        bool valid = (rec.mFlags & 2) && rec.isValid();
-        if (valid)
+        if ((rec.mFlags & 2) && rec.isValid())
             mGpLineTag[i]->show();
         else
             mGpLineTag[i]->hide();
@@ -734,35 +978,42 @@ dec:
         break;
     }
     mTaAnm0->setFrame((f32)mTaTimer);
-    for (int i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++)
         mTaAllPanes[i]->animationTransform();
     calcAnmRecordTACursor();
     calcAnmRecordTALineAll();
 
-    mSubCursorPanes1[0]->changeTexture(mBtiName_Cup[mGpCursor], 0);
-    mSubCursorPanes1[3]->changeTexture((ResTIMG *)CourseName2D::ptr()->getCourseNameTexture(
+    mSubCursorPanes1[0][0]->changeTexture(mBtiName_Cup[mGpCursor], 0);
+    mSubCursorPanes1[1][0]->changeTexture((ResTIMG *)CourseName2D::ptr()->getCourseNameTexture(
                                            SceneCourseSelect::mCourseData[mTaCursor / 4][mTaCursor % 4].courseID),
                                        0);
     mGpReOpPane->changeTexture(mBtiName_Cup[mGpCursor], 0);
 
-    for (int i = 0; i < 4; i++)
+    for (i = 0; i < 4; i++)
         calcTexChangeRecordGPLine((ERaceLevel)i);
     calcTexChangeRecordTA();
 
-    if (mState == 6)
-        mTitleLine.calcAnmTitleLine(-1);
-    else
-        mTitleLine.calcAnmTitleLine(1);
+    int dir;
+    switch (mState) {
+    case 6:
+        dir = -1;
+        break;
+    default:
+        dir = 1;
+        break;
+    }
+    calcAnmTitleLine(dir);
 }
 
 void SceneRecord::calcMatAnmRecordCursor() {
-    mMatCursorTimer++;
-    if (mMatCursorTimer > 119)
+    int i;
+    int j;
+    if (++mMatCursorTimer > 119)
         mMatCursorTimer = 0;
     mMenuAnm1->setFrame((f32)mMatCursorTimer);
     mSubAnm2->setFrame((f32)mMatCursorTimer);
 
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         if (mMenuCursor == i) {
             if (++mSubCursorTimer4[i] > 119)
                 mSubCursorTimer4[i] = 0;
@@ -771,20 +1022,18 @@ void SceneRecord::calcMatAnmRecordCursor() {
         }
         mSubAnm3[i]->setFrame((f32)mSubCursorTimer4[i]);
 
-        for (int j = 0; j < 2; j++) {
-            int *t = &mSubMatTimer[i * 2 + j];
-            if (mMenuCursor != i) {
-                *t = 0;
-            } else if (*t > 1) {
-                (*t)++;
-            } else {
-                *t = 1;
-            }
-            if (*t < 0)
-                *t = 0;
-            if (*t > 19)
-                *t = 1;
-            mSubAnm[i * 2 + j]->setFrame((f32)*t);
+        for (j = 0; j < 2; j++) {
+            if (i != mMenuCursor)
+                mSubMatTimer[i][j] = 0;
+            else if (mSubMatTimer[i][j] > 1)
+                mSubMatTimer[i][j]++;
+            else
+                mSubMatTimer[i][j] = 1;
+            if (mSubMatTimer[i][j] < 0)
+                mSubMatTimer[i][j] = 0;
+            if (mSubMatTimer[i][j] > 19)
+                mSubMatTimer[i][j] = 1;
+            mSubAnm[i][j]->setFrame((f32)mSubMatTimer[i][j]);
         }
     }
 }
@@ -798,8 +1047,9 @@ void SceneRecord::calcMatAnmRecordTACursor() {}
 void SceneRecord::calcMatAnmRecordBack() {}
 
 void SceneRecord::calcMatAnm() {
+    int i;
     calcMatAnmRecordCursor();
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
         if (mMenuCursor == i)
             mMatMenuTimer[i] = 1;
         else
@@ -808,11 +1058,10 @@ void SceneRecord::calcMatAnm() {
     }
     mMenuScreen->animation();
 
-    mGpMatTimer++;
-    if (mGpMatTimer > 119)
+    if (++mGpMatTimer > 119)
         mGpMatTimer = 0;
     mGpAnm1->setFrame((f32)mGpMatTimer);
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         if (mGpTextFrame[i] >= 1)
             mGpTextFrame[i]++;
         else
@@ -825,11 +1074,10 @@ void SceneRecord::calcMatAnm() {
     }
     mGpScreen->animation();
 
-    mTaMatTimer++;
-    if (mTaMatTimer > 119)
+    if (++mTaMatTimer > 119)
         mTaMatTimer = 0;
     mTaAnm1->setFrame((f32)mTaMatTimer);
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         if (mTaTextFrame[i] >= 1)
             mTaTextFrame[i]++;
         else
@@ -842,13 +1090,12 @@ void SceneRecord::calcMatAnm() {
     }
     mTaScreen->animation();
 
-    mBackFlag++;
-    if (mBackFlag > 540)
+    if (++mBackFlag > 540)
         mBackFlag = 0;
     mBackAnm->setFrame((f32)mBackFlag);
     mBackScreen->animation();
 
-    mTitleLine.calcMatAnmTitleLine();
+    calcMatAnmTitleLine();
 }
 
 void SceneRecord::calc() {
@@ -929,42 +1176,46 @@ void SceneRecord::mode() {
         if (mMenuCursor >= 2)
             return;
         GameAudio::Main::getAudio()->startSystemSe(0x2000c);
-        mSubCursorTimer2[mMenuCursor * 3] = 30;
-        mSubCursorTimer2[mMenuCursor * 3 + 1] = 30;
-        mSubMatTimer[mMenuCursor * 2] = 2;
+        mSubCursorTimer2[mMenuCursor][0] = 30;
+        mSubCursorTimer2[mMenuCursor][1] = 30;
+        mSubMatTimer[mMenuCursor][0] = 2;
         for (int i = 0; i < 2; i++) {
-            switch (mMenuCursor) {
-            case 0:
-                if (--mGpCursor < 0)
-                    mGpCursor = mModeCount - 1;
-                mGpIndex = mGpCursor;
-                break;
-            case 1:
-                if (--mTaCursor < 0)
-                    mTaCursor = mModeCount - 1;
-                mTaIndex = mTaCursor;
-                break;
+            if (mMenuCursor == i) {
+                switch (mMenuCursor) {
+                case 0:
+                    if (--mGpCursor < 0)
+                        mGpCursor = mModeCount - 1;
+                    mGpIndex = mGpCursor;
+                    break;
+                case 1:
+                    if (--mTaCursor < 0)
+                        mTaCursor = mLevelCount - 1;
+                    mTaIndex = mTaCursor;
+                    break;
+                }
             }
         }
     } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_RIGHT)) {
         if (mMenuCursor >= 2)
             return;
         GameAudio::Main::getAudio()->startSystemSe(0x2000c);
-        mSubCursorTimer2[mMenuCursor * 3] = 30;
-        mSubCursorTimer2[mMenuCursor * 3 + 2] = 30;
-        mSubMatTimer[mMenuCursor * 2 + 1] = 2;
+        mSubCursorTimer2[mMenuCursor][0] = 30;
+        mSubCursorTimer2[mMenuCursor][2] = 30;
+        mSubMatTimer[mMenuCursor][1] = 2;
         for (int i = 0; i < 2; i++) {
-            switch (mMenuCursor) {
-            case 0:
-                if (++mGpCursor >= mModeCount)
-                    mGpCursor = 0;
-                mGpIndex = mGpCursor;
-                break;
-            case 1:
-                if (++mTaCursor >= mModeCount)
-                    mTaCursor = 0;
-                mTaIndex = mTaCursor;
-                break;
+            if (mMenuCursor == i) {
+                switch (mMenuCursor) {
+                case 0:
+                    if (++mGpCursor >= mModeCount)
+                        mGpCursor = 0;
+                    mGpIndex = mGpCursor;
+                    break;
+                case 1:
+                    if (++mTaCursor >= mLevelCount)
+                        mTaCursor = 0;
+                    mTaIndex = mTaCursor;
+                    break;
+                }
             }
         }
     }
