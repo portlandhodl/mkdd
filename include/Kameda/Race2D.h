@@ -151,7 +151,10 @@ public:
 
     void endBombDemo() { mIsEndBombDemo = true; }
 public:
-    PLACEHOLDER_BYTES(0, 0x1b4);
+    PLACEHOLDER_BYTES(0, 0xe4);
+    const class ResTIMG *mItemTex[32]; // 0xe4
+    PLACEHOLDER_BYTES(0x164, 0x1b0);
+    Race2DHioNode *mHio;   // 0x1b0
     class J2DGrafContext *mGrafContext;   // 0x1b4
     PLACEHOLDER_BYTES(0x1b8, 0x1c0);
     class BombStart2D *mBombStart; // 0x1c0
@@ -161,9 +164,19 @@ public:
         u32 mStep; // +0x8
         u32 _c;    // +0xc
     } mAlarm[4];                   // 0x1c4
-    PLACEHOLDER_BYTES(0x204, 0x234);
+    PLACEHOLDER_BYTES(0x204, 0x208);
+    class J2DPicture *mAlarmPic0; // 0x208
+    class J2DPicture *mAlarmPic1; // 0x20c
+    f32 mAlarmPic0X; // 0x210
+    f32 mAlarmPic0Y; // 0x214
+    f32 mAlarmPic1X; // 0x218
+    f32 mAlarmPic1Y; // 0x21c
+    f32 mAlarmX[4];  // 0x220
+    PLACEHOLDER_BYTES(0x230, 0x234);
     class J2DScreen *mMaskScreen;         // 0x234
-    PLACEHOLDER_BYTES(0x238, 0x594);
+    class J2DPicture *mMark[4][8]; // 0x238
+    int mMarkOrder[4][8];          // 0x2b8
+    PLACEHOLDER_BYTES(0x338, 0x594);
     class J2DPicture *mRankDigits1[4][8]; // 0x594
     class J2DPicture *mRankDigits2[4][8]; // 0x614
     class J2DPicture *_694x[20];        // 0x694 (unconfirmed)
@@ -193,7 +206,9 @@ public:
 #define mBombColorFrame mLapShine.mShine.mBombColorFrame
 #define mBombWinFrame mLapShine.mShine.mBombWinFrame
 #define mBombMarkFrame mLapShine.mShine.mBombMarkFrame
-    PLACEHOLDER_BYTES(0xdc0, 0x1588);
+    PLACEHOLDER_BYTES(0xdc0, 0x1000);
+    JGeometry::TVec2f mMarkPos[4][8]; // 0x1000
+    PLACEHOLDER_BYTES(0x1100, 0x1588);
     struct Race2DLapSlot {
         u8 mAvailable;  // +0x00
         u8 _1[3];       // +0x01
@@ -218,7 +233,9 @@ public:
         f32 mGoalY2;     // +0x898
         u8 _89c[0x8d5 - 0x89c];
         bool mIsAlarm;   // +0x8d5 (abs 0x1e5d)
-        u8 _8d6[0x8e8 - 0x8d6];
+        u8 _8d6[0x8d8 - 0x8d6];
+        int mAlarmAlpha; // +0x8d8
+        u8 _8dc[0x8e8 - 0x8dc];
     };                              // size 0x8e8
     Race2DPlayerHUD mPlayerHUD[4];  // 0x1588
     int mGoalCount;                 // 0x3928
