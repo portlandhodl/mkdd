@@ -64,6 +64,14 @@ public:
         int mState;   // 18
     };
 
+    struct ViewRect // fabricated
+    {
+        f32 x; // 00
+        f32 y; // 04
+        f32 w; // 08
+        f32 h; // 0C
+    };
+
     struct SelectAnm // fabricated
     {
         u8 mEnable; // 00
@@ -173,7 +181,7 @@ private:
     static const char *mPowerMojiName[4];        // 0x803956a8
     static const char *mPowerPicName[4];         // 0x803956b8
     static const char *mBattleName[3];           // 0x803956c8
-    static const char *mCharCCName[8];           // 0x803956d4
+    static const char *mCharCCName[2][4];        // 0x803956d4
 
     struct MenuInfo // fabricated (only "mInfo.nextScene" is known)
     {
@@ -207,14 +215,10 @@ private:
     BrkData mModeBpk[6];                   // 0x1230
     BckData mBattleBck[15];                // 0x1278
     BckData mBattleBrk;                    // 0x132C
-    JUtility::TColor mBattleWhite;         // 0x1338
-    JUtility::TColor mBattleWhiteInactive; // 0x133C
-    JUtility::TColor mBattleBlack;         // 0x1340
-    JUtility::TColor mBattleBlackInactive; // 0x1344
-    JUtility::TColor mBattleWhite2;        // 0x1348
-    JUtility::TColor mBattleWhite2Inactive;// 0x134C
-    JUtility::TColor mBattleWhite3;        // 0x1350
-    JUtility::TColor mBattleWhite3Inactive;// 0x1354
+    JUtility::TColor mBarWhite[2];         // 0x1338
+    JUtility::TColor mBarBlack[2];         // 0x1340
+    JUtility::TColor mWordWhite[2];        // 0x1348
+    JUtility::TColor mBtlPWhite[2];        // 0x1350
     void *mColorRes;                       // 0x1358
     void *mMsgRes;                         // 0x135C
     J2DTextBox *mTextBox;                  // 0x1360
@@ -256,7 +260,7 @@ private:
     J2DScreen *mScreenChar4;               // 0x2010
     CharacterSelect3D *mCharacterSelect3D; // 0x2014
     J2DOrthoGraph *mGrafs[10];             // 0x2018
-    JGeometry::TBox2f mCharRect[10];       // 0x2040
+    ViewRect mCharRect[10];                // 0x2040
     MenuInfo mInfo;                        // 0x20E0
     u8 _2108[3];                           // 0x2108
     u8 _210b;                              // 0x210B

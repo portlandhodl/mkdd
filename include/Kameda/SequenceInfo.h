@@ -47,7 +47,7 @@ public:
 #line 278
         JUT_MINMAX_ASSERT(0, kart, 2);        
         //JUT_MINMAX_ASSERT(0, kart, 8);
-        JUT_MINMAX_ASSERT(0, charId, cCharIDMax);
+        JUT_MINMAX_ASSERT(1, charId, cCharIDMax);
         _318[kart]._0[driverNo] = charId;
     }
 
@@ -77,7 +77,15 @@ public:
         _318[kart]._14 = val;
     }
 
+    void set_318_coop(int kart, bool coop) {
+#line 297
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        _318[kart]._C[0] = coop;
+    }
+
     void set_318_Pad(int kart, KartGamePad *pad) {
+#line 322
+        JUT_MINMAX_ASSERT(0, kart, 2);
         _318[kart]._18 = pad;
     }
     ECharID get_318_charId0(int kart) {
