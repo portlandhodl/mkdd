@@ -17,10 +17,10 @@ FeelingOne::FeelingOne(Feeling *feel, int idx)
     }
 
     mMat0.mFrameCtrl.reset();
-    mMat0.mFrameCtrl.setRate(0.0f);
+    mMat0.setRate(0.0f);
 
     mMat1.mFrameCtrl.reset();
-    mMat1.mFrameCtrl.setRate(0.0f);
+    mMat1.setRate(0.0f);
     mMat1.mFrameCtrl.setAttribute(2);
 }
 
@@ -58,9 +58,8 @@ void FeelingOne::updateF()
     mAnm->setFrame(mFeeling->mFrameCtrl.mFrame);
 
     int index = mIndex;
-    J3DMtxCalc **calcs = FeelingMgr::ptr()->mMtxCalc;
-    J3DMtxCalc *calc = *(calcs + index);
-    calc->setAnmTransform(mAnm);
+    FeelingMgr *mgr = FeelingMgr::ptr();
+    mgr->mMtxCalc[index]->setAnmTransform(mAnm);
 
     mMat0.setFrame((f32)mFeeling->m_28);
     mMat0.update();
@@ -76,8 +75,19 @@ void FeelingOne::updateF()
 }
 
 
-void FeelingOne::createModelF(int, JKRSolidHeap *, u32, u32)
+void FeelingOne::createModelF(int idx, JKRSolidHeap *heap, u32 a, u32)
 {
+    ExModel::createDifferedModel(heap, a, 0x05020000, false);
+
+    mMat0.setExModel(this);
+    mMat0.mAnmBase = FeelingMgr::ptr()->mTevReg[idx];
+    mMat0.initFrameCtrl(mMat0.mAnmBase);
+
+    if (idx == 1) {
+        mMat1.setExModel(this);
+        mMat1.mAnmBase = FeelingMgr::ptr()->mTexPattern;
+        mMat1.initFrameCtrl(mMat1.mAnmBase);
+    }
 }
 
 void FeelingOne::setCurrentViewNo(u32 viewNo)
@@ -106,12 +116,68 @@ void Feeling::reset()
 {
 }
 
-void Feeling::updateOffset(int)
+void Feeling::updateOffset(int i)
 {
+    f32 offsetY;
+    Mtx mtx;
+    if (mDriver->getMtxP(18) != nullptr)
+        PSMTXCopy((MtxPtr)mDriver->getMtxP(18), mtx);
+    else
+        PSMTXCopy((MtxPtr)mDriver->getMtxP(1), mtx);
+
+    switch (i) {
+    case 0:
+        offsetY = DriverData::msDriverData[mDriver->mDataID].data[82];
+        break;
+    case 1:
+        offsetY = DriverData::msDriverData[mDriver->mDataID].data[83];
+        break;
+    }
+
+    Vec pos;
+    Vec offset;
+    offset.x = 0.0f;
+    offset.y = offsetY;
+    offset.z = 0.0f;
+    PSMTXMultVec((MtxPtr)mtx, &offset, &pos);
+
+    mtx[0][3] = pos.x;
+    mtx[1][3] = pos.y;
+    mtx[2][3] = pos.z;
+    PSMTXCopy(mtx, mOne[i]->getModel()->mPosMtx);
 }
 
 void Feeling::updateState()
 {
+    switch (mState) {
+    case 2:
+    case 3:
+        break;
+    case 0:
+        if (!mDriver->IsDanger())
+            mState = 1;
+        break;
+    case 1:
+        if (mDriver->IsDanger()) {
+            mState = 2;
+            m_28 = 1;
+            mFrameCtrl.mFrame = mFrameCtrl.mStartFrame;
+            mFrameCtrl.mRate = 1.0f;
+            mFrameCtrl.mState = 0;
+            mFrameCtrl.mEndFrame = mOne[1]->mAnm->getFrameMax();
+        }
+        break;
+    }
+
+    switch (mState) {
+    case 2:
+        m_2c = 0;
+        break;
+    case 3:
+        m_2c = 1;
+        break;
+    }
+
 }
 
 void Feeling::update(int danger)
@@ -125,96 +191,45 @@ void Feeling::update(int danger)
         mFrameCtrl.mState = 0;
         mFrameCtrl.mEndFrame = mOne[0]->mAnm->getFrameMax();
     } else {
-        switch (mState) {
-        case 0:
-            if (!mDriver->IsDanger())
-                mState = 1;
-            break;
-        case 1:
-            if (mDriver->IsDanger()) {
-                mState = 2;
-                m_28 = 1;
-                mFrameCtrl.mFrame = mFrameCtrl.mStartFrame;
-                mFrameCtrl.mRate = 1.0f;
-                mFrameCtrl.mState = 0;
-                mFrameCtrl.mEndFrame = mOne[1]->mAnm->getFrameMax();
-            }
-            break;
-        default:
-            break;
-        }
+        updateState();
     }
-
-    switch (mState) {
-    case 2:
-        m_2c = 0;
-        break;
-    case 3:
-        m_2c = 1;
-        break;
-    }
-
-    f32 f31 = 0.0f;
-    f32 f30;
 
     for (int i = 0; i < 2; i++) {
         if (m_2c == i) {
-            if (mState < 2) {
-                if (!(mState < 0))
-                    mOne[i]->hide();
-            } else {
-                if (mState < 4)
-                    mOne[i]->show();
+            switch (mState) {
+            case 0:
+            case 1:
+                mOne[i]->hide();
+                break;
+            case 2:
+            case 3:
+                mOne[i]->show();
+                break;
             }
         } else {
             mOne[i]->hide();
         }
 
-        FeelingMgr *mgr = FeelingMgr::ptr();
-        if (mgr->m_84 != 1) {
-            if (!((u32)mgr->m_84 < 2)) {
-                if (mgr->m_84 < 3)
-                    mOne[i]->hide();
-            }
-        } else {
-            mOne[i]->show();
-        }
-
-        Mtx mtx;
-        if (mDriver->getMtxP(18) != nullptr)
-            PSMTXCopy((MtxPtr)mDriver->getMtxP(18), mtx);
-        else
-            PSMTXCopy((MtxPtr)mDriver->getMtxP(1), mtx);
-
-        switch (i) {
+        switch (FeelingMgr::ptr()->m_84) {
         case 0:
-            f30 = DriverData::msDriverData[mDriver->mDataID].getData(82);
             break;
         case 1:
-            f30 = DriverData::msDriverData[mDriver->mDataID].getData(83);
+            mOne[i]->show();
+            break;
+        case 2:
+            mOne[i]->hide();
             break;
         }
 
-        Vec offset;
-        offset.x = f31;
-        offset.y = f30;
-        offset.z = f31;
-        Vec pos;
-        PSMTXMultVec((MtxPtr)mtx, &offset, &pos);
-
-        mtx[0][3] = pos.x;
-        mtx[1][3] = pos.y;
-        mtx[2][3] = pos.z;
-        PSMTXCopy(mtx, mOne[i]->getModel()->mPosMtx);
-
+        updateOffset(i);
         mOne[i]->updateF();
 
         if (mFrameCtrl.mRate == 0.0f) {
             switch (mState) {
-            case 3:
+            case 2:
                 mState = 0;
                 break;
-            case 2:
+            case 3:
                 mState = 0;
                 break;
             }
@@ -224,12 +239,16 @@ void Feeling::update(int danger)
     mFrameCtrl.update();
 }
 
-void Feeling::createModel(JKRSolidHeap *, u32, u32)
+void Feeling::createModel(JKRSolidHeap *heap, u32 a, u32 b)
 {
+    for (int i = 0; i < 2; i++)
+        mOne[i]->createModelF(i, heap, a, b);
 }
 
-void Feeling::setCurrentViewNo(u32)
+void Feeling::setCurrentViewNo(u32 viewNo)
 {
+    for (int i = 0; i < 2; i++)
+        mOne[i]->setCurrentViewNo(viewNo);
 }
 
 f32 Feeling::getBtpFrame()
@@ -360,28 +379,10 @@ void FeelingMgr::update()
 
 void FeelingMgr::createModel(DriverModel *driver, JKRSolidHeap *heap, u32 a, u32 b)
 {
-    int j;
-    Feeling *feel;
-    FeelingOne *one;
     int found = 0;
     for (int i = 0; i < mCount; i++) {
         if (mFeelings[i]->mDriver == driver) {
-            feel = mFeelings[i];
-            j = 0;
-            for (; j < 2; j++) {
-                one = feel->mOne[j];
-                one->ExModel::createDifferedModel(heap, a, 0x05020000, false);
-
-                one->mMat0.setExModel(one);
-                one->mMat0.mAnmBase = FeelingMgr::ptr()->mTevReg[j];
-                one->mMat0.initFrameCtrl(one->mMat0.mAnmBase);
-
-                if (j == 1) {
-                    one->mMat1.setExModel(one);
-                    one->mMat1.mAnmBase = FeelingMgr::ptr()->mTexPattern;
-                    one->mMat1.initFrameCtrl(one->mMat1.mAnmBase);
-                }
-            }
+            mFeelings[i]->createModel(heap, a, b);
 
             if (found == 0) {
                 mFeelings[0]->mOne[0]->makeSharedDL();
@@ -397,20 +398,14 @@ void FeelingMgr::createModel(DriverModel *driver, JKRSolidHeap *heap, u32 a, u32
 
 void FeelingMgr::setCurrentViewNo(u32 viewNo)
 {
-    int j = 0;
-    Feeling *feel;
-    int i;
-    for (i = 0; i < mCount; i++) {
-        feel = mFeelings[i];
-        for (j = 0; j < 2; j++)
-            feel->mOne[j]->setCurrentViewNo(viewNo);
-    }
+    for (int i = 0; i < mCount; i++)
+        mFeelings[i]->setCurrentViewNo(viewNo);
 }
 
-J3DModelData *FeelingMgr::getJ3DModelDataPtr(int idx)
+J3DModelData *FeelingMgr::getJ3DModelDataPtr(int num)
 {
 #line 632
-    JUT_MINMAX_ASSERT(0, idx, 2)
+    JUT_MINMAX_ASSERT(0, num, 2)
 #line 306
-    return mModelData[idx];
+    return mModelData[num];
 }

@@ -79,7 +79,7 @@ void DriverTPAnim::startDriverTPAnim(TPAStateEnum state)
 
     J3DFrameCtrl *ctrl = mAnm[state].getFrameCtrl();
     ctrl->setFrame((f32)ctrl->mStartFrame);
-    ctrl->setRate(0.0f);
+    ctrl->setRate(1.0f);
     ctrl->mState = 0;
 }
 
@@ -231,7 +231,7 @@ void DriverTPAnim::update_TPAWink()
         if (mCounter > mMinFrameWink) {
             if (stGetRnd(5)->getRandomMax(mProbabilityWink) == 0) {
                 mAnm[0].mFrameCtrl.mFrame = (f32)mAnm[0].mFrameCtrl.mStartFrame;
-                mAnm[0].mFrameCtrl.mRate = 0.0f;
+                mAnm[0].mFrameCtrl.mRate = 1.0f;
                 mAnm[0].mFrameCtrl.mState = 0;
             }
         }
@@ -346,11 +346,9 @@ void DriverTPAnim::update_TPABDamageB()
         if (!mDriver->IsDamageL12()) {
             setDriverTPAnim(TPA_ADAMAGE);
             startDriverTPAnim(TPA_ADAMAGE);
+            int idx = mAnimIdx; *(f32 *)((char *)this + idx * 0x20 + 0x68) = 2.0f;
         }
     }
-
-    int idx = mAnimIdx;
-    *(f32 *)((char *)this + idx * 0x20 + 0x68) = 2.0f;
 }
 
 void DriverTPAnim::update_basic()

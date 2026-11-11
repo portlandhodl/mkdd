@@ -38,6 +38,18 @@ public:
         return mscpaDriverFolderName2[no];
     }
 
+    inline static const char *getAnmFileName(int no) {
+#line 219
+        JUT_MINMAX_ASSERT(0, no, 82);
+        return sAnmFileNameTable[no];
+    }
+
+    inline static const char *getAnmSoundFileName(int no) {
+#line 225
+        JUT_MINMAX_ASSERT(0, no, 12);
+        return sAnmSoundFileNameTable[no];
+    }
+
     J3DModelData *getMdlData(int level) { return mMdlData[level]; }
 
     u16 getJntBindNo(u16 ctrlNo) {
@@ -96,6 +108,10 @@ public:
     u8 getHokanDamageCnt() { return _24; }
     int getBlendTime(int i) { return mBlendTimes[i]; }
     int getDangerTime() { return _5b; }
+    int getGoalTime() { return _5c; }
+    int getHappyFrontTime() { return _83a; }
+    int getHappyBackTime() { return _83c; }
+    u8 getAnmFolderFlag(int dataID, int anmID) { return _60[dataID][anmID]; }
 
     // Inline/Unused
     bool IsAllARAMDMAFinished();

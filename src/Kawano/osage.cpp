@@ -12,28 +12,14 @@
 
 #include "dolphin/mtx.h"
 
+static const f32 sZeroQuatset[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
 DriverModel *Osage::sCurDriver;
 KinopicoHairCtrl *Osage::sCurHair_L;
 KinopicoHairCtrl *Osage::sCurHair_R;
-Osage *Osage::sCurOsage;
-
 u32 OsageMgr::mNoIKFlag;
+Osage *Osage::sCurOsage;
 OsageMgr *OsageMgr::mspOsageMgr;
-
-const char *OsageMgr::mscaaJntName[7] = {
-    "k_hair_all_root", "k_hair_L1", "k_hair_L2", "k_hair_L3",
-    "k_hair_R1", "k_hair_R2", "k_hair_R3",
-};
-
-HairCallBack OsageMgr::mscaCallBackTbl[7] = {
-    (HairCallBack)&Osage::kHairRootCallBack,
-    (HairCallBack)&Osage::kHairL1CallBack,
-    (HairCallBack)&Osage::kHairL2CallBack,
-    (HairCallBack)&Osage::kHairL3CallBack,
-    (HairCallBack)&Osage::kHairR1CallBack,
-    (HairCallBack)&Osage::kHairR2CallBack,
-    (HairCallBack)&Osage::kHairR3CallBack,
-};
 
 const char *OsageMgr::mscaOsageBmdFileName = "/Driver/Kinopico/kinoko_hair.bmd";
 
@@ -109,6 +95,21 @@ void Osage::setCurrentViewNo(u32 viewNo) {
     MtxPtr mtx = light->getEffectMtx();
     setEffectMtx(mtx, 1);
 }
+
+const char *OsageMgr::mscaaJntName[7] = {
+    "k_hair_all_root", "k_hair_L1", "k_hair_L2", "k_hair_L3",
+    "k_hair_R1", "k_hair_R2", "k_hair_R3",
+};
+
+HairCallBack OsageMgr::mscaCallBackTbl[7] = {
+    (HairCallBack)&Osage::kHairRootCallBack,
+    (HairCallBack)&Osage::kHairL1CallBack,
+    (HairCallBack)&Osage::kHairL2CallBack,
+    (HairCallBack)&Osage::kHairL3CallBack,
+    (HairCallBack)&Osage::kHairR1CallBack,
+    (HairCallBack)&Osage::kHairR2CallBack,
+    (HairCallBack)&Osage::kHairR3CallBack,
+};
 
 bool Osage::kHairRootCallBack(J3DJoint *, int joint) {
     if (OsageMgr::ptr()->CheckNoIK())
@@ -265,24 +266,21 @@ OsageMgr *OsageMgr::ptr() {
     return mspOsageMgr;
 }
 
-#pragma dont_inline on
 void OsageMgr::init(DriverModel *driver) {
-    DriverModel *d = driver;
-    OsageMgr *mgr = this;
-    for (int i = 0; i < mgr->mCount; i++) {
-        if (mgr->mOsage[i]->mDriver == d)
+    int count = mCount;
+    for (int i = 0; i < count; i++) {
+        if (mOsage[i]->mDriver == driver)
             return;
     }
 
-    if (mgr->mCount != 0) {
-        mgr->mModelData[mgr->mCount] = mgr->createModelData((char *)mscaOsageBmdFileName);
-        mgr->setCallBack(mgr->mCount);
+    if (count != 0) {
+        mModelData[mCount] = createModelData((char *)mscaOsageBmdFileName);
+        setCallBack(mCount);
     }
 
-    mgr->mOsage[mgr->mCount] = new Osage(d);
-    mgr->mCount++;
+    mOsage[mCount] = new Osage(driver);
+    mCount++;
 }
-#pragma dont_inline reset
 
 void OsageMgr::setCallBack(int idx) {
     OsageMgr *mgr = this;

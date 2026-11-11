@@ -27,10 +27,8 @@ Accessory::Accessory(DriverModel *driver) : ExModel(1) {
     mMaterialAnm.setExModel(this);
     mMaterialAnm.setAnmBase(AccessoryMgr::ptr()->mAnm);
     mMaterialAnm.initFrameCtrl(mMaterialAnm.mAnmBase);
-    mMaterialAnm.setFrame(mMaterialAnm.mFrameCtrl.mStartFrame);
-    mMaterialAnm.setRate(1.0f);
-    mMaterialAnm.mFrameCtrl.mState = 0;
-    mMaterialAnm.stop();
+    mMaterialAnm.mFrameCtrl.reset();
+    mMaterialAnm.setRate(0.0f);
     mMaterialAnm.mFrameCtrl.mAttr = 2;
 }
 

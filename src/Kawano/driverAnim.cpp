@@ -17,11 +17,9 @@
 
 void DriverModel::goBack()
 {
-    if (mKartLoader->mDriverModels[0]->IsPiyo())
+    if (mKartLoader->mDriverModels[0]->IsPiyo() || mKartLoader->mDriverModels[1]->IsPiyo())
         return;
-    if (mKartLoader->mDriverModels[1]->IsPiyo())
-        return;
-    switch (mKartLoader->mKartInfo->getWeight()) {
+    switch (mKartLoader->mKartInfo->getKartWeight()) {
     case 0:
         StartAnimation(mcS098);
         break;
@@ -72,7 +70,7 @@ void DriverModel::StartThrow(int a, int b, int c)
         b = 1;
     if (c != 0)
         c = 1;
-    StartAnimation((StateEnum)(mcS013 + a * 4 + b * 2 + c));
+    StartAnimation((StateEnum)(a * 4 + b * 2 + c + mcS013));
 }
 
 void DriverModel::StartDriverThrow(int a, int b)
@@ -81,7 +79,7 @@ void DriverModel::StartDriverThrow(int a, int b)
         a = 1;
     if (b != 0)
         b = 1;
-    StartAnimation((StateEnum)(a * 2 + 9 + b));
+    StartAnimation((StateEnum)(a * 2 + b + mcS009));
 }
 
 void DriverModel::StartJump()
@@ -200,13 +198,12 @@ void DriverModel::StartWaitBack()
 
 void DriverModel::StartDWait()
 {
+    f32 phase = 0.7f * mKartNum;
     mState = mcS032;
-    f32 phase = mKartNum * 0.7f;
     mDriveAnim.mLoopAnim.mMinValue = 0.0f;
     mDriveAnim.mLoopAnim.mMaxValue = 1.0f;
     mDriveAnim.mLoopAnim.mSpeed = 1.0f;
     mDriveAnim.mLoopAnim.mCurrentPhase = phase;
-    mDriveAnim.mLoopAnim.reset();
     mDriveAnim.mLoopAnim.start();
 }
 
@@ -360,7 +357,7 @@ void DriverModel::SetHangRate(f32 rate)
 
 void DriverModel::StartHang2(f32 f, u8 b)
 {
-    if (f < 0.0f)
+    if (f >= 0.0f)
         DriverManager::ptr()->_28 = f;
     DriverManager::ptr()->mBlendTimes[3] = b;
     if (IsBack())
@@ -375,11 +372,11 @@ void DriverModel::StartDashEnd2(f32 f, u8 b)
     switch (mState) {
     case mcS075:
     case mcS076:
-        if (f < 0.0f)
+        if (f >= 0.0f)
             DriverManager::ptr()->_28 = f;
         DriverManager::ptr()->mBlendTimes[4] = b;
         m_e0 = 1;
-        m_bb = (u8)((f32)m_bb * (f32)DriverManager::ptr()->mBlendTimes[4] / (f32)DriverManager::ptr()->mBlendTimes[3]);
+        u8 t = DriverManager::ptr()->mBlendTimes[3]; DriverManager *mgr = DriverManager::ptr(); m_bb = (f32)m_bb * (f32)mgr->mBlendTimes[4] / (f32)t;
         break;
     }
 }
@@ -447,13 +444,7 @@ void DriverModel::StartSetTireR()
 
 void DriverModel::StartGoalMotion()
 {
-    register int rank;
-    int kartNum = mKartLoader->mKartNum;
-    RaceMgr *const rm = RaceMgr::getManager();
-#line 267
-    JUT_MINMAX_ASSERT(0, kartNum, 8);
-
-    rank = rm->mKartChecker[kartNum]->getRank();
+    int rank = RaceMgr::getManager()->getKartChecker(mKartLoader->mKartNum)->getRank();
     int front = IsFront();
     int kartNum2 = RaceMgr::getManager()->mRaceInfo->mKartNum;
 
@@ -563,8 +554,7 @@ void DriverModel::StartJuggle()
 {
     if (getAnmTransformPtr(mcS080) == 0)
         return;
-    J3DAnmTransform *anm = getAnmTransformPtr(mcS080);
-    f32 maxFrame = anm->getFrameMax();
+    s16 maxFrame = getAnmTransformPtr(mcS080)->getFrameMax();
     m_668.mMinValue = 0.0f;
     m_668.mMaxValue = 1.0f;
     m_668.mSpeed = 60.0f / maxFrame;
@@ -577,8 +567,7 @@ void DriverModel::StartSpeak()
 {
     if (getAnmTransformPtr(mcS081) == 0)
         return;
-    J3DAnmTransform *anm = getAnmTransformPtr(mcS081);
-    f32 maxFrame = anm->getFrameMax();
+    s16 maxFrame = getAnmTransformPtr(mcS081)->getFrameMax();
     m_688.mMinValue = 0.0f;
     m_688.mMaxValue = 1.0f;
     m_688.mSpeed = 60.0f / maxFrame;
@@ -591,7 +580,7 @@ int DriverModel::IsMove()
 {
     if (IsChange())
         return 1;
-    return IsTurn() != 0;
+    return IsTurn() != 0 ? 1 : 0;
 }
 
 int DriverModel::IsChange()
@@ -707,16 +696,7 @@ int DriverModel::IsAttack()
 {
     switch (mState) {
     case mcS021: case mcS022: case mcS023: case mcS024: case mcS025: case mcS026:
-    case mcS027: case mcS028: case mcS029: case mcS030: case mcS031: case mcS032:
-    case mcS033: case mcS034: case mcS035: case mcS036: case mcS037: case mcS038:
-    case mcS039: case mcS040: case mcS041: case mcS042: case mcS043: case mcS044:
-    case mcS045: case mcS046: case mcS047: case mcS048: case mcS049: case mcS050:
-    case mcS051: case mcS052: case mcS053: case mcS054: case mcS055: case mcS056:
-    case mcS057: case mcS058: case mcS059: case mcS060: case mcS061: case mcS062:
-    case mcS063: case mcS064: case mcS065: case mcS066: case mcS067: case mcS068:
-    case mcS069: case mcS070: case mcS071: case mcS072: case mcS073: case mcS074:
-    case mcS075: case mcS076: case mcS077: case mcS078: case mcS079: case mcS080:
-    case mcS081: case mcS082: case mcS083: case mcS084:
+    case mcS085: case mcS086: case mcS087: case mcS088:
     case mcS140: case mcS141: case mcS142: case mcS143: case mcS144: case mcS145:
         return 1;
     default:
@@ -753,12 +733,9 @@ int DriverModel::IsStand()
         case mcS091:
         case mcS092:
             return 1;
-        default:
-            return 0;
         }
-    default:
-        return 0;
     }
+    return 0;
 }
 
 int DriverModel::IsBack()
@@ -766,7 +743,6 @@ int DriverModel::IsBack()
     switch (mState) {
     case mcDriveC:
     case mcTandemAlone:
-    case mcS009:
     case mcS017: case mcS018: case mcS019: case mcS020:
     case mcS031:
     case mcS055: case mcS056: case mcS057: case mcS058: case mcS059: case mcS060:
@@ -784,7 +760,7 @@ int DriverModel::IsBack()
     case mcS147:
         return 1;
     }
-    if (mState == mcS104 || mState == mcS007)
+    if (IsTurnBack())
         return 1;
     return 0;
 }
@@ -792,16 +768,8 @@ int DriverModel::IsBack()
 int DriverModel::IsStart()
 {
     switch (mState) {
-    case mcS034: case mcS035: case mcS036: case mcS037: case mcS038: case mcS039:
-    case mcS040: case mcS041: case mcS042: case mcS043: case mcS044: case mcS045:
-    case mcS046: case mcS047: case mcS048: case mcS049: case mcS050: case mcS051:
-    case mcS052: case mcS053: case mcS054: case mcS055: case mcS056: case mcS057:
-    case mcS058: case mcS059: case mcS060: case mcS061: case mcS062: case mcS063:
-    case mcS064: case mcS065: case mcS066: case mcS067: case mcS068: case mcS069:
-    case mcS070: case mcS071: case mcS072: case mcS073: case mcS074: case mcS075:
-    case mcS076: case mcS077: case mcS078: case mcS079: case mcS080: case mcS081:
-    case mcS082: case mcS083: case mcS084: case mcS085: case mcS086: case mcS087:
-    case mcS088: case mcS089: case mcS090: case mcS091: case mcS092: case mcS093:
+    case mcS034: case mcS035: case mcS036:
+    case mcS094: case mcS095:
     case mcS125:
         return 1;
     default:
@@ -840,35 +808,17 @@ int DriverModel::IsDamage()
     if (m_dc != 0)
         return 1;
     switch (mState) {
-    case mcS037:
-    case mcS038:
-    case mcS039:
-    case mcS040:
-    case mcS041:
-    case mcS042:
-    case mcS043:
-    case mcS044:
-    case mcS045:
-    case mcS046:
-    case mcS047:
-    case mcS048:
-    case mcS106:
-    case mcS107:
+    case mcS037: case mcS038: case mcS039: case mcS040: case mcS041: case mcS042:
+    case mcS043: case mcS044: case mcS045: case mcS046: case mcS047: case mcS048:
+    case mcS106: case mcS107:
     case mcS110:
+    case mcS117:
         return 1;
-    case mcS108:
-    case mcS109:
-    case mcS112:
-    case mcS113:
-    case mcS114:
-    case mcS115:
-    case mcS116:
-        break;
     case mcS111:
-        if (mBeforeState == mcS117)
+        switch (mBeforeState) {
+        case mcS117:
             return 1;
-        else
-            return 0;
+        }
     }
     return 0;
 }
@@ -878,20 +828,17 @@ int DriverModel::IsDamageS()
     if (m_dc == mcS110)
         return 1;
     switch (mState) {
-    case mcS037:
-    case mcS038:
-    case mcS039:
-    case mcS043:
-    case mcS044:
-    case mcS045:
+    case mcS037: case mcS038: case mcS039:
+    case mcS043: case mcS044: case mcS045:
     case mcS106:
     case mcS110:
     case mcS117:
         return 1;
     case mcS111:
-        if (mBeforeState == mcS117)
+        switch (mBeforeState) {
+        case mcS117:
             return 1;
-        break;
+        }
     }
     return 0;
 }
@@ -948,6 +895,7 @@ int DriverModel::IsDamageS12()
     switch (mState) {
     case mcS037: case mcS038:
     case mcS043: case mcS044:
+    case mcS106:
     case mcS110:
         return 1;
     default:
@@ -1103,7 +1051,7 @@ int DriverModel::IsDanger()
     case mcS062:
     case mcS108:
     case mcS109:
-        return 1 + (m_be >= DriverManager::ptr()->_5b);
+        return (m_be >= DriverManager::ptr()->getDangerTime() ? 1 : 0) + 1;
     default:
         return 0;
     }
@@ -1239,7 +1187,7 @@ int DriverModel::IsGoal()
     case mcS133:
     case mcS134:
     case mcS135:
-        return 1 + (DriverManager::ptr()->_5c * 60 <= m_c2);
+        return (m_c2 >= DriverManager::ptr()->getGoalTime() * 60 ? 1 : 0) + 1;
     default:
         return 0;
     }
@@ -1250,7 +1198,7 @@ int DriverModel::IsGoalFront()
     switch (mState) {
     case mcS130:
     case mcS133:
-        if (m_c2 >= DriverManager::ptr()->_5c * 60)
+        if (m_c2 >= DriverManager::ptr()->getGoalTime() * 60)
             return 2;
         return 1;
     default:
@@ -1265,7 +1213,7 @@ int DriverModel::IsGoalBack()
     case mcS132:
     case mcS134:
     case mcS135:
-        return 1 + (DriverManager::ptr()->_5c * 60 <= m_c2);
+        return (m_c2 >= DriverManager::ptr()->getGoalTime() * 60 ? 1 : 0) + 1;
     default:
         return 0;
     }
@@ -1285,42 +1233,36 @@ int DriverModel::IsHappy()
 
 int DriverModel::IsHappyFront()
 {
-    if (mState == mcS131) {
-        int ret;
+    switch (mState) {
+    case mcS131:
         if (DriverManager::ptr()->_838 != 0) {
-            if (m_c4 >= DriverManager::ptr()->_83a)
-                ret = 2;
-            else
-                ret = 1;
+            if (m_c4 >= DriverManager::ptr()->getHappyFrontTime())
+                return 2;
         } else {
-            if (m_c4 >= DriverData::msDriverData[mDataID].getData(84))
-                ret = 2;
-            else
-                ret = 1;
+            if (m_c4 >= DriverData::msDriverData[mDataID].data[84])
+                return 2;
         }
-        return ret;
+        return 1;
+    default:
+        return 0;
     }
-    return 0;
 }
 
 int DriverModel::IsHappyBack()
 {
-    if (mState == mcS129) {
-        int ret;
+    switch (mState) {
+    case mcS129:
         if (DriverManager::ptr()->_838 != 0) {
-            if (m_c4 >= DriverManager::ptr()->_83c)
-                ret = 2;
-            else
-                ret = 1;
+            if (m_c4 >= DriverManager::ptr()->getHappyBackTime())
+                return 2;
         } else {
-            if (m_c4 >= DriverData::msDriverData[mDataID].getData(85))
-                ret = 2;
-            else
-                ret = 1;
+            if (m_c4 >= DriverData::msDriverData[mDataID].data[85])
+                return 2;
         }
-        return ret;
+        return 1;
+    default:
+        return 0;
     }
-    return 0;
 }
 
 int DriverModel::IsAppeal(StateEnum state)
@@ -1371,27 +1313,17 @@ int DriverModel::IsFront()
 
 int DriverModel::IsItemThrowOK()
 {
-    return (u32)m_ba >= (u32)DriverManager::ptr()->getBlendTime(0) ? 1 : 0;
+    if ((u32)m_ba >= (u32)DriverManager::ptr()->getBlendTime(0))
+        return 1;
+    return 0;
 }
 
 int DriverModel::IsTandem(StateEnum state)
 {
     switch (state) {
-    case mcTandemB: case mcTandemAlone: case mcChangeAtoB: case mcChangeBtoA: case mcS007: case mcS008:
-    case mcS009: case mcS010: case mcS011: case mcS012: case mcS013: case mcS014:
-    case mcS015: case mcS016: case mcS017: case mcS018: case mcS019: case mcS020:
-    case mcS021: case mcS022: case mcS023: case mcS024: case mcS025: case mcS026:
-    case mcS027: case mcS028: case mcS029: case mcS030: case mcS031: case mcS032:
-    case mcS033: case mcS034: case mcS035: case mcS036: case mcS037: case mcS038:
-    case mcS039: case mcS040: case mcS041: case mcS042: case mcS043: case mcS044:
-    case mcS045: case mcS046: case mcS047: case mcS048: case mcS049: case mcS050:
-    case mcS051: case mcS052: case mcS053: case mcS054: case mcS055: case mcS056:
-    case mcS057: case mcS058: case mcS059: case mcS060: case mcS061: case mcS062:
-    case mcS063: case mcS064: case mcS065: case mcS066: case mcS067: case mcS068:
-    case mcS069: case mcS070: case mcS071: case mcS072: case mcS073: case mcS074:
-    case mcS075: case mcS076: case mcS077: case mcS078:
-    case mcS111:
-    case mcS112:
+    case mcTandemB: case mcTandemAlone:
+    case mcS079: case mcS080: case mcS081: case mcS082: case mcS083: case mcS084:
+    case mcS111: case mcS112:
         return 1;
     default:
         return 0;
@@ -1400,12 +1332,21 @@ int DriverModel::IsTandem(StateEnum state)
 
 int DriverModel::IsTandem()
 {
-    return IsTandem((StateEnum)mState);
+    switch (mState) {
+    case mcTandemB: case mcTandemAlone:
+    case mcS079: case mcS080: case mcS081: case mcS082: case mcS083: case mcS084:
+    case mcS111: case mcS112:
+        return 1;
+    default:
+        return 0;
+    }
 }
 
 int DriverModel::IsWait(StateEnum state)
 {
     switch (state) {
+    case mcDriveBack:
+    case mcDriveC:
     case mcS077:
     case mcS078:
     case mcS079:
@@ -1419,19 +1360,12 @@ int DriverModel::IsWait(StateEnum state)
 int DriverModel::IsWait()
 {
     switch (mState) {
-    case mcDriveBack: case mcDriveC: case mcTandemB: case mcTandemAlone: case mcChangeAtoB: case mcChangeBtoA:
-    case mcS007: case mcS008: case mcS009: case mcS010: case mcS011: case mcS012:
-    case mcS013: case mcS014: case mcS015: case mcS016: case mcS017: case mcS018:
-    case mcS019: case mcS020: case mcS021: case mcS022: case mcS023: case mcS024:
-    case mcS025: case mcS026: case mcS027: case mcS028: case mcS029: case mcS030:
-    case mcS031: case mcS032: case mcS033: case mcS034: case mcS035: case mcS036:
-    case mcS037: case mcS038: case mcS039: case mcS040: case mcS041: case mcS042:
-    case mcS043: case mcS044: case mcS045: case mcS046: case mcS047: case mcS048:
-    case mcS049: case mcS050: case mcS051: case mcS052: case mcS053: case mcS054:
-    case mcS055: case mcS056: case mcS057: case mcS058: case mcS059: case mcS060:
-    case mcS061: case mcS062: case mcS063: case mcS064: case mcS065: case mcS066:
-    case mcS067: case mcS068: case mcS069: case mcS070: case mcS071: case mcS072:
-    case mcS073: case mcS074: case mcS075: case mcS076:
+    case mcDriveBack:
+    case mcDriveC:
+    case mcS077:
+    case mcS078:
+    case mcS079:
+    case mcS080:
         return 1;
     default:
         return 0;

@@ -31,8 +31,15 @@ public:
 class FootCtrl : public IKCtrl
 {
 public:
+    enum EFootCtrlKind
+    {
+        cFootL,
+        cFootR,
+        cSkirt,
+    };
+
     void reset();
-    void update_damage(float (*)[4], const LumbarCtrl &, int);
+    void update_damage(float (*)[4], const LumbarCtrl &, EFootCtrlKind);
 };
 
 class ArmCtrl : public IKCtrl
@@ -442,7 +449,7 @@ bool DriverModel::footLPosCallBack(J3DJoint *, int joint)
         pos.scale(0.5f);
 
         d->mLumbarCtrl->calcString(pos);
-        d->mFootCtrlL->update_damage(*mtx, *d->mLumbarCtrl, 0);
+        d->mFootCtrlL->update_damage(*mtx, *d->mLumbarCtrl, FootCtrl::cFootL);
         PSMTXCopy((Mtx &)d->mFootCtrlL->mMtx, *mtx);
         PSMTXCopy(*mtx, j3dSys.mCurrentMtx);
     }
@@ -557,7 +564,7 @@ bool DriverModel::footRPosCallBack(J3DJoint *, int joint)
     Mtx *wm = model->mMtxBuffer->mWorldMatrices;
     Mtx *mtx = &wm[d->mDriverLoader->getJntBindNo(9)];
     if (d->mLumbarCtrl->m_70 & 4) {
-        d->mFootCtrlR->update_damage(*mtx, *d->mLumbarCtrl, 1);
+        d->mFootCtrlR->update_damage(*mtx, *d->mLumbarCtrl, FootCtrl::cFootR);
         PSMTXCopy((Mtx &)d->mFootCtrlR->mMtx, *mtx);
         PSMTXCopy(*mtx, j3dSys.mCurrentMtx);
     }
@@ -919,7 +926,7 @@ bool DriverModel::skirtPosCallBack(J3DJoint *, int joint)
     Mtx *wm = model->mMtxBuffer->mWorldMatrices;
     Mtx *mtx = &wm[d->mDriverLoader->getJntBindNo(21)];
     if (d->mLumbarCtrl->m_70 & 4) {
-        d->mFootCtrlR->update_damage(*mtx, *d->mLumbarCtrl, 2);
+        d->mFootCtrlR->update_damage(*mtx, *d->mLumbarCtrl, FootCtrl::cSkirt);
         PSMTXCopy((Mtx &)d->mFootCtrlR->mMtx, *mtx);
         PSMTXCopy(*mtx, j3dSys.mCurrentMtx);
     }
