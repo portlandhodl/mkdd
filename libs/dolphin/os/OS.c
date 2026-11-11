@@ -7,7 +7,7 @@
 extern OSTime __OSGetSystemTime();
 static const char *__OSVersion =
     "<< Dolphin SDK - OS\trelease build: Jul 23 2003 11:27:16 (0x2301) >>";
-extern char _db_stack_end[];
+extern char _stack_addr[];
 
 #define OS_BI2_DEBUG_ADDRESS 0x800000F4
 #define DEBUGFLAG_ADDR 0x800030E8
@@ -272,7 +272,7 @@ void OSInit(void)
         //     set arenaLo to just past the end of the db stack
         if ((BootInfo->arenaLo == NULL) && (BI2DebugFlag != 0) && (*BI2DebugFlag < 2))
         {
-            debugArenaLo = (char *)(((u32)_db_stack_end + 0x1f) & ~0x1f);
+            debugArenaLo = (char *)(((u32)_stack_addr + 0x1f) & ~0x1f);
             OSSetArenaLo(debugArenaLo);
         }
 

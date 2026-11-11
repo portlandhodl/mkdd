@@ -557,7 +557,7 @@ void J3DModelLoader::readShape(const J3DShapeBlock* block, u32 flags)
 
     model->mShapeTable.mCount = block->_08;
     if (block->_14) {
-        model->mShapeTable.mNames = new JUTNameTab(JSUConvertOffsetToPtr<ResNTAB>(block, block->_14));
+        model->mShapeTable.mNames = new JUTNameTab(JSUConvertOffsetToPtr<ResNTAB>(block, (const void*)block->_14));
     } else {
         model->mShapeTable.mNames = nullptr;
     }
@@ -689,7 +689,7 @@ void J3DModelLoader::readMaterialDL(const J3DMaterialDLBlock* block, u32 flags)
         mMaterialTable->mMaterialNum = block->_08;
         mMaterialTable->mMaterialInitNum = block->_08;
         if (block->_20) {
-            mMaterialTable->mMaterialNames = new JUTNameTab(JSUConvertOffsetToPtr<ResNTAB>(block, block->_20));
+            mMaterialTable->mMaterialNames = new JUTNameTab(JSUConvertOffsetToPtr<ResNTAB>(block, (const void*)block->_20));
         } else {
             mMaterialTable->mMaterialNames = nullptr;
         }

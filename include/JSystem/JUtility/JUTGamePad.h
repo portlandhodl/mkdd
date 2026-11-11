@@ -371,6 +371,9 @@ public:
         u32 update(s8, u32);
         u32 getButton(u32);
 
+        static f32 sPressPoint;
+        static f32 sReleasePoint;
+
         f32 mX;
         f32 mY;
         f32 mValue;
@@ -457,8 +460,6 @@ public:
     static CStick mPadSStick[PAD_CONTROLLER_NUM];
     static EStickMode sStickMode;
     static EClampMode sClampMode;
-    static f32 sPressPoint;
-    static f32 sReleasePoint;
     static PADStatus mPadStatus[PAD_CONTROLLER_NUM];
 
     CButton mButtons;          // _18

@@ -160,8 +160,7 @@ J3DMaterial* J3DMaterialFactory_v21::create(J3DMaterial* material, int matID, u3
 
 J3DGXColor J3DMaterialFactory_v21::newMatColor(int idx, int stage) const
 {
-    J3DGXColor dflt;
-    dflt = j3dDefaultColInfo;
+    GXColor dflt = {0xFF, 0xFF, 0xFF, 0xFF};
 
     J3DMaterialInitData_v21* initData = &mpMaterialInitData[mpMaterialID[idx]];
 
@@ -266,8 +265,7 @@ J3DGXColorS10 J3DMaterialFactory_v21::newTevColor(int idx, int stage) const
 
 J3DGXColor J3DMaterialFactory_v21::newTevKColor(int idx, int stage) const
 {
-    J3DGXColor dflt;
-    dflt = j3dDefaultTevKColor;
+    GXColor dflt = {0xFF, 0xFF, 0xFF, 0xFF};
 
     J3DMaterialInitData_v21* initData = &mpMaterialInitData[mpMaterialID[idx]];
 

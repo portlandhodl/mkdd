@@ -140,17 +140,17 @@ void J3DAnmLoaderDataBase::setResource(J3DAnmBase* resource, const void* data)
 			loader.setResource(resource, data);
 			break;
 		}
-		case 'bva1': {
-			J3DAnmFullLoader_v15 loader;
-			loader.setResource(resource, data);
-			break;
-		}
 		case 'bla1': {
 			J3DAnmFullLoader_v15 loader;
 			loader.setResource(resource, data);
 			break;
 		}
 		case 'bxa1': {
+			J3DAnmFullLoader_v15 loader;
+			loader.setResource(resource, data);
+			break;
+		}
+		case 'bva1': {
 			J3DAnmFullLoader_v15 loader;
 			loader.setResource(resource, data);
 			break;

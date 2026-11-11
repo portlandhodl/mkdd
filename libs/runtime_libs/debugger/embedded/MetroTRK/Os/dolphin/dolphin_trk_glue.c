@@ -66,8 +66,9 @@ DBCommTable gDBCommTable = { nullptr, nullptr, nullptr, nullptr, nullptr, nullpt
 __declspec(section ".data") u8 TRK_Use_BBA = 0;
 __declspec(section ".data") BOOL _MetroTRK_Has_Framing = 0; // UNUSED
 
-static const char __declspec(section ".rodata") TrkStrings[264] = "\x00\x45\x4e\x44\x25\x73\x0a\x00\x44\x65\x76\x6b\x69\x74\x20\x73\x65\x74\x20\x74\x6f\x20\x3a\x20\x25\x6c\x64\x0a\x00\x00\x00\x00\x4d\x65\x74\x72\x6f\x54\x52\x4b\x20\x3a\x20\x53\x65\x74\x20\x74\x6f\x20\x42\x42\x41\x0a\x00\x00\x4d\x65\x74\x72\x6f\x54\x52\x4b\x20\x3a\x20\x53\x65\x74\x20\x74\x6f\x20\x47\x44\x45\x56\x20\x68\x61\x72\x64\x77\x61\x72\x65\x0a\x00\x00\x00\x00\x4d\x65\x74\x72\x6f\x54\x52\x4b\x20\x3a\x20\x53\x65\x74\x20\x74\x6f\x20\x41\x4d\x43\x20\x44\x44\x48\x20\x68\x61\x72\x64\x77\x61\x72\x65\x0a\x00\x4d\x65\x74\x72\x6f\x54\x52\x4b\x20\x3a\x20\x53\x65\x74\x20\x74\x6f\x20\x55\x4e\x4b\x4e\x4f\x57\x4e\x20\x68\x61\x72\x64\x77\x61\x72\x65\x2e\x20\x28\x25\x6c\x64\x29\x0a\x00\x00\x4d\x65\x74\x72\x6f\x54\x52\x4b\x20\x3a\x20\x49\x6e\x76\x61\x6c\x69\x64\x20\x68\x61\x72\x64\x77\x61\x72\x65\x20\x49\x44\x20\x70\x61\x73\x73\x65\x64\x20\x66\x72\x6f\x6d\x20\x4f\x53\x0a\x00\x00\x4d\x65\x74\x72\x6f\x54\x52\x4b\x20\x3a\x20\x44\x65\x66\x61\x75\x6c\x74\x69\x6e\x67\x20\x74\x6f\x20\x47\x44\x45\x56\x20\x48\x61\x72\x64\x77\x61\x72\x65\x0a\x00\x00\x00\x00\x00";
+static const u8 __declspec(section ".rodata") EndofProgramInstruction[4] = {0x00, 0x45, 0x4E, 0x44};
 static const char __declspec(section ".rodata") TrkNewline[] = "%s\n";
+
 
 
 void TRKLoadContext(OSContext* ctx, u32 r4);
@@ -90,12 +91,11 @@ void TRKEXICallBack(s16 r3, OSContext* ctx)
 int InitMetroTRKCommTable(int hwId)
 {
 	int result = 1;
-	char* strs  = (char*)TrkStrings;
-	OSReport(strs + 0x8, hwId);
+	OSReport("Devkit set to : %ld\n", hwId);
 	TRK_Use_BBA = 0;
 
 	if (hwId == HARDWARE_BBA) { // BBA hardware
-		OSReport(strs + 0x20);
+		OSReport("MetroTRK : Set to BBA\n");
 		// Initialize gDBCommTable
 		TRK_Use_BBA                       = 1;
 		gDBCommTable.initialize_func      = udp_cc_initialize;
@@ -112,7 +112,7 @@ int InitMetroTRKCommTable(int hwId)
 	}
 
 	if (hwId == HARDWARE_GDEV) { // NDEV hardware
-		OSReport(strs + 0x38);
+		OSReport("MetroTRK : Set to GDEV hardware\n");
 		// Initialize gDBCommTable
 		result                            = Hu_IsStub();
 		gDBCommTable.initialize_func      = gdev_cc_initialize;
@@ -127,7 +127,7 @@ int InitMetroTRKCommTable(int hwId)
 		gDBCommTable.init_interrupts_func = gdev_cc_initinterrupts;
 
 	} else if (hwId == HARDWARE_AMC_DDH) {
-		OSReport(strs + 0x5c);
+		OSReport("MetroTRK : Set to AMC DDH hardware\n");
 		result = AMC_IsStub();
 		// Initialize gDBCommTable
 		gDBCommTable.initialize_func      = ddh_cc_initialize;
@@ -142,9 +142,9 @@ int InitMetroTRKCommTable(int hwId)
 		gDBCommTable.init_interrupts_func = ddh_cc_initinterrupts;
 
 	} else { // unknown hardware
-		OSReport(strs + 0x80, hwId);
-		OSReport(strs + 0xac);
-		OSReport(strs + 0xdc);
+		OSReport("MetroTRK : Set to UNKNOWN hardware. (%ld)\n", hwId);
+		OSReport("MetroTRK : Invalid hardware ID passed from OS\n");
+		OSReport("MetroTRK : Defaulting to GDEV Hardware\n");
 	}
 
 	return result;
@@ -254,7 +254,7 @@ void UnreserveEXI2Port(void)
  */
 void TRK_board_display(char* str)
 {
-	OSReport((char*)TrkNewline, str);
+	OSReport(TrkNewline, str);
 }
 
 /**
@@ -263,7 +263,7 @@ void TRK_board_display(char* str)
  */
 TRKResult InitializeProgramEndTrap(void)
 {
-	u8* endOfProgramInstructionBytes = (u8*)TrkStrings;
+	u8* endOfProgramInstructionBytes = (u8*)EndofProgramInstruction;
 	u8* ppcHaltPtr                   = (u8*)PPCHalt;
 	TRK_memcpy(ppcHaltPtr + 4, endOfProgramInstructionBytes, 4);
 	ICInvalidateRange(ppcHaltPtr + 4, 4);

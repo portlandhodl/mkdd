@@ -422,8 +422,7 @@ size_t J3DMaterialFactory::calcSizeLockedMaterial(J3DMaterial* material, int mat
 
 J3DGXColor J3DMaterialFactory::newMatColor(int idx, int stage) const
 {
-    J3DGXColor dflt;
-    dflt = j3dDefaultColInfo;
+    GXColor dflt = {0xFF, 0xFF, 0xFF, 0xFF};
 
     J3DMaterialInitData* initData = &_04[_08[idx]];
 
@@ -455,8 +454,7 @@ J3DColorChan J3DMaterialFactory::newColorChan(int idx, int stage) const
 
 J3DGXColor J3DMaterialFactory::newAmbColor(int idx, int stage) const
 {
-    J3DGXColor dflt;
-    dflt = j3dDefaultAmbInfo;
+    GXColor dflt = {0x32, 0x32, 0x32, 0x32};
 
     J3DMaterialInitData* initData = &_04[_08[idx]];
 
@@ -541,8 +539,7 @@ J3DGXColorS10 J3DMaterialFactory::newTevColor(int idx, int stage) const
 
 J3DGXColor J3DMaterialFactory::newTevKColor(int idx, int stage) const
 {
-    J3DGXColor dflt;
-    dflt = j3dDefaultTevKColor;
+    GXColor dflt = {0xFF, 0xFF, 0xFF, 0xFF};
 
     J3DMaterialInitData* initData = &_04[_08[idx]];
 

@@ -280,10 +280,10 @@ void J3DGDSetTexCoordGen(GXTexGenType type, GXTexGenSrc src)
     }
 
     switch (type) {
-    case GX_TG_MTX3x4:
+    case GX_TG_MTX2x4:
         tgType = 0;
         break;
-    case GX_TG_MTX2x4:
+    case GX_TG_MTX3x4:
         tgType = 0;
         proj   = 1;
         break;
