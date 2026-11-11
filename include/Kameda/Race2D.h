@@ -4,10 +4,14 @@
 #include "kartEnums.h"
 
 #include "JSystem/J2D/J2DPicture.h"
+#include "JSystem/JUtility/JUTAssert.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "JSystem/JORReflexible.h"
 #include "Kameda/Task.h"
 #include "Kaneshige/HioMgr.h"
+
+#define RACE2D_ASSERT_RANGE(line, name, val, max) \
+    (((0 <= (val)) && ((val) < (max))) ? (void)0 : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "Race2D.h", line, "range over: %d <= " #name "=%d < %d", 0, (val), (max)), OSPanic("Race2D.h", line, "Halt")))
 
 class Race2DParam : public JORReflexible {
 public:
@@ -137,6 +141,21 @@ public:
     static Task *mTask;                                                                             // 0x80416304
  public:
      static int getWinBombPoint(); // helper mirroring KartChecker::getWinBombPoint
+
+    u8 *getSpecialItem(int status, int pos)
+    {
+        u8 *thisp = (u8 *)mThis;
+        RACE2D_ASSERT_RANGE(463, status, status, 4);
+        RACE2D_ASSERT_RANGE(464, pos, pos, 2);
+        return *(u8 **)(thisp + 0x4b4 + status * 8 + pos * 4);
+    }
+    int getItemShow(int status, int driver)
+    {
+        Race2D *thisp = mThis;
+        RACE2D_ASSERT_RANGE(544, status, status, 4);
+        RACE2D_ASSERT_RANGE(545, driver, driver, 2);
+        return thisp->mPlayerHUD[status].mItem[driver].mShown;
+    }
     // Inline/Unused
     ~Race2D();
     void getItemPos(int, int, JGeometry::TVec2f &);

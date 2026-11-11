@@ -89,6 +89,8 @@ short KartChecker::sBombPointDirect = 1;    // 1
 short KartChecker::sBombPointSpin = 1;      // 1
 short KartChecker::sBombPointIndirect = 1;  // 1
 short KartChecker::sBombPointAttacked = -1; // -1
+int KartChecker::getWinBombPoint() { return sBombPointFull; }
+
 short KartChecker::sBombPointFull = 4;      // 4
 short KartChecker::sBombPointFullS = 3;     // 3
 short KartChecker::sBombPointFullL = 4;     // 4

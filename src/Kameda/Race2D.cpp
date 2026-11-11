@@ -495,8 +495,8 @@ void Race2D::getBestTimeColor(int frame, JUTColor &color, J2DPicture::TCornerCol
     color.a = 0;
     cornerColor.mColor0.set(255, 255, (u8)(127.0f * t + 128.0f), 255);
     cornerColor.mColor1.set((u8)(177.0f * t + 78.0f), (u8)(255.0f * t), (u8)(128.0f * t), 255);
-    cornerColor.mColor2.set((u8)(177.0f * t + 78.0f), (u8)(255.0f * t), (u8)(128.0f * t), 255);
-    cornerColor.mColor3.set(255, 255, (u8)(127.0f * t + 128.0f), 255);
+    cornerColor.mColor2 = cornerColor.mColor1;
+    cornerColor.mColor3 = cornerColor.mColor0;
 }
 
 void Race2D::getBestLapColor(int frame, JUTColor &color)
@@ -581,9 +581,9 @@ f32 Race2D::getBombScale(int no, int type, int idx)
         else if (frame - 0x15 < 0x10)
             scale = 1.0f + 1.5f * (frame - 0x20) / 5.0f;
         else if (frame - 0x15 < 0x14)
-            scale = 2.5f + -2.0f * (frame - 0x25) * 0.25f;
+            scale = 2.5f + -2.0f * (frame - 0x25) / 4.0f;
         else if (frame - 0x15 < 0x18)
-            scale = 0.5f + 0.5f * (frame - 0x29) * 0.25f;
+            scale = 0.5f + 0.5f * (frame - 0x29) / 4.0f;
         else
         {
             scale = 1.0f;
@@ -666,7 +666,7 @@ void Race2D::drawEscape()
 
 f32 Race2D::getStartShineTimeScale(int frame)
 {
-    f32 scale;
+    f32 scale = 0.0f;
     if (frame < 11)
         scale = 1.6f * frame / 11.0f;
     else if (frame < 14)
@@ -840,12 +840,15 @@ bool Race2D::isBombWinner(int statusNo)
     return checker->getBombPoint() == winPoint;
 }
 
+#pragma dont_inline on
 void Race2D::setEffectPos(int no)
 {
     u8 *thisp = (u8 *)this;
     int kart = J2DManager::getStatus2Kart(no);
+#line 267
     JUT_MINMAX_ASSERT(0, kart, 8);
     int win = KartChecker::getWinBombPoint();
+#line 267
     JUT_MINMAX_ASSERT(0, kart, 8);
 
     for (int i = 0; i < win; i++)
@@ -891,6 +894,7 @@ void Race2D::setEffectPos(int no)
         }
     }
 }
+#pragma dont_inline reset
 
 void Race2D::calcEscape() {}
 
@@ -1202,13 +1206,13 @@ void Race2D::getMapPos(int status, JGeometry::TVec3f &pos, JGeometry::TVec2f &ds
     case 1:
         if (RCMGetManager()->isMirror())
         {
-            f32 q = (pos.z - c) / f6;
+            f32 q = (c - pos.z) / f6;
             f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
             dst.x = off + wd * gs * (1.0f - q);
         }
         else
         {
-            f32 q = (pos.z - c) / f6;
+            f32 q = (c - pos.z) / f6;
             f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
             dst.x = off + wd * gs * q;
         }
@@ -1221,18 +1225,18 @@ void Race2D::getMapPos(int status, JGeometry::TVec3f &pos, JGeometry::TVec2f &ds
     case 2:
         if (RCMGetManager()->isMirror())
         {
-            f32 q = (pos.x - a) / f5;
+            f32 q = (a - pos.x) / f5;
             f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
-            dst.x = off + wd * gs * (1.0f - q);
+            dst.x = off + wd * gs * q;
         }
         else
         {
-            f32 q = (pos.x - a) / f5;
+            f32 q = (a - pos.x) / f5;
             f32 off = e + gx - 0.5f * wd * (gs - 1.0f);
             dst.x = off + wd * gs * q;
         }
         {
-            f32 q = (pos.z - c) / f6;
+            f32 q = (c - pos.z) / f6;
             f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
             dst.y = off + hg * gs * q;
         }
@@ -1251,7 +1255,7 @@ void Race2D::getMapPos(int status, JGeometry::TVec3f &pos, JGeometry::TVec2f &ds
             dst.x = off + wd * gs * q;
         }
         {
-            f32 q = (pos.x - a) / f5;
+            f32 q = (a - pos.x) / f5;
             f32 off = g + gy - 0.5f * hg * (gs - 1.0f);
             dst.y = off + hg * gs * q;
         }
@@ -1261,7 +1265,7 @@ void Race2D::getMapPos(int status, JGeometry::TVec3f &pos, JGeometry::TVec2f &ds
 
 void Race2D::getCharacterInfo(int no, int which, f32 &x, f32 &y, f32 &z)
 {
-#line 4735
+#line 268
     JUT_MINMAX_ASSERT(0, no, 2);
     JUT_MINMAX_ASSERT(0, which, 39);
     x = mCharPos[1 - no][which].x;
@@ -1271,11 +1275,11 @@ void Race2D::getCharacterInfo(int no, int which, f32 &x, f32 &y, f32 &z)
 
 void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTColor &color2, u8 &alpha)
 {
-#line 4756
+#line 268
     JUT_MINMAX_ASSERT(0, no, 8);
-#line 4757
+#line 268
     JUT_MINMAX_ASSERT(0, which, 2);
-#line 4758
+#line 268
     JUT_MINMAX_ASSERT(0, type, 39);
 
     int v0, v1, v2, v3, v4, v5;
@@ -1383,7 +1387,7 @@ void Race2D::getCharacterClr(int no, int which, int type, JUTColor &color1, JUTC
 
 void Race2D::getItemInfo(int no, int type, int which, f32 &x, f32 &y, f32 &z)
 {
-#line 4863
+#line 268
     JUT_MINMAX_ASSERT(0, no, 4);
     JUT_MINMAX_ASSERT(0, type, 2);
     JUT_MINMAX_ASSERT(0, which, 39);
@@ -1400,7 +1404,7 @@ void Race2D::itemUseMain() {}
 
 void Race2D::decideItem(int no, u8 driverNo, int &item)
 {
-#line 4905
+#line 268
     JUT_MINMAX_ASSERT(0, no, 4);
     JUT_MINMAX_ASSERT(0, driverNo, 2);
 
@@ -1480,10 +1484,10 @@ void Race2D::decideItem(int no, u8 driverNo, int &item)
         if (itemKind == 0x15)
         {
             int kartNo = J2DManager::getStatus2Kart(no);
-#line 173
+#line 268
             JUT_MINMAX_ASSERT(0, kartNo, 8);
             KartInfo *ki = &gRaceInfo.mKartInfo[kartNo];
-#line 142
+#line 268
             JUT_MINMAX_ASSERT(0, driverNo, 2);
             const u16 *db = *(const u16 **)((u8 *)ki + (u8)driverNo * 8 + 8);
             if ((db ? *db : 0) == 8)
@@ -1492,10 +1496,10 @@ void Race2D::decideItem(int no, u8 driverNo, int &item)
         if (itemKind == 0xb)
         {
             int kartNo = J2DManager::getStatus2Kart(no);
-#line 173
+#line 268
             JUT_MINMAX_ASSERT(0, kartNo, 8);
             KartInfo *ki = &gRaceInfo.mKartInfo[kartNo];
-#line 142
+#line 268
             JUT_MINMAX_ASSERT(0, driverNo, 2);
             const u16 *db = *(const u16 **)((u8 *)ki + (u8)driverNo * 8 + 8);
             if ((db ? *db : 0) == 0xc)
@@ -1569,7 +1573,7 @@ void Race2D::calcLap()
 
             u8 slotValid = (lapTime.get() != MAX_TIME);
 
-#line 520
+#line 268
             JUT_MINMAX_ASSERT(0, no, 4);
 
             Race2DLapSlot *slot = &hud->mLapSlots[lap];
@@ -1582,7 +1586,7 @@ void Race2D::calcLap()
             slot->mDigits[5] = ms / 10 % 10;
             slot->mDigits[6] = ms / 100 % 10;
 
-#line 521
+#line 268
             JUT_MINMAX_ASSERT(0, lap - 1, 9);
         }
         Task::TCB *tcb = mTask->make(NULL, 0x8000);
@@ -1626,7 +1630,9 @@ void Race2D::lapTimeInit()
         {
 #line 484
             JUT_MINMAX_ASSERT(0, status, 4);
+#line 485
             JUT_MINMAX_ASSERT(0, lap, 9);
+#line 486
             JUT_MINMAX_ASSERT(0, i, 11);
             mThis->mLapDigits[status][lap][i]->mIsVisible = true;
         }
@@ -1637,11 +1643,13 @@ void Race2D::lapTimeInit()
         {
 #line 490
             JUT_MINMAX_ASSERT(0, status, 4);
+#line 491
             JUT_MINMAX_ASSERT(0, i, 8);
             mThis->mRankDigits1[status][i]->setAlpha(0xff);
 
 #line 495
             JUT_MINMAX_ASSERT(0, status, 4);
+#line 496
             JUT_MINMAX_ASSERT(0, i, 8);
             mThis->mRankDigits2[status][i]->setAlpha(0);
         }
@@ -1695,7 +1703,7 @@ void Race2D::calcItem()
                     {
                         mThis->decideItem(no, w, itemKind2[0]);
 
-#line 550
+#line 268
                         JUT_MINMAX_ASSERT(0, no, 4);
                         JUT_MINMAX_ASSERT(0, w, 2);
                         JUT_MINMAX_ASSERT(0, itemKind2[0], 0x1f);
@@ -1763,35 +1771,35 @@ void Race2D::itemGetMain()
 
     if (frame < 15)
     {
-#line 562
+#line 268
         JUT_MINMAX_ASSERT(0, no, 4);
-#line 563
+#line 268
         JUT_MINMAX_ASSERT(0, slot, 2);
         f32 *target = (f32 *)(thisp + 0x1d94 + no * 0x8e8 + slot * 8);
         f32 t = (f32)frame / 15.0f;
         f32 x = target[0] + (cur[0] - target[0]) * t;
         f32 y = target[1] + (cur[1] - target[1]) * t;
-#line 572
+#line 268
         JUT_MINMAX_ASSERT(0, no, 4);
-#line 573
+#line 268
         JUT_MINMAX_ASSERT(0, slot, 2);
         dst[0] = x;
         dst[1] = y;
     }
     else
     {
-#line 572
+#line 268
         JUT_MINMAX_ASSERT(0, no, 4);
-#line 573
+#line 268
         JUT_MINMAX_ASSERT(0, slot, 2);
         dst[0] = cur[0];
         dst[1] = cur[1];
         mTask->change(itemBlinkInit, mTask->mCurCB);
     }
 
-#line 577
+#line 268
     JUT_MINMAX_ASSERT(0, no, 4);
-#line 578
+#line 268
     JUT_MINMAX_ASSERT(0, slot, 2);
     *(int *)(thisp + 0x1db4 + no * 0x8e8 + slot * 4) = 15;
     *(int *)(thisp + 0x1dbc + no * 0x8e8 + slot * 4) = 0;
@@ -1802,7 +1810,72 @@ void Race2D::itemSpecialInit() {
     mTask->change(itemSpecialMain, mTask->mCurCB);
 }
 
-void Race2D::itemSpecialMain() {}
+void Race2D::itemSpecialMain()
+{
+    Task::TCB *tcb = mTask->mCurCB;
+    int frame = tcb->_10;
+    int status = tcb->mExecIdx;
+    int slot = *(u8 *)((u8 *)tcb + 0x28);
+    tcb->_10 = frame + 1;
+    f32 scale = 0.0f;
+    switch (RCMGetManager()->getConsoleNumber())
+    {
+    case 1:
+        scale = 1.0f;
+        break;
+    case 2:
+        scale = 0.7f;
+        break;
+    case 3:
+    case 4:
+        scale = 0.56f;
+        break;
+    default:
+#line 5581
+        JUT_ASSERT_F(0, "%s", "0");
+        break;
+    }
+    if (frame < 8)
+        scale *= 1.2f * frame / 7.0f;
+    else if (frame < 10)
+        scale *= -0.2f * (frame - 8) * 0.5f + 1.2f;
+    if (frame >= 81)
+        scale *= 1.0f - (frame - 81) / 9.0f;
+
+    u8 alpha;
+    if (frame < 15)
+        alpha = 255;
+    else if (frame < 20)
+        alpha = (u8)(255 - (frame - 20) * 255 / 5);
+    else if (frame < 25)
+        alpha = (u8)((frame - 25) * 255 / 5);
+    else if (frame < 40)
+        alpha = 255;
+    else if (frame < 45)
+        alpha = (u8)(255 - (frame - 40) * 255 / 5);
+    else if (frame < 50)
+        alpha = (u8)((frame - 45) * 255 / 5);
+    else
+        alpha = 255;
+
+    u8 *obj = mThis->getSpecialItem(status, slot);
+    obj[0xb0] = 1;
+
+    obj = mThis->getSpecialItem(status, slot);
+    *(f32 *)(obj + 0xcc) = scale;
+    *(f32 *)(obj + 0xd0) = scale;
+    (*(void (**)(u8 *))(*(u8 **)obj + 0x2c))(obj);
+
+    obj = mThis->getSpecialItem(status, slot);
+    (*(void (**)(u8 *, int))(*(u8 **)obj + 0x24))(obj, alpha);
+
+    if (frame < 90 && mThis->getItemShow(status, slot) != 16)
+        return;
+
+    obj = mThis->getSpecialItem(status, slot);
+    obj[0xb0] = 0;
+    tcb->mRequestKill = true;
+}
 
 void Race2D::setUsisi(int, ECharID) {}
 
@@ -1810,7 +1883,8 @@ void Race2D::alarmX(int no, f32 &x)
 {
     f32 step = mAlarm[no].mStep;
     f32 base = mAlarm[no].mBase;
-    x = step * 0.5f + base;
+    f32 half = 0.5f;
+    x = step * half + base;
 }
 
 void Race2D::getStartScaleA(int frame, f32 &scale)
@@ -1822,7 +1896,7 @@ void Race2D::getStartScaleA(int frame, f32 &scale)
     else if (frame - 0x32 < 0x10)
         scale = 1.2f + (frame - 0x3d) * -0.50000006f / 5.0f;
     else if (frame - 0x32 < 0x14)
-        scale = (frame - 0x42) * 0.3f * 0.25f + 0.7f;
+        scale = (frame - 0x42) * 0.3f / 4.0f + 0.7f;
     else
         scale = 1.0f;
 }
@@ -1836,7 +1910,7 @@ void Race2D::getStartScaleB(int frame, f32 &scale)
     else if (frame - 0x32 < 0x10)
         scale = 1.2f + (frame - 0x3d) * -0.50000006f / 5.0f;
     else if (frame - 0x32 < 0x14)
-        scale = (frame - 0x42) * 0.3f * 0.25f + 0.7f;
+        scale = (frame - 0x42) * 0.3f / 4.0f + 0.7f;
     else
         scale = 1.0f;
 }
@@ -1850,7 +1924,7 @@ void Race2D::getStartSpeedMeterScale(int frame, int no, f32 &scale)
         scale = (f32)t * 1.2f / 9.0f;
     else if (t < 13)
     {
-        scale = (f32)(t - 9) * -0.20000005f * 0.25f + 1.2f;
+        scale = 1.2f + (f32)(t - 9) * -0.20000005f / 4.0f;
     }
     else
         scale = 1.0f;
@@ -1949,7 +2023,7 @@ void Race2D::getGoalCharPos(int frame, int no, f32 &x)
 
 f32 Race2D::getThunderCharScale(int frame)
 {
-    f32 scale;
+    f32 scale = 0.0f;
     if (frame < 6)
         scale = 1.0f + -0.39999998f * frame / 6.0f;
     else if (frame < 0x21c)
@@ -1994,7 +2068,7 @@ void Race2D::getStartRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
             }
             break;
         default:
-#line 5986
+#line 268
             JUT_ASSERT_F(0, "%s", "0");
             break;
         }
@@ -2025,7 +2099,7 @@ void Race2D::getStartRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
             }
             break;
         default:
-#line 6007
+#line 268
             JUT_ASSERT_F(0, "%s", "0");
             break;
         }
@@ -2039,7 +2113,7 @@ void Race2D::getStartRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
 
 f32 Race2D::getRaceRankScale(int frame)
 {
-    f32 scale;
+    f32 scale = 0.0f;
     if (frame < 3)
         scale = 1.0f + -0.3f * frame / 3.0f;
     else if (frame < 6)
@@ -2116,7 +2190,9 @@ void Race2D::getGoalRankPos(int kartNo, int frame, JGeometry::TVec2f &pos)
     }
     else if (frame - 0x80 < 0x1e)
     {
-        JGeometry::TVec2f tmp(baseX * (frame - 0x80), baseY * (frame - 0x80));
+        JGeometry::TVec2f tmp;
+        tmp.x = baseX * (frame - 0x80);
+        tmp.y = baseY * (frame - 0x80);
         pos.x = tmp.x * 0.033333335f;
         pos.y = tmp.y * 0.033333335f;
     }
@@ -2188,7 +2264,7 @@ void Race2D::getGoalRankScale(int kartNo, int frame, f32 &scale)
     else if (frame - 0x80 < 0x1e)
         scale = endScale;
     else if (frame - 0x80 < 0x22)
-        scale = endScale + 0.25f * (startScale - endScale) * (frame - 0x9e);
+        scale = endScale + (startScale - endScale) * (frame - 0x9e) / 4.0f;
     else if (frame - 0x80 < 0x25)
         scale = startScale + (midScale - startScale) * (frame - 0xa2) / 3.0f;
     else if (frame - 0x80 < 0x28)
@@ -2221,7 +2297,7 @@ void Race2D::getStartLapTimePos(int frame, int no, f32 &x)
     else if (t < 0xf)
         x = pos + -pos * t / 15.0f;
     else if (t < 0x13)
-        x = 3.0f * (t - 0xf) * 0.25f;
+        x = 3.0f * (t - 0xf) / 4.0f;
     else if (t < 0x16)
         x = 3.0f + -3.0f * (t - 0x13) / 3.0f;
     else
