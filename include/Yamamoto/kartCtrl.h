@@ -146,6 +146,7 @@ public:
     void HaveRabbit();
 
     void AnimeInit(int idx) { getKartAnime(idx)->Init(); }
+    void DoAnime(int idx) { getKartAnime(idx)->DoAnime(idx); }
     void ApeendixInit(int idx)
     {
         for (int i = 0; i < 2; i++)
