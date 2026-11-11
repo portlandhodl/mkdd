@@ -76,27 +76,51 @@ LANNum2D::LANNum2D(JKRHeap *heap) {
     }
 
     for (int i = 0; i < 4; i++) {
+        int n = i * 0x100;
+        u64 keyP = 0x4e503131ULL + n;
+        u64 keyB = 0x50423131ULL + n;
+        u64 keyM = 0x504d3131ULL + n;
         for (int j = 0; j < 2; j++) {
-            int n = i * 0x100 + j;
-            mConsolePanes[i].mPane[j][0] = (J2DPicture *)mScreen->search(0x4e503131ULL + n);
+            mConsolePanes[i].mPane[j][0] = (J2DPicture *)mScreen->search(j + keyP);
 
-            J2DPicture *pane = (J2DPicture *)mScreen->search(0x50423131ULL + n);
+            J2DPicture *pane = (J2DPicture *)mScreen->search(j + keyB);
+            if (pane != NULL) {
 #line 128
-            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
-            mConsolePanes[i].mPane[j][1] = pane;
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mConsolePanes[i].mPane[j][1] = pane;
+            } else {
+                mConsolePanes[i].mPane[j][1] = NULL;
+            }
 
-            pane = (J2DPicture *)mScreen->search(0x504d3131ULL + n);
+            pane = (J2DPicture *)mScreen->search(j + keyM);
+            if (pane != NULL) {
 #line 136
-            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
-            mConsolePanes[i].mPane[j][2] = pane;
+                JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+                mConsolePanes[i].mPane[j][2] = pane;
+            } else {
+                mConsolePanes[i].mPane[j][2] = NULL;
+            }
         }
     }
 
     for (int i = 0; i < 4; i++) {
-        int n = 0x4e756d31 + i;
         mNumPanes[i].mNum = (J2DPicture *)mScreen->search(0x4e4e756d31ULL + i);
-        mNumPanes[i].mNumB = (J2DPicture *)mScreen->search(0x424e756d31ULL + i);
-        mNumPanes[i].mNumK = (J2DPicture *)mScreen->search(0x4b4e756d31ULL + i);
+        J2DPicture *pane = (J2DPicture *)mScreen->search(0x424e756d31ULL + i);
+        if (pane != NULL) {
+#line 153
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mNumPanes[i].mNumB = pane;
+        } else {
+            mNumPanes[i].mNumB = NULL;
+        }
+        pane = (J2DPicture *)mScreen->search(0x4b4e756d31ULL + i);
+        if (pane != NULL) {
+#line 161
+            JUT_ASSERT(pane->getTypeID() == J2DPane_Picture);
+            mNumPanes[i].mNumK = pane;
+        } else {
+            mNumPanes[i].mNumK = NULL;
+        }
     }
 
     init();
@@ -135,7 +159,7 @@ void LANNum2D::setDraw1() {
         }
 
         if (RCMGetManager()->getKartInfo(status)->getPad(1) != NULL) {
-            int coPort = coPad->getPadPort();
+            int coPort = coPad->getPadPort() + 0;
             if (coPort >= 0 && coPort < 4) {
                 mConsolePanes[i].mPane[1][1]->setCornerColor(Race2D::getCornerColor(coPort));
                 mConsolePanes[i].mPane[1][2]->setCornerColor(Race2D::getCornerColor(coPort));
@@ -194,7 +218,7 @@ void LANNum2D::setDraw2() {
         }
 
         if (RCMGetManager()->getKartInfo(status)->getPad(1) != NULL) {
-            int coPort = coPad->getPadPort();
+            int coPort = coPad->getPadPort() + 0;
             if (coPort >= 0 && coPort < 4) {
                 mConsolePanes[i].mPane[1][1]->setCornerColor(Race2D::getCornerColor(coPort));
                 mConsolePanes[i].mPane[1][2]->setCornerColor(Race2D::getCornerColor(coPort));
@@ -259,7 +283,7 @@ void LANNum2D::setDraw4() {
 
         if (RCMGetManager()->getKartInfo(status)->getPad(1) != NULL) {
             if (i == 0) {
-                int coPort = coPad->getPadPort();
+                int coPort = coPad->getPadPort() + 0;
                 if (coPort >= 0 && coPort < 4) {
                     mConsolePanes[i].mPane[1][1]->setCornerColor(Race2D::getCornerColor(coPort));
                     mConsolePanes[i].mPane[1][2]->setCornerColor(Race2D::getCornerColor(coPort));
