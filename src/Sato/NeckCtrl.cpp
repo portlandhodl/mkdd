@@ -29,10 +29,33 @@ static u8 sNeckFuncNum = 5;
 static JGeometry::TVec3f sKGravityAngle(32.0f, -0.4f, 0.0f);
 
 namespace {
-    f32 sKStringOffset[2] = { 12.0f, 9.0f };
+    f32 sPHairLength = 20.0f;
+    f32 sPMaxOffsetX = 10.0f;
+    f32 sPStringLength[2] = { 30.0f, 40.0f };
+    f32 sPStringAdjustRatio = 0.2f;
+    f32 sPStringAirFric = 0.99f;
+    f32 sPStringGravity = -0.8f;
+    f32 sPStringMaxAccel = 1.4f;
+    f32 sPDamageGravityDirRatio = 0.7f;
     f32 sDStringLength = 20.0f;
     f32 sDStringAdjustRatio = 0.2f;
     f32 sDStringGravity = -1.5f;
+    f32 sDaisyHair2RotAngle = 20.0f;
+    f32 sDMaxOffsetX = -5.0f;
+    f32 sKStringOffset[2] = { 12.0f, 9.0f };
+    f32 sKStringAdjustRatio = 0.2f;
+    f32 sKStringAirFric = 0.99f;
+    f32 sKStringGravity = -0.5f;
+    f32 sKStringMaxAccel = 2.0f;
+    f32 sKLockStringVelDownRatio = 0.98f;
+    f32 sKColFaceOffsetXdir = 35.0f;
+    f32 sKColFaceOffsetYdir = -10.0f;
+    f32 sKColHeadRadius = 35.0f;
+    f32 sDKStringLength[2] = { 40.0f, 20.0f };
+    f32 sDKStringAdjustRatio = 0.2f;
+    f32 sDKStringAirFric = 0.99f;
+    f32 sDKStringGravity = -0.6f;
+    f32 sDKStringMaxAccel = 0.8f;
 }
 
 #define NECK_MAX_ASSERT(i, max) \
@@ -55,6 +78,24 @@ static NeckFunc sDoFuncs[5] = {
 };
 
 Mtx NeckCtrl::sRotFrontDirMtx;
+
+static inline void mulVec3(register const JGeometry::TVec3f* a, register const JGeometry::TVec3f* b, register JGeometry::TVec3f* d)
+{
+    register f32 axy, az, bxy, bz, rxy, rz;
+    __asm {
+        psq_l axy, 0(a), 0, 0
+        psq_l az, 8(a), 1, 0
+        psq_l bxy, 0(b), 0, 0
+        psq_l bz, 8(b), 1, 0
+        ps_mul rxy, axy, bxy
+        ps_mul rz, az, bz
+        psq_st rxy, 0(d), 0, 0
+        psq_st rz, 8(d), 1, 0
+    }
+}
+static inline JGeometry::TVec3f addVec(const JGeometry::TVec3f& a, const JGeometry::TVec3f& b) { JGeometry::TVec3f r; r.add(a, b); return r; }
+static inline void callCalcFront(NeckCtrl* n) { n->calcFrontDirQt(); }
+static inline void callCalcFront2(NeckCtrl* n) { callCalcFront(n); }
 
 namespace {
         const char sName0[] __attribute__((section(".sdata2"))) = "Baby_Mario";
@@ -226,12 +267,12 @@ void NeckCtrl::initFunc_Search()
     }
 }
 
-#pragma inline_depth(0)
+#pragma inline_depth(3)
 void NeckCtrl::doFunc_Search()
 {
     if (mDriverNo != ItemObjMgr::getNowTandemDriverNum(mKartNo) || m10c || m10d)
     {
-        calcFrontDirQt();
+        callCalcFront2(this);
         return;
     }
     for (int i = 0; i < RaceMgr::sRaceManager->getKartNumber(); i++)
@@ -245,7 +286,7 @@ void NeckCtrl::doFunc_Search()
                 m104 &= ~bit;
         }
     }
-    calcFrontDirQt();
+    callCalcFront2(this);
     if ((u32)mKartNo == RaceMgr::sRaceManager->getRaceFrame() % RaceMgr::sRaceManager->getKartNumber())
     {
         mFC = searchRivalKart();
@@ -309,24 +350,27 @@ void NeckCtrl::initFunc_Look()
 {
 }
 
+#pragma inline_depth(3)
 void NeckCtrl::doFunc_Look()
 {
+    Mtx mtx;
     JGeometry::TVec3f rivalPos;
+    JGeometry::TVec3f right;
+    JGeometry::TVec3f up;
+    JGeometry::TVec3f dir;
+    JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mFC, &rivalPos);
     if (!mED)
     {
-        JGeometry::TVec3f kartPos;
         ObjUtility::getKartPos(mKartNo, &kartPos);
-        JGeometry::TVec3f dir;
         dir.sub(rivalPos, kartPos);
         stVecNormalize(&dir);
-        JGeometry::TVec3f right(1.0f, 0.0f, 0.0f);
-        JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
+        up.set(0.0f, 1.0f, 0.0f);
+        right.set(1.0f, 0.0f, 0.0f);
         PSVECCrossProduct(&up, &dir, &right);
         stVecNormalize(&right);
         PSVECCrossProduct(&dir, &right, &up);
         stVecNormalize(&up);
-        Mtx mtx;
         stMakeRMtx(mtx, right, up, dir);
         stMtx2Qt(&mQuat, mtx);
     }
@@ -361,7 +405,7 @@ void NeckCtrl::initFunc_LookShine()
 {
 }
 
-#pragma inline_depth(0)
+#pragma inline_depth(3)
 void NeckCtrl::doFunc_LookShine()
 {
     if (GeoRabbitMark::getSupervisor()->getRabbitKartNo() == mKartNo)
@@ -374,25 +418,27 @@ void NeckCtrl::doFunc_LookShine()
     }
     if (mDriverNo != ItemObjMgr::getNowTandemDriverNum(mKartNo))
     {
-        calcFrontDirQt();
+        callCalcFront2(this);
         return;
     }
+    Mtx mtx;
     JGeometry::TVec3f markPos;
+    JGeometry::TVec3f right;
+    JGeometry::TVec3f up;
+    JGeometry::TVec3f dir;
+    JGeometry::TVec3f kartPos;
     GeoRabbitMark::getSupervisor()->getMarkPosition(&markPos);
     if (!mED)
     {
-        JGeometry::TVec3f kartPos;
         ObjUtility::getKartPos(mKartNo, &kartPos);
-        JGeometry::TVec3f dir;
         dir.sub(markPos, kartPos);
         stVecNormalize(&dir);
-        JGeometry::TVec3f right(1.0f, 0.0f, 0.0f);
-        JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
+        up.set(0.0f, 1.0f, 0.0f);
+        right.set(1.0f, 0.0f, 0.0f);
         PSVECCrossProduct(&up, &dir, &right);
         stVecNormalize(&right);
         PSVECCrossProduct(&dir, &right, &up);
         stVecNormalize(&up);
-        Mtx mtx;
         stMakeRMtx(mtx, right, up, dir);
         stMtx2Qt(&mQuat, mtx);
     }
@@ -665,8 +711,120 @@ void NeckCtrl::checkMaxAngle(float (*mtx)[4])
     }
 }
 
-void NeckCtrl::update(float (*)[4], float (*)[4], LumbarCtrl*, u32)
+void NeckCtrl::update(float (*mtx1)[4], float (*mtx2)[4], LumbarCtrl*, u32 mode)
 {
+    Mtx inv2;
+    Mtx inv1;
+    Mtx norm2;
+    Mtx norm1;
+    JGeometry::TMtx34f copy1;
+    JGeometry::TMtx34f copy2;
+    Mtx rotB;
+    Mtx rotA;
+    Mtx rotC;
+    Quaternion q;
+    Quaternion lerp;
+    Quaternion q2;
+    Quaternion qb;
+    Quaternion qa;
+
+    if (!mEC)
+    {
+        mEC = 1;
+        stMtx2Qt(&mQuatPrev, ObjUtility::getKartBodyMtx(mKartNo));
+        mQuat = mQuatPrev;
+        stMTXRotDeg(rotA, 'Z', 180.0f);
+        stMTXRotDeg(rotB, 'Y', 90.0f);
+        stMtx2Qt(&qa, rotA);
+        stMtx2Qt(&qb, rotB);
+        PSMTXConcat(rotB, rotA, (Mtx&)mMtx88);
+        PSQUATMultiply(&qb, &qa, &mQuat78);
+
+        int id = RaceMgr::sRaceManager->getKartInfo(mKartNo)->getDriverCharID(mDriverNo);
+        f32 ang;
+        if (id == KOOPATROOPA)
+            ang = 90.0f;
+        else if (id == PARATROOPA)
+            ang = 90.0f;
+        else
+            ang = -90.0f;
+        stMTXRotDeg(rotC, 'X', ang);
+        stMTXRotDeg(rotB, 'Y', ang);
+        PSMTXConcat(rotB, rotC, (Mtx&)mMtxB8);
+        mED = 0;
+    }
+
+    copy1.set(mtx1);
+    f32 sx1 = JGeometry::TUtilf::sqrt(copy1.at(0, 0) * copy1.at(0, 0) + copy1.at(1, 0) * copy1.at(1, 0) + copy1.at(2, 0) * copy1.at(2, 0));
+    f32 sy1 = JGeometry::TUtilf::sqrt(copy1.at(0, 1) * copy1.at(0, 1) + copy1.at(1, 1) * copy1.at(1, 1) + copy1.at(2, 1) * copy1.at(2, 1));
+    f32 sz1 = JGeometry::TUtilf::sqrt(copy1.at(0, 2) * copy1.at(0, 2) + copy1.at(1, 2) * copy1.at(1, 2) + copy1.at(2, 2) * copy1.at(2, 2));
+    PSMTXScale((Mtx&)copy1, sx1, sy1, sz1);
+
+    copy2.set(mtx2);
+    f32 sx2 = JGeometry::TUtilf::sqrt(copy2.at(0, 0) * copy2.at(0, 0) + copy2.at(1, 0) * copy2.at(1, 0) + copy2.at(2, 0) * copy2.at(2, 0));
+    f32 sy2 = JGeometry::TUtilf::sqrt(copy2.at(0, 1) * copy2.at(0, 1) + copy2.at(1, 1) * copy2.at(1, 1) + copy2.at(2, 1) * copy2.at(2, 1));
+    f32 sz2 = JGeometry::TUtilf::sqrt(copy2.at(0, 2) * copy2.at(0, 2) + copy2.at(1, 2) * copy2.at(1, 2) + copy2.at(2, 2) * copy2.at(2, 2));
+    PSMTXScale((Mtx&)copy2, sx2, sy2, sz2);
+
+    PSMTXScale(inv1, 1.0f / sx1, 1.0f / sy1, 1.0f / sz1);
+    PSMTXScale(inv2, 1.0f / sx2, 1.0f / sy2, 1.0f / sz2);
+
+    PSMTXConcat(mtx1, inv1, norm1);
+    PSMTXConcat(mtx2, inv2, norm2);
+
+    f32 tx = mtx1[0][3];
+    f32 ty = mtx1[1][3];
+    f32 tz = mtx1[2][3];
+
+    if (mode != 0)
+    {
+        stMtx2Qt(&q, norm1);
+        PSQUATMultiply(&q, &mQuat78, &mQuat);
+    }
+    else
+    {
+        mPtrE8 = norm1;
+        if (m42)
+        {
+            m42 = 0;
+            (mSelf->*(mVec48[m40].mFunc))();
+        }
+        (mSelf->*(mVec4c[m40].mFunc))();
+        mTimer++;
+    }
+
+    if (mode != 0)
+    {
+        switch (mode)
+        {
+        case 2:
+            mF4 = 1.0f;
+            break;
+        case 1:
+            mF4 = 0.2f;
+            break;
+        }
+    }
+    else
+    {
+        if (mDriverNo == ItemObjMgr::getNowTandemDriverNum(mKartNo))
+            mF4 = 0.1f;
+        else
+            mF4 = 0.2f;
+    }
+
+    stQtLerp(&lerp, &mQuatPrev, &mQuat, mF4);
+    mQuatPrev = lerp;
+
+    if (mode == 0)
+        checkMaxAngle(norm2);
+
+    PSQUATMultiply(&mQuatPrev, &mQuat78, &q2);
+    stQt2Mtx((Mtx&)mMtx, &q2);
+    PSMTXConcat((Mtx&)mMtx, (Mtx&)copy1, (Mtx&)mMtx);
+    mMtx[0][3] = tx;
+    mMtx[1][3] = ty;
+    mMtx[2][3] = tz;
 }
 
 HairCtrl::HairCtrl(int index, u8 driverNo) : IKCtrl(index, driverNo)
@@ -687,8 +845,9 @@ void HairCtrl::initString(const JGeometry::TVec3<f32>&, f32)
 void HairCtrl::makeFaceNormalizeMtx(float (*mtx)[4], JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >& a, JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >& b)
 {
     PSMTXCopy(mtx, *a.toMtx());
-    volatile f32 pad[3];
     volatile JGeometry::TVec3f scale;
+    JGeometry::TVec3f eps(0.0001f, 0.0001f, 0.0001f);
+    scale.x = eps.x; scale.y = eps.y; scale.z = eps.z;
     scale.x = JGeometry::TUtilf::sqrt(a.at(0, 0) * a.at(0, 0) + a.at(1, 0) * a.at(1, 0) + a.at(2, 0) * a.at(2, 0));
     scale.y = JGeometry::TUtilf::sqrt(a.at(0, 1) * a.at(0, 1) + a.at(1, 1) * a.at(1, 1) + a.at(2, 1) * a.at(2, 1));
     scale.z = JGeometry::TUtilf::sqrt(a.at(0, 2) * a.at(0, 2) + a.at(1, 2) * a.at(1, 2) + a.at(2, 2) * a.at(2, 2));
@@ -709,47 +868,66 @@ void HairCtrl::lockString(float (*mtx)[4], const JGeometry::TVec3<f32>& vec, f32
 {
     JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > inv;
     JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > norm;
-    makeFaceNormalizeMtx(mtx, norm, inv);
-    SysDebug::checkInvalidMatrix(*inv.toMtx(), "hairInvMtx");
     JGeometry::TVec3f nodePos[2];
     JGeometry::TVec3f tmp[2];
     JGeometry::TVec3f tmp2[2];
+    makeFaceNormalizeMtx(mtx, norm, inv);
+    SysDebug::checkInvalidMatrix(*(Mtx*)inv.toMtx(), "hairInvMtx");
     for (u8 i = 0; i < 2; i++)
     {
         mNodeMgr->getNodePos(i + 1, &nodePos[i]);
-        PSMTXMultVec(*inv.toMtx(), &nodePos[i], &tmp[i]);
+        mulVec3(&nodePos[i], &vec, &tmp2[i]);
+        PSMTXMultVec(*(Mtx*)inv.toMtx(), &tmp2[i], &tmp[i]);
         f32 lim = lock * i;
         if (tmp[i].x > lim)
             tmp[i].x = lim;
-        PSMTXMultVec(*norm.toMtx(), &tmp[i], &tmp2[i]);
-        JGeometry::TVec3f out;
-        out.add(nodePos[i], tmp2[i]);
-        mNodeMgr->setNodePos(i + 1, out);
+        PSMTXMultVec(*(Mtx*)norm.toMtx(), &tmp[i], &tmp2[i]);
+        mNodeMgr->setNodePos(i + 1, JGeometry::TVec3f(nodePos[i].x + tmp2[i].x, nodePos[i].y + tmp2[i].y, nodePos[i].z + tmp2[i].z));
         SysDebug::checkInvalidVector(&nodePos[i], "hair_nodePos");
     }
 }
 
-void DonkeyTieCtrl::lockStringTieMin(float (*)[4], const JGeometry::TVec3<f32>&, f32, bool)
+void DonkeyTieCtrl::lockStringTieMin(float (*mtx)[4], const JGeometry::TVec3<f32>& vec, f32 min, bool flag)
 {
+    JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > inv;
+    JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > norm;
+    JGeometry::TVec3f nodePos[2];
+    JGeometry::TVec3f tmp[2];
+    JGeometry::TVec3f tmp2[2];
+    makeFaceNormalizeMtx(mtx, norm, inv);
+    for (u8 i = 0; i < 2; i++)
+    {
+        mNodeMgr->getNodePos(i + 1, &nodePos[i]);
+        mulVec3(&nodePos[i], &vec, &tmp2[i]);
+        PSMTXMultVec(*(Mtx*)inv.toMtx(), &tmp2[i], &tmp[i]);
+        if (flag)
+            tmp[i].y = 0.0f;
+        else if (tmp[i].y < min)
+            tmp[i].y = min;
+        PSMTXMultVec(*(Mtx*)norm.toMtx(), &tmp[i], &tmp2[i]);
+        mNodeMgr->setNodePos(i + 1, JGeometry::TVec3f(nodePos[i].x + tmp2[i].x, nodePos[i].y + tmp2[i].y, nodePos[i].z + tmp2[i].z));
+        SysDebug::checkInvalidVector(&nodePos[i], "hair_nodePos");
+    }
 }
 
 void HairCtrl::lockStringMin(float (*mtx)[4], const JGeometry::TVec3<f32>& vec, f32 max, f32 min)
 {
     JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > inv;
     JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > norm;
-    makeFaceNormalizeMtx(mtx, norm, inv);
     JGeometry::TVec3f nodePos[2];
     JGeometry::TVec3f tmp[2];
     JGeometry::TVec3f tmp2[2];
+    makeFaceNormalizeMtx(mtx, norm, inv);
     for (u8 i = 0; i < 2; i++)
     {
         mNodeMgr->getNodePos(i + 1, &nodePos[i]);
-        PSMTXMultVec(*inv.toMtx(), &nodePos[i], &tmp[i]);
+        tmp2[i].mul(vec, nodePos[i]);
+        PSMTXMultVec(*(Mtx*)inv.toMtx(), &tmp2[i], &tmp[i]);
         if (tmp[i].x > max)
             tmp[i].x = max;
         else if (tmp[i].x < min)
             tmp[i].x = min;
-        PSMTXMultVec(*norm.toMtx(), &tmp[i], &tmp2[i]);
+        PSMTXMultVec(*(Mtx*)norm.toMtx(), &tmp[i], &tmp2[i]);
         JGeometry::TVec3f out;
         out.add(nodePos[i], tmp2[i]);
         mNodeMgr->setNodePos(i + 1, out);
@@ -858,9 +1036,9 @@ void DaisyHairCtrl::update_hair2(float (*)[4], DriverModel*)
 
 void DaisyHairCtrl::calcHairString(float (*)[4], const JGeometry::TVec3<f32>& pos)
 {
-    mNodeMgr->setNodePos(0, JGeometry::TVec3f(pos));
     mNodeMgr->_1c = sDStringGravity;
     mNodeMgr->_24 = sDStringAdjustRatio;
+    mNodeMgr->setNodePos(0, JGeometry::TVec3f(pos));
     mNodeMgr->calc();
 }
 
@@ -911,8 +1089,38 @@ void KinopicoHairCtrl::calcHairMtx(u32 idx, DriverModel* driver)
     calcJointMtx(idx, *(JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >*)&mMtx, driver);
 }
 
-void KinopicoHairCtrl::lockStringKp(float (*)[4], const JGeometry::TVec3<f32>&)
+void KinopicoHairCtrl::lockStringKp(float (*mtx)[4], const JGeometry::TVec3<f32>& vec)
 {
+    JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > inv;
+    JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > norm;
+    makeFaceNormalizeMtx(mtx, norm, inv);
+    JGeometry::TVec3f out;
+    JGeometry::TVec3f vel;
+    Vec tmp[3];
+    Vec tmp2[3];
+    Vec nodePos[3];
+    for (u8 i = 0; i < 3; i++)
+    {
+        mNodeMgr->getNodePos(i + 1, (JGeometry::TVec3f*)&nodePos[i]);
+        tmp2[i] = nodePos[i];
+        PSMTXMultVec((Mtx&)inv, &tmp2[i], &tmp[i]);
+        bool clamped = false;
+        if (tmp[i].y < 0.0f)
+        {
+            tmp[i].y = 0.0f;
+            clamped = true;
+        }
+        PSMTXMultVec((Mtx&)norm, &tmp[i], &tmp2[i]);
+        out.add(nodePos[i], tmp2[i]);
+        mNodeMgr->setNodePos(i + 1, out);
+        if (clamped)
+        {
+            mNodeMgr->getNodeVel(i + 1, (JGeometry::TVec3f*)&vel);
+            if (clamped)
+                vel.y *= sKLockStringVelDownRatio;
+            mNodeMgr->setNodeVel(i + 1, vel);
+        }
+    }
 }
 
 DonkeyTieCtrl::DonkeyTieCtrl(int a, u8 b) : HairCtrl(a, b)
