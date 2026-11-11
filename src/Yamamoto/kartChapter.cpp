@@ -210,7 +210,6 @@ void KartGame::DoChapterFive() {
     int idx = body->mMynum;
     RaceMgr *mgr = RaceMgr::getCurrentManager();
     KartChecker *checker = RCMGetKartChecker(idx);
-    u8 chapter;
     mgr->getKartDrawer(idx);
     body->getItem()->SetSucMashItem();
     if (mCountDownDuration != 0)
@@ -223,18 +222,16 @@ void KartGame::DoChapterFive() {
                 DoStopItm();
                 body->_592 = 0;
                 DoChapterBomEsc();
-                chapter = 10;
-                body->getScene()->mChapter = chapter;
+                body->getScene()->mChapter = 10;
             }
         }
         if (CheckBalloon() && body->getTouchNum() != 0) {
             DoStopItm();
             body->_592 = 0;
             GetKartCtrl()->getKartAnime(idx)->mFlags |= (u64)0x1000000000;
-            chapter = 9;
-                body->getScene()->mChapter = chapter;
+            body->getScene()->mChapter = 9;
         }
-        break;
+        return;
     case 7:
         body->getCrash()->DoMatchlessTimer();
         body->getItem()->DoRabbit();
@@ -246,16 +243,13 @@ void KartGame::DoChapterFive() {
             body->_592 = 0;
             if (idx == GetKartCtrl()->CheckWinner()) {
                 DoChapterBomEsc();
-                chapter = 10;
-                body->getScene()->mChapter = chapter;
+                body->getScene()->mChapter = 10;
             } else {
                 GetKartCtrl()->getKartAnime(idx)->mFlags |= (u64)0x1000000000;
-                chapter = 9;
-                body->getScene()->mChapter = chapter;
+                body->getScene()->mChapter = 9;
             }
-            break;
         }
-        break;
+        return;
     case 6:
         body->getCrash()->DoMatchlessTimer();
         if (mgr->isRaceEnd()) {
@@ -264,16 +258,13 @@ void KartGame::DoChapterFive() {
             body->_592 = 0;
             if (idx == GetKartCtrl()->CheckWinner()) {
                 DoChapterBomEsc();
-                chapter = 10;
-                body->getScene()->mChapter = chapter;
+                body->getScene()->mChapter = 10;
             } else {
                 GetKartCtrl()->getKartAnime(idx)->mFlags |= (u64)0x1000000000;
-                chapter = 9;
-                body->getScene()->mChapter = chapter;
+                body->getScene()->mChapter = 9;
             }
-            break;
         }
-        break;
+        return;
     case 1:
         if (!checker->isGoal() && checker->isLapRenewal() && checker->isCurrentLapTimeRenewal())
             GetKartCtrl()->getKartAnime(idx)->mFlags |= (u64)0x400000000;
@@ -328,8 +319,7 @@ void KartGame::DoChapterFive() {
     body->_59a = 0;
     body->getItem()->ReleseWanWan();
     DoStopItm();
-    chapter = 6;
-                body->getScene()->mChapter = chapter;
+    body->getScene()->mChapter = 6;
 after:
     RankWatchMan();
     if (checker->isLapRenewal() && !checker->isFinalLapRenewal() && !(body->mGameStatus & 0x20) &&
@@ -409,7 +399,6 @@ void KartGame::DoChapterSeven() {
 void KartGame::DoChapterBalloon() {
     KartBody *body = mBody;
     int idx = body->mMynum;
-    int camNum;
     DoStopItm();
     if (body->_592 == 0) {
         GetStEfctMgr()->setExhaustStopFlg(body->mMynum, true);
@@ -444,7 +433,7 @@ void KartGame::DoChapterBalloon() {
                     body->mGameStatus |= 0x4000;
                     if (GetKartCtrl()->getKartBody(GetKartCtrl()->CheckWinner())->getGame()->_0c != 0) {
                         if (GetKartCtrl()->CheckCamera(idx)) {
-                            camNum = GetKartCtrl()->GetCameraNum(idx);
+                            int camNum = GetKartCtrl()->GetCameraNum(idx);
                             GETWipeManager()->startWipe(idx);
                             KartCam *cam = GetKartCtrl()->getKartCam(camNum);
                             cam->mFlags &= ~0x10;
@@ -470,7 +459,7 @@ void KartGame::DoChapterBalloon() {
         if (RaceMgr::getCurrentManager()->isLANMode()) {
             if (GetKartCtrl()->getKartBody(GetKartCtrl()->CheckWinner())->getGame()->_0c != 0) {
                 if (GetKartCtrl()->CheckCamera(idx)) {
-                    camNum = GetKartCtrl()->GetCameraNum(idx);
+                    int camNum = GetKartCtrl()->GetCameraNum(idx);
                     GETWipeManager()->killWipe(idx);
                     KartCam *cam = GetKartCtrl()->getKartCam(camNum);
                     cam->mFlags &= ~0x10;
@@ -484,13 +473,17 @@ void KartGame::DoChapterBalloon() {
                 body->getScene()->mChapter = 8;
                 body->mGameStatus &= ~0x4000;
             } else if (body->_592 == 160) {
-                if (GetKartCtrl()->CheckCamera(idx))
-                    GetKartCtrl()->getKartCam(GetKartCtrl()->GetCameraNum(idx))->GetDemoCam()->SetUpMapID();
+                if (GetKartCtrl()->CheckCamera(idx)) {
+                    int camNum = GetKartCtrl()->GetCameraNum(idx);
+                    GetKartCtrl()->getKartCam(camNum)->GetDemoCam()->SetUpMapID();
+                }
             }
         } else {
             if (body->_592 == 160) {
-                if (GetKartCtrl()->CheckCamera(idx))
-                    GetKartCtrl()->getKartCam(GetKartCtrl()->GetCameraNum(idx))->GetDemoCam()->SetUpMapID();
+                if (GetKartCtrl()->CheckCamera(idx)) {
+                    int camNum = GetKartCtrl()->GetCameraNum(idx);
+                    GetKartCtrl()->getKartCam(camNum)->GetDemoCam()->SetUpMapID();
+                }
                 body->getScene()->mChapter = 8;
                 body->mGameStatus &= ~0x4000;
             }
