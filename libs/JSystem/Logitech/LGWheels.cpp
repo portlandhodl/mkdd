@@ -38,11 +38,11 @@ void LGWheels::InitVars(s32 wheel)
 
 void LGWheels::ReadAll()
 {
-    s32 ret = mWheels.ReadAll();
+    s16 ret = mWheels.ReadAll();
     memcpy(mPosition, &mWheels, 40);
 
-    if ((s16)ret != -1) {
-        InitVars((s16)ret);
+    if (ret != -1) {
+        InitVars(ret);
     }
 }
 

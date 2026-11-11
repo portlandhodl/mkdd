@@ -8,13 +8,15 @@ class Wheels
 {
 public:
     Wheels();
-    s32 ReadAll();
+    ~Wheels();
+    s16 ReadAll();
     bool IsConnected(s32);
 
-    s32 mHandles[4];
-    u8 _10[0x828 - 0x10];
-    u32 mEffectId[4];
-    u8 _838[0x880 - 0x838];
+    LGPosition mPosition[4];     // 0x000
+    u8 _28[0x828 - 0x28];        // 0x028
+    u32 mEffectId[4];            // 0x828
+    u8 _838[0x858 - 0x838];      // 0x838
+    LGPosition mPrevPosition[4]; // 0x858
 }; // Size: 0x880
 
 #endif // LOGITECH_WHEELS_H

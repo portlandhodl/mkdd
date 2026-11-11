@@ -8,6 +8,7 @@ class Condition : public Force
 {
 public:
     Condition();
+    ~Condition();
     s32 DownloadForce(s32, s32, u32&, u8, u32, u32, s8, u8, u8, u8, s16, s16);
     s32 UpdateForce(s32, s32, u8, u32, u32, s8, u8, u8, u8, s16, s16);
 }; // Size: 0xA0

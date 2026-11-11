@@ -2,6 +2,7 @@
 
 .section .init, "ax"  # 0x80003100 - 0x80005600
 
+.fn pad_00_800035E4_init, local
 .global gTRKInterruptVectorTable
 gTRKInterruptVectorTable:
 .asciz "Metrowerks Target Resident Kernel for PowerPC"
@@ -472,5 +473,6 @@ gTRKInterruptVectorTable:
 /* 8000507C 0000207C  7C 7A 03 A6 */	mtspr 0x1a, r3
 /* 80005080 00002080  38 60 1F 00 */	li r3, 0x1f00
 /* 80005084 00002084  4C 00 00 64 */	rfi 
+.endfn pad_00_800035E4_init
 .global gTRKInterruptVectorTableEnd
 gTRKInterruptVectorTableEnd:

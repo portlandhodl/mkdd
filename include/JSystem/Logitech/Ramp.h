@@ -8,6 +8,7 @@ class Ramp : public Force
 {
 public:
     Ramp();
+    ~Ramp();
 }; // Size: 0xA0
 
 #endif // LOGITECH_RAMP_H
