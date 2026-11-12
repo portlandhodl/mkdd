@@ -42,11 +42,6 @@ public:
     TMapObjMareA(const CrsData::SObject &obj) : TMapObjMareBase(obj) {}
     virtual ~TMapObjMareA() {}
     virtual const char *getBmdFileName() { return "/Objects/mareL_a.bmd"; }
-
-private:
-    u8 _pad[28];
-
-
 };
 
 class TMapObjMareB : public TMapObjMareBase
@@ -55,11 +50,6 @@ public:
     TMapObjMareB(const CrsData::SObject &obj) : TMapObjMareBase(obj) {}
     virtual ~TMapObjMareB() {}
     virtual const char *getBmdFileName() { return "/Objects/mareL_b.bmd"; }
-
-private:
-    u8 _pad[28];
-
-
 };
 
 class TMapObjMareC : public TMapObjMareBase
@@ -68,11 +58,6 @@ public:
     TMapObjMareC(const CrsData::SObject &obj) : TMapObjMareBase(obj) {}
     virtual ~TMapObjMareC() {}
     virtual const char *getBmdFileName() { return "/Objects/mareL_c.bmd"; }
-
-private:
-    u8 _pad[28];
-
-
 };
 
 class TMapObjMareM_A : public TMapObjDemoObj

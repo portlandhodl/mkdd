@@ -90,6 +90,7 @@ public:
 class TMapObjGeyserSearch : public TMapObjGeyser
 {
 public:
+    TMapObjGeyserSearch(const CrsData::SObject &obj) : TMapObjGeyser(obj) {}
     virtual ~TMapObjGeyserSearch();
 
     virtual void reset();

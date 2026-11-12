@@ -35,7 +35,7 @@ protected:
 class TMapObjJetCoasterBody : public TMapObjJetCoaster
 {
 public:
-    TMapObjJetCoasterBody(u32 id = 0) : TMapObjJetCoaster(id) {}
+    TMapObjJetCoasterBody(u32 id = 0xce7) : TMapObjJetCoaster(id) {}
     virtual ~TMapObjJetCoasterBody() {}
     virtual const char *getBmdFileName() { return "/Objects/BabyJet_body.bmd"; }
     virtual int getJointNo() { return sJointNo; }

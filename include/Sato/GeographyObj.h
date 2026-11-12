@@ -59,6 +59,7 @@ public:
 
 private:
     friend class ItemThunder;
+    friend class GeographyObjManager;
     JSULink<GeoObjSupervisor> mLink;
     JSULink<GeoObjSupervisor> mLink2;
 };

@@ -448,6 +448,7 @@ public:
     static const s16 cPatchCamTableNtscE[];
     static const s16 cPatchCamTablePal[];
 private:
+    friend class GeographyObjManager;
     SColHeader *mCollionData;
     SOblHeader *mObjectData;
     SMatData *mMatData;

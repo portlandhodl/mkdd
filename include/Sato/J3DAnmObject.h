@@ -51,8 +51,8 @@ public:
         mDeformData = nullptr;
     }
     
-    virtual ~J3DAnmObjCluster();
-    virtual void anmFrameProc();
+    virtual ~J3DAnmObjCluster() {}
+    virtual void anmFrameProc() { mAnmBase->setFrame(mFrameCtrl.getFrame()); }
 
     void attach(J3DAnmCluster *);
 
@@ -99,6 +99,16 @@ public:
     template <typename T>
     static void setMaterialAnmTev(T**, J3DModelData*);
 
+    static void setMaterialAnm(J3DModelData *modelData, u16 matID) {
+#line 131
+        JUT_ASSERT_F(matID != 0xffff, "can't find anm");
+        if (modelData->getMaterialNodePointer(matID)->getMaterialAnm() == nullptr) {
+            J3DMaterialAnm *matAnm = new J3DMaterialAnm();
+            modelData->getMaterialNodePointer(matID)->change();
+            modelData->getMaterialNodePointer(matID)->setMaterialAnm(matAnm);
+        }
+    }
+
     J3DAnmBase *getAnmBase() { return mAnmBase; }
     void setAnmBase(J3DAnmBase *base) { mAnmBase = base; }
 
@@ -110,6 +120,11 @@ public:
     J3DAnmObjMaterialBase() {}
     virtual void anmFrameProc() {
         mAnmBase->setFrame(mFrameCtrl.getFrame());
+    }
+
+    void attach(T *anm) {
+        mAnmBase = anm;
+        J3DAnmObjBase::initFrameCtrl(mAnmBase);
     }
 };
 

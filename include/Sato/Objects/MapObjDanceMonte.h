@@ -28,10 +28,6 @@ public:
     TMapObjDanceMonteA(const CrsData::SObject &obj) : TMapObjDanceMonte(obj) {}
     virtual ~TMapObjDanceMonteA() {}
     virtual const char *getBmdFileName() { return "/Objects/monF_a.bmd"; }
-
-private:
-    u8 _pad[24];
-
 };
 
 class TMapObjDanceMonteB : public TMapObjDanceMonte
@@ -40,10 +36,6 @@ public:
     TMapObjDanceMonteB(const CrsData::SObject &obj) : TMapObjDanceMonte(obj) {}
     virtual ~TMapObjDanceMonteB() {}
     virtual const char *getBmdFileName() { return "/Objects/monF_b.bmd"; }
-
-private:
-    u8 _pad[24];
-
 };
 
 #endif

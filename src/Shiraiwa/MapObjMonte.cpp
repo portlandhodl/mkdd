@@ -189,12 +189,12 @@ void TMapObjDanceMonte::reset()
     JUT_MINMAX_ASSERT(0, mObjData->mParam5, 2);
 
     s8 anmNo = mObjData->mParam5;
-    mAnmPlayer._11 = anmNo;
+    mAnmPlayer._11 = mObjData->mParam5;
     mAnmPlayer._10 = 1;
     mAnmPlayer._e |= 1;
 
     if (mObjData->mParam6 != 0)
-        SiUtil::setRandomStartFrame(mAnmCtrl->mTrans->getObjAnt(anmNo)->getFrameCtrl(), getGeoRnd());
+        SiUtil::setRandomStartFrame(mAnmCtrl->mTrans->getFrameCtrl(anmNo), getGeoRnd());
 }
 
 void TMapObjDanceMonte::loadAnimation()

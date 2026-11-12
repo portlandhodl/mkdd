@@ -55,7 +55,7 @@ void AnmControlTrans::frameProc() {
         }
     }
     else {
-        J3DAnmObjTrans *trans = getObj(mNowAnmNo);
+        J3DAnmObjTrans *trans = getObjChk(mNowAnmNo);
         if (trans->_28 & 1) {
             mObj[mNowAnmNo].setWeight(0, 1.0f);
             for (u8 i = 1; i < 4; i++) {

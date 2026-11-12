@@ -36,6 +36,7 @@ private:
 class TMapObjAwardCup : public TMapObjDemoObj, public StateObserver, public JKRDisposer {
 public:
     TMapObjAwardCup(u32);
+    virtual ~TMapObjAwardCup() { sSupervisor = nullptr; }
     void createModel(JKRSolidHeap *, u32);
     void update();
     void reset();
@@ -107,9 +108,6 @@ public:
     virtual ~TMapObjAwardCupKinoko() {}
     virtual const char *getBmdFileName() { return "/AwardKinokoCup.bmd"; }
     virtual const char *getBtpFileName() { return "/AwardKinokoCup.btp"; }
-
-private:
-    u8 _pad[0xa8];
 };
 
 class TMapObjAwardCupFlower : public TMapObjAwardCup
@@ -119,9 +117,6 @@ public:
     virtual ~TMapObjAwardCupFlower() {}
     virtual const char *getBmdFileName() { return "/AwardFlowerCup.bmd"; }
     virtual const char *getBtpFileName() { return "/AwardFlowerCup.btp"; }
-
-private:
-    u8 _pad[0xa8];
 };
 
 class TMapObjAwardCupStar : public TMapObjAwardCup
@@ -131,9 +126,6 @@ public:
     virtual ~TMapObjAwardCupStar() {}
     virtual const char *getBmdFileName() { return "/AwardStarCup.bmd"; }
     virtual const char *getBtpFileName() { return "/AwardStarCup.btp"; }
-
-private:
-    u8 _pad[0xa8];
 };
 
 class TMapObjAwardCupSpecial : public TMapObjAwardCup
@@ -143,9 +135,6 @@ public:
     virtual ~TMapObjAwardCupSpecial() {}
     virtual const char *getBmdFileName() { return "/AwardSpecialCup.bmd"; }
     virtual const char *getBtpFileName() { return "/AwardSpecialCup.btp"; }
-
-private:
-    u8 _pad[0xa8];
 };
 
 class TMapObjAwardCupReverse : public TMapObjAwardCup
@@ -155,9 +144,6 @@ public:
     virtual ~TMapObjAwardCupReverse() {}
     virtual const char *getBmdFileName() { return "/AwardReverseCup.bmd"; }
     virtual const char *getBtpFileName() { return "/AwardReverseCup.btp"; }
-
-private:
-    u8 _pad[0xa8];
 };
 
 class TMapObjAwardCupAllTour : public TMapObjAwardCup
@@ -167,9 +153,6 @@ public:
     virtual ~TMapObjAwardCupAllTour() {}
     virtual const char *getBmdFileName() { return "/AwardAllCupTour.bmd"; }
     virtual const char *getBtpFileName() { return "/AwardAllCupTour.btp"; }
-
-private:
-    u8 _pad[0xa8];
 };
 
 #endif // MAPOBJAWARD_H

@@ -91,6 +91,13 @@ public:
         return &mObj[anm_no];
     }
 
+    T *getObjChk(u8 anm_no) // fabricated, Sato's accessor (assert line 122)
+    {
+#line 122
+        JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
+        return &mObj[anm_no];
+    }
+
     T *getObjNoCheck(u8 anm_no) { return &mObj[anm_no]; }
 
     J3DFrameCtrl *getFrameCtrl(u8 anm_no)
@@ -131,11 +138,14 @@ public:
     AnmControlTrans() {}
     virtual ~AnmControlTrans() {}
 
-    virtual void changeAnm(u8 anm_no, bool reset) { 
+    virtual void changeAnm(u8 anm_no, bool reset) {
+#line 154
         JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
-        mNowAnmNo = anm_no;
-        if (reset) {
-            mObj[mNowAnmNo].resetFrame();
+        if (anm_no != mNowAnmNo) {
+            mNowAnmNo = anm_no;
+            if (reset) {
+                mObj[mNowAnmNo].resetFrame();
+            }
         }
     }
 
@@ -209,6 +219,11 @@ public:
     AnmControlMatTevReg() {
 
     }
+    void changeMatAnmPrev(u8 prevUseAnmNo) {
+#line 239
+        JUT_MINMAX_ASSERT(0, prevUseAnmNo, mMaxAnmNo);
+        mObj[mNowAnmNo].changeMatAnm(&mObj[prevUseAnmNo]);
+    }
     virtual void changeMatAnm(u8 anm_no, bool reset) {
 #line 246
         JUT_MINMAX_ASSERT(0, anm_no, mMaxAnmNo);
@@ -275,7 +290,7 @@ public:
         }
 #line 338
         JUT_MINMAX_ASSERT(0, AnmNo, mTrans->mMaxAnmNo);
-        J3DAnmObjTrans *transObj = mTrans->getObj(AnmNo);
+        J3DAnmObjTrans *transObj = mTrans->getObjChk(AnmNo);
         if (transObj->_28 & 1) {
             transObj->setWeight(0, 1.0f);
             for(u8 i = 1; i < 4; i++) {
@@ -299,6 +314,28 @@ public:
     
     void ChangeTransAnm(u8 AnmNo, bool p2) { mTrans->changeAnm(AnmNo, p2); } // fabricated
     void RegisterTrans(u8 AnmNo, J3DAnmTransform *transform, J3DMtxCalc *calc) { mTrans->registration(AnmNo, transform, calc); } // fabricated
+    void RegisterMatColor(u8 AnmNo, J3DAnmColor *anm) { // fabricated
+#line 316
+        JUT_MINMAX_ASSERT(0, AnmNo, mMatData->mpCtrlColor->mMaxAnmNo);
+        mMatData->mpCtrlColor->getObjNoCheck(AnmNo)->attach(anm);
+        mMatData->mpCtrlColor->mNowAnmNo = AnmNo;
+    }
+    void RegisterMatTexSRT(u8 AnmNo, J3DAnmTextureSRTKey *anm) { // fabricated
+        JUT_MINMAX_ASSERT(0, AnmNo, mMatData->mpCtrlSRT->mMaxAnmNo);
+        mMatData->mpCtrlSRT->getObjNoCheck(AnmNo)->attach(anm);
+        mMatData->mpCtrlSRT->mNowAnmNo = AnmNo;
+    }
+    void RegisterMatTexPattern(u8 AnmNo, J3DAnmTexPattern *anm) { // fabricated
+        JUT_MINMAX_ASSERT(0, AnmNo, mMatData->mpCtrlPattern->mMaxAnmNo);
+        mMatData->mpCtrlPattern->getObjNoCheck(AnmNo)->attach(anm);
+        mMatData->mpCtrlPattern->mNowAnmNo = AnmNo;
+    }
+    void RegisterMatTevReg(u8 AnmNo, J3DAnmTevRegKey *anm) { // fabricated
+        JUT_MINMAX_ASSERT(0, AnmNo, mMatData->mpCtrlTevReg->mMaxAnmNo);
+        mMatData->mpCtrlTevReg->getObjNoCheck(AnmNo)->attach(anm);
+        mMatData->mpCtrlTevReg->mNowAnmNo = AnmNo;
+    }
+
     bool IsAvailableTrans() const { return mTrans != nullptr; }
     void StopTrans() { mTrans->resetFlag(); } // fabricated
     bool IsTransAnm2() const { return mTrans->tstFlgAnm2(); }

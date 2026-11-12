@@ -8,7 +8,7 @@ class TMapObjPakkun;
 class TMapObjPakkunColHead : public TMapObjHioNode
 {
 public:
-    TMapObjPakkunColHead(u32 id = 0xe81) : TMapObjHioNode(id), _14c(0), mPakkun(nullptr) {}
+    TMapObjPakkunColHead(u32 id = 0xe81) : TMapObjHioNode(id), mPakkun(nullptr) {}
 
     virtual ~TMapObjPakkunColHead() {}
 
