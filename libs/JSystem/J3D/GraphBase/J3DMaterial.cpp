@@ -184,8 +184,6 @@ DECL_WEAK u32 J3DTexGenBlock::countDLSize() { return 0; }
 
 DECL_WEAK u32 J3DColorBlock::countDLSize() { return 0; }
 
-DECL_WEAK u32 J3DTevBlock::countDLSize() { return 0; }
-
 DECL_WEAK u32 J3DIndBlock::countDLSize() { return 0; }
 
 DECL_WEAK u32 J3DPEBlock::countDLSize() { return 0; }
@@ -197,8 +195,6 @@ DECL_WEAK u8 J3DColorBlock::getCullMode() const { return 2; }
 DECL_WEAK u8 J3DIndBlock::getIndTexStageNum() const { return 0; }
 
 DECL_WEAK u8 J3DColorBlock::getColorChanNum() const { return 0; }
-
-DECL_WEAK void J3DTevBlock::load() { }
 
 void J3DMaterial::makeDisplayList_private(J3DDisplayListObj* obj)
 {
@@ -327,8 +323,6 @@ DECL_WEAK J3DTexCoord* J3DTexGenBlock::getTexCoord(u32) { return nullptr; }
 DECL_WEAK void J3DPEBlock::reset(J3DPEBlock*) { }
 
 DECL_WEAK void J3DIndBlock::reset(J3DIndBlock*) { }
-
-DECL_WEAK void J3DTevBlock::reset(J3DTevBlock*) { }
 
 DECL_WEAK void J3DTexGenBlock::reset(J3DTexGenBlock*) { }
 

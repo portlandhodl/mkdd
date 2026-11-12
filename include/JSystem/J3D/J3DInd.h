@@ -145,8 +145,8 @@ struct J3DIndBlock {
 struct J3DIndBlockFull : public J3DIndBlock {
     inline J3DIndBlockFull() { initialize(); }
 
-    virtual void reset(J3DIndBlock*);                                                                 // _08
     virtual void diff(unsigned long);                                                                 // _0C
+    virtual void reset(J3DIndBlock*);                                                                 // _08
     virtual void load();                                                                              // _10
     virtual u32 countDLSize();                                                                        // _14
     virtual JBlockType getType() { return JBT_IndFull; }                                              // _18 (weak)
