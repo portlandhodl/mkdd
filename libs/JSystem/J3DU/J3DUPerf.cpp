@@ -7,7 +7,10 @@
 #include "JSystem/J3DU/J3DU.h"
 #include "JSystem/JUtility/JUTDbPrint.h"
 
+#pragma push
+#pragma force_active on
 u32 J3DUMemRequest::sBusTransactionMax = OS_BUS_CLOCK / 120;
+#pragma pop
 
 void J3DUPerf::init()
 {
@@ -118,3 +121,5 @@ J3DUPerf::~J3DUPerf()
 {
     mModelData = nullptr;
 }
+
+#pragma force_active on

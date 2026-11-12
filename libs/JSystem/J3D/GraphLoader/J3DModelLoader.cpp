@@ -9,7 +9,7 @@
 #include "JSystem/JSupport.h"
 #include "macros.h"
 
-DECL_WEAK J3DModelLoader::~J3DModelLoader()
+inline J3DMtxCalcNoAnmBase::~J3DMtxCalcNoAnmBase()
 {
 }
 
@@ -17,7 +17,16 @@ DECL_WEAK J3DModelLoader::~J3DModelLoader()
 
 
 
-DECL_WEAK J3DModelLoader_v21::~J3DModelLoader_v21()
+inline J3DMaterial::J3DMaterial()
+{
+    initialize();
+}
+
+
+
+
+
+inline J3DTexture::~J3DTexture()
 {
 }
 
@@ -25,7 +34,7 @@ DECL_WEAK J3DModelLoader_v21::~J3DModelLoader_v21()
 
 
 
-DECL_WEAK J3DModelLoader_v26::~J3DModelLoader_v26()
+J3DModelLoader::~J3DModelLoader()
 {
 }
 
@@ -33,7 +42,23 @@ DECL_WEAK J3DModelLoader_v26::~J3DModelLoader_v26()
 
 
 
-DECL_WEAK J3DModelLoader::J3DModelLoader()
+J3DModelLoader_v21::~J3DModelLoader_v21()
+{
+}
+
+
+
+
+
+J3DModelLoader_v26::~J3DModelLoader_v26()
+{
+}
+
+
+
+
+
+J3DModelLoader::J3DModelLoader()
     : mModelData(nullptr)
     , mMaterialTable(nullptr)
     , mShapeBlock(nullptr)
@@ -42,6 +67,56 @@ DECL_WEAK J3DModelLoader::J3DModelLoader()
     , _18(0)
     , _1A(0)
 {
+}
+
+
+
+
+
+void J3DModelLoader::readMaterial_v21(const J3DMaterialBlock_v21*, u32)
+{
+}
+
+
+
+
+
+void J3DModelLoader::readMaterial(const J3DMaterialBlock*, u32)
+{
+}
+
+
+
+
+
+void J3DModelLoader::readMaterialTable_v21(const J3DMaterialBlock_v21*, u32)
+{
+}
+
+
+
+
+
+void J3DModelLoader::readMaterialTable(const J3DMaterialBlock*, u32)
+{
+}
+
+
+
+
+
+size_t J3DModelLoader::calcSizeMaterial(const J3DMaterialBlock*, u32)
+{
+    return 0;
+}
+
+
+
+
+
+size_t J3DModelLoader::calcSizeMaterialTable(const J3DMaterialBlock*, u32)
+{
+    return 0;
 }
 
 
@@ -721,93 +796,4 @@ void J3DModelLoader::modifyMaterial(u32 flags)
             factory.modifyPatchedCurrentMtx(mMaterialTable->mMaterials[i], i);
         }
     }
-}
-
-
-
-
-
-DECL_WEAK void J3DModelLoader::readMaterial_v21(const J3DMaterialBlock_v21*, u32)
-{
-}
-
-
-
-
-
-DECL_WEAK void J3DModelLoader::readMaterial(const J3DMaterialBlock*, u32)
-{
-}
-
-
-
-
-
-DECL_WEAK void J3DModelLoader::readMaterialTable_v21(const J3DMaterialBlock_v21*, u32)
-{
-}
-
-
-
-
-
-DECL_WEAK void J3DModelLoader::readMaterialTable(const J3DMaterialBlock*, u32)
-{
-}
-
-
-
-
-
-DECL_WEAK size_t J3DModelLoader::calcSizeMaterial(const J3DMaterialBlock*, u32)
-{
-    return 0;
-}
-
-
-
-
-
-DECL_WEAK size_t J3DModelLoader::calcSizeMaterialTable(const J3DMaterialBlock*, u32)
-{
-    return 0;
-}
-
-
-
-
-
-
-DECL_WEAK J3DMtxCalcNoAnmBase::~J3DMtxCalcNoAnmBase()
-{
-}
-
-
-
-
-
-template <>
-DECL_WEAK void J3DMtxCalcNoAnm<J3DMtxCalcCalcTransformSoftimage, J3DMtxCalcJ3DSysInitSoftimage>::init(const Vec& p1, const f32 (&p2)[3][4])
-{
-    J3DSys::mCurrentS.x = p1.x;
-    J3DSys::mCurrentS.y = p1.y;
-    J3DSys::mCurrentS.z = p1.z;
-    PSMTXCopy(p2, J3DSys::mCurrentMtx);
-}
-
-
-
-
-
-DECL_WEAK J3DMaterial::J3DMaterial()
-{
-    initialize();
-}
-
-
-
-
-
-DECL_WEAK J3DTexture::~J3DTexture()
-{
 }

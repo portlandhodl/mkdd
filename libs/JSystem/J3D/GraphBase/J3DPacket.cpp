@@ -116,17 +116,6 @@ void J3DPacket::addChildPacket(J3DPacket* pPacket) {
     }
 }
 
-void J3DCallBackPacket::draw() {
-    if (mCallBack != NULL)
-        mCallBack(this, 0);
-
-    for (J3DPacket* packet = mChildPacket; packet != NULL; packet = packet->getNextPacket())
-        packet->draw();
-
-    if (mCallBack != NULL)
-        mCallBack(this, 1);
-}
-
 DECL_WEAK void J3DPacket::draw() {
 }
 
@@ -445,17 +434,11 @@ void J3DShapePacket::drawFast() {
     }
 }
 
-DECL_WEAK int J3DMatPacket::entry(J3DDrawBuffer* pBuffer) {
+int J3DMatPacket::entry(J3DDrawBuffer* pBuffer) {
     J3DDrawBuffer::sortFunc func = J3DDrawBuffer::sortFuncTable[pBuffer->mSortType];
     return (pBuffer->*func)(this);
-}
-
-J3DCallBackPacket::~J3DCallBackPacket() {
 }
 
 GDCurrentDL J3DDisplayListObj::sGDLObj;
 int J3DDisplayListObj::sInterruptFlag;
 
-
-void (J3DShapePacket::*const sPrepareDraw)() const = &J3DShapePacket::prepareDraw;
-bool (J3DPacket::*const sIsSame)(J3DMatPacket*) const = &J3DPacket::isSame;

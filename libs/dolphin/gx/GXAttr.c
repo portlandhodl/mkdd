@@ -1,8 +1,6 @@
 #include "dolphin/gx.h"
 #include "dolphin/gx/GXPriv.h"
 
-#pragma push
-#pragma force_active on
 static void __GXXfVtxSpecs(void)
 {
 	u32 normCount, colorCount, texCount;
@@ -20,7 +18,6 @@ static void __GXXfVtxSpecs(void)
 
 	return;
 }
-#pragma pop
 
 void GXSetVtxDesc(GXAttr attr, GXAttrType type)
 {

@@ -15,7 +15,7 @@ struct J3DModelLoaderDataBase {
 };
 
 struct J3DModelLoader {
-    J3DModelLoader();
+    inline J3DModelLoader();
 
     virtual J3DModelData* load(const void*, u32);                  // _08
     virtual J3DMaterialTable* loadMaterialTable(const void*);      // _0C
@@ -29,13 +29,13 @@ struct J3DModelLoader {
      * @reifiedAddress{8006FAA0}
      * @reifiedFile{JSystem/J3D/J3DModelLoader.cpp}
      */
-    virtual ~J3DModelLoader();                                         // _28 (weak)
-    virtual void readMaterial(const J3DMaterialBlock*, u32);              // _2C (weak)
-    virtual void readMaterial_v21(const J3DMaterialBlock_v21*, u32);      // _30 (weak)
-    virtual void readMaterialTable(const J3DMaterialBlock*, u32);         // _34 (weak)
-    virtual void readMaterialTable_v21(const J3DMaterialBlock_v21*, u32); // _38 (weak)
-    virtual size_t calcSizeMaterial(const J3DMaterialBlock*, u32);        // _3C (weak)
-    virtual size_t calcSizeMaterialTable(const J3DMaterialBlock*, u32);   // _40 (weak)
+    inline virtual ~J3DModelLoader();                                         // _28 (weak)
+    inline virtual void readMaterial(const J3DMaterialBlock*, u32);              // _2C (weak)
+    inline virtual void readMaterial_v21(const J3DMaterialBlock_v21*, u32);      // _30 (weak)
+    inline virtual void readMaterialTable(const J3DMaterialBlock*, u32);         // _34 (weak)
+    inline virtual void readMaterialTable_v21(const J3DMaterialBlock_v21*, u32); // _38 (weak)
+    inline virtual size_t calcSizeMaterial(const J3DMaterialBlock*, u32);        // _3C (weak)
+    inline virtual size_t calcSizeMaterialTable(const J3DMaterialBlock*, u32);   // _40 (weak)
 
     void readInformation(const J3DModelInfoBlock*, u32);
     void readVertex(const J3DVertexBlock*);
@@ -75,7 +75,7 @@ struct J3DModelLoader_v21 : public J3DModelLoader {
      * @reifiedAddress{8006FA44}
      * @reifiedFile{JSystem/J3D/J3DModelLoader.cpp}
      */
-    virtual ~J3DModelLoader_v21();                                               // _28 (weak)
+    inline virtual ~J3DModelLoader_v21();                                               // _28 (weak)
     virtual void readMaterial_v21(const J3DMaterialBlock_v21*, unsigned long);      // _30
     virtual void readMaterialTable_v21(const J3DMaterialBlock_v21*, unsigned long); // _38
 };
@@ -87,7 +87,7 @@ struct J3DModelLoader_v26 : public J3DModelLoader {
      * @reifiedAddress{8006F9E8}
      * @reifiedFile{JSystem/J3D/J3DModelLoader.cpp}
      */
-    virtual ~J3DModelLoader_v26();                                             // _28 (weak)
+    inline virtual ~J3DModelLoader_v26();                                             // _28 (weak)
     virtual void readMaterial(const J3DMaterialBlock*, unsigned long);            // _2C
     virtual void readMaterialTable(const J3DMaterialBlock*, unsigned long);       // _34
     virtual size_t calcSizeMaterial(const J3DMaterialBlock*, unsigned long);      // _3C

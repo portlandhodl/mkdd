@@ -340,4 +340,16 @@ void J3DSys::reinitPixelProc()
     GXSetZCompLoc(GX_TRUE);
 }
 
-void J3DSys::ErrorReport(J3DErrType) const { }
+void J3DSys::ErrorReport(J3DErrType errType) const
+{
+    const char *errStr[] = {
+        "Success\n",
+        "J3DErrType : Material has No Material Animation\n",
+        "J3DErrType : Model Data is Locked\n",
+        "J3DErrType : Binary Resource is Null\n",
+        "J3DErrType : Out Of Memory\n",
+        "J3DErrType : Argument is Invalid\n",
+        "J3DErrType : Data is Invalid\n",
+    };
+    OSReport(errStr[errType]);
+}

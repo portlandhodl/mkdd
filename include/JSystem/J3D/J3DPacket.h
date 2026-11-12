@@ -136,7 +136,7 @@ struct J3DMatPacket : public J3DDrawPacket {
 
     J3DMatPacket();
 
-    virtual int entry(J3DDrawBuffer*); // _08 (weak)
+    inline virtual int entry(J3DDrawBuffer*); // _08 (weak)
     virtual void draw();                // _0C
     virtual ~J3DMatPacket();            // _10
 

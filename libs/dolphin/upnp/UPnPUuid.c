@@ -13,6 +13,10 @@ typedef struct UPnPUuid {
 char* IPGetUuidString(const UPnPUuid* uuid, char* string);
 s32 IPScanUuid(const char* string, UPnPUuid* uuid);
 
+UPnPUuid UPnPUdnNameSpace = {
+    0x53e6872a, 0x8dd7, 0x11c4, 0x9c, 0x55, { 0x00, 0x09, 0xbf, 0x00, 0x01, 0x3f }
+};
+
 char* UPnPGetUuidString(const UPnPUuid* uuid, char* string)
 {
     return IPGetUuidString(uuid, string);

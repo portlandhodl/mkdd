@@ -62,8 +62,10 @@ static OSResetFunctionInfo ResetFunctionInfo = {OnReset, 0x6F};
 
 static u16 Protocols[4] = {0x0800, 0x0806, 0x8863, 0x8864};
 static u8 HwBroadcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static u32 Mute;
+static u32 Mute = 1;
 
+#pragma push
+#pragma force_active on
 static u8 RecvBuf[0x5EE] __attribute__((aligned(32)));
 static u8 SendBuf[0x5EE] __attribute__((aligned(32)));
 static u8 SendFifo[0x10];
@@ -71,6 +73,7 @@ static u8 SendHeap[0x4000];
 static u8 LinkAlarm[0x28] __attribute__((aligned(8)));
 static u8 Current[0x58];
 u8 __IFDefault[0xA8] __attribute__((aligned(8)));
+#pragma pop
 
 static u32 Loopback;
 static u32 Sending;
@@ -78,6 +81,7 @@ static void* SendQueue[2];
 static u32 LinkState;
 static u32 Reset;
 static u32 initialized;
+OSTime __ETHInterruptTime;
 
 static asm u32 NullFilter(void)
 {

@@ -64,13 +64,10 @@ static u8 HW2GXFiltConv[8] = { 0, 2, 4, 0, 1, 3, 5, 0 };
 
 static void __SetSURegs(u32 texImgIndex, u32 setUpRegIndex);
 
-#pragma push
-#pragma force_active on
 void __GXGetTexTileShift(GXTexFmt format, u32* widthTiles, u32* heightTiles)
 {
 	GET_TILE_SHIFT(format, widthTiles, heightTiles);
 }
-#pragma pop
 u32 GXGetTexBufferSize(u16 width, u16 height, u32 format, GXBool mipmap, u8 max_lod)
 {
 	u32 widthTiles, heightTiles, tileSize, bufferSize, numX, numY, i;
@@ -254,15 +251,10 @@ void GXInitTexObjLOD(GXTexObj* obj, GXTexFilter minFilter, GXTexFilter maxFilter
 	GX_SET_REG(internal->mode1, reg1, 24, 31);
 	GX_SET_REG(internal->mode1, reg2, 16, 23);
 }
-#pragma push
-#pragma force_active on
 void GXInitTexObjData(GXTexObj* obj, const void* imagePtr)
 {
 	GX_SET_REG(((GXTexObjPriv*)obj)->image3, (u32)imagePtr >> 5, 11, 31);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjWrapMode(GXTexObj* obj, GXTexWrapMode sWrap, GXTexWrapMode tWrap)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
@@ -270,17 +262,11 @@ void GXInitTexObjWrapMode(GXTexObj* obj, GXTexWrapMode sWrap, GXTexWrapMode tWra
 	GX_SET_REG(internal->mode0, sWrap, 30, 31);
 	GX_SET_REG(internal->mode0, tWrap, 28, 29);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjTlut(GXTexObj* obj, u32 tlutName)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
 	internal->tlutName = tlutName;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjFilter(GXTexObj* obj, GXTexFilter minFilter, GXTexFilter maxFilter)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
@@ -288,9 +274,6 @@ void GXInitTexObjFilter(GXTexObj* obj, GXTexFilter minFilter, GXTexFilter maxFil
 	GX_SET_REG(internal->mode0, maxFilter == 1 ? 1 : 0, 27, 27);
 	GX_SET_REG(internal->mode0, GX2HWFiltConv[minFilter], 24, 26);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjMaxLOD(GXTexObj* obj, f32 maxLOD)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
@@ -304,9 +287,6 @@ void GXInitTexObjMaxLOD(GXTexObj* obj, f32 maxLOD)
 	reg = maxLOD * 16.0f;
 	GX_SET_REG(internal->mode1, reg, 16, 23);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjMinLOD(GXTexObj* obj, f32 minLOD)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
@@ -320,9 +300,6 @@ void GXInitTexObjMinLOD(GXTexObj* obj, f32 minLOD)
 	reg = minLOD * 16.0f;
 	GX_SET_REG(internal->mode1, reg, 24, 31);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjLODBias(GXTexObj* obj, f32 lodBias)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
@@ -336,49 +313,31 @@ void GXInitTexObjLODBias(GXTexObj* obj, f32 lodBias)
 	reg = lodBias * 32.0f;
 	GX_SET_REG(internal->mode0, reg, 15, 22);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjBiasClamp(GXTexObj* obj, GXBool doBiasClamp)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
 	GX_SET_REG(internal->mode0, doBiasClamp, 10, 10);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjEdgeLOD(GXTexObj* obj, GXBool doEdgeLOD)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
 	GX_SET_REG(internal->mode0, doEdgeLOD ? 0 : 1, 23, 23);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjMaxAniso(GXTexObj* obj, GXAnisotropy maxAniso)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
 	GX_SET_REG(internal->mode0, maxAniso, 11, 12);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInitTexObjUserData(GXTexObj* obj, void* userData)
 {
 	GXTexObjPriv* internal = (GXTexObjPriv*)obj;
 	internal->userData = userData;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void* GXGetTexObjUserData(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return internal->userData;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXGetTexObjAll(const GXTexObj* obj, void** data, u16* width, u16* height, GXTexFmt* format,
                     GXTexWrapMode* wrapS, GXTexWrapMode* wrapT, GXBool* mipmap)
 {
@@ -392,60 +351,42 @@ void GXGetTexObjAll(const GXTexObj* obj, void** data, u16* width, u16* height, G
 	*wrapT  = GX_GET_REG(internal->mode0, 28, 29);
 	*mipmap = (internal->flags & 1) == 1;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void* GXGetTexObjData(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 
 	return (void*)(GX_GET_REG(internal->image3, 11, 31) << 5);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 u16 GXGetTexObjWidth(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->image0, 22, 31) + 1;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 u16 GXGetTexObjHeight(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->image0, 12, 21) + 1;
 }
-#pragma pop
 GXTexFmt GXGetTexObjFmt(const GXTexObj* obj)
 {
 	const GXTexObjPriv* pObj = (const GXTexObjPriv*)obj;
 	return pObj->format;
 }
-#pragma push
-#pragma force_active on
 GXTexWrapMode GXGetTexObjWrapS(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode0, 30, 31);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 GXTexWrapMode GXGetTexObjWrapT(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode0, 28, 29);
 }
-#pragma pop
 GXBool GXGetTexObjMipMap(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return (internal->flags & 1) == 1;
 }
-#pragma push
-#pragma force_active on
 void GXGetTexObjLODAll(const GXTexObj* tex_obj, GXTexFilter* min_filt, GXTexFilter* mag_filt,
                        f32* min_lod, f32* max_lod, f32* lod_bias, GXBool* bias_clamp,
                        GXBool* do_edge_lod, GXAnisotropy* max_aniso)
@@ -463,80 +404,52 @@ void GXGetTexObjLODAll(const GXTexObj* tex_obj, GXTexFilter* min_filt, GXTexFilt
 	*do_edge_lod = GX_GET_REG(internal->mode0, 23, 23) == 0;
 	*max_aniso  = GX_GET_REG(internal->mode0, 11, 12);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 GXTexFilter GXGetTexObjMinFilt(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return HW2GXFiltConv[GX_GET_REG(internal->mode0, 24, 26)];
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 GXTexFilter GXGetTexObjMagFilt(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode0, 27, 27);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 f32 GXGetTexObjMinLOD(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode1, 24, 31) / 16.0f;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 f32 GXGetTexObjMaxLOD(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode1, 16, 23) / 16.0f;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 f32 GXGetTexObjLODBias(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	s16 bias = GX_GET_REG(internal->mode0, 15, 22);
 	return (f32)(s8)bias / 32.0f;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 GXBool GXGetTexObjBiasClamp(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode0, 10, 10);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 GXBool GXGetTexObjEdgeLOD(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode0, 23, 23) == 0;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 GXAnisotropy GXGetTexObjMaxAniso(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return GX_GET_REG(internal->mode0, 11, 12);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 u32 GXGetTexObjTlut(const GXTexObj* obj)
 {
 	const GXTexObjPriv* internal = (const GXTexObjPriv*)obj;
 	return internal->tlutName;
 }
-#pragma pop
 void GXLoadTexObjPreLoaded(GXTexObj* obj, GXTexRegion* region, GXTexMapID map)
 {
 	u8 stackManipulation[0x18];
@@ -591,8 +504,6 @@ void GXInitTlutObj(GXTlutObj* obj, const void* table, GXTlutFmt format, u16 numE
 
 	internal->numEntries = numEntries;
 }
-#pragma push
-#pragma force_active on
 void GXGetTlutObjAll(const GXTlutObj* obj, void** data, GXTlutFmt* format, u16* numEntries)
 {
 	const GXTlutObjPriv* internal = (const GXTlutObjPriv*)obj;
@@ -601,34 +512,24 @@ void GXGetTlutObjAll(const GXTlutObj* obj, void** data, GXTlutFmt* format, u16* 
 	*format     = GX_GET_REG(internal->unk0, 20, 21);
 	*numEntries = internal->numEntries;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void* GXGetTlutObjData(const GXTlutObj* obj)
 {
 	const GXTlutObjPriv* internal = (const GXTlutObjPriv*)obj;
 
 	return (void*)(GX_GET_REG(internal->unk4, 11, 31) << 5);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 GXTlutFmt GXGetTlutObjFmt(const GXTlutObj* obj)
 {
 	const GXTlutObjPriv* internal = (const GXTlutObjPriv*)obj;
 
 	return GX_GET_REG(internal->unk0, 20, 21);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 u16 GXGetTlutObjNumEntries(const GXTlutObj* obj)
 {
 	const GXTlutObjPriv* internal = (const GXTlutObjPriv*)obj;
 
 	return internal->numEntries;
 }
-#pragma pop
 void GXLoadTlut(GXTlutObj* obj, u32 tlutName)
 {
 	GXTlutObjPriv* internal = (GXTlutObjPriv*)obj;
@@ -694,8 +595,6 @@ void GXInitTexCacheRegion(GXTexRegion* region, GXBool is32bMIPmap, u32 memEven, 
 	internal->unkC = is32bMIPmap;
 	internal->unkD = 1;
 }
-#pragma push
-#pragma force_active on
 void GXInitTexPreLoadRegion(GXTexRegion* region, u32 tmemEven, u32 sizeEven, u32 tmemOdd,
                             u32 sizeOdd)
 {
@@ -717,9 +616,6 @@ void GXInitTexPreLoadRegion(GXTexRegion* region, u32 tmemEven, u32 sizeEven, u32
 	internal->sizeEven = sizeEven >> 5;
 	internal->sizeOdd  = sizeOdd >> 5;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXGetTexRegionAll(const GXTexRegion* region, GXBool* isCached, GXBool* is32bMipmap,
                        u32* memEven, GXTexCacheSize* sizeEven, u32* memOdd,
                        GXTexCacheSize* sizeOdd)
@@ -738,7 +634,6 @@ void GXGetTexRegionAll(const GXTexRegion* region, GXBool* isCached, GXBool* is32
 		*sizeOdd  = (GXTexCacheSize)(r->sizeOdd << 5);
 	}
 }
-#pragma pop
 void GXInitTlutRegion(GXTlutRegion* region, u32 memAddr, GXTlutSize tlutSize)
 {
 	GXTlutRegionPriv* internal = (GXTlutRegionPriv*)region;
@@ -748,8 +643,6 @@ void GXInitTlutRegion(GXTlutRegion* region, u32 memAddr, GXTlutSize tlutSize)
 	GX_SET_REG(internal->unk0, tlutSize, 11, 21);
 	GX_SET_REG(internal->unk0, 0x65, 0, 7);
 }
-#pragma push
-#pragma force_active on
 void GXGetTlutRegionAll(const GXTlutRegion* region, u32* memAddr, GXTlutSize* tlutSize)
 {
 	const GXTlutRegionPriv* r = (const GXTlutRegionPriv*)region;
@@ -757,9 +650,6 @@ void GXGetTlutRegionAll(const GXTlutRegion* region, u32* memAddr, GXTlutSize* tl
 	*memAddr  = (GX_GET_REG(r->unk0, 22, 31) << 9) + 0x80000;
 	*tlutSize = GX_GET_REG(r->unk0, 11, 21);
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXInvalidateTexRegion(const GXTexRegion* region)
 {
 	const GXTexRegionPriv* r = (const GXTexRegionPriv*)region;
@@ -775,7 +665,6 @@ void GXInvalidateTexRegion(const GXTexRegion* region)
 	GX_BP_LOAD_REG(reg);
 	GX_BP_LOAD_REG(reg2);
 }
-#pragma pop
 void GXInvalidateTexAll(void)
 {
 	__GXFlushTextureState();
@@ -799,8 +688,6 @@ GXTlutRegionCallback GXSetTlutRegionCallback(GXTlutRegionCallback func)
 
 	return oldFunc;
 }
-#pragma push
-#pragma force_active on
 void GXPreLoadEntireTexture(const GXTexObj* obj, GXTexRegion* region)
 {
 	const GXTexObjPriv* t = (const GXTexObjPriv*)obj;
@@ -836,9 +723,6 @@ void GXPreLoadEntireTexture(const GXTexObj* obj, GXTexRegion* region)
 
 	gx->bpSentNot = GX_FALSE;
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXSetTexCoordScaleManually(GXTexCoordID coord, GXBool enable, u16 ss, u16 ts)
 {
 	gx->tcsManEnab = (gx->tcsManEnab & ~(1 << coord)) | (enable << coord);
@@ -850,9 +734,6 @@ void GXSetTexCoordScaleManually(GXTexCoordID coord, GXBool enable, u16 ss, u16 t
 		gx->bpSentNot = GX_FALSE;
 	}
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXSetTexCoordCylWrap(GXTexCoordID coord, GXBool s_enable, GXBool t_enable)
 {
 	GX_SET_REG(gx->suTs0[coord], s_enable, 17, 17);
@@ -863,9 +744,6 @@ void GXSetTexCoordCylWrap(GXTexCoordID coord, GXBool s_enable, GXBool t_enable)
 		gx->bpSentNot = GX_FALSE;
 	}
 }
-#pragma pop
-#pragma push
-#pragma force_active on
 void GXSetTexCoordBias(GXTexCoordID coord, GXBool s_enable, GXBool t_enable)
 {
 	GX_SET_REG(gx->suTs0[coord], s_enable, 15, 15);
@@ -876,7 +754,6 @@ void GXSetTexCoordBias(GXTexCoordID coord, GXBool s_enable, GXBool t_enable)
 		gx->bpSentNot = GX_FALSE;
 	}
 }
-#pragma pop
 #pragma dont_inline on
 static void __SetSURegs(u32 texImgIndex, u32 setUpRegIndex)
 {
@@ -955,14 +832,11 @@ void __GXSetSUTexRegs(void)
 	}
 }
 #pragma dont_inline reset
-#pragma push
-#pragma force_active on
 void __GXGetSUTexSize(GXTexCoordID coord, u16* width, u16* height)
 {
 	*width  = GX_GET_REG(gx->suTs0[coord], 16, 31) + 1;
 	*height = GX_GET_REG(gx->suTs1[coord], 16, 31) + 1;
 }
-#pragma pop
 
 #pragma dont_inline on
 void __GXSetTmemConfig(u32 config)

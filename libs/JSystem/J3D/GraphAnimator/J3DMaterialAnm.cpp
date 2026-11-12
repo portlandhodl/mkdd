@@ -9,34 +9,34 @@
 #include "JSystem/J3D/J3DTexMtx.h"
 #include "macros.h"
 
-DECL_WEAK J3DMaterialAnm::~J3DMaterialAnm()
+J3DMaterialAnm::~J3DMaterialAnm()
 {
 }
 
-DECL_WEAK J3DTevKColorAnm::~J3DTevKColorAnm()
+J3DTevKColorAnm::~J3DTevKColorAnm()
 {
 }
 
-DECL_WEAK J3DTevColorAnm::~J3DTevColorAnm()
+J3DTevColorAnm::~J3DTevColorAnm()
 {
 }
 
-DECL_WEAK J3DTexNoAnm::~J3DTexNoAnm()
+J3DTexNoAnm::~J3DTexNoAnm()
 {
 }
 
-DECL_WEAK void J3DTexNoAnm::calc(u16* pNo) const
+void J3DTexNoAnm::calc(u16* pNo) const
 {
 	J3DAnmTexPattern* anm = mAnm;
 	u16* idxp             = (u16*)((u8*)this + 4);
 	anm->getTexNo(*idxp, pNo);
 }
 
-DECL_WEAK J3DTexMtxAnm::~J3DTexMtxAnm()
+J3DTexMtxAnm::~J3DTexMtxAnm()
 {
 }
 
-DECL_WEAK J3DMatColorAnm::~J3DMatColorAnm()
+J3DMatColorAnm::~J3DMatColorAnm()
 {
 }
 
