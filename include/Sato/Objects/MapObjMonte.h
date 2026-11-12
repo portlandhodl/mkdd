@@ -16,6 +16,7 @@ public:
     virtual void reset();
     virtual void calc();
     virtual const char *getShadowBmdFileName() { return "/Objects/monL_a_sh.bmd"; }
+    virtual const char *getBmdFileName() = 0;
 
     void MoveExec();
     void InitExec();
@@ -26,7 +27,6 @@ public:
     void initFunc_Banzai();
     void doFunc_Banzai();
 
-    static const f32 sIdentityQuat[4];
     static TAnmInfo sAnmInfos[2];
     static StateObserver::StateFuncSet<TMapObjMonteBase> sTable[2];
     static const s8 sAnmTable[2];

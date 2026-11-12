@@ -18,12 +18,7 @@ TSMAButterfly::TSMAButterfly() : TSmallAnimal(0x119b) {
 }
 
 const char *TSMAButterfly::getBmdFileName() {
-    static s8 init;
-    static const char *cBmdName;
-    if (!init) {
-        cBmdName = "/Objects/butterfly1.bmd";
-        init = 1;
-    }
+    static const char *cBmdName = "/Objects/butterfly1.bmd";
     return cBmdName;
 }
 

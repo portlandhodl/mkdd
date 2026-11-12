@@ -58,10 +58,6 @@ f32 TMapObjPtera::sReachLength = 2000.0f;
 
 #include <JSystem/JAudio/JASFakeMatch2.h>
 
-J3DAnmTransform *TMapObjSwimNossie::sSwimNossieBckAnmTrans;
-J3DMtxCalc *TMapObjSwimNossie::sSwimNossieBckMtxCalc;
-J3DAnmTexPattern *TMapObjSwimNossie::sSwimNossieBtpAnm;
-
 TMapObjNossie::TMapObjNossie(const CrsData::SObject &obj) : TMapObjHioNode(obj) {
     NewAnmCtrl();
     mHead = (TMapObjNossieColHead *)GeographyObjManager::gMgr->createGenSubObj(0x11a2);
@@ -92,12 +88,7 @@ TMapObjNossie::TMapObjNossie(const CrsData::SObject &obj) : TMapObjHioNode(obj) 
 TMapObjNossie::~TMapObjNossie() {}
 
 const char *TMapObjNossie::getBmdFileName() {
-    static s8 init;
-    static const char *cBmdName;
-    if (!init) {
-        cBmdName = "/Objects/Nossie.bmd";
-        init = 1;
-    }
+    static const char *cBmdName = "/Objects/Nossie.bmd";
     return cBmdName;
 }
 
@@ -351,6 +342,10 @@ void TMapObjNossieColFoot::moveShadowModel() {
     mShadowMdl->setBaseTRMtx(mtx);
     mShadowMdl->getModel()->setBaseScale(mScale);
 }
+
+J3DAnmTransform *TMapObjSwimNossie::sSwimNossieBckAnmTrans;
+J3DMtxCalc *TMapObjSwimNossie::sSwimNossieBckMtxCalc;
+J3DAnmTexPattern *TMapObjSwimNossie::sSwimNossieBtpAnm;
 
 TMapObjSwimNossie::TMapObjSwimNossie(const CrsData::SObject &obj) : TMapObjHioNode(obj) {
 #line 526

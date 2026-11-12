@@ -6,7 +6,7 @@
 #include "Sato/Objects/MapObjDanceMonte.h"
 #include "Sato/Objects/MapObjMonte.h"
 
-const f32 TMapObjMonteBase::sIdentityQuat[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+static const f32 sDummy[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 TAnmInfo TMapObjMonteBase::sAnmInfos[2] = {
     { "/Objects/monL_a_bye1.bck", nullptr, nullptr, 2, 10, 0, 1, 0 },

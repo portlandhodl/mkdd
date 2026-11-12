@@ -17,6 +17,7 @@ public:
     virtual void reset();
     virtual void calc();
     virtual const char *getShadowBmdFileName() { return "/Objects/mareL_a_sh.bmd"; }
+    virtual const char *getBmdFileName() = 0;
 
     void MoveExec();
     void InitExec();

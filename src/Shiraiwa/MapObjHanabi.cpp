@@ -73,7 +73,3 @@ s16 THanabiSupervisor::getFireFrame(s16 frame) {
     }
     return ret;
 }
-
-DECL_WEAK TMapObjHanabi::~TMapObjHanabi() {
-    sSupervisor = nullptr;
-}

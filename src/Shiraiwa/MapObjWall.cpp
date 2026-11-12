@@ -41,8 +41,8 @@ void TMapObjWall::reset()
     if (IsPathMove()) {
         mPathMove->init(&mPos, &mVel);
         TPathMove *path = mPathMove;
-        f32 speed = 0.5f * rest;
         path->_14 = 1.0f;
+        f32 speed = 0.5f * rest;
         path->_18 = rest;
         path->_20 = speed * speed;
         ResetState();

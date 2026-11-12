@@ -2,6 +2,10 @@
 #include "JSystem/JAudio/JASFakeMatch2.h"
 #include "Sato/AnmController.h"
 
+GeoAnmTableEntry TMapObjDonkyTree::sBckAnmTable[1] = {
+    0, "DonkyTree1_wait.bck"
+};
+
 TMapObjDonkyTree::TMapObjDonkyTree(const CrsData::SObject &object) : GeoMarioTree1(object) {}
 
 TMapObjDonkyTree::~TMapObjDonkyTree() {}
@@ -22,8 +26,8 @@ u16 TMapObjDonkyTree::getSizeAnmTbl() {
     return sizeof(sBckAnmTable);
 }
 
-GeoAnmTableEntry TMapObjDonkyTree::sBckAnmTable[1] = {
-    0, "DonkyTree1_wait.bck"
+GeoAnmTableEntry TMapObjDinoTree::sBckAnmTable[1] = {
+    0, "DinoTree1_wait.bck"
 };
 
 TMapObjDinoTree::TMapObjDinoTree(const CrsData::SObject &object) : GeoMarioTree1(object) {}
@@ -57,10 +61,6 @@ GeoAnmTableEntry *TMapObjDinoTree::getAnmTbl() {
 u16 TMapObjDinoTree::getSizeAnmTbl() {
     return sizeof(sBckAnmTable);
 }
-
-GeoAnmTableEntry TMapObjDinoTree::sBckAnmTable[1] = {
-    0, "DinoTree1_wait.bck"
-};
 
 TMapObjDesertTree::TMapObjDesertTree(const CrsData::SObject &object) : GeoMarioTree1(object) {
     mObjFlag &= ~0x100;
