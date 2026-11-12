@@ -1210,7 +1210,7 @@ void DriverModel::updateFrame_base(DriversAnimator *animator, StateEnum state)
                 switch (state) {
                 case mcS106: {
                     int blend = DriverManager::ptr()->getBlendTime(27);
-                    if (mAnmFrame[mAnmID] + blend > getAnmTransformPtr(mAnmID)->getFrameMax() * 0.5f)
+                    if (mAnmFrame[mAnmID] + blend > getAnmTransformPtr(mAnmID)->getFrameMax() / 2.0f)
                         Change_next_mState((StateEnum)msNext_mState_HokanDamages[state - 106]);
                     break;
                 }
@@ -1221,14 +1221,14 @@ void DriverModel::updateFrame_base(DriversAnimator *animator, StateEnum state)
                     }
                     break;
                 case mcS126: {
-                    u8 blend = DriverManager::ptr()->mBlendTimes[36];
+                    u8 blend = DriverManager::ptr()->getBlendTime(36);
                     if (mAnmFrame[mAnmID] > blend)
                         Change_next_mState((StateEnum)(state - 63));
                     break;
                 }
                 case mcS127: {
                     s16 frameMax = getAnmTransformPtr(mAnmID)->getFrameMax();
-                    u8 blend = DriverManager::ptr()->mBlendTimes[36];
+                    u8 blend = DriverManager::ptr()->getBlendTime(36);
                     if (mAnmFrame[mAnmID] + blend < frameMax)
                         Change_next_mState((StateEnum)(state - 63));
                     break;

@@ -27,9 +27,11 @@ public:
 class AnimatorWind : public NullAnimator
 {
 public:
-    s32 mFrameCounter; // 0x8
-    s32 mAnimationState; // 0xC
-    AnimatorWind() : mFrameCounter(0), mAnimationState(0) {}
+    struct {
+        s32 mFrameCounter;   // 0x8
+        s32 mAnimationState; // 0xC
+    } mWind;
+    AnimatorWind() { mWind.mFrameCounter = 0; mWind.mAnimationState = 0; }
     virtual void start();
     virtual void stop();
     virtual void reset();

@@ -6,16 +6,16 @@ static void unused_force_data_ordering(double *a)
 }
 
 void AnimatorWind::start() {
-    mAnimationState = 1;
+    mWind.mAnimationState = 1;
 }
 
 void AnimatorWind::stop() {
-    mAnimationState = 2;
+    mWind.mAnimationState = 2;
 }
 
 void AnimatorWind::reset() {
-    mAnimationState = 0;
-    mFrameCounter = 0.0f;
+    mWind.mAnimationState = 0;
+    mWind.mFrameCounter = 0.0f;
 }
 
 static void unused_force_data_ordering2(float *a)
@@ -25,11 +25,11 @@ static void unused_force_data_ordering2(float *a)
 }
 
 void LoopAnimatorWind::update() {
-    if (mAnimationState == 1) {
-        mFrameCounter++;
+    if (mWind.mAnimationState == 1) {
+        mWind.mFrameCounter++;
     }
 
-    float frameCounter = mFrameCounter;
+    float frameCounter = mWind.mFrameCounter;
     
     float normalizedTime = frameCounter / 60.0f;
     
@@ -38,7 +38,7 @@ void LoopAnimatorWind::update() {
     float effectiveMin = (mMinValue > mMaxValue) ? mMaxValue : mMinValue;
     float effectiveMax = (mMinValue < mMaxValue) ? mMaxValue : mMinValue;
     
-    if (((u8)mAnimationState == 1) && effectiveMin != effectiveMax && mSpeed != 0.0f) {
+    if (((u8)mWind.mAnimationState == 1) && effectiveMin != effectiveMax && mSpeed != 0.0f) {
         float range = effectiveMax - effectiveMin;
         
         float rangeOverSpeed = range / mSpeed;
