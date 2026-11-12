@@ -855,15 +855,16 @@ void SceneRecord::calcTexChangeRecordGPLine(ERaceLevel level) {
         else
             mGpLineChar[level][2]->hide();
 
-        u8 c1 = rec.mCharIDs[0];
-        u8 c2 = rec.mCharIDs[1];
-        u8 kart = rec.mKartID;
-        char1 = c1;
-        char2 = c2;
-        if (c1 == 0)
+        u8 c[2];
+        c[0] = rec.mCharIDs[0];
+        c[1] = rec.mCharIDs[1];
+        char1 = c[0];
+        char2 = c[1];
+        if (c[0] == 0)
             char1 = 1;
-        if (c2 == 0)
+        if (c[1] == 0)
             char2 = 1;
+        u8 kart = rec.mKartID;
         mGpLineName[level]->show();
         mGpLineName2[level]->show();
         mGpLineName3[level]->show();
