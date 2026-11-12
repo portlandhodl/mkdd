@@ -465,39 +465,39 @@ config.libs = [
     trkLib(
         "TRK_MINNOW_DOLPHIN",
         [
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mainloop.c", extra_cflags=["-sdata", "0"]),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/nubevent.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/mainloop.c", extra_cflags=["-sdata", "0"]),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/nubevent.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/nubassrt.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/nubinit.c", extra_cflags=["-sdata", "0"]),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msg.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msgbuf.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/msg.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/msgbuf.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/serpoll.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/dispatch.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msghndlr.c", extra_cflags=["-sdata2", "0"]),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/support.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mutex_TRK.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/notify.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/msghndlr.c", extra_cflags=["-sdata2", "0"]),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/support.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/mutex_TRK.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/notify.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/main_TRK.c", extra_cflags=["-sdata", "0"]),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mem_TRK.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/mem_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/string_TRK.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/flush_cache.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/__exception.s"),
+            Object(Matching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/flush_cache.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/__exception.s"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/targimpl.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Processor/ppc/Export/targsupp.s"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/mpc_7xx_603e.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Processor/ppc/Export/targsupp.s"),
+            Object(Matching, "debugger/embedded/MetroTRK/Processor/ppc/Generic/mpc_7xx_603e.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/dolphin_trk.c"),   
-            Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/usr_put.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Os/dolphin/usr_put.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/dolphin_trk_glue.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/targcont.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Os/dolphin/targcont.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/target_options.c", extra_cflags=["-sdata", "0"]),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/UDP_Stubs.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Os/dolphin/UDP_Stubs.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Export/mslsupp.c"),
 
             Object(NonMatching, "gamedev/cust_connection/cc/exi2/GCN/EXI2_DDH_GCN/main.c"),
-            Object(NonMatching, "gamedev/cust_connection/utils/common/CircleBuffer.c"),
+            Object(Matching, "gamedev/cust_connection/utils/common/CircleBuffer.c"),
             Object(NonMatching, "gamedev/cust_connection/cc/exi2/GCN/EXI2_GDEV_GCN/main.c"),
-            Object(NonMatching, "gamedev/cust_connection/utils/common/MWTrace.c"),
-            Object(NonMatching, "gamedev/cust_connection/utils/gc/MWCriticalSection_gc.cpp"),
+            Object(Matching, "gamedev/cust_connection/utils/common/MWTrace.c"),
+            Object(Matching, "gamedev/cust_connection/utils/gc/MWCriticalSection_gc.cpp"),
         ]
     ),
     DolphinLib(
@@ -592,26 +592,26 @@ config.libs = [
     DolphinLib(
         "gd",
         [
-            Object(NonMatching, "dolphin/gd/GDBase.c"),
-            Object(NonMatching, "dolphin/gd/GDGeometry.c")
+            Object(Matching, "dolphin/gd/GDBase.c"),
+            Object(Matching, "dolphin/gd/GDGeometry.c")
         ]
     ),
     DolphinLib(
         "gx",
         [
             Object(NonMatching, "dolphin/gx/GXInit.c"),
-            Object(NonMatching, "dolphin/gx/GXFifo.c"),
+            Object(Matching, "dolphin/gx/GXFifo.c"),
             Object(NonMatching, "dolphin/gx/GXAttr.c"),
             Object(NonMatching, "dolphin/gx/GXMisc.c"),
-            Object(NonMatching, "dolphin/gx/GXGeometry.c"),
+            Object(Matching, "dolphin/gx/GXGeometry.c"),
             Object(NonMatching, "dolphin/gx/GXFrameBuf.c"),
-            Object(NonMatching, "dolphin/gx/GXLight.c"),
+            Object(Matching, "dolphin/gx/GXLight.c"),
             Object(NonMatching, "dolphin/gx/GXTexture.c"),
             Object(NonMatching, "dolphin/gx/GXBump.c"),
             Object(NonMatching, "dolphin/gx/GXTev.c"),
-            Object(NonMatching, "dolphin/gx/GXPixel.c"),
+            Object(Matching, "dolphin/gx/GXPixel.c"),
             Object(NonMatching, "dolphin/gx/GXDraw.c"),
-            Object(NonMatching, "dolphin/gx/GXDisplayList.c"),
+            Object(Matching, "dolphin/gx/GXDisplayList.c"),
             Object(NonMatching, "dolphin/gx/GXTransform.c"),
             Object(NonMatching, "dolphin/gx/GXPerf.c")
         ]
@@ -619,7 +619,7 @@ config.libs = [
     DolphinLib(
         "hio",
         [
-            Object(NonMatching, "dolphin/hio/hio.c")
+            Object(Matching, "dolphin/hio/hio.c")
         ]
     ),
     DolphinLib(
@@ -630,16 +630,16 @@ config.libs = [
             Object(NonMatching, "dolphin/ip/IPIcmp.c"),
             Object(NonMatching, "dolphin/ip/IPRoute.c"),
             Object(NonMatching, "dolphin/ip/IPUdp.c"),
-            Object(NonMatching, "dolphin/ip/IPFrag.c"),
+            Object(Matching, "dolphin/ip/IPFrag.c"),
             Object(NonMatching, "dolphin/ip/IPEther.c"),
-            Object(NonMatching, "dolphin/ip/IFFifo.c"),
-            Object(NonMatching, "dolphin/ip/IFRing.c"),
+            Object(Matching, "dolphin/ip/IFFifo.c"),
+            Object(Matching, "dolphin/ip/IFRing.c"),
             Object(NonMatching, "dolphin/ip/IPTcp.c"),
             Object(NonMatching, "dolphin/ip/IPTcpOutput.c"),
             Object(NonMatching, "dolphin/ip/IPTcpTimer.c"),
             Object(NonMatching, "dolphin/ip/IPTcpUser.c"),
             Object(NonMatching, "dolphin/ip/IPTcpTimeWait.c"),
-            Object(NonMatching, "dolphin/ip/IPDns.c"),
+            Object(Matching, "dolphin/ip/IPDns.c"),
             Object(NonMatching, "dolphin/ip/IPDhcp.c"),
             Object(NonMatching, "dolphin/ip/IPZero.c"),
             Object(NonMatching, "dolphin/ip/IPOpt.c"),
@@ -647,7 +647,7 @@ config.libs = [
             Object(NonMatching, "dolphin/ip/IPPPP.c"),
             Object(NonMatching, "dolphin/ip/IPPPPoE.c"),
             Object(NonMatching, "dolphin/ip/IPLcp.c"),
-            Object(NonMatching, "dolphin/ip/IPIpcp.c"),
+            Object(Matching, "dolphin/ip/IPIpcp.c"),
             Object(NonMatching, "dolphin/ip/IPPap.c"),
             Object(NonMatching, "dolphin/ip/IPChap.c"),
             Object(NonMatching, "dolphin/ip/IPIgmp.c"),
@@ -688,7 +688,7 @@ config.libs = [
     DolphinLib(
         "odenotstub",
         [
-            Object(NonMatching, "dolphin/odenotstub/odenotstub.c")
+            Object(Matching, "dolphin/odenotstub/odenotstub.c")
         ]
     ),
     DolphinLib(
@@ -732,14 +732,14 @@ config.libs = [
             Object(Matching, "dolphin/si/SIBios.c"),
             Object(Matching, "dolphin/si/SISamplingRate.c"),
             Object(NonMatching, "dolphin/si/SISteering.c"),
-            Object(NonMatching, "dolphin/si/SISteeringXfer.c"),
-            Object(NonMatching, "dolphin/si/SISteeringAuto.c")
+            Object(Matching, "dolphin/si/SISteeringXfer.c"),
+            Object(Matching, "dolphin/si/SISteeringAuto.c")
         ]
     ),
     DolphinLib(
         "upnp",
         [
-            Object(NonMatching, "dolphin/upnp/UPnP.c"),
+            Object(Matching, "dolphin/upnp/UPnP.c"),
             Object(NonMatching, "dolphin/upnp/UPnPHttp.c"),
             Object(NonMatching, "dolphin/upnp/UPnPSsdp.c"),
             Object(NonMatching, "dolphin/upnp/UPnPUuid.c"),
@@ -792,16 +792,16 @@ config.libs = [
         ["-O4,p"],
         [
             Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DAnimation.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DCluster.cpp"),
+            Object(Matching, "JSystem/J3D/GraphAnimator/J3DCluster.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DJoint.cpp"), 
             Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DJointTree.cpp"), 
             Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DMaterialAnm.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DMaterialAttach.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DModel.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DModelData.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DMtxBuffer.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DShapeTable.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphAnimator/J3DSkinDeform.cpp"),                    
+            Object(Matching, "JSystem/J3D/GraphAnimator/J3DModelData.cpp"),
+            Object(Matching, "JSystem/J3D/GraphAnimator/J3DMtxBuffer.cpp"),
+            Object(Matching, "JSystem/J3D/GraphAnimator/J3DShapeTable.cpp"),
+            Object(Matching, "JSystem/J3D/GraphAnimator/J3DSkinDeform.cpp"),                    
             
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DDrawBuffer.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DGD.cpp"),
@@ -811,23 +811,23 @@ config.libs = [
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DShape.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DShapeDraw.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DShapeMtx.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphBase/J3DStruct.cpp"),
+            Object(Matching, "JSystem/J3D/GraphBase/J3DStruct.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DSys.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DTevs.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphBase/J3DTexture.cpp"),
+            Object(Matching, "JSystem/J3D/GraphBase/J3DTexture.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphBase/J3DTransform.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphBase/J3DVertex.cpp"),                     
+            Object(Matching, "JSystem/J3D/GraphBase/J3DVertex.cpp"),                     
 
             Object(NonMatching, "JSystem/J3D/GraphLoader/J3DAnmLoader.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DBinaryFormat.cpp"),  # might not be in GraphLoader
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DClusterLoader.cpp"),            
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DJointFactory.cpp"),
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DBinaryFormat.cpp"),  # might not be in GraphLoader
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DClusterLoader.cpp"),            
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DJointFactory.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphLoader/J3DMaterialFactory.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphLoader/J3DMaterialFactory_v21.cpp"),
             Object(NonMatching, "JSystem/J3D/GraphLoader/J3DModelLoader.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DModelLoaderCalcSize.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DModelSaver.cpp"),  # might not be in GraphLoader
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DShapeFactory.cpp")
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DModelLoaderCalcSize.cpp"),
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DModelSaver.cpp"),  # might not be in GraphLoader
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DShapeFactory.cpp")
         ]
     ),
     JSystemLib(
@@ -835,7 +835,7 @@ config.libs = [
         ["-O4,p"],
         [
             Object(NonMatching, "JSystem/J3DU/J3DUPerf.cpp"),
-            Object(NonMatching, "JSystem/J3DU/J3DUDL.cpp"),
+            Object(Matching, "JSystem/J3DU/J3DUDL.cpp"),
             Object(NonMatching, "JSystem/J3DU/J3DUMotion.cpp"),
             Object(Matching, "JSystem/J3DU/J3DUClipper.cpp"),
         ]
@@ -1042,12 +1042,12 @@ config.libs = [
         "Logitech",
         ["-O4,s"],
         [
-            Object(NonMatching, "JSystem/Logitech/Conditon.cpp"),
+            Object(Matching, "JSystem/Logitech/Conditon.cpp"),
             Object(NonMatching, "JSystem/Logitech/Constant.cpp"),
-            Object(NonMatching, "JSystem/Logitech/Force.cpp"),
+            Object(Matching, "JSystem/Logitech/Force.cpp"),
             Object(NonMatching, "JSystem/Logitech/LGWheels.cpp"),
             Object(NonMatching, "JSystem/Logitech/Periodic.cpp"),
-            Object(NonMatching, "JSystem/Logitech/Ramp.cpp"),
+            Object(Matching, "JSystem/Logitech/Ramp.cpp"),
             Object(NonMatching, "JSystem/Logitech/Wheels.cpp")
         ]
     ),
@@ -1127,7 +1127,7 @@ config.libs = [
             Object(Matching, "Kameda/LapGhost2D.cpp"),
             Object(Matching, "Kameda/CanNotSaveG2D.cpp"),
             Object(Matching, "Kameda/LANResult2D.cpp"),
-            Object(NonMatching, "Kameda/LANNum2D.cpp"),
+            Object(Matching, "Kameda/LANNum2D.cpp"),
             Object(Matching, "Kameda/Cup2D.cpp"),
             Object(Matching, "Kameda/BombStart2D.cpp")
         ]
@@ -1217,12 +1217,12 @@ config.libs = [
             Object(NonMatching, "Kawano/driverData.cpp"),
             Object(NonMatching, "Kawano/driver.cpp"),
             Object(Matching, "Kawano/driverMgr.cpp"),
-            Object(NonMatching, "Kawano/animation.cpp"),
+            Object(Matching, "Kawano/animation.cpp"),
             Object(NonMatching, "Kawano/driverAnim.cpp"),
             Object(NonMatching, "Kawano/driverAnimBuf.cpp"),
             Object(NonMatching, "Kawano/driver_ik.cpp"),
             Object(NonMatching, "Kawano/driverTPAnim.cpp"),
-            Object(NonMatching, "Kawano/driverState.cpp"),
+            Object(Matching, "Kawano/driverState.cpp"),
             Object(NonMatching, "Kawano/driverOffset.cpp"),
             Object(NonMatching, "Kawano/feeling.cpp"),
             Object(NonMatching, "Kawano/osage.cpp"),
@@ -1278,7 +1278,7 @@ config.libs = [
             Object(Matching, "Osako/ResetAgent.cpp"),
             Object(NonMatching, "Osako/Award2D.cpp"),
             Object(Matching, "Osako/NameEntryHelper.cpp"),
-            Object(NonMatching, "Osako/LANBackground.cpp"),
+            Object(Matching, "Osako/LANBackground.cpp"),
             Object(Matching, "Osako/LANSelectMode.cpp"),
             Object(NonMatching, "Osako/LANTitle.cpp"),
             Object(NonMatching, "Osako/LANEntry.cpp"),
@@ -1369,7 +1369,7 @@ config.libs = [
             Object(NonMatching, "Shiraiwa/MapObjSkyShip.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjDonkyRockGen.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjDonkyRock.cpp"),
-            Object(NonMatching, "Shiraiwa/MapObjNoMove.cpp"),
+            Object(Matching, "Shiraiwa/MapObjNoMove.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjPeachTree.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjFireBar.cpp"),
             Object(Matching, "Shiraiwa/MapObjHioNode.cpp"),
@@ -1392,7 +1392,7 @@ config.libs = [
             Object(NonMatching, "Shiraiwa/MapObjHeyho.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjSanbo.cpp"),
             Object(NonMatching, "Shiraiwa/MapObjWluArrow.cpp"),
-            Object(NonMatching, "Shiraiwa/MapObjSnowMan.cpp"),
+            Object(Matching, "Shiraiwa/MapObjSnowMan.cpp"),
             Object(NonMatching, "Shiraiwa/DistSnow.cpp"),
             Object(Matching, "Shiraiwa/MapObjIceBlock.cpp"),
             Object(Matching, "Shiraiwa/WipeSlide.cpp"),
@@ -1449,7 +1449,7 @@ config.libs = [
             Object(NonMatching, "Yamamoto/kartCtrlStrat.cpp"),
             Object(Matching, "Yamamoto/kartLine.cpp"),
             Object(Matching, "Yamamoto/kartCtrlInfo.cpp"),
-            Object(NonMatching, "Yamamoto/kartCamStrat.cpp"),
+            Object(Matching, "Yamamoto/kartCamStrat.cpp"),
             Object(NonMatching, "Yamamoto/KartAnime.cpp"),
             Object(NonMatching, "Yamamoto/KartItemStrat.cpp"),
             Object(Matching, "Yamamoto/KartSound.cpp"),
