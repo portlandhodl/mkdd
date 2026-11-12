@@ -41,12 +41,12 @@ struct TList {
             return (T*)(this->p_ + 1); 
         }
 
-        friend bool operator==(const iterator& a, const iterator& b) {
+        friend bool operator==(iterator a, iterator b) {
             return a.p_ == b.p_;
         }
 
-        friend bool operator!=(const iterator& a, const iterator& b) {
-            return a.p_ != b.p_;
+        friend bool operator!=(iterator a, iterator b) {
+            return !(a == b);
         }
 
         TNode_* p_;

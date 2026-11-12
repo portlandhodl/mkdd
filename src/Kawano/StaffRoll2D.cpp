@@ -379,6 +379,7 @@ StaffRoll2D::StaffRoll2D(JKRHeap *heap, Language language, VideoMode videoMode, 
                                           JKRArchive::MOUNT_DIRECTION_HEAD);
 
     for (int i = 0; i < 18; i++) {
+        int j;
         int id = getSceneDataID(i, mVersion);
         mScreen[i] = new (heap, 0) J2DScreen();
         mScreen[i]->set(mBloName[id], 0x40000, archive);
@@ -388,7 +389,7 @@ StaffRoll2D::StaffRoll2D(JKRHeap *heap, Language language, VideoMode videoMode, 
         mScreen[i]->setAnimation(mAnmTransform[i]);
         void *brk = JKRFileLoader::getGlbResource(mBrkName[id], archive);
 
-        for (int j = 0; j < 15; j++) {
+        for (j = 0; j < 15; j++) {
             for (int k = 0; k < 32; k++)
                 mStrings[i][j][k] = '\0';
 
@@ -413,9 +414,8 @@ StaffRoll2D::StaffRoll2D(JKRHeap *heap, Language language, VideoMode videoMode, 
             }
         }
 
-        int j;
-        mExitBoxNum[i] = j = 0;
-        for (; j < 8; j++) {
+        mExitBoxNum[i] = 0;
+        for (j = 0; j < 8; j++) {
             mExitBoxPicture[i][j] = (J2DPicture *)mScreen[i]->search(mTag_exitbox[id][j]);
             if (mExitBoxPicture[i][j] != nullptr) {
                 mExitBoxPicture[i][j]->hide();

@@ -24,7 +24,7 @@ LANTitle::Item::Item(int idx, J2DScreen *screen, void *bck, void *brk) {
     mPane->setAnimation(mTrans2);
     mPane->hide();
 
-    J2DPane *pane = screen->search(0x746C4D31ull + idx);
+    J2DPane *pane = screen->search(0x54746C4D31ull + idx);
     pane->setAnimation(mTrans);
     pane->setAnimation(mKey);
 }

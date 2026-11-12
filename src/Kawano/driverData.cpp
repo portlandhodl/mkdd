@@ -1031,7 +1031,6 @@ struct DD1027 { virtual ~DD1027() {} };
 struct DD1028 { virtual ~DD1028() {} };
 struct DD1029 { virtual ~DD1029() {} };
 struct DD1030 { virtual ~DD1030() {} };
-int DriverDataChild::mInitCounter;
 
 f32 DriverDataChild::mDriverDataDefault[20][95] = {
     { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 46.70000076293945f, 16.5f, 22.5f, -4.699999809265137f, 0.0f, -36.5f, 53.5f, 41.5f, 45.5f, -22.899999618530273f, 0.0f, -70.0f, 0.0f, 0.0f, 0.0f, 0.0f, -60.0f, -13.0f, 53.5f, 41.5f, 45.5f, -22.899999618530273f, 8.0f, -76.0f, -23.0f, -5.0f, -56.0f, -17.0f, -56.0f, -7.0f, -7.0f, -22.0f, -9.0f, -30.0f, -13.0f, -27.0f, -9.0f, -27.0f, -9.0f, -38.0f, -12.0f, -60.0f, -14.0f, -58.0f, -27.0f, -73.0f, -1.0f, -90.0f, 7.0f, 0.0f, 0.0f, 0.0f, 4.0f, 0.0f, 4.0f, 0.0f, -2.0f, -18.0f, 20.0f, -21.0f, 25.0f, -33.0f, 27.0f, -23.0f, 22.0f, -23.0f, 43.0f, -58.0f, 46.0f, -46.0f, 46.0f, -46.0f, 47.0f, -67.0f, 41.0f, -62.0f, 0.0f, -65.0f, 40.0f, 28.0f, 0.5f, 0.550000011920929f, 0.5f, 0.0f, 0.0f, -12.0f, 31.0f, 12.5f, 0.0f },
@@ -1057,6 +1056,7 @@ f32 DriverDataChild::mDriverDataDefault[20][95] = {
 };
 
 DriverData *DriverData::mspDriverData;
+int DriverDataChild::mInitCounter;
 DriverDataChild DriverData::msDriverData[20];
 
 DriverDataChild::DriverDataChild()
@@ -1074,12 +1074,3 @@ DriverData *DriverData::create()
     }
     return mspDriverData;
 }
-
-#pragma push
-#pragma force_active on
-#pragma dont_inline on
-static void forceDriverDataCtor()
-{
-    DriverData d;
-}
-#pragma pop

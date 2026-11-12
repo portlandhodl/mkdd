@@ -34,8 +34,13 @@ struct CamOp
 
 struct CubeParam
 {
-    JGeometry::TVec3f _0[8];
+    Vec _0[8];
 }; // 60
+
+struct ThunderOffsetParam
+{
+    f32 x, y;
+}; // 8
 
 struct TireParamData
 {
@@ -190,7 +195,7 @@ extern f32 Jdata[63];
 extern f32 BodyFullHeightData[21];
 extern f32 BodyFullBumpData[21];
 extern f32 SusPowerData[21];
-extern JGeometry::TVec2f ThunderOffet[21];
+extern ThunderOffsetParam ThunderOffet[21];
 extern f32 SusDushDive[21];
 extern f32 SetEngineClassData[3];
 extern SusParamData *SusParamsData[21];

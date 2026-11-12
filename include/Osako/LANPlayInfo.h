@@ -60,7 +60,6 @@ private:
     JMath::TRandom_fast_ mRandom; // 0x18
     Player mPlayers[8];    // 0x1c
     u8 mActive[8];         // 0x3c
-    PLACEHOLDER_BYTES(0x44, 0x84);
 };
 extern LANPlayInfo gLANPlayInfo;
 

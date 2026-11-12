@@ -8,7 +8,6 @@
 #include "JSystem/JAudio/System/JASTrack.h"
 #include "JSystem/JAudio/System/JASChannel.h"
 #include "JSystem/JAudio/Interface/JAISe.h"
-#include "JSystem/JAudio/JASFakeMatch2.h"
 #include "dolphin/dvd.h"
 #include "dolphin/os.h"
 #include "mathHelper.h"
@@ -49,10 +48,6 @@ static OSThread sSSDPThread;
 static OSThread sHTTPThread;
 static u8 saSSDPStack[0x4000];
 static u8 saHTTPStack[0x4000];
-static char sHttpThreadName[12];
-static char sHttpThreadName2[12];
-static char sHttpThreadName3[12];
-static char sHttpThreadName4[12];
 extern u8 UPnPUdnNameSpace[16];
 
 static SOConfig sConfig = {
@@ -60,7 +55,7 @@ static SOConfig sConfig = {
 };
 
 static SSDPServiceConfig sSSDPServiceConfig = {
-    &sSSDPThread, saHTTPStack, 0x4000, 8, (void (*)(const char *, const void *))NetGameMgr::callbackNotify, 0x01000000,
+    &sSSDPThread, saSSDPStack + sizeof(saSSDPStack), 0x4000, 8, (void (*)(const char *, const void *))NetGameMgr::callbackNotify, 0x01000000,
 };
 
 static struct {
@@ -70,7 +65,7 @@ static struct {
 } sHttpFile = {"/rootDesc.xml", 0, 0};
 
 static HTTPServiceConfig sHTTPServiceConfig = {
-    &sHTTPThread, sHttpThreadName, 0x4000, 0x14, &sHttpFile, 1,
+    &sHTTPThread, saHTTPStack + sizeof(saHTTPStack), 0x4000, 0x14, &sHttpFile, 1, 0,
 };
 
 static SSDPSearchInfo sSearchInfo = {
@@ -228,6 +223,7 @@ int BBAMgr::processDHCP()
 
 int BBAMgr::processAutoIP()
 {
+    int ret;
     switch (mState)
     {
     case 2:
@@ -246,19 +242,18 @@ int BBAMgr::processAutoIP()
             }
         }
         mState = 4;
+        ret = 1;
         mFlag = 0;
         mUnk24 = 0;
-        int ret = 1;
         if (mFlag != 1)
         {
             mStartTime = Clock::getTime() - mUnk24;
             mFlag = 1;
         }
         mTimer1 = 0.0f;
-        return ret;
+        break;
     case 4:
     {
-        int ret;
         UPnPGetHostAddr(&mHostAddr);
         if (mHostAddr != 0)
         {
@@ -310,9 +305,10 @@ int BBAMgr::processAutoIP()
             break;
         }
         mTimer1 = timer;
-        return ret;
+        break;
     }
     }
+    return ret;
 }
 
 bool BBAMgr::disconnecting(bool unk)
@@ -451,3 +447,5 @@ void BBAMgr::loadHttpFile()
     sHttpFile.mData = ResMgr::getPtr(ResMgr::mcArcSystem, buf);
     sHttpFile.mSize = ResMgr::getResSize(ResMgr::mcArcSystem, sHttpFile.mData);
 }
+
+#include "JSystem/JAudio/JASFakeMatch2.h"

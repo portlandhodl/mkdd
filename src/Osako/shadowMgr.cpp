@@ -64,9 +64,8 @@ void ShadowManager::draw(u32 viewNo, List& modelList) {
     GXSetDstAlpha(GX_DISABLE, 0);
     
     List::iterator it = modelList.begin();
-    List::iterator itEndTmp = modelList.end();
-    List::const_iterator itEnd = itEndTmp;
-    
+    List::iterator itEnd = modelList.end();
+
     for (; it != itEnd; ++it) {
         (*it)->setCurrentViewNo(viewNo);
         

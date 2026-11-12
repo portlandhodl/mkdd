@@ -259,6 +259,15 @@ void DriverModel::init_ik(int i)
     }
 }
 
+inline J3DJoint *getDriverJoint(DriverLoader *loader, ExModel *model, u16 i)
+{
+    J3DJoint *jnt = nullptr;
+    u16 jntNo = loader->getJntBindNo(i);
+    if (jntNo != 0xffff)
+        jnt = model->getModelData()->getJointNodePointer(jntNo);
+    return jnt;
+}
+
 void DriverModel::init(int driverNo)
 {
     StateEnum stt;
@@ -304,10 +313,7 @@ void DriverModel::init(int driverNo)
         setModelData(1, mDriverLoader->getMdlData(1));
 
         for (u16 i = 0; i < 27; i++) {
-            J3DJoint *jnt = nullptr;
-            u16 jntNo = mDriverLoader->getJntBindNo(i);
-            if (jntNo != 0xffff)
-                jnt = getModelData()->getJointNodePointer(jntNo);
+            J3DJoint *jnt = getDriverJoint(mDriverLoader, this, i);
             if (jnt)
                 jnt->mFunction = mscaCallBackTbl__11DriverModel[i];
         }

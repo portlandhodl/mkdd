@@ -134,6 +134,13 @@ void KartStrat::DoEnemyMaxmZCrl(f32 p1) {
     body->mVel.add(vec);
 }
 
+void KartStrat::DoMaxVelCrl(f32 max) {
+    KartBody *body = mBody;
+    f32 len = body->mVel.length();
+    if (len > max)
+        body->mVel.scale(0.6f);
+}
+
 void KartStrat::DoMaxLevelZXVelCrl(f32 p1, f32 p2) {
     KartBody *body = mBody;
     JGeometry::TVec3f vec;

@@ -39,12 +39,13 @@ struct SSDPServiceConfig
 struct HTTPServiceConfig
 {
     OSThread *mThread;   // 0x0
-    char *mName;         // 0x4
+    void *mStack;        // 0x4
     u32 mStackSize;      // 0x8
     u32 mPriority;       // 0xc
     void *mFile;         // 0x10
     u32 mUnk14;          // 0x14
-}; // Size: 0x18
+    u32 mUnk18;          // 0x18
+}; // Size: 0x1c
 
 struct SSDPSearchInfo
 {

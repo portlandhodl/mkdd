@@ -1412,12 +1412,10 @@ void KartDemoCam::InitLastCam() {
     yaw = std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 3.14f;
     GetKartCtrl()->PolarToCross((VecPtr)look, (VecPtr)look, 80.0f, 0.0f, yaw);
     cam = mCam;
-    yaw = std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 2.09333f;
-    GetKartCtrl()->PolarToCross((VecPtr)&cam->mCameraLookPos, (VecPtr)&cam->mCameraPos, 200.0f, -0.523333f, yaw);
+    GetKartCtrl()->PolarToCross((VecPtr)&cam->mCameraLookPos, (VecPtr)&cam->mCameraPos, 200.0f, -0.523333f, std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 2.09333f);
     mCam->mPathData[0].set(mCam->mCameraPos);
     cam = mCam;
-    yaw = std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 1.046666f;
-    GetKartCtrl()->PolarToCross((VecPtr)&_a4, (VecPtr)&cam->mPathData[1], 1.3f * cam->mTargetBody->_4e4, 0.0f, yaw);
+    GetKartCtrl()->PolarToCross((VecPtr)&_a4, (VecPtr)&cam->mPathData[1], 1.3f * cam->mTargetBody->_4e4, 0.0f, std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 1.046666f);
     cam = mCam;
     yaw = std::atan2f(cam->mTargetBody->_308.x, cam->mTargetBody->_308.z) + 1.91888f;
     GetKartCtrl()->PolarToCross((VecPtr)&_a4, (VecPtr)&cam->mPathData[2], cam->mTargetBody->_4e4, 0.0f, yaw);

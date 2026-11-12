@@ -17,6 +17,7 @@ public:
     void GetRoadBodyRoll();
     void GetBodyNorm();
     void DoEnemyMaxmZCrl(f32);
+    void DoMaxVelCrl(f32);
     void DoMaxLevelZXVelCrl(f32, f32);
     void DoVelCrl(f32);
     void DoWgCrl(f32);
@@ -69,7 +70,6 @@ public:
 
     // Inline/Unused
     // void DoMaxmZCrl(f32);
-    // void DoMaxVelCrl(f32);
     // void DoMaxZXVelCrl(f32);
     // void DoZXVelCrl(f32);
     // void DoMaxLevelZXDirCrl(f32, f32);

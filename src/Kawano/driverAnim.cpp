@@ -193,7 +193,11 @@ void DriverModel::StartWait()
 
 void DriverModel::StartWaitBack()
 {
-    StartAnimation(mcS078);
+    mState = mcS078;
+    mDriveAnim.mLoopAnim.mMinValue = 0.0f;
+    mDriveAnim.mLoopAnim.mMaxValue = 1.0f;
+    mDriveAnim.mLoopAnim.mSpeed = 0.5f;
+    mDriveAnim.mLoopAnim.start();
 }
 
 void DriverModel::StartDWait()

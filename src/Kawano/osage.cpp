@@ -282,21 +282,23 @@ void OsageMgr::init(DriverModel *driver) {
     mCount++;
 }
 
-void OsageMgr::setCallBack(int idx) {
-    OsageMgr *mgr = this;
-    J3DModelData **modelData = &mgr->mModelData[idx];
-    for (u16 ctrlNo = 0; ctrlNo < 7; ctrlNo++) {
-        J3DJoint *jnt = nullptr;
 #undef __FILE__
 #define __FILE__ "osage.h"
-#line 95
-        JUT_MINMAX_ASSERT(0, ctrlNo, 7);
+#line 93
+inline J3DJoint *getOsageJoint(J3DModelData **modelData, u16 *jntNoTbl, u16 ctrlNo) {
+    J3DJoint *jnt = nullptr;
+    JUT_MINMAX_ASSERT(0, ctrlNo, 7);
+    u16 jntNo = jntNoTbl[ctrlNo];
+    if (jntNo != 0xffff)
+        jnt = (*modelData)->getJointNodePointer(jntNo);
+    return jnt;
+}
+
 #undef __FILE__
-
-        u16 jntNo = mgr->mJntNo[ctrlNo];
-        if (jntNo != 0xffff)
-            jnt = modelData[0]->getJointNodePointer(jntNo);
-
+#line 99
+void OsageMgr::setCallBack(int idx) {
+    for (u16 ctrlNo = 0; ctrlNo < 7; ctrlNo++) {
+        J3DJoint *jnt = getOsageJoint(&mModelData[idx], mJntNo, ctrlNo);
         if (jnt != nullptr)
             jnt->mFunction = mscaCallBackTbl[ctrlNo];
     }
