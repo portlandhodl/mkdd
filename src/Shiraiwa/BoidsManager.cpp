@@ -11,10 +11,10 @@ TBoidParam TBoidsManager::sParams[3] = {
 };
 
 f32 TBoid::sUpPow = 2.0f;
-static const f32 asmF_00000000 = 0.0f;
-static const f32 asmF_3f000000 = 0.5f;
-static const f32 asmF_40400000 = 3.0f;
-static const f32 asmF_42000000 = 32.0f;
+
+static inline void normalizeDir(JGeometry::TVec3<f32> &v) {
+    v.normalize();
+}
 
 TBoidsManager::TBoidsManager(u32 num, u8 type) {
     mBoids = new TBoid *[num];
@@ -71,153 +71,21 @@ void TBoidsManager::getCenter() {
         mCenter.div(count);
 }
 
-asm void TBoidsManager::getGlbDir()
-{
-    nofralloc
-    stwu r1, -0x20(r1)
-    li r7, 0x0
-    lfs f4, asmF_00000000
-    li r4, 0x0
-    stfs f4, 0x24(r3)
-    stfs f4, 0x20(r3)
-    stfs f4, 0x1c(r3)
-    b L_802D1EF0
-    L_802D1D98:
-    lwz r5, 0x8(r3)
-    lwzx r5, r5, r4
-    cmplwi r5, 0x0
-    beq L_802D1EE8
-    lwz r6, 0x14(r5)
-    lis r5, __float_epsilon@ha
-    lfs f5, asmF_42000000
-    lfs f6, 0x0(r6)
-    lfs f4, 0x4(r6)
-    stfs f6, 0x8(r1)
-    lfs f6, 0x8(r6)
-    stfs f4, 0xc(r1)
-    lfs f4, __float_epsilon@l(r5)
-    psq_l f8, 0x8(r1), 0, 0
-    fmuls f4, f5, f4
-    stfs f6, 0x10(r1)
-    ps_mul f8, f8, f8
-    ps_madd f9, f6, f6, f8
-    ps_sum0 f9, f9, f8, f8
-    fcmpo cr0, f9, f4
-    cror eq, lt, eq
-    beq L_802D1E44
-    lfs f4, asmF_00000000
-    fcmpo cr0, f9, f4
-    cror eq, lt, eq
-    bne L_802D1E08
-    fmr f1, f9
-    b L_802D1E2C
-    L_802D1E08:
-    frsqrte f8, f9
-    lfs f6, asmF_3f000000
-    lfs f4, asmF_40400000
-    frsp f8, f8
-    fmuls f5, f8, f8
-    fmuls f6, f6, f8
-    fnmsubs f4, f9, f5, f4
-    fmuls f4, f6, f4
-    fmr f1, f4
-    L_802D1E2C:
-    psq_l f5, 0x8(r1), 0, 0
-    psq_l f4, 0x10(r1), 1, 0
-    ps_muls0 f5, f5, f1
-    ps_muls0 f4, f4, f1
-    psq_st f5, 0x8(r1), 0, 0
-    psq_st f4, 0x10(r1), 1, 0
-    L_802D1E44:
-    psq_l f6, 0x8(r1), 0, 0
-    lis r5, __float_epsilon@ha
-    lfs f2, 0x10(r1)
-    ps_mul f6, f6, f6
-    lfs f5, asmF_42000000
-    lfs f4, __float_epsilon@l(r5)
-    ps_madd f9, f2, f2, f6
-    fmuls f4, f5, f4
-    ps_sum0 f9, f9, f6, f6
-    fcmpo cr0, f9, f4
-    cror eq, lt, eq
-    beq L_802D1EC8
-    lfs f4, asmF_00000000
-    fcmpo cr0, f9, f4
-    cror eq, lt, eq
-    bne L_802D1E8C
-    fmr f7, f9
-    b L_802D1EB0
-    L_802D1E8C:
-    frsqrte f8, f9
-    lfs f6, asmF_3f000000
-    lfs f4, asmF_40400000
-    frsp f8, f8
-    fmuls f5, f8, f8
-    fmuls f6, f6, f8
-    fnmsubs f4, f9, f5, f4
-    fmuls f4, f6, f4
-    fmr f7, f4
-    L_802D1EB0:
-    psq_l f5, 0x8(r1), 0, 0
-    psq_l f4, 0x10(r1), 1, 0
-    ps_muls0 f5, f5, f7
-    ps_muls0 f4, f4, f7
-    psq_st f5, 0x8(r1), 0, 0
-    psq_st f4, 0x10(r1), 1, 0
-    L_802D1EC8:
-    psq_l f6, 0x1c(r3), 0, 0
-    psq_l f5, 0x8(r1), 0, 0
-    psq_l f4, 0x10(r1), 1, 0
-    ps_add f5, f6, f5
-    psq_st f5, 0x1c(r3), 0, 0
-    psq_l f5, 0x24(r3), 1, 0
-    ps_add f4, f5, f4
-    psq_st f4, 0x24(r3), 1, 0
-    L_802D1EE8:
-    addi r7, r7, 0x1
-    addi r4, r4, 0x4
-    L_802D1EF0:
-    lwz r0, 0xc(r3)
-    cmplw r7, r0
-    blt L_802D1D98
-    psq_l f4, 0x1c(r3), 0, 0
-    lis r4, __float_epsilon@ha
-    lfs f3, 0x24(r3)
-    ps_mul f4, f4, f4
-    lfs f2, asmF_42000000
-    lfs f1, __float_epsilon@l(r4)
-    ps_madd f5, f3, f3, f4
-    fmuls f1, f2, f1
-    ps_sum0 f5, f5, f4, f4
-    fcmpo cr0, f5, f1
-    cror eq, lt, eq
-    beq L_802D1F80
-    lfs f1, asmF_00000000
-    fcmpo cr0, f5, f1
-    cror eq, lt, eq
-    bne L_802D1F44
-    fmr f0, f5
-    b L_802D1F68
-    L_802D1F44:
-    frsqrte f4, f5
-    lfs f3, asmF_3f000000
-    lfs f1, asmF_40400000
-    frsp f4, f4
-    fmuls f2, f4, f4
-    fmuls f3, f3, f4
-    fnmsubs f1, f5, f2, f1
-    fmuls f1, f3, f1
-    fmr f0, f1
-    L_802D1F68:
-    psq_l f1, 0x1c(r3), 0, 0
-    psq_l f2, 0x24(r3), 1, 0
-    ps_muls0 f1, f1, f0
-    ps_muls0 f0, f2, f0
-    psq_st f1, 0x1c(r3), 0, 0
-    psq_st f0, 0x24(r3), 1, 0
-    L_802D1F80:
-    addi r1, r1, 0x20
-    blr
+void TBoidsManager::getGlbDir() {
+    mGlbDir.zero();
+    for (u32 i = 0; i < mNum; i++) {
+        TBoid *boid = mBoids[i];
+        if (boid) {
+            JGeometry::TVec3<f32> dir;
+            dir.x = boid->mVel->x;
+            dir.y = boid->mVel->y;
+            dir.z = boid->mVel->z;
+            normalizeDir(dir);
+            dir.normalize();
+            mGlbDir.add(dir);
+        }
+    }
+    mGlbDir.normalize();
 }
 
 void TBoidsManager::getPow(u32 idx, JGeometry::TVec3<f32> *out) {

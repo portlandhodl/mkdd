@@ -10,6 +10,7 @@ class TMapObjDossun : public TMapObjStamper, public StateObserver
 {
 public:
     TMapObjDossun(const CrsData::SObject &); // 0x8028a7ac
+    virtual void calc();                           // 0x8028b75c
     virtual ~TMapObjDossun();                // 0x8028a8c8
 
     virtual void reset();                          // 0x8028a9f0
@@ -20,7 +21,6 @@ public:
     virtual const char *getBmdFileName();          // 0x8028afac
     virtual void update();                         // 0x8028afd4
     virtual void doKartColCallBack(int);           // 0x8028b03c
-    virtual void calc();                           // 0x8028b75c
     virtual u32 getReleaseFrame();                 // 0x8028b850
     virtual void MoveExec();                       // 0x8028b91c
     virtual void InitExec();                       // 0x8028b8b0

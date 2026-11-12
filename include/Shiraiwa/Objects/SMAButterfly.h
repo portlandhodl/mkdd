@@ -48,13 +48,13 @@ public:
     TSMAButterfly();
     virtual ~TSMAButterfly() {}
 
+    virtual void calc();
+    virtual void update();
     virtual const char *getBmdFileName();
     virtual void reset();
     virtual void setOrigin(JGeometry::TVec3f *);
     virtual void loadAnimation();
     virtual void createModel(JKRSolidHeap *, u32);
-    virtual void calc();
-    virtual void update();
     bool checkReachTarget();
     s16 getRandomDeg(s16, s16);
 
