@@ -90,7 +90,7 @@ asm void ETHIn(void* ifp, u8* frame, u32 len)
 {
     nofralloc
     mflr r0
-    lis r6,RecvBuf@h
+    lis r6,RecvBuf@ha
     stw r0,4(r1)
     stwu r1,-40(r1)
     stw r31,36(r1)
@@ -242,7 +242,7 @@ L_cb0_1:
     lwz r0,Reset
     cmpwi r0,0
     bne L_cb0_no
-    lis r3,RecvBuf@h
+    lis r3,RecvBuf@ha
     addi r3,r3,RecvBuf@l
     blr
 L_cb0_no:
@@ -260,7 +260,7 @@ static asm void Callback1(u8* buf, s32 len)
     addi r4,r3,0
     stwu r1,-8(r1)
     blt L_cb1_end
-    lis r3,__IFDefault@h
+    lis r3,__IFDefault@ha
     addi r3,r3,__IFDefault@l
     addi r5,r5,-4
     bl ETHIn
@@ -275,7 +275,7 @@ static asm u32 Go(void)
 {
     nofralloc
     mflr r0
-    lis r3,RecvBuf@h
+    lis r3,RecvBuf@ha
     stw r0,4(r1)
     stwu r1,-48(r1)
     stmw r22,8(r1)
@@ -439,7 +439,7 @@ L_go_15:
     addi r0,r3,1
     stw r0,19728(r31)
 L_go_16:
-    lis r3,GoCallback@h
+    lis r3,GoCallback@ha
     addi r5,r3,GoCallback@l
     addi r4,r28,0
     addi r3,r31,1536
@@ -463,7 +463,7 @@ static asm void GoCallback(u32 flags)
 {
     nofralloc
     mflr r0
-    lis r4,RecvBuf@h
+    lis r4,RecvBuf@ha
     stw r0,4(r1)
     stwu r1,-56(r1)
     stmw r22,16(r1)
@@ -762,7 +762,7 @@ static asm void* Alloc(u32 size)
 {
     nofralloc
     mflr r0
-    lis r3,SendFifo@h
+    lis r3,SendFifo@ha
     stw r0,4(r1)
     addi r3,r3,SendFifo@l
     stwu r1,-8(r1)
@@ -777,7 +777,7 @@ static asm void Free(void* p)
 {
     nofralloc
     mflr r0
-    lis r3,SendFifo@h
+    lis r3,SendFifo@ha
     stw r0,4(r1)
     addi r3,r3,SendFifo@l
     stwu r1,-8(r1)
@@ -792,7 +792,7 @@ static asm void LinkCheckHandler(void)
 {
     nofralloc
     mflr r0
-    lis r3,RecvBuf@h
+    lis r3,RecvBuf@ha
     stw r0,4(r1)
     stwu r1,-32(r1)
     stw r31,28(r1)
@@ -839,7 +839,7 @@ asm u32 IFInit(s32 mode)
 {
     nofralloc
     mflr r0
-    lis r4,RecvBuf@h
+    lis r4,RecvBuf@ha
     stw r0,4(r1)
     stwu r1,-32(r1)
     stw r31,28(r1)
@@ -910,18 +910,18 @@ L_ifi_8:
     li r4,IPLimited
     li r5,4
     bl memcpy
-    lis r3,ETHOut@h
+    lis r3,ETHOut@ha
     addi r0,r3,ETHOut@l
-    lis r3,Cancel@h
+    lis r3,Cancel@ha
     stw r0,19680(r31)
     addi r0,r3,Cancel@l
-    lis r3,Alloc@h
+    lis r3,Alloc@ha
     stw r0,19684(r31)
     addi r0,r3,Alloc@l
-    lis r3,Free@h
+    lis r3,Free@ha
     stw r0,19688(r31)
     addi r0,r3,Free@l
-    lis r3,NullFilter@h
+    lis r3,NullFilter@ha
     stw r0,19692(r31)
     addi r0,r3,NullFilter@l
     stw r0,19700(r31)
@@ -954,7 +954,7 @@ L_ifi_8:
     mulhwu r0,r5,r0
     srwi r0,r0,6
     mulli r8,r0,250
-    lis r5,LinkCheckHandler@h
+    lis r5,LinkCheckHandler@ha
     addi r9,r5,LinkCheckHandler@l
     addi r5,r3,0
     addi r6,r4,0
@@ -970,7 +970,7 @@ L_ifi_9:
     stw r30,LinkState
     stw r30,19588(r31)
 L_ifi_10:
-    lis r3,ResetFunctionInfo@h
+    lis r3,ResetFunctionInfo@ha
     addi r3,r3,ResetFunctionInfo@l
     bl OSRegisterResetFunction
     li r3,1
@@ -988,7 +988,7 @@ asm u32 IFMute(u32 mute)
 {
     nofralloc
     mflr r0
-    lis r4,__IFDefault@h
+    lis r4,__IFDefault@ha
     stw r0,4(r1)
     stwu r1,-24(r1)
     stw r31,20(r1)
@@ -1015,8 +1015,8 @@ L_mute_2:
     bne L_mute_end
     cmpwi r31,0
     beq L_mute_end
-    lis r3,Callback0@h
-    lis r4,Callback1@h
+    lis r3,Callback0@ha
+    lis r4,Callback1@ha
     addi r3,r3,Callback0@l
     addi r4,r4,Callback1@l
     bl ETHSetRecvCallback
@@ -1069,7 +1069,7 @@ L_or_zero2:
     b L_or_end
 L_or_2:
     lwz r4,Mute
-    lis r3,__IFDefault@h
+    lis r3,__IFDefault@ha
     stw r31,Mute
     lwz r0,__IFDefault@l(r3)
     cmpwi r0,5

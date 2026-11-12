@@ -129,7 +129,7 @@ static void Start(DHCPControl*);
 static void Stop(DHCPControl*);
 static void ClaimHandler(ARPConf*, s32);
 static void Claim(DHCPControl*);
-static s32 Restart(DHCPControl*, s32, OSTime);
+static s32 Restart(DHCPControl*, OSTime);
 static void NullCallback(s32);
 s32 DHCPStartupEx(DHCPHandler, s32);
 BOOL DHCPCleanup(void);
@@ -140,6 +140,21 @@ s32 DHCPGetStatus(DHCPInfo*);
 static DHCPControl Control;
 static ARPConf Conf;
 static u32 MagicCookie = 0x63825363;
+
+static u32 Rotate(u32 x, u32 n)
+{
+    return (x << n) | (x >> (32 - n));
+}
+
+static OSTime DHCPBackoff(DHCPControl* control)
+{
+    OSTime t;
+    u32 r;
+
+    t = (OSTime)(control->retry <= control->maxRetry ? 4 << control->retry : 64) * OS_TIMER_CLOCK;
+    r = OSGetTick();
+    return t + Rotate(r, r & 31) % (OS_TIMER_CLOCK * 2) - OS_TIMER_CLOCK;
+}
 
 static void UpdateDHCPInfo(DHCPInfo* info, DHCPInfo* src)
 {
@@ -435,7 +450,7 @@ static void RecvCallback(SOUdpSocket* so, s32 len)
             if (control->flags & DHCP_FLAG_AUTO) {
                 return;
             }
-            Restart(control, 0, (OSTime)300 * OS_TIMER_CLOCK);
+            Restart(control, (OSTime)300 * OS_TIMER_CLOCK);
             return;
         default:
             goto receive;
@@ -446,7 +461,7 @@ static void RecvCallback(SOUdpSocket* so, s32 len)
     }
 
 receive:
-    UDPReceiveAsync(so, packet, 536, 0, control->peer, RecvCallback, NULL);
+    UDPReceiveAsync(so, control->packet, 536, 0, control->peer, RecvCallback, NULL);
 }
 
 static void T1Handler(OSAlarm* alarm, OSContext* context)
@@ -610,11 +625,7 @@ static s32 DHCPDiscover(DHCPControl* control)
 static s32 DHCPDecline(DHCPControl* control)
 {
     u8* p;
-    u8* hw;
-    u8* end;
     OSAddress peer;
-    s32 result;
-    s32 timeout;
 
     if (control->state != DHCP_STATE_REQUESTING &&
         control->state != DHCP_STATE_REBOOTING &&
@@ -624,30 +635,30 @@ static s32 DHCPDecline(DHCPControl* control)
     }
     UDPCancel((SOUdpSocket*)control);
     OSCancelAlarm(&control->alarm);
-    hw = __IFDefault + 56;
+
     p = control->packet + 236;
     memmove(p, &MagicCookie, 4);
-    p[4] = 53;
-    p[5] = 1;
-    p[6] = DHCPDECLINE;
-    p[7] = 54;
-    p[8] = 4;
-    p += 9;
+    p += 4;
+    *p++ = 53;
+    *p++ = 1;
+    *p++ = DHCPDECLINE;
+    *p++ = 54;
+    *p++ = 4;
     memmove(p, control->info.server, 4);
-    p[4] = 50;
-    p[5] = 4;
-    p += 6;
+    p += 4;
+    *p++ = 50;
+    *p++ = 4;
     memmove(p, control->info.addr, 4);
-    p[4] = 61;
-    p[5] = 7;
-    p[6] = 1;
-    p += 7;
-    memmove(p, hw, 6);
-    p[6] = 255;
-    end = p + 7;
-    control->length = end - control->packet;
+    p += 4;
+    *p++ = 61;
+    *p++ = 7;
+    *p++ = 1;
+    memmove(p, __IFDefault + 56, 6);
+    p += 6;
+    *p++ = 255;
+    control->length = p - control->packet;
     if (control->length < 300) {
-        memset(end, 0, 300 - control->length);
+        memset(p, 0, 300 - control->length);
         control->length = 300;
     }
 
@@ -662,23 +673,18 @@ static s32 DHCPDecline(DHCPControl* control)
     memset(p + 12, 0, 4);
     memset(p + 16, 0, 4);
     memset(p + 20, 0, 4);
-    memmove(p + 28, hw, 6);
+    memset(p + 24, 0, 4);
+    memmove(p + 28, __IFDefault + 56, 6);
     memset(p + 44, 0, 64);
     memset(p + 108, 0, 128);
 
+    OSSetAlarm(&control->alarm, DHCPBackoff(control), ReleaseHandler);
+
     peer.len = 8;
     peer.family = 2;
-    peer.port = 67;
     memmove(peer.addr, &IPLimited, 4);
-
-    result = UDPSendAsync((SOUdpSocket*)control, p, control->length,
-                          (u8*)&peer, ReleaseCallback, NULL);
-    timeout = control->retry <= control->maxRetry ? 4 << control->retry : 64;
-    OSSetAlarm(&control->alarm,
-               (OSTime)timeout * OS_TIMER_CLOCK +
-                   OSGetTick() % (OS_TIMER_CLOCK * 2) - OS_TIMER_CLOCK,
-               ReleaseHandler);
-    return result;
+    peer.port = 67;
+    return UDPSendAsync((SOUdpSocket*)control, control->packet, control->length, (u8*)&peer, ReleaseCallback, NULL);
 }
 
 static s32 DHCPRelease(DHCPControl* control)
@@ -951,7 +957,7 @@ static void Stop(DHCPControl* control)
     ARPClaim(__IFDefault, &Conf);
     control->callback(control->state);
     if (control->flags & DHCP_FLAG_AUTO) {
-        Restart(control, 0, (OSTime)300 * OS_TIMER_CLOCK);
+        Restart(control, (OSTime)300 * OS_TIMER_CLOCK);
     }
 }
 
@@ -991,7 +997,7 @@ static void Claim(DHCPControl* control)
     ARPClaim(__IFDefault, &Conf);
 }
 
-static s32 Restart(DHCPControl* control, s32 unused, OSTime wait)
+static s32 Restart(DHCPControl* control, OSTime wait)
 {
     OSAddress addr;
 
@@ -1047,7 +1053,7 @@ s32 DHCPStartupEx(DHCPHandler handler, s32 retry)
         Conf.handler = ClaimHandler;
     }
     control->callback = handler != NULL ? handler : NullCallback;
-    result = Restart(control, 0,
+    result = Restart(control,
                      (OSTime)(OS_TIMER_CLOCK + OSGetTick() % OS_TIMER_CLOCK));
     OSRestoreInterrupts(enabled);
     return result;
@@ -1117,7 +1123,7 @@ BOOL DHCPAuto(BOOL on)
     wasAuto = control->flags & DHCP_FLAG_AUTO;
     if (on) {
         control->flags |= DHCP_FLAG_AUTO;
-        Restart(control, 0, (OSTime)300 * OS_TIMER_CLOCK);
+        Restart(control, (OSTime)300 * OS_TIMER_CLOCK);
     } else {
         control->flags &= ~DHCP_FLAG_AUTO;
     }

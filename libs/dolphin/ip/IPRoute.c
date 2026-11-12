@@ -31,8 +31,20 @@ static BOOL Initialized;
 static RouteList Up;
 static RouteList Free;
 
-void IPRefreshRoute(void);
+BOOL IPRefreshRoute(void);
 static BOOL AddRoute(u8* dst, u8* mask, u8* gateway, u32 flags);
+
+static inline BOOL IsValidNet(const u8* dst, const u8* mask)
+{
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        if (dst[i] != (dst[i] & mask[i])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
 
 static inline int CountBits(const u8* p)
 {
@@ -125,6 +137,39 @@ void IPSetBroadcastAddr(u8* interface, u8* addr)
     OSRestoreInterrupts(enabled);
 }
 
+void IPSetNetmask(u8* interface, u8* addr)
+{
+    u8* p;
+    int enabled;
+
+    p = (interface != NULL) ? interface : __IFDefault;
+    enabled = OSDisableInterrupts();
+    memcpy(p + 0x48, addr ? addr : (u8*)&IPAddrAny, 4);
+    OSRestoreInterrupts(enabled);
+}
+
+void IPSetAddr(u8* interface, u8* addr)
+{
+    u8* p;
+    int enabled;
+
+    p = (interface != NULL) ? interface : __IFDefault;
+    enabled = OSDisableInterrupts();
+    memcpy(p + 0x44, addr ? addr : (u8*)&IPAddrAny, 4);
+    OSRestoreInterrupts(enabled);
+}
+
+void IPSetGateway(u8* interface, u8* addr)
+{
+    u8* p;
+    int enabled;
+
+    p = (interface != NULL) ? interface : __IFDefault;
+    enabled = OSDisableInterrupts();
+    memcpy(p + 0x50, addr ? addr : (u8*)&IPAddrAny, 4);
+    OSRestoreInterrupts(enabled);
+}
+
 void IPSetAlias(u8* interface, u8* alias)
 {
     u8* p;
@@ -146,9 +191,22 @@ void IPSetMtu(u8* interface, s32 mtu)
     OSRestoreInterrupts(enabled);
 }
 
+static BOOL Hit(RouteEntry* route, const u8* addr)
+{
+    int i;
+    int a;
+
+    for (i = 0; i < 4; i++) {
+        a = addr[i];
+        if (route->dst[i] != (a & route->mask[i])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 BOOL IPIsBroadcastAddr(u8* interface, const u8* addr)
 {
-    u32 net;
     u32 mask;
     u32 a;
     u32 classMask;
@@ -162,22 +220,21 @@ BOOL IPIsBroadcastAddr(u8* interface, const u8* addr)
     if (a == IPLimited || a == IPAddrAny || a == *(u32*)(p + 0x4C)) {
         return TRUE;
     }
-    net = *(u32*)(p + 0x44);
     mask = *(u32*)(p + 0x48);
-    if ((net & mask) != 0) {
-        if ((net & mask) == (a & mask) && (~mask & a) == ~mask) {
+    if ((classMask = *(u32*)(p + 0x44) & mask) != 0) {
+        if (classMask == (a & mask) && (~mask & a) == ~mask) {
             return TRUE;
         }
-    }
-    if ((p[0x44] & 0x80) == 0) {
-        classMask = 0xFF000000;
-    } else if ((p[0x44] & 0xC0) == 0x80) {
-        classMask = 0xFFFF0000;
-    } else if ((p[0x44] & 0xE0) == 0xC0) {
-        classMask = 0xFFFFFF00;
-    }
-    if ((net & classMask) == (a & classMask) && (~classMask & a) == ~classMask) {
-        return TRUE;
+        if ((p[0x44] & 0x80) == 0) {
+            mask = 0xFF000000;
+        } else if ((p[0x44] & 0xC0) == 0x80) {
+            mask = 0xFFFF0000;
+        } else if ((p[0x44] & 0xE0) == 0xC0) {
+            mask = 0xFFFFFF00;
+        }
+        if ((*(u32*)(p + 0x44) & mask) == (a & mask) && (~mask & a) == ~mask) {
+            return TRUE;
+        }
     }
     if ((*(u32*)(p + 0x54) & 0xFFFF0000) != 0 &&
         (*(u32*)(p + 0x54) & 0xFFFF0000) == (a & 0xFFFF0000) &&
@@ -199,7 +256,7 @@ BOOL IPIsLocalAddr(u32 interface, const u8* addr)
 {
     u32 iface;
     BOOL local = FALSE;
-    u32 aliasMask[1] = { 0xFFFF0000 };
+    u8 aliasMask[4] = { 255, 255, 0, 0 };
     int enabled;
 
     iface = (interface != 0) ? interface : (u32)__IFDefault;
@@ -211,7 +268,7 @@ BOOL IPIsLocalAddr(u32 interface, const u8* addr)
         }
     }
     if (*(u32*)((u8*)iface + 0x54) != IPAddrAny) {
-        if ((*(u32*)addr & aliasMask[0]) == (*(u32*)((u8*)iface + 0x54) & aliasMask[0])) {
+        if ((*(u32*)addr & *(u32*)aliasMask) == (*(u32*)((u8*)iface + 0x54) & *(u32*)aliasMask)) {
             local = TRUE;
         }
     }
@@ -223,21 +280,15 @@ void* IPGetRoute(u8* addr, u8* gateway)
 {
     RouteEntry* route;
     RouteEntry* next;
-    u8* a = addr;
 
-    next = Up.head;
-    while (next != NULL) {
-        route = next;
-        next = route->next;
-        if (route->dst[0] == (a[0] & route->mask[0]) &&
-            route->dst[1] == (a[1] & route->mask[1]) &&
-            route->dst[2] == (a[2] & route->mask[2]) &&
-            route->dst[3] == (a[3] & route->mask[3])) {
+    for (route = Up.head, next = !route ? NULL : route->next; route;
+         route = next, next = !route ? NULL : route->next) {
+        if (Hit(route, addr)) {
             if (gateway != NULL) {
                 if (route->flags & 1) {
                     memmove(gateway, route->gateway, 4);
                 } else {
-                    memmove(gateway, a, 4);
+                    memmove(gateway, addr, 4);
                 }
             }
             route->time = __OSGetSystemTime();
@@ -247,110 +298,118 @@ void* IPGetRoute(u8* addr, u8* gateway)
     return NULL;
 }
 
-BOOL AddRoute(u8* dst, u8* mask, u8* gateway, u32 flags)
+static BOOL AddRoute(u8* dst, u8* mask, u8* gateway, u32 flags)
 {
     RouteEntry* route;
-    RouteEntry* stale;
+    RouteEntry* next;
     RouteEntry* p;
-    u32 f;
+    RouteEntry* q;
     int bits;
+    int i;
 
-    if (!(dst[0] == (dst[0] & mask[0]) &&
-          dst[1] == (dst[1] & mask[1]) &&
-          dst[2] == (dst[2] & mask[2]) &&
-          dst[3] == (dst[3] & mask[3]))) {
+    if (!IsValidNet(dst, mask)) {
         return FALSE;
     }
     if (*(u32*)gateway == IPAddrAny) {
-        f = flags & ~1;
+        flags &= ~1;
     } else {
-        f = flags | 1;
+        flags |= 1;
     }
-    route = Up.head;
-    while (route != NULL) {
-        if (MatchRoute(route, dst)) {
-            if ((f & 1) && !(route->flags & 6)) {
-                if (*(u32*)route->gateway == *(u32*)gateway) {
-                    return TRUE;
-                }
-                route = route->next;
-                continue;
+
+    for (p = Up.head, next = !p ? NULL : p->next; p;
+         p = next, next = !p ? NULL : p->next) {
+        for (i = 0; i < 4; i++) {
+            if ((p->dst[i] & p->mask[i]) != (dst[i] & mask[i])) {
+                break;
             }
-            memmove(route->gateway, gateway, 4);
-            memmove(route->mask, mask, 4);
-            if (!(route->flags & 2)) {
-                f &= ~2;
-            }
-            route->flags = f;
-            route->time = __OSGetSystemTime();
-            route->interface = __IFDefault;
-            return TRUE;
         }
-        route = route->next;
+        if (i < 4) {
+            continue;
+        }
+        if ((flags & 1) && !(p->flags & 6)) {
+            if (*(u32*)gateway == *(u32*)p->gateway) {
+                return TRUE;
+            }
+            continue;
+        }
+        memmove(p->gateway, gateway, 4);
+        memmove(p->mask, mask, 4);
+        if (!(p->flags & 2)) {
+            flags &= ~2;
+        }
+        p->flags = flags;
+        p->time = __OSGetSystemTime();
+        p->interface = __IFDefault;
+        return TRUE;
     }
 
     if (Free.head == NULL) {
-        stale = NULL;
-        for (p = Up.head; p != NULL; p = p->next) {
+        route = NULL;
+        for (p = Up.head, next = !p ? NULL : p->next; p; p = next, next = !p ? NULL : p->next) {
             if (p->flags & 2) {
-                if (stale == NULL || p->time > stale->time) {
-                    stale = p;
+                if (route == NULL) {
+                    route = p;
+                } else if (p->time < route->time) {
+                    route = p;
                 }
             }
         }
-        if (stale == NULL) {
+        if (route == NULL) {
             return FALSE;
         }
-        if (stale->next == NULL) {
-            Up.tail = stale->prev;
+        p = route->next;
+        q = route->prev;
+        if (p == NULL) {
+            Up.tail = q;
         } else {
-            stale->next->prev = stale->prev;
+            p->prev = q;
         }
-        if (stale->prev == NULL) {
-            Up.head = stale->next;
+        if (q == NULL) {
+            Up.head = p;
         } else {
-            stale->prev->next = stale->next;
+            q->next = p;
         }
-        route = stale;
     } else {
         route = Free.head;
-        Free.head = route->next;
-        if (Free.head == NULL) {
+        p = route->next;
+        if (p == NULL) {
             Free.tail = NULL;
         } else {
-            Free.head->prev = NULL;
+            p->prev = NULL;
         }
+        Free.head = p;
     }
 
     memmove(route->dst, dst, 4);
     memmove(route->mask, mask, 4);
     memmove(route->gateway, gateway, 4);
-    f &= ~2;
-    route->flags = f;
+    flags &= ~4;
+    route->flags = flags;
     route->time = __OSGetSystemTime();
     route->interface = __IFDefault;
 
     bits = CountBits(mask);
-    for (p = Up.head; p != NULL; p = p->next) {
-        if (bits < CountBits(p->mask)) {
+    for (p = Up.head, next = !p ? NULL : p->next; p; p = next, next = !p ? NULL : p->next) {
+        if (CountBits(p->mask) < bits) {
             route->prev = p->prev;
             route->next = p;
             p->prev = route;
-            if (route->next == NULL) {
+            if (route->prev == NULL) {
                 Up.head = route;
             } else {
-                route->next->prev = route;
+                route->prev->next = route;
             }
             return TRUE;
         }
     }
-    route->next = NULL;
-    route->prev = Up.tail;
-    if (route->prev == NULL) {
+    q = Up.tail;
+    if (q == NULL) {
         Up.head = route;
     } else {
-        route->prev->next = route;
+        q->next = route;
     }
+    route->prev = q;
+    route->next = NULL;
     Up.tail = route;
     return TRUE;
 }
@@ -358,33 +417,16 @@ BOOL AddRoute(u8* dst, u8* mask, u8* gateway, u32 flags)
 BOOL IPRedirect(u8* addr, u8* gateway, u8* src)
 {
     u8 gw[4];
-    RouteEntry* route;
-    void* interface;
-    void* found;
+    u8* interface;
 
     if (*(u32*)gateway == IPAddrAny) {
         return FALSE;
     }
-    for (route = Up.head; route != NULL; route = route->next) {
-        if (MatchRoute(route, addr)) {
-            if (route->flags & 1) {
-                memmove(gw, route->gateway, 4);
-            } else {
-                memmove(gw, addr, 4);
-            }
-            route->time = __OSGetSystemTime();
-            interface = route->interface;
-            goto found;
-        }
-    }
-    return FALSE;
-
-found:
+    interface = IPGetRoute(addr, gw);
     if (interface == NULL) {
         return FALSE;
     }
-    if ((*(u32*)gateway & *(u32*)((u8*)interface + 0x48)) !=
-        (*(u32*)((u8*)interface + 0x44) & *(u32*)((u8*)interface + 0x48))) {
+    if ((*(u32*)gateway & *(u32*)(interface + 0x48)) != (*(u32*)(interface + 0x44) & *(u32*)(interface + 0x48))) {
         return FALSE;
     }
     if (IPIsBroadcastAddr(interface, gateway)) {
@@ -393,170 +435,145 @@ found:
     if (*(u32*)gw != *(u32*)src) {
         return FALSE;
     }
-    found = NULL;
-    for (route = Up.head; route != NULL; route = route->next) {
-        if (MatchRoute(route, gateway)) {
-            route->time = __OSGetSystemTime();
-            found = route->interface;
-            break;
-        }
-    }
-    interface = NULL;
-    for (route = Up.head; route != NULL; route = route->next) {
-        if (MatchRoute(route, src)) {
-            route->time = __OSGetSystemTime();
-            interface = route->interface;
-            break;
-        }
-    }
-    if (found != interface) {
+    if (IPGetRoute(gateway, NULL) != IPGetRoute(src, NULL)) {
         return FALSE;
     }
-    if (*(u32*)gateway == *(u32*)(__IFDefault + 0x44)) {
+    if (*(u32*)gateway == *(u32*)(__IFDefault + 0x44) || *(u32*)gateway == *(u32*)(__IFDefault + 0x54)) {
         return FALSE;
     }
-    if (*(u32*)gateway == *(u32*)(__IFDefault + 0x54)) {
-        return FALSE;
-    }
-    return AddRoute(addr, NULL, gateway, 7);
+    return AddRoute(addr, (u8*)&IPLimited, gateway, 7);
 }
+
+BOOL IPAddRoute(u8* dst, u8* mask, u8* gateway)
+{
+    BOOL rc;
+    int enabled;
+
+    enabled = OSDisableInterrupts();
+    rc = AddRoute(dst, mask, gateway, 0);
+    OSRestoreInterrupts(enabled);
+    return rc;
+}
+
 void IPInitRoute(u8* addr, u8* netmask, u8* gateway)
 {
     RouteEntry* route;
     RouteEntry* end;
+    RouteEntry* prev;
     u8 broadcast[4];
     int enabled;
+    int i;
 
-    route = RoutingTable;
-    end = route + 32;
     enabled = OSDisableInterrupts();
     if (!Initialized) {
         Initialized = TRUE;
         memset(RoutingTable, 0, sizeof(RoutingTable));
-        Up.head = NULL;
-        Up.tail = NULL;
-        Free.head = NULL;
-        Free.tail = NULL;
-        for (; route < end; route++) {
-            route->next = NULL;
-            route->prev = Free.tail;
-            if (Free.tail == NULL) {
+        Up.head = Up.tail = NULL;
+        Free.head = Free.tail = NULL;
+        for (route = RoutingTable, end = RoutingTable + 32; route < end; route++) {
+            prev = Free.tail;
+            if (prev == NULL) {
                 Free.head = route;
             } else {
-                Free.tail->next = route;
+                prev->next = route;
             }
+            route->prev = prev;
+            route->next = NULL;
             Free.tail = route;
         }
     }
     OSRestoreInterrupts(enabled);
 
-    enabled = OSDisableInterrupts();
-    memcpy(__IFDefault + 0x44, addr ? addr : (u8*)&IPAddrAny, 4);
-    OSRestoreInterrupts(enabled);
-
-    enabled = OSDisableInterrupts();
-    memcpy(__IFDefault + 0x48, netmask ? netmask : (u8*)&IPAddrAny, 4);
-    OSRestoreInterrupts(enabled);
-
-    enabled = OSDisableInterrupts();
-    memcpy(__IFDefault + 0x50, gateway ? gateway : (u8*)&IPAddrAny, 4);
-    OSRestoreInterrupts(enabled);
-
+    IPSetAddr(__IFDefault, addr);
+    IPSetNetmask(__IFDefault, netmask);
+    IPSetGateway(__IFDefault, gateway);
     if (addr != NULL && netmask != NULL) {
-        broadcast[0] = (addr[0] & netmask[0]) | ~netmask[0];
-        broadcast[1] = (addr[1] & netmask[1]) | ~netmask[1];
-        broadcast[2] = (addr[2] & netmask[2]) | ~netmask[2];
-        broadcast[3] = (addr[3] & netmask[3]) | ~netmask[3];
-        enabled = OSDisableInterrupts();
-        memcpy(__IFDefault + 0x4C, broadcast, 4);
-        OSRestoreInterrupts(enabled);
+        for (i = 0; i < 4; i++) {
+            broadcast[i] = addr[i] & netmask[i];
+            broadcast[i] |= ~netmask[i];
+        }
+        IPSetBroadcastAddr(__IFDefault, broadcast);
     }
     IPRefreshRoute();
 }
 
-void IPRefreshRoute(void)
+BOOL IPRefreshRoute(void)
 {
-    u32 loopback = 0x7F000000;
-    u32 loopbackMask = 0xFF000000;
-    u32 aliasMask = 0xFFFF0000;
+    int enabled;
+    u8 loopback[4] = { 127, 0, 0, 0 };
+    u8 loopbackMask[4] = { 255, 0, 0, 0 };
+    u8 aliasMask[4] = { 255, 255, 0, 0 };
     u8 net[4];
     RouteEntry* route;
     RouteEntry* next;
-    int enabled;
-    int e;
+    RouteEntry* p;
+    RouteEntry* q;
+    u8* addr;
+    u8* netmask;
+    u8* gateway;
+    u8* alias;
     int i;
 
     enabled = OSDisableInterrupts();
-    for (route = Up.head; route != NULL; route = next) {
-        next = route->next;
-        if (route->next == NULL) {
-            Up.tail = route->prev;
+    addr = __IFDefault + 0x44;
+    netmask = __IFDefault + 0x48;
+    gateway = __IFDefault + 0x50;
+    alias = __IFDefault + 0x54;
+    for (route = Up.head, next = !route ? NULL : route->next; route;
+         route = next, next = !route ? NULL : route->next) {
+        p = route->next;
+        q = route->prev;
+        if (p == NULL) {
+            Up.tail = q;
         } else {
-            route->next->prev = route->prev;
+            p->prev = q;
         }
-        if (route->prev == NULL) {
-            Up.head = route->next;
+        if (q == NULL) {
+            Up.head = p;
         } else {
-            route->prev->next = route->next;
+            q->next = p;
         }
-        if (Free.head == NULL) {
+        p = Free.head;
+        if (p == NULL) {
             Free.tail = route;
         } else {
-            Free.head->prev = route;
+            p->prev = route;
         }
-        route->next = Free.head;
+        route->next = p;
         route->prev = NULL;
         Free.head = route;
     }
 
-    e = OSDisableInterrupts();
-    AddRoute((u8*)&IPLimited, NULL, (u8*)&IPAddrAny, 0);
-    OSRestoreInterrupts(e);
-
-    if (*(u32*)(__IFDefault + 0x44) != IPAddrAny) {
-        e = OSDisableInterrupts();
-        AddRoute(__IFDefault + 0x44, NULL, (u8*)&IPLoopbackAddr, 0);
-        OSRestoreInterrupts(e);
-
-        net[0] = __IFDefault[0x44] & __IFDefault[0x48];
-        net[1] = __IFDefault[0x45] & __IFDefault[0x49];
-        net[2] = __IFDefault[0x46] & __IFDefault[0x4A];
-        net[3] = __IFDefault[0x47] & __IFDefault[0x4B];
-        e = OSDisableInterrupts();
-        AddRoute(net, __IFDefault + 0x48, (u8*)&IPAddrAny, 0);
-        OSRestoreInterrupts(e);
+    IPAddRoute((u8*)&IPLimited, (u8*)&IPLimited, (u8*)&IPAddrAny);
+    if (*(u32*)addr != IPAddrAny) {
+        IPAddRoute(addr, (u8*)&IPLimited, (u8*)&IPLoopbackAddr);
+        for (i = 0; i < 4; i++) {
+            net[i] = addr[i] & netmask[i];
+        }
+        IPAddRoute(net, netmask, (u8*)&IPAddrAny);
     }
-    if (*(u32*)(__IFDefault + 0x54) != IPAddrAny) {
-        e = OSDisableInterrupts();
-        AddRoute(__IFDefault + 0x54, NULL, (u8*)&IPLoopbackAddr, 0);
-        OSRestoreInterrupts(e);
-
-        net[0] = (u8)aliasMask & __IFDefault[0x54];
-        net[1] = (u8)(aliasMask >> 8) & __IFDefault[0x55];
-        net[2] = (u8)(aliasMask >> 16) & __IFDefault[0x56];
-        net[3] = (u8)(aliasMask >> 24) & __IFDefault[0x57];
-        e = OSDisableInterrupts();
-        AddRoute(net, (u8*)&aliasMask, (u8*)&IPAddrAny, 0);
-        OSRestoreInterrupts(e);
+    if (*(u32*)alias != IPAddrAny) {
+        IPAddRoute(alias, (u8*)&IPLimited, (u8*)&IPLoopbackAddr);
+        for (i = 0; i < 4; i++) {
+            net[i] = aliasMask[i] & alias[i];
+        }
+        IPAddRoute(net, aliasMask, (u8*)&IPAddrAny);
     }
-    e = OSDisableInterrupts();
-    AddRoute((u8*)&loopback, (u8*)&loopbackMask, (u8*)&IPLoopbackAddr, 0);
-    OSRestoreInterrupts(e);
-
-    if (*(u32*)(__IFDefault + 0x50) != IPAddrAny) {
-        e = OSDisableInterrupts();
-        AddRoute((u8*)&IPAddrAny, (u8*)&IPAddrAny, __IFDefault + 0x50, 0);
-        OSRestoreInterrupts(e);
+    IPAddRoute(loopback, loopbackMask, (u8*)&IPLoopbackAddr);
+    if (*(u32*)gateway != IPAddrAny) {
+        IPAddRoute((u8*)&IPAddrAny, (u8*)&IPAddrAny, gateway);
     }
     ARPGratuitous(__IFDefault);
     OSRestoreInterrupts(enabled);
+    return TRUE;
 }
 
 static void DecayRoute(RouteEntry* route)
 {
-    RouteEntry* p;
     RouteEntry* next;
     RouteEntry* prev;
+    RouteEntry* e;
+    RouteEntry* p;
     int bits;
     int ebits;
 
@@ -574,14 +591,12 @@ static void DecayRoute(RouteEntry* route)
         prev->next = next;
     }
 
-    next = Up.tail;
-    p = next != NULL ? next->prev : NULL;
-    while (next != NULL) {
-        ebits = CountBits(next->mask);
+    for (e = Up.tail, p = !e ? NULL : e->prev; e; e = p, p = !e ? NULL : e->prev) {
+        ebits = CountBits(e->mask);
         if (bits <= ebits) {
-            route->prev = next;
-            route->next = next->next;
-            next->next = route;
+            route->prev = e;
+            route->next = e->next;
+            e->next = route;
             if (route->next == NULL) {
                 Up.tail = route;
             } else {
@@ -589,15 +604,14 @@ static void DecayRoute(RouteEntry* route)
             }
             return;
         }
-        next = p;
-        p = next != NULL ? next->prev : NULL;
     }
-    route->next = Up.head;
-    if (route->next == NULL) {
+    next = Up.head;
+    if (next == NULL) {
         Up.tail = route;
     } else {
-        route->next->prev = route;
+        next->prev = route;
     }
+    route->next = next;
     route->prev = NULL;
     Up.head = route;
 }
@@ -605,24 +619,26 @@ static void DecayRoute(RouteEntry* route)
 BOOL IPRecoverGateway(u8* addr)
 {
     RouteEntry* route;
+    RouteEntry* next;
 
     if (*(u32*)addr == IPAddrAny || addr[0] == 127) {
         return FALSE;
     }
-    for (route = Up.tail; route != NULL; route = route->prev) {
-        if ((route->flags & 1) && route->gateway[0] != 127 &&
-            *(u32*)route->gateway == *(u32*)addr) {
+    for (route = Up.tail, next = !route ? NULL : route->prev; route;
+         route = next, next = !route ? NULL : route->prev) {
+        if ((route->flags & 1) && route->gateway[0] != 127 && *(u32*)route->gateway == *(u32*)addr) {
             DecayRoute(route);
             return TRUE;
         }
     }
-    for (route = Up.head; route != NULL; route = route->next) {
-        if (MatchRoute(route, addr)) {
-            if (!(route->flags & 1) || route->gateway[0] == 127) {
-                return FALSE;
+    for (route = Up.head, next = !route ? NULL : route->next; route;
+         route = next, next = !route ? NULL : route->next) {
+        if (Hit(route, addr)) {
+            if ((route->flags & 1) && route->gateway[0] != 127) {
+                DecayRoute(route);
+                return TRUE;
             }
-            DecayRoute(route);
-            return TRUE;
+            break;
         }
     }
     return FALSE;

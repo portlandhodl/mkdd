@@ -176,12 +176,12 @@ extern void IPClearConfigError(s32);
 extern void IPInitRoute(u8* addr, u8* netmask, u8* gateway);
 extern void IPSetBroadcastAddr(void* interface, u32* addr);
 extern void IPAutoConfig(s32);
-extern void IPAutoStop(s32);
-extern void ARPRefresh(s32);
+extern void IPAutoStop(void);
+extern void ARPRefresh(void);
 extern BOOL IFInit(s32);
 extern BOOL IFMute(BOOL);
 extern s32 PPPInit(void* ifp, void* lcp, void* ipcp, void* lcpConf, void* ipcpConf);
-extern void PPPClose(void);
+extern void PPPClose(void* ppp);
 extern s32 PPPGetState(void* lcp);
 extern void TCPSetTimeWaitBuffer(u8* buffer, u32 size);
 extern s32 TCPCancel(TCPSocket* so);
@@ -231,7 +231,7 @@ void __IPWakeupPollingThreads(void);
 s32 SOGetResolver(u8* dns1, u8* dns2);
 static SOAllocFn Alloc;
 static SOFreeFn Free;
-static s32 Allocated;
+static u32 Allocated;
 static SOLingerQueue LingerQueue;
 static u8* TimeWaitBuf;
 static s32 TimeWaitBufSize;
@@ -278,13 +278,15 @@ static inline void SOFree(s32 type, void* ptr, u32 size)
 {
     BOOL enabled;
 
-    Free(type, ptr, size);
-    enabled = OSDisableInterrupts();
-    Allocated -= size;
-    if (Allocated == 0 && State == 2) {
-        OSWakeupThread(&CleaningQueue);
+    if (ptr != NULL) {
+        Free(type, ptr, size);
+        enabled = OSDisableInterrupts();
+        Allocated -= size;
+        if (Allocated == 0 && State == 2) {
+            OSWakeupThread(&CleaningQueue);
+        }
+        OSRestoreInterrupts(enabled);
     }
-    OSRestoreInterrupts(enabled);
 }
 
 char* SOInetNtoA(const u8* addr)
@@ -386,8 +388,8 @@ static SOsock* GetNode(s32 s, void** socket)
 static void PutNode(SOsock* sock)
 {
     SOsock* node;
-    u8 proto;
     void* so;
+    u8 proto;
     s16 ref;
     BOOL enabled;
 
@@ -638,7 +640,7 @@ s32 SOStartup(SOConfig* config)
     }
 
     if (!LowInitialized) {
-        ARPRefresh(0);
+        ARPRefresh();
     }
     if (Flag & 0x8000) {
         IPAutoConfig(0);
@@ -685,8 +687,9 @@ fail:
 s32 SOCleanup(void)
 {
     SOsock* node;
-    SOTcpSocket* so;
+    TCPSocket* info;
     s32 s;
+    TCPSocket* next;
     u32 linger[2];
 
     if (State != 1) {
@@ -713,26 +716,24 @@ s32 SOCleanup(void)
         }
     }
 
-    so = TCPInfoQueue.head ? (SOTcpSocket*)TCPInfoQueue.head->unk18 : NULL;
-    while (so != NULL) {
-        SOTcpSocket* next = so->tcp.unk18 ? (SOTcpSocket*)so->tcp.unk18 : NULL;
-        if (so->tcp.closeCallback == (void (*)(TCPSocket*, s32))LingerCallback) {
-            TCPCancel(&so->tcp);
+    for (info = TCPInfoQueue.head, next = !info ? NULL : (TCPSocket*)info->unk18; info;
+         info = next, next = !info ? NULL : (TCPSocket*)info->unk18) {
+        if (info->closeCallback == (void (*)(TCPSocket*, s32))LingerCallback) {
+            TCPCancel(info);
         }
-        so = next;
     }
 
     GetNode(-1, NULL);
 
     if (Flag & 0x8000) {
-        IPAutoStop(0);
+        IPAutoStop();
     }
     DNSClose(&Resolver);
 
     if (!LowInitialized) {
         if (Flag & 2) {
             BOOL enabled;
-            PPPClose();
+            PPPClose(PPPIpcpConf);
             enabled = OSDisableInterrupts();
             while (PPPGetState(PPPLcpConf) != 0) {
                 OSSleepThread(&CleaningQueue);
@@ -752,7 +753,7 @@ s32 SOCleanup(void)
         }
     }
 
-    if (TimeWaitBuf != NULL && TimeWaitBufSize != 0) {
+    if (TimeWaitBuf != NULL) {
         SOFree(6, TimeWaitBuf, TimeWaitBufSize);
     }
     if (ReassemblyBuffer != NULL) {
@@ -770,7 +771,7 @@ s32 SOCleanup(void)
 
     if (!LowInitialized) {
         IFMute(TRUE);
-        ARPRefresh(0);
+        ARPRefresh();
     }
     State = 0;
     return 0;
@@ -1189,15 +1190,9 @@ static SOTcpSocket* AddBackLog(TCPSocket* so)
     OSRestoreInterrupts(enabled);
 
 fail:
-    if (buf2 != 0) {
-        SOFree(2, buf2, size2);
-    }
-    if (buf1 != 0) {
-        SOFree(1, buf1, size1);
-    }
-    if (tcp != 0) {
-        SOFree(0, tcp, 0x330);
-    }
+    SOFree(2, buf2, size2);
+    SOFree(1, buf1, size1);
+    SOFree(0, tcp, 0x330);
     return NULL;
 }
 
@@ -1484,7 +1479,7 @@ s32 SORecvFrom(s32 s, void* buf, s32 len, u32 flags, u8* addr)
 
     switch (so->unk00[0]) {
     case IP_PROTO_UDP:
-        if (flags & 0xF & 0xFF) {
+        if (flags & ~0x6) {
             PutNode(node);
             return SO_EBADR;
         }
@@ -1597,8 +1592,13 @@ s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr)
         OSLockMutex(&node->sendMutex);
         if (node->socket == NULL) {
             result = SO_EBADF;
-        } else if (flags == 0) {
-            result = UDPSend((SOUdpSocket*)so, buf, len, addr);
+        } else {
+            SOUdpSocket* sock = (SOUdpSocket*)so;
+            switch (flags) {
+            case 0:
+                result = UDPSend(sock, buf, len, addr);
+                break;
+            }
         }
         OSUnlockMutex(&node->sendMutex);
         break;
@@ -1611,11 +1611,12 @@ s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr)
         if (node->socket == NULL) {
             result = SO_EBADF;
         } else {
+            TCPSocket* sock = so;
+
             if (node->flag & SO_FNONBLOCK) {
                 flags |= SO_FNONBLOCK;
             }
             {
-                TCPSocket* sock = so;
                 switch (flags) {
                 case 0:
                     result = TCPSend(sock, buf, len);
@@ -1626,11 +1627,8 @@ s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr)
                 case 4:
                     result = TCPSendNonblock(sock, buf, len);
                     break;
-                case 6:
+                case 5:
                     result = TCPSendUrgNonblock(sock, buf, len);
-                    break;
-                default:
-                    result = SO_EINVAL;
                     break;
                 }
             }
@@ -1688,8 +1686,6 @@ s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr)
         case 5:
         case 4:
         case 14:
-            result = SO_EBADF;
-            break;
         default:
             result = SO_EBADF;
             break;
