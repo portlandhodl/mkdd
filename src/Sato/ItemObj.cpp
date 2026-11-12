@@ -382,13 +382,17 @@ void ItemObj::setStateOccur(const JGeometry::TVec3f &pos, const JGeometry::TVec3
     initOccur(pos, vel);
 }
 
+inline bool ItemObj::IsSuccessionChildItem()
+{
+    return mSuccessionItemLink.getSupervisor() != nullptr;
+}
+
 void ItemObj::setStateDivested(bool flag)
 {
     mStateFunc = &ItemObj::doDivested;
-    mWaitFrame = 0;
-    resetNoColParam();
+    doStateUniv();
 
-    if (mSuccessionItemLink.getList() == nullptr)
+    if (!IsSuccessionChildItem())
         setHandOffsetData();
 
     mState = 5;
@@ -399,72 +403,18 @@ void ItemObj::setStateDivested(bool flag)
     }
     else
     {
-        for (JSULink<ItemObj> *link = _1a4.getFirst(); link != nullptr; link = link->getNext())
+        for (JSUListIterator<ItemObj> it(_1a4.getFirst()); it != _1a4.getEnd(); it++)
         {
-            link->getObject()->mOwnerNum = mOwnerNum;
-            link->getObject()->mDriverNum = mDriverNum;
-            link->getObject()->mOrigOwnerNum = mOrigOwnerNum;
-            link->getObject()->mOrigDriverNum = mOrigDriverNum;
-            ItemObj *child = link->getObject();
-            child->mStateFunc = &ItemObj::doDivested;
-            child->mWaitFrame = 0;
-            child->resetNoColParam();
-            if (child->mSuccessionItemLink.getSupervisor() == nullptr)
-                child->setHandOffsetData();
-            child->mState = 5;
-            if (!child->IsSuccessionItem())
-            {
-                child->initDivested();
-            }
-            else
-            {
-                for (JSUListIterator<ItemObj> it(child->_1a4.getFirst()); it != child->_1a4.getEnd(); it++)
-                {
-                    it.getObject()->mOwnerNum = child->mOwnerNum;
-                    it.getObject()->mDriverNum = child->mDriverNum;
-                    it.getObject()->mOrigOwnerNum = child->mOrigOwnerNum;
-                    it.getObject()->mOrigDriverNum = child->mOrigDriverNum;
-
-                    ItemObj *gchild = &(*it);
-                    gchild->mStateFunc = &ItemObj::doDivested;
-                    gchild->doStateUniv();
-                    if (!gchild->IsSuccessionChildItem())
-                        gchild->setHandOffsetData();
-                    gchild->mState = 5;
-                    if (!gchild->IsSuccessionItem())
-                    {
-                        gchild->initDivested();
-                    }
-                    else
-                    {
-                        for (JSUListIterator<ItemObj> it2(gchild->_1a4.getFirst()); it2 != gchild->_1a4.getEnd(); it2++)
-                        {
-                            (*it2).mOwnerNum = gchild->mOwnerNum;
-                            (*it2).mDriverNum = gchild->mDriverNum;
-                            (*it2).mOrigOwnerNum = gchild->mOrigOwnerNum;
-                            (*it2).mOrigDriverNum = gchild->mOrigDriverNum;
-                            (*it2).setStateDivested(true);
-                        }
-                        gchild->initDivested();
-                    }
-                }
-                child->initDivested();
-            }
+            it->mOwnerNum = mOwnerNum;
+            it->mDriverNum = mDriverNum;
+            it->mOrigOwnerNum = mOrigOwnerNum;
+            it->mOrigDriverNum = mOrigDriverNum;
+            it->setStateDivested(true);
         }
 
         if (flag)
             initDivested();
     }
-}
-
-inline bool ItemObj::IsSuccessionItem()
-{
-    return mItemKind > 0x10;
-}
-
-inline bool ItemObj::IsSuccessionChildItem()
-{
-    return mSuccessionItemLink.getList() != nullptr;
 }
 
 void ItemObj::setStateDisappear(bool flag)
@@ -512,7 +462,7 @@ bool ItemObj::tstAnyObjectHitting()
 int ItemObj::doSucStateFunc(ItemState state)
 {
     int ret = false;
-    if (mState == state)
+    if (state == mState)
         return false;
 
     mWaitFrame = 0;
@@ -521,74 +471,19 @@ int ItemObj::doSucStateFunc(ItemState state)
         switch (state)
         {
         case 4:
-            if (mState == 4 || mState == 10)
-                return 0;
-            if (mState == 9)
-            {
-                mState = 10;
-                initEnd();
-                return 0;
-            }
-            mStateFunc = &ItemObj::doFall;
-            if (mItemKind == 0x15)
-                GetItemObjMgr()->releaseItemByKartEquipItemList(this);
-            if (mShadow != nullptr)
-                mShadow->setVisibleAll();
-            _12c &= ~0x80;
-            mState = 4;
-            mWaitFrame = 0;
-            resetNoColParam();
-            initFall();
-            doDeleteList();
+            setStateFall(true);
             return 0;
         case 7:
-            if (mState == 8 || mState == 7 || mState == 10)
-                return 0;
-            mStateFunc = &ItemObj::doForceDisappear;
-            if (mState == 1)
-                _12c |= 0x400;
-            mState = 7;
-            mWaitFrame = 0;
-            resetNoColParam();
-            if (mShadow != nullptr)
-                mShadow->clrVisibleAll();
-            initForceDisappear();
+            setStateForceDisappear();
             return 0;
         case 8:
-            if (mState == 8 || mState == 7 || mState == 10)
-                return 0;
-            mStateFunc = &ItemObj::doDisappear;
-            if (mItemKind == 7 || mItemKind == 0x15 || mItemKind == 0xc)
-                GetItemObjMgr()->releaseItemByKartEquipItemList(this);
-            GetItemObjMgr()->deleteItemByMoveList(this);
-            mState = 8;
-            mWaitFrame = 0;
-            resetNoColParam();
-            if (mShadow != nullptr)
-                mShadow->clrVisibleAll();
-            initDisappear();
+            setStateDisappear(true);
             return 0;
-        default:
-            break;
         }
     }
-    else
+    else if (state == 7)
     {
-        if (state == 7)
-        {
-            if (mState != 8 && mState != 7 && mState != 10)
-            {
-                mStateFunc = &ItemObj::doForceDisappear;
-                if (mState == 1)
-                    _12c |= 0x400;
-                mState = 7;
-                mWaitFrame = 0;
-                resetNoColParam();
-                if (mShadow != nullptr)
-                    mShadow->clrVisibleAll();
-                initForceDisappear();
-            }
-        }
+        setStateForceDisappear();
     }
 
     if (_1a4.getNumLinks() == 0)
@@ -596,112 +491,45 @@ int ItemObj::doSucStateFunc(ItemState state)
         GetItemObjMgr()->releaseItemByKartEquipItemList(this);
         mState = 10;
         initEnd();
-        ret = true;
+        return true;
     }
-    else if (state == 7)
+
+    if (state == 7)
     {
         for (JSULink<ItemObj> *link = _1a4.getFirst(); link != nullptr; link = link->getNext())
-        {
-            ItemObj *child = link->getObject();
-            if (child->mState != 8 && child->mState != 7 && child->mState != 10)
-            {
-                child->mStateFunc = &ItemObj::doForceDisappear;
-                if (child->mState == 1)
-                    child->_12c |= 0x400;
-                child->mState = 7;
-                child->mWaitFrame = 0;
-                child->resetNoColParam();
-                if (child->mShadow != nullptr)
-                    child->mShadow->clrVisibleAll();
-                child->initForceDisappear();
-            }
-        }
+            link->getObject()->setStateForceDisappear();
     }
     else
     {
-        int divestNum = 1;
+        u32 divestNum = 1;
         if (_12c & 0x40)
             divestNum = _1a4.getNumLinks();
 
-        for (u32 i = 0; i < (u32)divestNum; i++)
+        for (u32 i = 0; i < divestNum; i++)
         {
             JSUListIterator<ItemObj> it = selectSucChild();
-            ItemObj *childLink = it.mLink->getObject();
-            if (childLink == nullptr)
+            if (it.mLink == nullptr)
                 continue;
 
             switch (state)
             {
             case 2:
-            {
-                ItemObj *child = it.mLink->getObject();
-                doSucReleaseFunc(child);
-                child->setStateRelease(true);
+                doSucReleaseFunc(it.mLink->getObject());
+                it.mLink->getObject()->setStateRelease(true);
                 break;
-            }
             case 3:
-            {
-                ItemObj *child = it.mLink->getObject();
-                doSucSpReleaseFunc(child);
-                child->setStateSpRelease(true);
+                doSucSpReleaseFunc(it.mLink->getObject());
+                it.mLink->getObject()->setStateSpRelease(true);
                 break;
-            }
-            case 4:
-            {
-                ItemObj *child = it.mLink->getObject();
-                if (child->mState != 4 && child->mState != 10)
-                {
-                    if (child->mState == 9)
-                    {
-                        child->mState = 10;
-                        child->initEnd();
-                    }
-                    else
-                    {
-                        child->mStateFunc = &ItemObj::doFall;
-                        if (child->mItemKind == 0x15)
-                            GetItemObjMgr()->releaseItemByKartEquipItemList(child);
-                        if (child->mShadow != nullptr)
-                            child->mShadow->setVisibleAll();
-                        child->_12c &= ~0x80;
-                        child->mState = 4;
-                        child->mWaitFrame = 0;
-                        child->resetNoColParam();
-                        child->initFall();
-                        if (child->mItemKind <= 0x10)
-                        {
-                            if (child->mSuccessionItemLink.getList() == nullptr)
-                                GetItemObjMgr()->deleteItemByKartEquipItemList(child);
-                            else
-                                GetItemObjMgr()->deleteItemByKartEquipItemListSuc(child);
-                        }
-                    }
-                }
-                break;
-            }
             case 8:
-            {
-                ItemObj *child = it.mLink->getObject();
-                if (child->mState != 8 && child->mState != 7 && child->mState != 10)
-                {
-                    child->mStateFunc = &ItemObj::doDisappear;
-                    if (child->mItemKind == 7 || child->mItemKind == 0x15 || child->mItemKind == 0xc)
-                        GetItemObjMgr()->releaseItemByKartEquipItemList(child);
-                    GetItemObjMgr()->deleteItemByMoveList(child);
-                    child->mState = 8;
-                    child->mWaitFrame = 0;
-                    child->resetNoColParam();
-                    if (child->mShadow != nullptr)
-                        child->mShadow->clrVisibleAll();
-                    child->initDisappear();
-                }
+                it.mLink->getObject()->setStateDisappear(true);
                 break;
-            }
-            default:
+            case 4:
+                it.mLink->getObject()->setStateFall(true);
                 break;
             }
 
-            _1a4.remove(&childLink->mSuccessionItemLink);
+            _1a4.remove(&it.mLink->getObject()->mSuccessionItemLink);
             if (_1a4.mHead == nullptr)
             {
                 GetItemObjMgr()->releaseItemByKartEquipItemList(this);
@@ -728,20 +556,7 @@ bool ItemObj::disappearAllChild(bool flag)
         JSULink<ItemObj> *link = it.mLink;
         if (link != nullptr && flag)
         {
-            ItemObj *child = it.mLink->getObject();
-            if (child->mState != 8 && child->mState != 7 && child->mState != 10)
-            {
-                child->mStateFunc = &ItemObj::doDisappear;
-                if (child->mItemKind == 7 || child->mItemKind == 0x15 || child->mItemKind == 0xc)
-                    GetItemObjMgr()->releaseItemByKartEquipItemList(child);
-                GetItemObjMgr()->deleteItemByMoveList(child);
-                child->mState = 8;
-                child->mWaitFrame = 0;
-                child->resetNoColParam();
-                if (child->mShadow != nullptr)
-                    child->mShadow->clrVisibleAll();
-                child->initDisappear();
-            }
+            it.mLink->getObject()->setStateDisappear(true);
         }
         _1a4.remove(&it.mLink->getObject()->mSuccessionItemLink);
         if (_1a4.getFirst() == nullptr)
@@ -829,11 +644,12 @@ void ItemObj::calc()
             }
 
             m[0][3] = mPos.x;
-            m[1][3] = shadowY;
             m[2][3] = mPos.z;
+            m[1][3] = shadowY;
             mShadow->setBaseTRMtx(m);
 
-            JGeometry::TVec3f scaleVec = mDisScaleAnm * mShadowOffsetScale;
+            JGeometry::TVec3f scaleVec(mDisScaleAnm);
+            scaleVec.scale(mShadowOffsetScale);
             scaleVec.y *= scaleY;
             J3DModel *shadowModel = mShadow->getModel();
             shadowModel->mModelScale.x = scaleVec.x;
@@ -858,8 +674,7 @@ void ItemObj::calcDarkRatio()
     int owner = mOwnerNum;
     if (mState == 1 && owner >= 0 && owner < RCMGetManager()->getKartNumber())
     {
-        u8 driverNum = getDriverNum();
-        if (!((u8)driverNum == (u8)ItemObjMgr::getNowTandemDriverNum(owner)))
+        if (ItemObjMgr::getNowTandemDriverNum(owner) != getDriverNum())
         {
             if (mDarkCount < 20.0f)
             {
@@ -909,19 +724,16 @@ void ItemObj::checkPriorityNormal()
 
 void ItemObj::checkPrioritySpecial()
 {
-    if (mTransferFlags & 2)
+    if (mTransferFlags & 2 && mVel.length() < 3.0f)
     {
-        if (mVel.length() < 3.0f)
-        {
-            if (mGndAttr == 1)
-                _1ec = 2;
-            else
-                _1ec = 0;
-        }
-        else
-        {
+        if (mGndAttr == 1)
             _1ec = 2;
-        }
+        else
+            _1ec = 0;
+    }
+    else
+    {
+        _1ec = 2;
     }
 }
 
@@ -1066,7 +878,7 @@ void ItemObj::resetObject()
     mGndAttr = 0xff;
     _1fc = 0;
     mSucKind = 0x10;
-    mMulti = nullptr;
+    _1a4.initiate();
     mSuccessionParent = nullptr;
     mOrigOwnerNum = -1;
     mOrigDriverNum = 0;
@@ -1181,9 +993,9 @@ int ItemObj::IsSpecialItem(int kind)
     case 8:
     case 11:
     case 12:
-    case 15:
-    case 18:
-    case 20:
+    case 14:
+    case 17:
+    case 19:
     case 21:
         ret = true;
     }
@@ -1201,10 +1013,11 @@ void ItemObj::getCompVecLength(JGeometry::TVec3f &outComp, f32 &outLen)
     JGeometry::TVec3f diff;
     diff.sub(mPos, kartPos);
 
-    JGeometry::TVec3f comp;
-    comp.scale(-kartXdir.dot(diff), kartXdir);
+    JGeometry::TVec3f comp(kartXdir);
+    f32 d = -diff.dot(kartXdir);
+    comp.scale(d);
     outLen = comp.length();
-    stVecNormalize(&comp);
+    stVecNormalize(comp);
     outComp = comp;
 }
 
@@ -1269,21 +1082,12 @@ void ItemObj::calcColPos()
 bool ItemObj::IsHitKart(int kartNo, const JGeometry::TVec3f &kartPos, f32 radius)
 {
     bool ret = false;
-    const JGeometry::TVec3f &kp = kartPos;
-    if ((KartCtrl::getKartCtrl()->getKartBody(kartNo)->mCarStatus & 0x00B80000) == 0)
+    if (((KartCtrl::getKartCtrl()->getKartBody(kartNo)->mCarStatus & 0x00B80000) == 0 &&
+         !GetItemObjMgr()->tstColReactionKart(kartNo, this)) ||
+        !(_12c & 0x100))
     {
-        if (!GetItemObjMgr()->tstColReactionKart(kartNo, this))
-            goto hit;
+        ret = mBounds->IsHitSphere(mColPos, kartPos, radius);
     }
-
-    if (_12c & 0x100)
-    {
-        ret = false;
-        return ret;
-    }
-
-hit:
-    ret = mBounds->IsHitSphere(mColPos, kp, radius);
     return ret;
 }
 
@@ -1370,7 +1174,7 @@ void ItemObj::doHandOneEquip(bool flag, f32 lerp)
 
                 if (removeIt)
                 {
-                    GetJPAMgr()->deleteEmt(emt);
+                    GetJPAMgr()->deleteEmt(mEquipEmt[i]);
                     mEquipEmt[i] = nullptr;
                     _12c &= ~0x4000;
                 }
@@ -1388,7 +1192,7 @@ void ItemObj::doPosLerp(JGeometry::TVec3f *out, const JGeometry::TVec3f &target,
     JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mOwnerNum, &kartPos);
 
-    pos.add(kartPos);
+    pos.add(kartPos, pos);
     JMAVECLerp(&pos, (Vec *)&target, (Vec *)out, ratio);
 
     out->y += mDivestedGravity * wf + wf * (sDivestedGravity * wf);
@@ -1498,59 +1302,63 @@ void ItemObj::calcForceDisappearScaleDown(JGeometry::TVec3f &out, u32 startFrame
     }
 }
 
+static inline void calcReflectVec(JGeometry::TVec3f *out, JGeometry::TVec3f a, JGeometry::TVec3f b)
+{
+    JGeometry::TVec3f nrm(a);
+    JGeometry::TVec3f vel(b);
+    out->zero();
+
+    if (vel.length() > 0.0f)
+    {
+        nrm.normalize();
+        vel.normalize();
+
+        vel.scale(-1.0f);
+        f32 dot = vel.dot(nrm);
+        nrm.scale(dot);
+        JGeometry::TVec3f tmp;
+        tmp.sub(nrm, vel);
+        out->add(nrm, tmp);
+        out->y = 0.0f;
+        stVecNormalize(*out);
+    }
+}
+
 void ItemObj::doReflectGeoObj(GeographyObj *geoObj, f32 pow)
 {
     JGeometry::TVec3f normVec;
     normVec.set(0.0f, 0.0f, 1.0f);
 
     f32 mag = PSVECMag(&mVel);
-    ObjColBase *col = geoObj->mBounds[0];
-
     JGeometry::TVec3f outVec;
-    outVec.zero();
 
-    if (col->getKind() == ObjColBase::CUBE)
+    if (geoObj->mBounds[0]->getKind() == ObjColBase::CUBE)
     {
-        normVec = col->getPos();
-        if (mVel.length() > 0.0f)
-        {
-            JGeometry::TVec3f nrm(normVec);
-            nrm.normalize();
-
-            JGeometry::TVec3f vel(mVel);
-            vel.normalize();
-            vel.negate();
-
-            f32 d = nrm.dot(vel);
-            outVec.x = nrm.x * d + vel.x;
-            outVec.y = nrm.y * d + vel.y;
-            outVec.z = nrm.z * d + vel.z;
-            outVec.y = 0.0f;
-            stVecNormalize(&outVec);
-        }
+        normVec = geoObj->mBounds[0]->getPos();
+        calcReflectVec(&outVec, normVec, mVel);
     }
     else
     {
-        JGeometry::TVec3f diff;
-        diff.sub(mPos, geoObj->mPos);
-        normVec = diff;
-        stVecNormalize(&normVec);
+        JGeometry::TVec3f geoPos;
+        geoObj->getPosition(&geoPos);
+        normVec.sub(_10, geoPos);
+        normVec.y = 0.0f;
+        stVecNormalize(normVec);
 
-        if (col->getKind() == ObjColBase::CYLINDER)
+        if (geoObj->mBounds[0]->getKind() == ObjColBase::CYLINDER)
         {
-            outVec = col->getPos();
+            outVec = geoObj->mBounds[0]->getPos();
         }
         else
         {
-            outVec.sub(mPos, geoObj->mPos);
-            stVecNormalize(&outVec);
+            outVec.sub(mPos, geoPos);
+            stVecNormalize(outVec);
         }
     }
 
-    f32 scale = mag * pow;
-    normVec.scale(col->getBoundDepth());
+    normVec.scale(geoObj->mBounds[0]->getBoundDepth());
     mReflectWallVec += normVec;
-    outVec *= scale;
+    outVec.scale(mag * pow);
     mVel = outVec;
 }
 
@@ -1572,22 +1380,7 @@ void ItemObj::doGeoObjectCol(GeographyObj *geoObj)
         doReflectGeoObj(geoObj, _2c);
         break;
     case 2:
-        if (mState != 8 && mState != 7 && mState != 10)
-        {
-            mStateFunc = &ItemObj::doDisappear;
-            if (mItemKind == 7 || mItemKind == 0x15 || mItemKind == 0xc)
-                GetItemObjMgr()->releaseItemByKartEquipItemList(this);
-            GetItemObjMgr()->deleteItemByMoveList(this);
-            mState = 8;
-            mWaitFrame = 0;
-            mNoColKartMax = 0;
-            mNoColKartCnt = 0;
-            mNoColKartClr = 0;
-            mNoColKart = 0;
-            if (mShadow != nullptr)
-                mShadow->clrVisibleAll();
-            initDisappear();
-        }
+        setStateDisappear(true);
         break;
     case 3:
     {
@@ -1607,7 +1400,9 @@ void ItemObj::executeGeoObjHitCallBack(GeographyObj *) {}
 
 void ItemObj::setCollideAddVel(const JGeometry::TVec3f &vel, const f32 &scale)
 {
-    mVel.add(vel * scale);
+    JGeometry::TVec3f addVel = vel;
+    addVel.scale(scale);
+    mVel.add(addVel);
 }
 
 
@@ -1653,24 +1448,26 @@ void ItemObj::moveDivested()
     mNoColKartClr = 0;
     mNoColKart = 0;
 
-    if (IsSuccessionChildItem())
+    if (IsSuccessionChildItem() && mMulti == mBuild)
     {
-        if (mMulti == mBuild)
+        int num = -1;
+        if (mSuccessionParent->mItemKind > 0x10)
+            num = mSuccessionParent->_1a4.getNumLinks();
+        if (num > 1 || GetGeoObjMgr()->isBombBattle())
         {
-            int num = -1;
-            if (mSuccessionParent->mItemKind > 0x10)
-                num = mSuccessionParent->_1a4.getNumLinks();
-            if (num > 1 || GetGeoObjMgr()->isBombBattle())
-            {
-                ItemHandOffsetData offsetData = GetItemObjMgr()->getHandOffsetData(this);
-                setHandOffsetPos(&offsetData);
-            }
-            else
-            {
-                setHandOffsetData();
-            }
+            ItemHandOffsetData offsetData = GetItemObjMgr()->getHandOffsetData(this);
+            setHandOffsetPos(&offsetData);
         }
-     }
+        else
+        {
+            goto setDefault;
+        }
+    }
+    else
+    {
+    setDefault:
+        setHandOffsetData();
+    }
     mState = 1;
     initEquip();
 }
@@ -1690,12 +1487,13 @@ void ItemObj::initmoveFall()
     kartMtx[0][3] = kartMtx[1][3] = kartMtx[2][3] = 0.0f;
     PSMTXMultVec(kartMtx, (Vec *)&fallDir, (Vec *)&fallDir);
 
-    fallDir.negate(fallDir);
+    fallDir.y = 0.0f;
+    fallDir.scale(-1.0f);
 
     JGeometry::TVec3f fallUp = fallDir;
-    stVecNormalize(&fallUp);
+    stVecNormalize(fallUp);
     fallUp.y += sFallParam[2];
-    stVecNormalize(&fallUp);
+    stVecNormalize(fallUp);
 
     f32 windup = (0.7f + 0.3f * getItemRnd()->get_ufloat_1()) * sFallParam[3];
     fallUp.scale(windup);
@@ -1719,7 +1517,7 @@ void ItemObj::initCommonMoveFall(const JGeometry::TVec3f &vel)
 void ItemObj::initCommonMoveFallMtx()
 {
     JGeometry::TVec3f vel = mVel;
-    stVecNormalize(&vel);
+    stVecNormalize(vel);
     _240 = vel;
     calcBananaFirstQuat(vel);
     _34 = _44;
@@ -1728,7 +1526,7 @@ void ItemObj::initCommonMoveFallMtx()
 
 void ItemObj::moveFall()
 {
-    if (!(_12c & 1) && mWaitFrame >= 0x1e)
+    if (!(*(volatile u32 *)&_12c & 1) && mWaitFrame >= 0x1e)
         _12c |= 1;
 
     if (mState != 6)
@@ -1745,17 +1543,16 @@ void ItemObj::moveFall()
 
     if (!(mTransferFlags & 2))
     {
-        JGeometry::TVec3f norm;
-        norm.set(mVel);
+        JGeometry::TVec3f norm(mVel);
         if (norm.length() > 0.0f)
         {
-            stVecNormalize(&norm);
+            norm.normalize();
             stVec2QtUpdate(_44, _240, *(Vec *)&norm);
         }
     }
 
     _240 = mVel;
-    stVecNormalize(&_240);
+    stVecNormalize(_240);
 }
 
 void ItemObj::doHeartWaiting()
@@ -1794,15 +1591,14 @@ void ItemObj::colItemReflect(ItemObj *other1, ItemObj *other2, ItemColFlag flag1
     JGeometry::TVec3f diff;
     diff.sub(other1->mPos, other2->mPos);
 
-    f32 len1 = other1->mVel.length();
-    f32 len2 = other2->mVel.length();
-    f32 baseLen = 0.5f * (len1 + len2) + 5.0f;
-    (void)baseLen;
+    f32 baseLen = 0.5f * (other1->mVel.length() + other2->mVel.length()) + 5.0f;
+    if (other1->mItemKind != other2->mItemKind)
+        diff.y = 0.0f;
+    stVecNormalize(diff);
 
     ItemObj *obj = other1;
     ItemColFlag flag = flag1;
-    stVecNormalize(&diff);
-    for (u32 i = 0; i < 2; i++)
+    for (u8 i = 0; i < 2; i++)
     {
         if (i == 1)
         {
@@ -1826,12 +1622,7 @@ void ItemObj::colItemReflect(ItemObj *other1, ItemObj *other2, ItemColFlag flag1
             obj->doColMoveReflectJumpDownAndDisappear(diff, baseLen);
             break;
         case 4:
-        case 5:
-        default:
-            if (obj->mState != 8 && obj->mState != 7 && obj->mState != 10)
-            {
-                obj->setStateDisappear(true);   // via calling the inline block?
-            }
+            obj->setStateDisappear(true);
             break;
         }
     }
@@ -1839,63 +1630,50 @@ void ItemObj::colItemReflect(ItemObj *other1, ItemObj *other2, ItemColFlag flag1
 
 void ItemObj::doColMoveReflect(JGeometry::TVec3f vec, f32 pow)
 {
+    JGeometry::TVec3f normal = vec;
     if (mVel.x == 0.0f && mVel.z == 0.0f)
     {
         mVel += vec;
         mVel.z += 0.1f;
     }
+
+    JGeometry::TVec3f refVec;
+    if (ObjUtility::getReflectVec(normal, mVel, &refVec, false))
+        mVel = refVec;
     else
-    {
-        JGeometry::TVec3f refVec;
-        if (ObjUtility::getReflectVec(vec, mVel, &refVec, false))
-            mVel.set(refVec);
-        else
-            mVel.set(vec);
-    }
+        mVel = normal;
 
     mVel *= pow * getItemBoundRatio();
 }
 
-void ItemObj::doColMoveReflectAndStopDisappear(JGeometry::TVec3f vec, f32 pow)
+inline bool ItemObj::IsStop()
 {
-    bool stopped = false;
+    bool ret = false;
     if (mState != 8)
     {
         if (mVel.length() < 3.0f)
-            stopped = true;
+            ret = true;
     }
+    return ret;
+}
 
-    bool flag2 = false;
-    if (stopped && (mTransferFlags & 2))
-        flag2 = true;
+inline bool ItemObj::checkStopDisappear()
+{
+    bool ret = false;
+    if (IsStop() && (mTransferFlags & 2))
+        ret = true;
+    return ret;
+}
 
-    if (flag2)
+void ItemObj::doColMoveReflectAndStopDisappear(JGeometry::TVec3f vec, f32 pow)
+{
+    if (checkStopDisappear())
     {
-        if (mState != 8 && mState != 7 && mState != 10)
-        {
-            mStateFunc = &ItemObj::doDisappear;
-            if (mItemKind == 7 || mItemKind == 0x15 || mItemKind == 0xc)
-                GetItemObjMgr()->releaseItemByKartEquipItemList(this);
-            GetItemObjMgr()->deleteItemByMoveList(this);
-            mState = 8;
-            mWaitFrame = 0;
-            mNoColKartMax = 0;
-            mNoColKartCnt = 0;
-            mNoColKartClr = 0;
-            mNoColKart = 0;
-            if (mShadow != nullptr)
-                mShadow->clrVisibleAll();
-            initDisappear();
-        }
+        setStateDisappear(true);
         return;
     }
 
-    JGeometry::TVec3f refVec;
-    if (ObjUtility::getReflectVec(vec, mVel, &refVec, false))
-        mVel.set(refVec);
-    else
-        mVel.set(vec);
-    mVel *= pow * getItemBoundRatio();
+    doColMoveReflect(vec, pow);
 }
 
 void ItemObj::doColMoveJumpDown(JGeometry::TVec3f vec, f32 pow)
@@ -1905,33 +1683,9 @@ void ItemObj::doColMoveJumpDown(JGeometry::TVec3f vec, f32 pow)
 
 void ItemObj::doColMoveReflectJumpDownAndDisappear(JGeometry::TVec3f vec, f32 pow)
 {
-    bool flag2 = false;
-    bool stopped = flag2;
-    if (mState != 8)
+    if (checkStopDisappear())
     {
-        if (mVel.length() < 3.0f)
-            stopped = true;
-    }
-    if (stopped && (mTransferFlags & 2))
-        flag2 = true;
-    if (flag2)
-    {
-        if (mState != 8 && mState != 7 && mState != 10)
-        {
-            mStateFunc = &ItemObj::doDisappear;
-            if (mItemKind == 7 || mItemKind == 0x15 || mItemKind == 0xc)
-                GetItemObjMgr()->releaseItemByKartEquipItemList(this);
-            GetItemObjMgr()->deleteItemByMoveList(this);
-            mState = 8;
-            mWaitFrame = 0;
-            mNoColKartMax = 0;
-            mNoColKartCnt = 0;
-            mNoColKartClr = 0;
-            mNoColKart = 0;
-            if (mShadow != nullptr)
-                mShadow->clrVisibleAll();
-            initDisappear();
-        }
+        setStateDisappear(true);
         return;
     }
     doColMoveCommonJumpAndReflect(vec, pow, false);
@@ -1940,30 +1694,16 @@ void ItemObj::doColMoveReflectJumpDownAndDisappear(JGeometry::TVec3f vec, f32 po
 void ItemObj::doColMoveCommonJumpAndReflect(JGeometry::TVec3f vec, f32 pow, bool upForce)
 {
     JGeometry::TVec3f jumpVec;
-    jumpVec.zero();
-
-    if (mVel.length() > 0.0f)
-    {
-        JGeometry::TVec3f nrm(vec);
-        nrm.normalize();
-
-        JGeometry::TVec3f vel(mVel);
-        vel.normalize();
-
-        f32 dot = vel.dot(nrm);
-        jumpVec.scale(-2.0f * dot, nrm);
-        jumpVec += vel;
-        jumpVec.y = 0.0f;
-        stVecNormalize(&jumpVec);
-    }
+    JGeometry::TVec3f nrm(vec);
+    calcReflectVec(&jumpVec, nrm, mVel);
 
     if (upForce)
         jumpVec.negate();
 
-    stVecNormalize(&mVel);
-    jumpVec *= 2.0f;
+    stVecNormalize(mVel);
+    jumpVec.scale(2.0f);
     mVel += jumpVec;
-    stVecNormalize(&mVel);
+    stVecNormalize(mVel);
 
     mVel.scale(pow * 0.4f);
     mVel.y += 32.0f;
@@ -2034,6 +1774,11 @@ void ItemObj::doMoveColGround(Quaternion *quat, bool flagExp)
         }
     }
 
+    pos = mPos;
+    _10vec = _10;
+    pos.y -= mHeightOffset * mDisScaleAnm.y;
+    _10vec.y -= mHeightOffset * mDisScaleAnm.y;
+
     CrsArea roofArea;
     roofArea.searchRoof(pos);
     if (roofArea.isInside())
@@ -2045,25 +1790,13 @@ void ItemObj::doMoveColGround(Quaternion *quat, bool flagExp)
             mVel.y = 0.0f;
             mVel.x *= 0.5f;
             mVel.z *= 0.5f;
-            mPos.y = (roofPos.y - 100.0f) + mDisScaleAnm.y * mHeightOffset;
+            pos.y = roofPos.y - 100.0f;
+            mPos.y = pos.y + mDisScaleAnm.y * mHeightOffset;
         }
     }
 
-    if (mGndAttr == 0x12 && (mState == 4 || mState == 6) && mWaitFrame > 0xb4 && (mTransferFlags & 0x2) && mState != 0xa)
-    {
-        mStateFunc = &ItemObj::doForceDisappear;
-        if (mState == 1)
-            _12c |= 0x400;
-        mState = 7;
-        mWaitFrame = 0;
-        mNoColKartMax = 0;
-        mNoColKartCnt = 0;
-        mNoColKartClr = 0;
-        mNoColKart = 0;
-        if (mShadow != nullptr)
-            mShadow->clrVisibleAll();
-        initForceDisappear();
-    }
+    if (gnd.getAttribute() == 0x12 && (mState == 4 || mState == 6) && mWaitFrame > 0xb4 && (mTransferFlags & 0x2))
+        setStateForceDisappear();
 
     Quaternion lerped;
     stQtLerp(&lerped, &_34, &_44, mLerpRatio);
@@ -2120,29 +1853,12 @@ void ItemObj::moveColWall(CrsGround &gnd)
 {
     mTransferFlags |= 0x4;
     JGeometry::TVec3f wallNorm;
+    JGeometry::TVec3f refDir;
     JGeometry::TVec3f wallPos;
     gnd.getWallNormal(&wallNorm, &wallPos);
 
-    f32 velLen = mVel.length();
-    JGeometry::TVec3f refDir;
-    refDir.zero();
-    if (velLen > 0.0f)
-    {
-        JGeometry::TVec3f nrm;
-        JGeometry::setTVec3f(&wallNorm.x, &nrm.x);
-        nrm.normalize();
-        JGeometry::TVec3f vel;
-        JGeometry::setTVec3f(&mVel.x, &vel.x);
-        vel.normalize();
-        vel.negate();
-
-        f32 d = nrm.dot(vel);
-        refDir.x = nrm.x * d + vel.x;
-        refDir.y = nrm.y * d + vel.y;
-        refDir.z = nrm.z * d + vel.z;
-        refDir.y = 0.0f;
-        stVecNormalize(&refDir);
-    }
+    f32 velLen = PSVECMag(&mVel);
+    calcReflectVec(&refDir, wallNorm, mVel);
 
     SysDebug::checkInvalidVector((Vec *)&mVel, (char *)"WanWan_mVel");
     SysDebug::checkInvalidVector((Vec *)&wallNorm, (char *)"WanWan_wallnorm");
@@ -2163,22 +1879,7 @@ void ItemObj::moveRescue(CrsGround &gnd)
     f32 yLimit = mHeightOffset * mDisScaleAnm.y + gnd.getHeight();
     if (mPos.y <= yLimit)
     {
-        if (mState != 8 && mState != 7 && mState != 10)
-        {
-            mStateFunc = &ItemObj::doDisappear;
-            if (mItemKind == 7 || mItemKind == 0x15 || mItemKind == 0xc)
-                GetItemObjMgr()->releaseItemByKartEquipItemList(this);
-            GetItemObjMgr()->deleteItemByMoveList(this);
-            mState = 8;
-            mWaitFrame = 0;
-            mNoColKartMax = 0;
-            mNoColKartCnt = 0;
-            mNoColKartClr = 0;
-            mNoColKart = 0;
-            if (mShadow != nullptr)
-                mShadow->clrVisibleAll();
-            initDisappear();
-        }
+        setStateDisappear(true);
     }
     else
         moveNormal(gnd);
@@ -2186,29 +1887,15 @@ void ItemObj::moveRescue(CrsGround &gnd)
 
 void ItemObj::moveCannon(CrsGround &gnd)
 {
-    if (mState != 8 && mState != 7 && mState != 10)
-    {
-        mStateFunc = &ItemObj::doDisappear;
-        if (mItemKind == 7 || mItemKind == 0x15 || mItemKind == 0xc)
-            GetItemObjMgr()->releaseItemByKartEquipItemList(this);
-        GetItemObjMgr()->deleteItemByMoveList(this);
-        mState = 8;
-        mWaitFrame = 0;
-        mNoColKartMax = 0;
-        mNoColKartCnt = 0;
-        mNoColKartClr = 0;
-        mNoColKart = 0;
-        if (mShadow != nullptr)
-            mShadow->clrVisibleAll();
-        initDisappear();
-    }
+    setStateDisappear(true);
 }
 
 void ItemObj::simpleDraw(u32 viewNo, f32 (*mtx)[4], u32 num)
 {
+    f32 s = mDarkScale;
     JGeometry::TVec3f sc;
     JGeometry::setTVec3f(&mDisScaleAnm.x, &sc.x);
-    sc.scale(mDarkScale);
+    sc.scale(s);
     JGeometry::setTVec3f(&sc.x, &mModel.mScale.x);
     mModel.simpleDraw(viewNo, mtx, num);
 }
@@ -2227,10 +1914,8 @@ void ItemObj::setMultiType(ItemObj::cMultiType type)
 
 ItemObj::cMultiType ItemObj::getCharaMultiType(int charID, u8 driverNum)
 {
-    u8 drv = driverNum;
-    u8 drv2 = drv;
     cMultiType ret = cMultiType_0;
-    ECharID charBit = RCMGetManager()->getKartInfo(charID)->getDriverCharID(drv2);
+    ECharID charBit = RCMGetManager()->getKartInfo(charID)->getDriverCharID(driverNum);
     switch (charBit)
     {
     case BABY_LUIGI:
@@ -2254,35 +1939,37 @@ void ItemObj::doMoveGndParallel(const JGeometry::TVec3f &normVec, f32 pow)
     JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
     JGeometry::TVec3f &n = mNormal;
     f32 angle = up.angle(n);
+    JGeometry::TVec3f axis;
 
     JGeometry::TVec3f hv(mVel);
     hv.y = 0.0f;
-    stVecNormalize(&hv);
+    stVecNormalize(hv);
 
-    JGeometry::TVec3f hn = n;
+    JGeometry::TVec3f hn(mNormal);
     hn.y = 0.0f;
     f32 normMag = PSVECMag(&hn);
-    stVecNormalize(&hn);
+    stVecNormalize(hn);
 
     if (!hn.isZero())
     {
-        angle *= (1.0f - normMag) * fabs(hv.dot(hn));
+        angle *= (1.0f - normMag) * JGeometry::TUtilf::abs(hn.dot(hv));
     }
 
-    JGeometry::TVec3f axis;
     axis.cross(up, normVec);
 
-    f32 ang2 = hv.angle(n);
-    if (fabs(57.29578f * ang2) < 90.0f)
-        angle = -angle;
+    JGeometry::TVec3f &n2 = mNormal;
+    f32 ang2 = hv.angle(n2);
+    if (JGeometry::TUtilf::abs(57.29578f * ang2) >= 90.0f)
+        angle *= -1.0f;
 
     JGeometry::TPos3f mtx;
     mtx.setRotate(axis, angle);
     mtx.zeroTrans();
     PSMTXMultVec(mtx.mMtx, (Vec *)&normVec, (Vec *)&mVel);
-    stVecNormalize(&mVel);
+    stVecNormalize(mVel);
 
-    f32 d = mMaxVel * mMaxVel - pow * pow;
+    f32 pow2 = pow * pow;
+    f32 d = mMaxVel * mMaxVel - pow2;
     f32 scl = JMAFastSqrt(d);
     mVel.scale(scl);
     mVel.y += pow;
@@ -2293,10 +1980,12 @@ void ItemObj::initThrowVel(f32 dirScale, f32 upScale, f32 power)
     JGeometry::TVec3f kartVel;
     ObjUtility::getKartVel(mOwnerNum, &kartVel);
     kartVel.y *= 0.3f;
-    mVel += kartVel;
-
     JGeometry::TVec3f mixDir;
+    JGeometry::TVec3f sideVec;
+    JGeometry::TVec3f apart;
+    JGeometry::TVec3f addVel;
     mixDir.zero();
+    mVel += kartVel;
 
     f32 stickY = KartCtrl::getKartCtrl()->GetItemStickY(mOwnerNum);
     if (stickY > 0.0f)
@@ -2304,25 +1993,29 @@ void ItemObj::initThrowVel(f32 dirScale, f32 upScale, f32 power)
         if (stickY < 0.8f)
             stickY *= 0.6f;
 
+        JGeometry::TVec3f ydir;
         JGeometry::TVec3f zdir;
         ObjUtility::getKartZdir(mOwnerNum, &zdir);
-        JGeometry::TVec3f ydir;
         ObjUtility::getKartYdir(mOwnerNum, &ydir);
 
-        mixDir = zdir * (stickY * dirScale) + ydir * (stickY * upScale);
+        zdir.scale(stickY * dirScale);
+        ydir.scale(stickY * upScale);
+        zdir += ydir;
+        mixDir = zdir;
     }
 
-    JGeometry::TVec3f sideVec;
     sideVec.zero();
 
-    u8 hasSide = 0;
+    bool hasSide = false;
     f32 stickX = KartCtrl::getKartCtrl()->GetItemStickX(mOwnerNum);
-    if (fabs(stickX) > 0.1f)
+    if (JGeometry::TUtilf::abs(stickX) > 0.1f)
     {
         JGeometry::TVec3f xdir;
         ObjUtility::getKartXdir(mOwnerNum, &xdir);
-        hasSide = 1;
-        sideVec.scale(-stickX * 35.0f, xdir);
+        hasSide = true;
+        f32 sideScale = 35.0f;
+        xdir.scale(-stickX * sideScale);
+        sideVec = xdir;
     }
 
     mVel += mixDir;
@@ -2333,28 +2026,29 @@ void ItemObj::initThrowVel(f32 dirScale, f32 upScale, f32 power)
     }
     else
     {
+        JGeometry::TVec3f mdir;
+        JGeometry::TVec3f diff;
+        JGeometry::TVec3f kartPos;
         JGeometry::TVec3f xdir;
         ObjUtility::getKartXdir(mOwnerNum, &xdir);
-        JGeometry::TVec3f kartPos;
         ObjUtility::getKartPos(mOwnerNum, &kartPos);
 
-        JGeometry::TVec3f diff;
-    diff.sub(mPos, kartPos);
-        JGeometry::TVec3f mdir(diff);
+        diff.sub(mPos, kartPos);
+        mdir = xdir;
+        mdir *= -diff.dot(xdir);
         f32 mag = PSVECMag(&mdir);
-        stVecNormalize(&mdir);
+        stVecNormalize(mdir);
 
-        JGeometry::TVec3f apart = mdir;
-        float sl = (-power * mag) / (mVel.y * 2.0f);
-
-        mVel.x += apart.x * sl;
-        mVel.y += apart.y * sl;
-        mVel.z += apart.z * sl;
+        f32 sl = (-power * mag) / (2.0f * mVel.y);
+        apart = mdir;
+        addVel = apart;
+        addVel.scale(sl);
+        mVel += addVel;
     }
 
     if (PSVECMag(&mVel) > 300.0f)
     {
-        stVecNormalize(&mVel);
+        stVecNormalize(mVel);
         mVel.scale(300.0f);
     }
 }
@@ -2370,7 +2064,7 @@ void ItemObj::setInitThrowDir(JGeometry::TVec3f *dir, f32 pow, bool useUpForce)
         f32 p = pow;
         ydir.scale(p);
         *dir += ydir;
-        stVecNormalize(dir);
+        stVecNormalize(*dir);
     }
 }
 
@@ -2392,7 +2086,7 @@ void ItemObj::setVelUpDown(f32 upAmount, f32 downAmount)
 
 void ItemObj::setVelMax()
 {
-    stVecNormalize(&mVel);
+    stVecNormalize(mVel);
     mVel *= mMaxVel;
 }
 
@@ -2401,7 +2095,7 @@ void ItemObj::calcVelUpDown(f32 amount)
     f32 velY = mVel.y;
     f32 len = mVel.length();
     mVel.y = 0.0f;
-    stVecNormalize(&mVel);
+    stVecNormalize(mVel);
     f32 lenSq = len * len;
     f32 ySq = velY * velY;
     f32 horiz = JMAFastSqrt(lenSq - ySq);
@@ -2409,44 +2103,46 @@ void ItemObj::calcVelUpDown(f32 amount)
     mVel.y = velY;
 }
 
+static inline void addDirNormalize(JGeometry::TVec3f *dir, JGeometry::TVec3f &vec, f32 scale)
+{
+    vec.scale(scale);
+    *dir += vec;
+    stVecNormalize(*dir);
+}
+
 void ItemObj::calcGndNormal(JGeometry::TVec3f *dir, CrsGround &gnd, f32 threshold, f32 pow)
 {
-    JGeometry::TVec3f add;
     JGeometry::TVec3f gndNormal;
     gnd.getNormal(&gndNormal);
 
     JGeometry::TVec3f cross;
     PSVECCrossProduct(dir, &gndNormal, &cross);
     f32 len = PSVECMag(&cross);
-    f32 angle = fabs(JMAAtan2Radian(len, dir->dot(gndNormal)));
+    f32 angle = JGeometry::TUtilf::abs(JMAAtan2Radian(len, dir->dot(gndNormal)));
 
-    if (fabs(angle * 57.29578f) > threshold)
-    {
-        JGeometry::setTVec3f(&gndNormal.x, &add.x);
-        add.scale(pow);
-        *dir += add;
-        stVecNormalize(dir);
-    }
+    if (JGeometry::TUtilf::abs(57.29578f * angle) > threshold)
+        addDirNormalize(dir, gndNormal, pow);
 }
 
 void ItemObj::calcBananaFirstQuat(const JGeometry::TVec3f &dir)
 {
-    f32 angle = (getItemRnd()->get_ufloat_1() * 2.0f - 1.0f) * 3.14f;
+    f32 angle = getItemRnd()->get_ufloat_1() * 2.0f - 1.0f;
+    angle = 3.14f * angle;
 
     Quaternion spin;
     QuatRotY(angle, &spin);
 
-    JGeometry::TVec3f negDir;
-    JGeometry::negateInternal(&dir.x, &negDir.x);
+    JGeometry::TVec3f tmp(dir);
+    tmp.negate();
+    JGeometry::TVec3f negDir(tmp);
 
-    JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
-    JGeometry::TVec3f xdir;
-    xdir.cross(negDir, up);
-    stVecNormalize(&xdir);
+    JGeometry::TVec3f zdir(0.0f, 1.0f, 0.0f);
+    JGeometry::TVec3f xdir(1.0f, 0.0f, 0.0f);
+    xdir.cross(negDir, zdir);
+    stVecNormalize(xdir);
 
-    JGeometry::TVec3f zdir;
     zdir.cross(xdir, negDir);
-    stVecNormalize(&zdir);
+    stVecNormalize(zdir);
 
     Mtx rotMtx;
     stMakeRMtx(rotMtx, xdir, negDir, zdir);
@@ -2464,6 +2160,9 @@ void ItemObj::calcScale(f32 scale, f32 maxScale, f32 step)
         case 5:
             doEquipScaleUp(scale);
             break;
+        case 7:
+            doForceDisappearScaleDown();
+            break;
         case 4:
         case 6:
             doFallScaling();
@@ -2478,9 +2177,6 @@ void ItemObj::calcScale(f32 scale, f32 maxScale, f32 step)
                     mEquipScale = maxScale;
             }
             setScaleCol(mEquipScale);
-            break;
-        case 7:
-            doForceDisappearScaleDown();
             break;
         }
     }
@@ -2580,30 +2276,25 @@ void ItemObj::setHandOffsetData()
     ItemHandOffsetData data = GetItemObjMgr()->getHandOffsetData(this);
     setHandOffsetPos(&data);
 
-    s16 ry = data._c[1];
-    s16 rx = data._c[0];
-    s16 rz = data._c[2];
+    f32 cz = JMASCos(data._c[2]);
+    f32 sz = JMASSin(data._c[2]);
+    f32 cy = JMASCos(data._c[1]);
+    f32 cx = JMASCos(data._c[0]);
+    f32 sy = JMASSin(data._c[1]);
+    f32 sx = JMASSin(data._c[0]);
 
-    f32 cy = JMASCos(ry);
-    f32 cz = JMASCos(rz);
-    f32 sz = JMASSin(rz);
-    f32 cx = JMASCos(rx);
-    f32 sx = JMASSin(rx);
-    f32 sy = JMASSin(ry);
-
+    f32 cxsz = cx * sz;
+    f32 cxcz = cx * cz;
     _210[0][0] = cy * cz;
     _210[1][0] = cy * sz;
     _210[2][0] = -sy;
-
-    f32 cxsz = cx * sz;
-    f32 sxcz = sx * cz;
-    _210[0][1] = sxcz * sy - cxsz;
-
+    f32 sxsy = sx * sy;
     f32 sxsz = sx * sz;
-    f32 cxcz = cx * cz;
-    _210[1][1] = cxcz + sxsz * sy;
+    _210[0][1] = sxsy * cz - cxsz;
+    _210[1][1] = sxsy * sz + cxcz;
     _210[2][1] = sx * cy;
-    _210[0][2] = sxsz + cxcz * sy;
+    f32 sxcz = sx * cz;
+    _210[0][2] = cxcz * sy + sxsz;
     _210[1][2] = cxsz * sy - sxcz;
     _210[2][2] = cx * cy;
 }
@@ -2647,3 +2338,5 @@ inline void ItemObj::doDivested()
 {
     moveDivested();
 }
+
+#include "JSystem/JAudio/JASFakeMatch2.h"

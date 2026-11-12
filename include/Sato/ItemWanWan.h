@@ -56,7 +56,7 @@ public:
     void executeGeoObjHitCallBack(GeographyObj *);
     void doTraceEfct();
 
-    static Vec sHandOffsetPos;
+    static JGeometry::TVec3f sHandOffsetPos;
     static J3DAnmTransform *mAnmTrans[2];
     static J3DMtxCalc *mAnmCalc[2];
     static int sChainJointNo;

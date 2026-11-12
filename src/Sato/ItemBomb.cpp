@@ -2,6 +2,7 @@
 
 #include "JSystem/J3D/J3DAnmLoader.h"
 #include "JSystem/J3D/J3DModel.h"
+#include "JSystem/J3D/J3DTexMtx.h"
 #include "JSystem/JUtility/JUTAssert.h"
 #include "Kaneshige/KartChecker.h"
 #include "Kaneshige/RaceMgr.h"
@@ -11,6 +12,7 @@
 #include "Sato/JPEffectMgr.h"
 #include "Sato/ObjUtility.h"
 #include "Yamamoto/kartCtrl.h"
+#include "mathHelper.h"
 
 #include "JSystem/JMath/JMath.h"
 
@@ -71,19 +73,28 @@ namespace
 J3DAnmTransform *ItemBomb::mAnmTrans[3] = {nullptr, nullptr, nullptr};
 J3DMtxCalc *ItemBomb::mAnmCalc[3] = {nullptr, nullptr, nullptr};
 J3DAnmColor *ItemBomb::sColorAnm[7] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
-Vec ItemBomb::sHandOffsetPos;
+JGeometry::TVec3f ItemBomb::sHandOffsetPos(21.0f, 31.0f, 0.0f);
 J3DAnmObjMatColor *ItemBomb::sNowColorAnm;
 int ItemBomb::sLocatorJointNo;
 
-ItemBomb::ItemBomb(u32 kind) : ItemObj(kind)
+inline ItemBombBase::ItemBombBase()
 {
     mBombEfct = new BombEffectObj();
     mBombEfctScale = sBombEfctScale;
     if (GetGeoObjMgr()->isBombBattle())
         mBombEfctScale = 1.5f;
     mIsColKart = 0;
-    mTransferFlags = 0;
+}
 
+void ItemBombBase::execute_doDisappear(int kartNo)
+{
+    if (RaceMgr::getManager()->getRaceMode() == 6 && !mIsColKart && kartNo >= 0)
+        RCMGetKartChecker(kartNo)->setBombEvent(KartChecker::EVENT_2, nullptr);
+}
+
+ItemBomb::ItemBomb(u32 kind) : ItemObj(kind), ItemBombBase()
+{
+    mNewBounds = nullptr;
     reset();
 
     if (GetGeoObjMgr()->isBombBattle()) {
@@ -96,9 +107,9 @@ void ItemBomb::reset()
 {
     resetObject();
     mKartReaction = 8;
-    mEquipScale = 0.0f;
+    mEquipScale = 1.0f;
     mEquipFlags = 0;
-    _2cc = 1.0f;
+    _2cc = 0.0f;
     mGndBoundCnt = 0;
     mIsOnGnd = 0;
     mGravity = sGravity;
@@ -113,8 +124,8 @@ void ItemBomb::reset()
     }
 
     mIsColKart = 0;
-    _2d0.set(1.0f, 1.0f, 1.0f);
-    _28 = 1.0f;
+    _2d0.zero();
+    _28 = 0.0f;
     _2c = sReflectVelDownRatio;
     mLerpRatio = sQtLerpRatio;
     _6c = sHeightOffset;
@@ -127,7 +138,7 @@ void ItemBomb::reset()
     }
     if (mBounds != nullptr) {
         mBounds->setRadius(sBoundsRadius);
-        mBounds->setScale(0.0f);
+        mBounds->setScale(1.0f);
     }
 
     mBombEfct->reset();
@@ -138,9 +149,11 @@ void ItemBomb::reset()
     if (sColorAnm[0] != nullptr) {
         mColorAnm.mAnmBase = sColorAnm[0];
         mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
-        mColorAnm.getFrameCtrl()->reset();
         sNowColorAnm = &mColorAnm;
     }
+    mColorAnm.getFrameCtrl()->reset();
+    mColorAnm.getFrameCtrl()->setRate(0.0f);
+    mBlastEmt = nullptr;
 
     setAnimation(BombBck0, 0);
 }
@@ -152,12 +165,13 @@ const char *ItemBomb::getBmdFileName()
 
 void ItemBomb::createModel(JKRSolidHeap *heap, u32 p2, u32 p3)
 {
-    mModel.createDifferedModel(heap, p2, p3 | 0x00000201, true);
+    mModel.createDifferedModel(heap, p2, p3 | 0x01000201, true);
     mColorAnm.mModel = &mModel;
     mColorAnm.mAnmBase = sColorAnm[0];
     mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
     sNowColorAnm = &mColorAnm;
 
+#line 352
     JUT_ASSERT(mBounds != 0);
 
     mNewBounds = mBounds;
@@ -194,6 +208,24 @@ const char *ItemBomb::getBckName(int idx)
     return ret;
 }
 
+void ItemBomb::update()
+{
+    J3DModelData *modelData = mModel.getModelData();
+    Mtx lightMtx;
+    ObjUtility::getCamDependLightMtx(0, mPos, lightMtx);
+    for (u32 i = 0; i < modelData->getMaterialNum(); i++) {
+        J3DTexMtx *texMtx = modelData->getMaterialNodePointer(i)->getTexMtx(0);
+        if (texMtx)
+            texMtx->setEffectMtx(lightMtx);
+    }
+    modelData->getJointNodePointer(0)->setMtxCalc(mAnmCalc[mAnmType]);
+    mAnmTrans[mAnmType]->setFrame(mAnmFrame);
+    mColorAnm.anmFrameProc();
+    mColorAnm.changeMatAnm(sNowColorAnm);
+    mModel.update(0);
+    sNowColorAnm = &mColorAnm;
+}
+
 void ItemBomb::setAnimation(BombBck type, int frame)
 {
     mAnmType = type;
@@ -212,20 +244,72 @@ void ItemBomb::deleteEffect()
 
 bool ItemBomb::IsHitKart(int kart, const JGeometry::TVec3f &pos, f32 radius)
 {
-    if (mState == 1)
-        return false;
-    JGeometry::TVec3f center = _10;
-    center.z = mColPos.z;
-    return mBounds->IsHitSphere(center + pos, pos, radius);
+    bool ret = false;
+    if (mState != 1)
+        ret = mBounds->IsHitSphere(mColPos, pos, radius);
+    return ret;
 }
 
-void ItemBomb::doScale()
+void ItemBomb::doUniv()
 {
-    f32 scale = sScale;
-    f32 equipScale = sScaleEquip;
+    if (mAnmRepeat == 0) {
+        mAnmFrame++;
+        if (mAnmFrame >= mAnmTrans[mAnmType]->getFrameMax()) {
+            mAnmFrame = 0;
+            if (mAnmType == 1)
+                mAnmRepeat = 1;
+        }
+    }
+
+    if (!mFoundKart && mBlastWaitFrame - mBlastFrame < sSpBlastWaitFrame) {
+        if (mState == 2 && !mColorFlg) {
+            mColorAnm.mAnmBase = sColorAnm[0];
+            mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
+            mColorAnm.getFrameCtrl()->reset();
+            sNowColorAnm = &mColorAnm;
+        }
+        mColorAnm.getFrameCtrl()->update();
+        mColorFlg = 1;
+    } else if (!GetGeoObjMgr()->isBombBattle() && mState == 2) {
+        if (mIsOnGnd)
+            mColorAnm.getFrameCtrl()->update();
+        if (mFoundKart && mColorAnm.getFrameCtrl()->checkState(1))
+            mKartGone = 1;
+    }
+
+    doScale();
+    (this->*mStateFunc)();
+
+    if (!mDisappearing) {
+        if ((!mFoundKart && !GetGeoObjMgr()->isBombBattle() && mState == 2) || mState == 3 || mState == 4 || mState == 6)
+            mBlastFrame++;
+
+        bool blast = false;
+        if (mState == 2) {
+            if (GetGeoObjMgr()->isBombBattle()) {
+                if (mIsOnGnd)
+                    blast = true;
+            } else if (mKartGone) {
+                blast = true;
+            }
+        }
+
+        if (mBlastFrame >= mBlastWaitFrame || blast || (mTransferFlags & 1) || (mTransferFlags & 8) || mHitObjNum) {
+            setStateDisappear(true);
+            mBounds = mBombEfct->getBlastBound();
+            mBounds2 = mBombEfct->mSphere2;
+            mDisappearing = 1;
+        }
+    }
+
+    setSparkTranslation();
+}
+
+void ItemBomb::calcScale(f32 equipScale, f32 scale)
+{
     if (tstAnyObjectHitting())
         return;
-    if (mState >= 8)
+    if (*(volatile int *)&mState >= 8)
         return;
 
     switch (mState) {
@@ -237,11 +321,17 @@ void ItemBomb::doScale()
         doForceDisappearScaleDown();
         break;
     default:
+        f32 ratio = sScaleUpRatio;
         if (mEquipScale < scale)
-            mEquipScale *= sScaleUpRatio;
+            mEquipScale *= ratio;
         setScaleCol(mEquipScale);
         break;
     }
+}
+
+void ItemBomb::doScale()
+{
+    calcScale(sScaleEquip, sScale);
 }
 
 void ItemBomb::setSparkTranslation()
@@ -281,31 +371,27 @@ void ItemBomb::initEquip()
 
 void ItemBomb::setMiniGameBombColor()
 {
-    if (RaceMgr::getManager()->getConsoleNumber() < 3)
-        return;
+    if (GetGeoObjMgr()->isBombBattle()) {
+        u8 color = 0;
+        switch (RCMGetKartChecker(mOwnerNum)->getPlayerKartColor()) {
+        case 0:
+            color = 3;
+            break;
+        case 1:
+            color = 4;
+            break;
+        case 2:
+            color = 5;
+            break;
+        case 3:
+            color = 6;
+            break;
+        }
 
-    int index = mOwnerNum;
-    JUT_MINMAX_ASSERT(0, index, 8);
-
-    int color = 0;
-    switch (RCMGetKartChecker(index)->getPlayerKartColor()) {
-    case 0:
-        color = 3;
-        break;
-    case 1:
-        color = 4;
-        break;
-    case 2:
-        color = 5;
-        break;
-    case 3:
-        color = 6;
-        break;
+        mColorAnm.mAnmBase = sColorAnm[color];
+        mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
+        sNowColorAnm = &mColorAnm;
     }
-
-    mColorAnm.mAnmBase = sColorAnm[color];
-    mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
-    sNowColorAnm = &mColorAnm;
 }
 
 void ItemBomb::doEquip()
@@ -319,9 +405,9 @@ void ItemBomb::doEquip()
 
 void ItemBomb::initRelease()
 {
-    f32 velYRatio = sSpVelYRatio;
-    f32 stickMag = 0.0f;
     f32 velMag = sSpVelMag;
+    f32 stickMag = 1.0f;
+    f32 velYRatio = sSpVelYRatio;
 
     if (!GetGeoObjMgr()->isBombBattle())
         mBlastWaitFrame = sNormReleaseBlastWaitFrame;
@@ -330,10 +416,12 @@ void ItemBomb::initRelease()
         velMag = sSpVelMagMiniGame;
         stickMag = sMiniGameStickMagRatio;
         velYRatio = sSpVelYRatioMiniGame;
-        velYRatio = KartCtrl::getKartCtrl()->GetItemStickY(mOwnerNum) * sMiniStickYOffsetRatio + velYRatio;
+        f32 stickY = KartCtrl::getKartCtrl()->GetItemStickY(mOwnerNum);
+        velYRatio = stickY * sMiniStickYOffsetRatio + velYRatio;
     }
 
     mMaxVel = velMag;
+    u8 noColCnt = sMaxNoColCnt;
     mEquipFlags = 0xffffffff;
     _12c |= 2;
     _12c |= 1;
@@ -342,15 +430,17 @@ void ItemBomb::initRelease()
         mEquipFlags = 0xffffffff;
         mEquipFlags &= ~(1 << mOwnerNum);
     } else {
-        setFrameNoColKart(sMaxNoColCnt, false);
+        setFrameNoColKart(noColCnt, false);
     }
 
     initMoveColGround();
 
+    ObjUtility::getKartBodyMtx(mOwnerNum);
     JGeometry::TVec3f dir;
     setInitThrowDir(&dir, velYRatio, false);
     calcBananaFirstQuat(dir);
     mVel = dir;
+    mVel.scale(mMaxVel);
     initThrowVel(sStickMagXZ * stickMag, sStickMagY * stickMag, mGravity);
 }
 
@@ -360,7 +450,7 @@ void ItemBomb::doRelease()
         mVel.scale(sSpVelDownRatio);
 
     JGeometry::TVec3f dir = mVel;
-    stVecNormalize(&dir);
+    stVecNormalize(dir);
 
     mVel.scale(sAirFric);
     mVel.y += mGravity;
@@ -381,18 +471,18 @@ void ItemBomb::doRelease()
 
     if (!mIsOnGnd) {
         JGeometry::TVec3f vec = mVel;
-        if (PSVECMag(&vec) > 1.0f) {
-            stVecNormalize(&vec);
+        if (PSVECMag(&vec) > 0.0f) {
+            vec.normalize();
             stVec2QtUpdate(_44, dir, vec);
         }
     } else {
         JGeometry::TVec3f up;
         getModelUpDir(&up);
-        if (!(up.x == mNormal.x && up.y == mNormal.y && up.z == mNormal.z))
+        if (!up.equals(mNormal))
             stVec2QtUpdate(_34, _44, up, mNormal);
     }
 
-    if (mIsOnGnd && !GetGeoObjMgr()->isBombBattle() && !mFoundKart && !mColorFlg) {
+    if (mGndBoundCnt && !GetGeoObjMgr()->isBombBattle() && !mFoundKart && !mColorFlg) {
         mFoundKart = findAnyKart();
         if (mFoundKart) {
             mColorAnm.mAnmBase = sColorAnm[2];
@@ -430,14 +520,13 @@ void ItemBomb::initSpRelease()
     f32 compLen = 0.0f;
     getCompVecLength(_2d0, compLen);
 
-    f32 sqrtVal = 2.0f * -mGravity * sReleaseHeight;
-    if (sqrtVal > 0.0f)
-        sqrtVal = JMAFastSqrt(sqrtVal);
-    f32 scale = (compLen * -mGravity) / sqrtVal;
-    mVel.scaleAdd(scale, _2d0);
+    JGeometry::TVec3f comp(_2d0);
+    f32 sqrtVal = JMAFastSqrt(2.0f * -mGravity * sReleaseHeight);
+    comp.scale((compLen * -mGravity) / sqrtVal);
+    mVel.add(comp);
 
     JGeometry::TVec3f dir = mVel;
-    stVecNormalize(&dir);
+    stVecNormalize(dir);
     calcBananaFirstQuat(dir);
 
     mBlastWaitFrame = sSpBlastWaitFrame;
@@ -457,16 +546,16 @@ void ItemBomb::initDisappear()
     else
         mEquipFlags = 0xffffffff;
 
-    mEquipScale = 1.0f;
+    mEquipScale = 0.0f;
 
+    JGeometry::TVec3f up;
     JGeometry::TVec3f frDir;
     getModelFrDir(&frDir);
 
-    JGeometry::TVec3f up;
     if (mTransferFlags & 2)
         up = mNormal;
     else
-        up.set(1.0f, 0.0f, 1.0f);
+        up.set(0.0f, 1.0f, 0.0f);
 
     JGeometry::TPos3f mtx;
     ObjUtility::setRMtx(mtx, up, frDir);
@@ -476,9 +565,7 @@ void ItemBomb::initDisappear()
 
     int color = 0;
     if (GetGeoObjMgr()->isBombBattle()) {
-        int index = mOwnerNum;
-        JUT_MINMAX_ASSERT(0, index, 8);
-        switch (RCMGetKartChecker(index)->getPlayerKartColor()) {
+        switch (RCMGetKartChecker(mOwnerNum)->getPlayerKartColor()) {
         case 0:
             color = 0;
             break;
@@ -498,8 +585,7 @@ void ItemBomb::initDisappear()
     _12c |= 0x2000;
 
     if (mBlastEmt != nullptr) {
-        mBlastEmt->mFlags |= 1;
-        mBlastEmt->mRate = 1.0f;
+        mBlastEmt->becomeInvalidEmitter();
         mBlastEmt = nullptr;
     }
 }
@@ -513,11 +599,8 @@ void ItemBomb::doDisappear()
 
     if (mBombEfct->execute()) {
         mState = 10;
-        if (RaceMgr::getManager()->mRaceInfo->mRaceMode == 6 && !mIsColKart && mOwnerNum >= 0) {
-            int index = mOwnerNum;
-            JUT_MINMAX_ASSERT(0, index, 8);
-            RCMGetKartChecker(index)->setBombEvent(KartChecker::EVENT_2, nullptr);
-        }
+        int owner = mOwnerNum;
+        execute_doDisappear(owner);
     }
 
     setModelMatrixAndScale(_34);
@@ -558,31 +641,7 @@ void ItemBomb::initFall()
 void ItemBomb::initDivested()
 {
     initmoveDivested();
-
-    if (GetGeoObjMgr()->isMiniGame()) {
-        int index = mOwnerNum;
-        JUT_MINMAX_ASSERT(0, index, 8);
-
-        int color = 0;
-        switch (RCMGetKartChecker(index)->getPlayerKartColor()) {
-        case 0:
-            color = 3;
-            break;
-        case 1:
-            color = 4;
-            break;
-        case 2:
-            color = 5;
-            break;
-        case 3:
-            color = 6;
-            break;
-        }
-
-        mColorAnm.mAnmBase = sColorAnm[color];
-        mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
-        sNowColorAnm = &mColorAnm;
-    }
+    setMiniGameBombColor();
 }
 
 void ItemBomb::doFall()
@@ -592,7 +651,7 @@ void ItemBomb::doFall()
 
     doRelease();
 
-    if (GetGeoObjMgr()->isMiniGame() && mIsOnGnd)
+    if (GetGeoObjMgr()->isBombBattle() && mIsOnGnd)
         setStateForceDisappear();
 }
 
@@ -615,47 +674,46 @@ void ItemBomb::initForceDisappear()
 void ItemBomb::moveNormal(CrsGround &ground)
 {
     f32 height = ground.getHeight();
-    if (mPos.y >= height)
-        return;
+    if (mPos.y < height) {
+        mTransferFlags |= 2;
+        mTransferFlags |= 0x100;
 
-    mTransferFlags |= 2;
-    mTransferFlags |= 0x100;
-
-    if (mState == 2) {
-        if (GetGeoObjMgr()->isBombBattle()) {
-            mIsOnGnd = 1;
-            mVel.y = 1.0f;
-        } else if (mGndBoundCnt < sMaxGndBoundNum) {
-            mGndBoundCnt++;
-            f32 ratio = sBoundRatio;
-            f32 dot = mVel.dot(mNormal);
-            f32 ndot = -dot;
-            f32 stdVel = sBoundStdVelMagY;
-            mVel.x = mVel.x * ratio + mNormal.x * ndot;
-            mVel.y = stdVel;
-            mVel.z = mVel.z * ratio + mNormal.z * ndot;
-            if (mVel.y > sMaxVelBoundY)
-                mVel.y = sMaxVelBoundY;
+        if (mState == 2) {
+            if (GetGeoObjMgr()->isBombBattle()) {
+                mIsOnGnd = 1;
+                mVel.y = 0.0f;
+            } else if (mGndBoundCnt < sMaxGndBoundNum) {
+                mGndBoundCnt++;
+                mVel.scale(sBoundRatio);
+                JGeometry::TVec3f proj;
+                proj.scale(mNormal.dot(mVel), mNormal);
+                JGeometry::TVec3f horiz;
+                horiz.sub(mVel, proj);
+                horiz.y = sBoundStdVelMagY;
+                proj.scale(-1.0f);
+                mVel.add(horiz, proj);
+                mVel.y = mVel.y > sMaxVelBoundY ? sMaxVelBoundY : mVel.y;
+            } else {
+                mPos.y = height;
+                mVel.y = 0.0f;
+                mVel.x = ground.getNormalVec().x;
+                mVel.z = ground.getNormalVec().z;
+                if (!mIsOnGnd && !mFoundKart) {
+                    mColorAnm.mAnmBase = sColorAnm[1];
+                    mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
+                    mColorAnm.getFrameCtrl()->reset();
+                    sNowColorAnm = &mColorAnm;
+                }
+                mIsOnGnd = 1;
+                mPos.y = height;
+            }
         } else {
             mPos.y = height;
-            mVel.y = 1.0f;
+            mVel.y = 0.0f;
             mVel.x = ground.getNormalVec().x;
             mVel.z = ground.getNormalVec().z;
-            if (!mIsOnGnd && !mFoundKart) {
-                mColorAnm.mAnmBase = sColorAnm[1];
-                mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
-                mColorAnm.getFrameCtrl()->reset();
-                sNowColorAnm = &mColorAnm;
-            }
             mIsOnGnd = 1;
-            mPos.y = height;
         }
-    } else {
-        mPos.y = height;
-        mVel.y = 1.0f;
-        mVel.x = ground.getNormalVec().x;
-        mVel.z = ground.getNormalVec().z;
-        mIsOnGnd = 1;
     }
 }
 
@@ -685,7 +743,7 @@ void ItemBomb::setCurrentViewNo(u32 viewNo)
 
 void ItemBomb::createEffect()
 {
-    if (!GetGeoObjMgr()->isMiniGame() || RaceMgr::getManager()->getConsoleNumber() < 3) {
+    if (!GetGeoObjMgr()->isBombBattle() || RaceMgr::getManager()->getConsoleNumber() < 3) {
         if (mBlastEmt == nullptr)
             mBlastEmt = GetJPAMgr()->createEmt("bombchiri01", mPos);
     }
@@ -715,3 +773,5 @@ void ItemBombSuc::reset()
     mSucKind = 8;
 }
 
+
+#include "JSystem/JAudio/JASFakeMatch2.h"

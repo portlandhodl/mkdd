@@ -13,6 +13,12 @@
 #include "Sato/stMath.h"
 #include "dolphin/mtx.h"
 
+inline void setIdentQuat(Quaternion &q)
+{
+    Quaternion id = {0.0f, 0.0f, 0.0f, 1.0f};
+    q = id;
+}
+
 namespace
 {
     f32 sTargetR = 500.0f;
@@ -59,25 +65,12 @@ namespace
     f32 sBoundRatio;
 }
 
-Vec ItemWanWanObj::sHandOffsetPos;
+JGeometry::TVec3f ItemWanWanObj::sHandOffsetPos(155.0f, 150.0f, -330.0f);
 J3DAnmTransform *ItemWanWanObj::mAnmTrans[2] = {nullptr, nullptr};
 J3DMtxCalc *ItemWanWanObj::mAnmCalc[2] = {nullptr, nullptr};
 J3DDeformData *ItemWanWanObj::mAnmDeform;
 J3DAnmCluster *ItemWanWanObj::mAnmCluster;
 
-namespace
-{
-struct WanWanInit
-{
-    WanWanInit()
-    {
-        ItemWanWanObj::sHandOffsetPos.x = 155.0f;
-        ItemWanWanObj::sHandOffsetPos.y = 150.0f;
-        ItemWanWanObj::sHandOffsetPos.z = -330.0f;
-    }
-};
-WanWanInit sWanWanInit;
-}
 
 
 ItemWanWanObj::ItemWanWanObj(u32 kind) : ItemObj(kind)
@@ -115,6 +108,7 @@ void ItemWanWanObj::reset()
     _338.zero();
 
     mAnmObjCluster.getFrameCtrl()->reset();
+    mController.Reset();
 
     mGravity = sGravity;
     _348 = 0;
@@ -155,16 +149,17 @@ const char *ItemWanWanObj::getBmdFileName()
 
 void ItemWanWanObj::loadAnmData(J3DModelData *modelData)
 {
-    J3DAnmObjCluster::loadClusterData(&mAnmDeform, ObjUtility::getPtrMainArc("/Item/wanwan.bls"));
-    J3DAnmObjCluster::loadClusterAnmData(&mAnmCluster, ObjUtility::getPtrMainArc("/Item/wanwan.blk"));
+    void *bls = ObjUtility::getPtrMainArc("/Item/wanwan.bls");
+    J3DAnmObjCluster::loadClusterData(&mAnmDeform, bls);
+    void *blk = ObjUtility::getPtrMainArc("/Item/wanwan.blk");
+    J3DAnmObjCluster::loadClusterAnmData(&mAnmCluster, blk);
 
     for (int i = 0; i < 2; i++)
     {
-        const char *name = getBckName(i);
-        void *data = ResMgr::getPtr(ResMgr::mcArcMRAM, name);
-        J3DAnmObjTrans::setupTransAnmData(&mAnmTrans[i], &mAnmCalc[i], modelData, data);
+        void *bck = ResMgr::getPtr(ResMgr::mcArcMRAM, getBckName(i));
+        J3DAnmObjTrans::setupTransAnmData(&mAnmTrans[i], &mAnmCalc[i], modelData, bck);
     }
-    sChainJointNo = modelData->getJointName()->getIndex("mk_wanChain");
+    sChainJointNo = modelData->getJointName()->getIndex("pos_chn");
 }
 
 
@@ -218,12 +213,6 @@ void ItemWanWanObj::update()
 
 
 
-DECL_WEAK J3DAnmObjCluster::~J3DAnmObjCluster() {}
-DECL_WEAK void J3DAnmObjCluster::anmFrameProc()
-{
-    mAnmBase->setFrame(mFrameCtrl.getFrame());
-}
-
 void ItemWanWanObj::drawSimpleModel(u32 viewNo, Mtx mtx, J3DUClipper *clipper, Mtx mtx2)
 {
     mStringObj->drawSimpleModel(viewNo, mtx, clipper, mtx2);
@@ -245,7 +234,6 @@ void ItemWanWanObj::setCurrentViewNo(u32 viewNo)
 
 
 
-#pragma inline_depth(1)
 void ItemWanWanObj::doUniv()
 {
     if (!tstAnyObjectHitting())
@@ -301,29 +289,26 @@ void ItemWanWanObj::doUniv()
         {
             JGeometry::TVec3f kartVel;
             ObjUtility::getKartVel(mOwnerNum, &kartVel);
-            locPos.x += kartVel.x;
-            locPos.y += kartVel.y;
-            locPos.z += kartVel.z;
+            locPos.add(kartVel);
         }
 
-        mgr->setNodePos(0, JGeometry::TVec3f(locPos.x, locPos.y, locPos.z));
-        mgr->setNodeVel(0, JGeometry::TVec3f(mPos.x, mPos.y, mPos.z));
+        mgr->setNodePos(0, locPos);
+        mgr->setNodeVel(0, mVel);
 
         JGeometry::TVec3f kartPos;
         ObjUtility::getKartPos(mOwnerNum, &kartPos);
-        _2b4.x = mPos.x - kartPos.x;
-        _2b4.y = mPos.y - kartPos.y;
-        _2b4.z = mPos.z - kartPos.z;
+        JGeometry::TVec3f diff;
+        diff.sub(mPos, kartPos);
+        _2b4.zero();
 
         u32 last = 0;
         if (!_2e0)
         {
-            u32 num = mgr->mStrNodeList.getNumLinks();
-            last = num - 1;
+            last = mgr->mStrNodeList.getNumLinks() - 1;
             JGeometry::TVec3f kartVel;
             ObjUtility::getKartVel(mOwnerNum, &kartVel);
-            mgr->setNodePos(last, JGeometry::TVec3f(kartPos.x, kartPos.y, kartPos.z));
-            mgr->setNodeVel(last, JGeometry::TVec3f(kartVel.x, kartVel.y, kartVel.z));
+            mgr->setNodePos(last, kartPos);
+            mgr->setNodeVel(last, kartVel);
         }
 
         mStringObj->mScale = sChainScale * mEquipScale;
@@ -331,18 +316,17 @@ void ItemWanWanObj::doUniv()
 
         if (!_2e0)
         {
-            u32 num = mgr->mStrNodeList.getNumLinks();
-            JUT_ASSERT(num > 0);
-            StringNode *node = (StringNode *)mgr->mStrNodeList.getNthLink(0)->getObjectPtr();
+            u32 num = mStringObj->mStringNodeMgr->mStrNodeList.getNumLinks();
+            StringNode *node = mStringObj->mStringNodeMgr->getNode(0);
             f32 nodeLen = node->_34;
-            if (locPos.length() > nodeLen * (num - 1))
+            if (diff.length() > nodeLen * (num - 1))
                 mgr->getNodeVel(last, &_2b4);
         }
     }
 
     mController.FrameProc();
 
-    if (mState != 1 && mEquipScale == 0.0f)
+    if (mState != 1 && mAnmObjCluster.getFrame() == 0.0f)
         mSoundMgr->setSe(0x40021);
 
     if (_34a)
@@ -351,7 +335,6 @@ void ItemWanWanObj::doUniv()
     doTraceEfct();
     SysDebug::checkInvalidMatrix((MtxPtr)mModel.getBaseTRMtx(), (char *)"WanWanRTMtx");
 }
-#pragma inline_depth(4)
 void ItemWanWanObj::setHitSe()
 {
     if (_34a == 0)
@@ -374,11 +357,7 @@ void ItemWanWanObj::initEquip()
     _338.zero();
     mPos.zero();
 
-    JGeometry::TVec4f off = *(JGeometry::TVec4f *)&sHandOffsetPos;
-    _44.x = off.x;
-    _44.y = off.y;
-    _44.z = off.z;
-    _44.w = off.w;
+    setIdentQuat(_44);
     mEquipScale = sScaleEquip;
 }
 
@@ -398,24 +377,16 @@ void ItemWanWanObj::initRelease()
     ObjUtility::getKartYdir(mOwnerNum, &ydir);
 
     stMtx2Qt(&_44, mtx);
-    f32 t = 1.0f;
-    if (ydir.y >= 0.0f)
-        t = 1.0f - ydir.y;
-    else
+    f32 t = 1.0f - ydir.y;
+    if (ydir.y < 0.0f)
         t = 0.0f;
 
-    f32 addY = sReleaseAddYRatio * t;
+    ydir.scale(sReleaseAddYRatio * t);
+    zdir.add(ydir);
+    stVecNormalize(zdir);
 
-    JGeometry::TVec3f dir;
-    dir.x = zdir.x + ydir.x * addY;
-    dir.y = zdir.y + ydir.y * addY;
-    dir.z = zdir.z + ydir.z * addY;
-    stVecNormalize(dir);
-
-    f32 scale = sReleaseVelRatio * mMaxVel;
-    mVel.x = dir.x * scale;
-    mVel.y = dir.y * scale;
-    mVel.z = dir.z * scale;
+    mVel = zdir;
+    mVel.scale(sReleaseVelRatio * mMaxVel);
 
     JGeometry::TVec3f kartVel;
     ObjUtility::getKartVel(mOwnerNum, &kartVel);
@@ -437,11 +408,7 @@ void ItemWanWanObj::setInitReleaseParam()
 
     f32 len = 0.0f;
     getCompVecLength(_2c4, len);
-    f32 ratio = len / (f32)sReleaseOffsetCnt;
-    _2d0 = ratio - _2c4.x;
-    _2c4.x = ratio / _2c4.x;
-    _2c4.y = ratio / _2c4.y;
-    _2c4.z = ratio / _2c4.z;
+    _2c4.scale(len / (f32)sReleaseOffsetCnt);
 }
 
 
@@ -504,20 +471,12 @@ void ItemWanWanObj::doRelease()
 
     if (mMoveState != 3)
     {
-        if (mMoveState == 2)
-        {
-            if (mWaitFrame > (u32)(sMaxReleaseCnt + sMaxSeparateCnt))
-            {
-                mMoveState = 3;
-                goto statecheck;
-            }
-        }
+        if (mMoveState == 2 && mWaitFrame > (u32)(sMaxReleaseCnt + sMaxSeparateCnt))
+            mMoveState = 3;
+        else if (mWaitFrame > sMaxReleaseCnt)
+            separate();
     }
 
-    if (mWaitFrame > sMaxReleaseCnt)
-        separate();
-
-statecheck:
     if (mMoveState == 3 || mMoveState == 2)
     {
         if ((mTransferFlags & 4) || (mTransferFlags & 8))
@@ -559,7 +518,7 @@ void ItemWanWanObj::initDisappear()
 
 void ItemWanWanObj::doDisappear()
 {
-    if (mController.mTrans->getFrameCtrl(mController.getNowTransNo())->checkState(1))
+    if (mController.mTrans->getObjChk(mController.getNowTransNo())->getFrameCtrl()->checkState(1))
         mState = 10;
 
     J3DFrameCtrl *ctrl = mController.mTrans->getObjAnt(mController.getNowTransNo())->getFrameCtrl();
@@ -682,8 +641,7 @@ void ItemWanWanObj::initmoveCenterLine()
     JGeometry::TVec3f cross;
     PSVECCrossProduct(&clDir, &vel, &cross);
     f32 mag = cross.length();
-
-    f32 angle = JGeometry::TUtilf::atan2(cross.x, cross.z);
+    f32 angle = JGeometry::TUtilf::atan2(mag, clDir.dot(vel));
     angle = JGeometry::TUtilf::abs(angle) * 57.29578f;
     if (angle > sBackReleaseAngle)
         _34b = 1;
@@ -699,40 +657,42 @@ void ItemWanWanObj::setCLPoint()
 
 void ItemWanWanObj::moveCenterLine()
 {
-    JGeometry::TVec3f point;
-    mCLPointController->mNext->getPosition(&point);
-    JGeometry::TVec3f delta(point);
-    delta.sub(mPos);
+    JGeometry::TVec3f tmp;
+    JGeometry::TVec3f prevPos;
+    JGeometry::TVec3f pos;
+    JGeometry::TVec3f dir;
+    JGeometry::TVec3f side;
+    JGeometry::TVec3f target;
+    JGeometry::TVec3f delta;
+    JGeometry::TVec3f vel;
+    JGeometry::TVec3f toTarget;
+    JGeometry::TVec3f clDir;
+
+    mCLPointController->mNext->getPosition(&pos);
+    tmp.sub(pos, mPos);
+    delta = tmp;
     delta.y = 0.0f;
     if (delta.length() < sTargetR || mCLPointController->chkIsOverFwPoint(mPos))
         mCLPointController->changeNextPoint();
 
-    JGeometry::TVec3f prevPos;
-    JGeometry::TVec3f nextPos;
     mCLPointController->mPrev->getPosition(&prevPos);
-    mCLPointController->mNext->getPosition(&nextPos);
+    mCLPointController->mNext->getPosition(&pos);
 
-    JGeometry::TVec3f dir;
-    dir.sub(nextPos, prevPos);
+    dir.sub(pos, prevPos);
     stVecNormalize(dir);
 
-    JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
-    JGeometry::TVec3f side;
-    side.cross(up, dir);
+    side.cross(dir, JGeometry::TVec3f(0.0f, 1.0f, 0.0f));
 
-    f32 width = mCLPointController->mNext->getPointData()->scale * 0.5f;
-    if (width > sMaxRoadWidth)
-        width = sMaxRoadWidth;
+    f32 w = 0.5f * mCLPointController->mNext->getPointData()->scale;
+    f32 width = w > sMaxRoadWidth ? sMaxRoadWidth : w;
 
-    f32 lateral = width * JMASinShort(_328) * sRoadWidthRatio;
+    f32 lateral = sRoadWidthRatio * (width * JMASinShort(_328));
     side.scale(lateral);
-    JGeometry::TVec3f target;
-    target.add(side, nextPos);
+    target.add(side, pos);
 
     f32 vely = mVel.y;
     mVel.y = 0.0f;
 
-    JGeometry::TVec3f toTarget;
     toTarget.sub(target, mPos);
     toTarget.y = 0.0f;
     stVecNormalize(toTarget);
@@ -740,13 +700,13 @@ void ItemWanWanObj::moveCenterLine()
     toTarget.scale(sNormalAddVel);
     mVel.scale(sMoveVelDownRatio);
     mVel.add(toTarget);
-    JGeometry::TVec3f vel(mVel);
+    vel = mVel;
     mVel.y = vely;
 
-    JGeometry::TVec3f clDir(mCLPointController->_c);
-    stVecNormalize(clDir);
+    clDir = mCLPointController->_c;
+    stVecNormalize(vel);
 
-    _328 = _328 + (s16)(width / sMaxRoadWidth * sAddCnt);
+    _328 += (s16)(sAddCnt * (width / sMaxRoadWidth));
 
     _338.sub(mVel, _32c);
 }
@@ -763,13 +723,10 @@ void ItemWanWanObj::moveStraight()
 
 f32 ItemWanWanObj::getChainLength()
 {
-    StringNodeManager *mgr = mStringObj->mStringNodeMgr;
-    u32 num = mgr->mStrNodeList.getNumLinks();
-    JUT_ASSERT_F(0 < num, "range over: %d <= num=%d < %d", 0, num, mgr->mStrNodeList.getNumLinks());
-    StringNode *node = (StringNode *)mgr->mStrNodeList.getNthLink(0)->getObjectPtr();
+    u32 num = mStringObj->mStringNodeMgr->mStrNodeList.getNumLinks();
+    StringNode *node = mStringObj->mStringNodeMgr->getNode(0);
     return node->_34 * (num - 1);
 }
-
 
 void ItemWanWanObj::getFirstNodePos(JGeometry::TVec3f *pos)
 {
@@ -777,7 +734,7 @@ void ItemWanWanObj::getFirstNodePos(JGeometry::TVec3f *pos)
 }
 void ItemWanWanObj::getCenterNodePos(JGeometry::TVec3f *pos)
 {
-    mStringObj->mStringNodeMgr->getNodePos(mStringObj->mStringNodeMgr->mStrNodeList.getNumLinks() / 2, pos);
+    mStringObj->mStringNodeMgr->getNodePos((int)mStringObj->mStringNodeMgr->mStrNodeList.getNumLinks() / 2, pos);
 }
 
 void ItemWanWanObj::getLastNodePos(JGeometry::TVec3f *pos)
@@ -817,14 +774,16 @@ void ItemWanWanObj::separate()
     _2e0 = 1;
     mMoveState = 2;
 
-    JUT_ASSERT(mState != StateEquip);
-    JUT_ASSERT(mState != StateDivested);
+#line 1257
+    JUT_ASSERT(getState() != ItemObj::StateEquip);
+    JUT_ASSERT(getState() != ItemObj::StateDivested);
 
     if (mMoveState != 3)
         ItemObjMgr::gItemMgr->releaseItemByKartEquipItemList(this);
 
+    u8 i;
     char *name = "mk_wanChain";
-    for (u8 i = 0; i < 2; i++)
+    for (i = 0; i < 2; i++)
     {
         const char *fn = ObjUtility::concatSimpleFileName(name, i);
         JPABaseEmitter *emt = GetJPAMgr()->createEmt(fn, mPos);
@@ -841,9 +800,11 @@ void ItemWanWanObj::separate()
 void ItemWanWanObj::getChainLocatorPos(JGeometry::TVec3f *pos, Mtx mtx)
 {
     PSMTXCopy(mModel.getModel()->mMtxBuffer->getAnmMtx(sChainJointNo), mtx);
-    mtx[0][3] += sChainOffset * mtx[0][2];
-    mtx[1][3] += sChainOffset * mtx[1][2];
-    mtx[2][3] += sChainOffset * mtx[2][2];
+    JGeometry::TVec3f zdir(mtx[0][2], mtx[1][2], mtx[2][2]);
+    zdir.scale(sChainOffset);
+    mtx[0][3] += zdir.x;
+    mtx[1][3] += zdir.y;
+    mtx[2][3] += zdir.z;
     pos->set(mtx[0][3], mtx[1][3], mtx[2][3]);
 }
 
@@ -867,293 +828,6 @@ void ItemWanWanObj::executeGeoObjHitCallBack(GeographyObj *obj)
     case 3711:
     case 3712:
     case 3713:
-    case 3714:
-    case 3715:
-    case 3716:
-    case 3717:
-    case 3718:
-    case 3719:
-    case 3720:
-    case 3721:
-    case 3722:
-    case 3723:
-    case 3724:
-    case 3725:
-    case 3726:
-    case 3727:
-    case 3728:
-    case 3729:
-    case 3730:
-    case 3731:
-    case 3732:
-    case 3733:
-    case 3734:
-    case 3735:
-    case 3736:
-    case 3737:
-    case 3738:
-    case 3739:
-    case 3740:
-    case 3741:
-    case 3742:
-    case 3743:
-    case 3744:
-    case 3745:
-    case 3746:
-    case 3747:
-    case 3748:
-    case 3749:
-    case 3750:
-    case 3751:
-    case 3752:
-    case 3753:
-    case 3754:
-    case 3755:
-    case 3756:
-    case 3757:
-    case 3758:
-    case 3759:
-    case 3760:
-    case 3761:
-    case 3762:
-    case 3763:
-    case 3764:
-    case 3765:
-    case 3766:
-    case 3767:
-    case 3768:
-    case 3769:
-    case 3770:
-    case 3771:
-    case 3772:
-    case 3773:
-    case 3774:
-    case 3775:
-    case 3776:
-    case 3777:
-    case 3778:
-    case 3779:
-    case 3780:
-    case 3781:
-    case 3782:
-    case 3783:
-    case 3784:
-    case 3785:
-    case 3786:
-    case 3787:
-    case 3788:
-    case 3789:
-    case 3790:
-    case 3791:
-    case 3792:
-    case 3793:
-    case 3794:
-    case 3795:
-    case 3796:
-    case 3797:
-    case 3798:
-    case 3799:
-    case 3800:
-    case 3801:
-    case 3802:
-    case 3803:
-    case 3804:
-    case 3805:
-    case 3806:
-    case 3807:
-    case 3808:
-    case 3809:
-    case 3810:
-    case 3811:
-    case 3812:
-    case 3813:
-    case 3814:
-    case 3815:
-    case 3816:
-    case 3817:
-    case 3818:
-    case 3819:
-    case 3820:
-    case 3821:
-    case 3822:
-    case 3823:
-    case 3824:
-    case 3825:
-    case 3826:
-    case 3827:
-    case 3828:
-    case 3829:
-    case 3830:
-    case 3831:
-    case 3832:
-    case 3833:
-    case 3834:
-    case 3835:
-    case 3836:
-    case 3837:
-    case 3838:
-    case 3839:
-    case 3840:
-    case 3841:
-    case 3842:
-    case 3843:
-    case 3844:
-    case 3845:
-    case 3846:
-    case 3847:
-    case 3848:
-    case 3849:
-    case 3850:
-    case 3851:
-    case 3852:
-    case 3853:
-    case 3854:
-    case 3855:
-    case 3856:
-    case 3857:
-    case 3858:
-    case 3859:
-    case 3860:
-    case 3861:
-    case 3862:
-    case 3863:
-    case 3864:
-    case 3865:
-    case 3866:
-    case 3867:
-    case 3868:
-    case 3869:
-    case 3870:
-    case 3871:
-    case 3872:
-    case 3873:
-    case 3874:
-    case 3875:
-    case 3876:
-    case 3877:
-    case 3878:
-    case 3879:
-    case 3880:
-    case 3881:
-    case 3882:
-    case 3883:
-    case 3884:
-    case 3885:
-    case 3886:
-    case 3887:
-    case 3888:
-    case 3889:
-    case 3890:
-    case 3891:
-    case 3892:
-    case 3893:
-    case 3894:
-    case 3895:
-    case 3896:
-    case 3897:
-    case 3898:
-    case 3899:
-    case 3900:
-    case 3901:
-    case 3902:
-    case 3903:
-    case 3904:
-    case 3905:
-    case 3906:
-    case 3907:
-    case 3908:
-    case 3909:
-    case 3910:
-    case 3911:
-    case 3912:
-    case 3913:
-    case 3914:
-    case 3915:
-    case 3916:
-    case 3917:
-    case 3918:
-    case 3919:
-    case 3920:
-    case 3921:
-    case 3922:
-    case 3923:
-    case 3924:
-    case 3925:
-    case 3926:
-    case 3927:
-    case 3928:
-    case 3929:
-    case 3930:
-    case 3931:
-    case 3932:
-    case 3933:
-    case 3934:
-    case 3935:
-    case 3936:
-    case 3937:
-    case 3938:
-    case 3939:
-    case 3940:
-    case 3941:
-    case 3942:
-    case 3943:
-    case 3944:
-    case 3945:
-    case 3946:
-    case 3947:
-    case 3948:
-    case 3949:
-    case 3950:
-    case 3951:
-    case 3952:
-    case 3953:
-    case 3954:
-    case 3955:
-    case 3956:
-    case 3957:
-    case 3958:
-    case 3959:
-    case 3960:
-    case 3961:
-    case 3962:
-    case 3963:
-    case 3964:
-    case 3965:
-    case 3966:
-    case 3967:
-    case 3968:
-    case 3969:
-    case 3970:
-    case 3971:
-    case 3972:
-    case 3973:
-    case 3974:
-    case 3975:
-    case 3976:
-    case 3977:
-    case 3978:
-    case 3979:
-    case 3980:
-    case 3981:
-    case 3982:
-    case 3983:
-    case 3984:
-    case 3985:
-    case 3986:
-    case 3987:
-    case 3988:
-    case 3989:
-    case 3990:
-    case 3991:
-    case 3992:
-    case 3993:
-    case 3994:
-    case 3995:
-    case 3996:
-    case 3997:
-    case 3998:
-    case 3999:
-    case 4000:
     case 4001:
     case 4002:
     case 4003:
@@ -1205,3 +879,5 @@ void ItemWanWanObj::doTraceEfct()
 }
 
 DECL_WEAK ItemWanWanObj::~ItemWanWanObj() {}
+
+#include "JSystem/JAudio/JASFakeMatch2.h"

@@ -282,8 +282,10 @@ public:
     // static f32 sDivPosLerpValue;
 
     // Inline
-    bool IsSuccessionItem();
+    bool IsSuccessionItem() { return mItemKind > 0x10; }
     bool IsSuccessionChildItem();
+    bool IsStop();
+    bool checkStopDisappear();
     void doOccur() { doFall(); }                                                        // 0x8024af68, ptmf shit
 
     int get_1fc() const { return _1fc; }

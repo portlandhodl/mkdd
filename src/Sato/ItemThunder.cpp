@@ -8,19 +8,12 @@
 #include "Yamamoto/kartBody.h"
 #include "Yamamoto/kartCtrl.h"
 
+static const f32 sDummy[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
 namespace
 {
     f32 sScale = 1.0f;
     f32 sHeightOffset = 26.0f;
-
-    const char cThunderEmtName[] =
-        "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-        "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-        "\0\0\0\0\0\0\0\0"
-        "mk_thunder_a\0\0\0"
-        "mk_thunder_b\0\0\0"
-        "mk_thunder_c\0\0\0"
-        "mk_thunder_d\0\0\0";
 }
 
 JGeometry::TVec3f ItemThunder::sHandOffsetPos;
@@ -206,8 +199,6 @@ const bool ItemThunder::checkKartColDisappear(int kartNo)
 
 void ItemThunder::setEffectThunder(int exceptKartNo)
 {
-    const char *base = cThunderEmtName;
-
     for (int i = 0; i < RCMGetManager()->getKartNumber(); i++)
     {
         if (i == exceptKartNo)
@@ -215,10 +206,10 @@ void ItemThunder::setEffectThunder(int exceptKartNo)
 
         JGeometry::TVec3f pos;
         ObjUtility::getKartPos(i, &pos);
-        mEffectThunder[i][0] = GetJPAMgr()->createEmtThunder(base + 0x28, pos);
-        mEffectThunder[i][1] = GetJPAMgr()->createEmtThunder(base + 0x38, pos);
-        mEffectThunder[i][2] = GetJPAMgr()->createEmtThunder(base + 0x48, pos);
-        mEffectThunder[i][3] = GetJPAMgr()->createEmtThunder(base + 0x58, pos);
+        mEffectThunder[i][0] = GetJPAMgr()->createEmtThunder("mk_thunder_a", pos);
+        mEffectThunder[i][1] = GetJPAMgr()->createEmtThunder("mk_thunder_b", pos);
+        mEffectThunder[i][2] = GetJPAMgr()->createEmtThunder("mk_thunder_c", pos);
+        mEffectThunder[i][3] = GetJPAMgr()->createEmtThunder("mk_thunder_d", pos);
     }
 }
 

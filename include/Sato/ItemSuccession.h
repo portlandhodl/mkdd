@@ -107,8 +107,9 @@ public:
     void doBuildEquip();
     JSUListIterator<ItemObj> selectJuggleSucChild();
     void setSucMultiType(cMultiType);
-    f32 getRotAxisRatio();
+    static f32 getRotAxisRatio();
     JSUListIterator<ItemObj> selectBuildSucChild();
+    u8 IsAvailableDivested() const { return mJuggleFirst; }
 
     virtual void reset();
     virtual void initEquip();

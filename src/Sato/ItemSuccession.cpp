@@ -2,34 +2,32 @@
 
 #include "JSystem/JMath/JMath.h"
 #include "JSystem/JUtility/JUTAssert.h"
+#include "Kaneshige/KartLoader.h"
 #include "Kaneshige/RaceMgr.h"
+#include "Kawano/driver.h"
+#include "Kawano/driverMgr.h"
 #include "Sato/ItemObj.h"
 #include "Sato/ItemObjMgr.h"
 #include "Sato/ObjUtility.h"
 #include "Sato/stMath.h"
+#include "Yamamoto/kartCtrl.h"
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
-namespace
+inline void setIdentQuat(Quaternion &q)
 {
-    f32 sDivestedFrameSyncCheckFrame = 0.05f;
-
-    struct SucFuncSet
-    {
-        ItemObjSuc::EquipFunc init;
-        ItemObjSuc::EquipFunc doFunc;
-        ItemObjSuc::SelectFunc select;
-    };
-
-    const SucFuncSet sEquipFuncTable[2] = {
-        {&ItemObjSuc::initJuggleEquip, &ItemObjSuc::doJuggleEquip, &ItemObjSuc::selectJuggleSucChild},
-        {&ItemObjSuc::initBuildEquip, &ItemObjSuc::doBuildEquip, &ItemObjSuc::selectBuildSucChild},
-    };
+    Quaternion id = {0.0f, 0.0f, 0.0f, 1.0f};
+    q = id;
 }
 
 f32 ItemJuggle::sJuggleRotStartOffset = 0.02f;
 f32 ItemJuggle::sJuggleRotRatio = 0.88f;
 f32 ItemJuggle::sJuggleRotRatioSub = 0.05f;
+
+namespace
+{
+    f32 sDivestedFrameSyncCheckFrame = 0.05f;
+}
 
 f32 ItemObjSuc::sJuggleXLength = 35.0f;
 f32 ItemObjSuc::sJuggleRndAngle = 1.0f;
@@ -38,6 +36,43 @@ f32 ItemObjSuc::sJuggleRotAxisRatio = 0.8f;
 f32 ItemObjSuc::sJuggleGravity = -0.45f;
 f32 ItemObjSuc::sJuggleGravityUpRatio = 2.1f;
 f32 ItemObjSuc::sJuggleAnmOverFrame = 16.5f;
+
+static inline J3DAnmTransform *getKeepAnmTrans(DriverModel *driver, int anmID)
+{
+    int keepID = DriverLoader::convAnmIDToKeepID((DriverLoader::AnmEnum)anmID);
+    if (keepID >= 0)
+        return driver->mKeepAnmTrans[keepID];
+    return nullptr;
+}
+
+static inline s16 getKeepAnmFrameMax(DriverModel *driver, int anmID)
+{
+    if (getKeepAnmTrans(driver, anmID) != nullptr)
+        return getKeepAnmTrans(driver, anmID)->getFrameMax();
+    return 0;
+}
+
+static inline f32 getJuggleAnmFrame(int kartNo, int driverNo)
+{
+    DriverModel *driver = RCMGetManager()->getKartLoader(kartNo)->getExModelDriver(driverNo);
+    f32 cur = driver->m_668.mCurrentValue;
+    int frame = (int)(cur * (f32)getKeepAnmFrameMax(driver, 80) + 0.5f);
+    if (frame >= getKeepAnmFrameMax(driver, 80))
+        return 0.0f;
+    return (f32)frame;
+}
+
+inline f32 getEquipScale(ItemMultiBase *multi)
+{
+    f32 scale = 1.0f;
+    if (multi->mObj->mState == 1)
+    {
+        if (multi->mObj->getDriverNum() != GetItemObjMgr()->getNowTandemDriverNum(multi->mObj->mOwnerNum))
+            scale = ItemObj::sFrontEquipScaleRatio;
+    }
+    scale *= multi->mObj->getThunderScale();
+    return scale;
+}
 
 void ItemJuggle::DoEquipScaleUp(f32 scale)
 {
@@ -86,6 +121,250 @@ void ItemJuggle::ParamInit(const JGeometry::TVec3<s16> &)
     mObj->mpHandAnmMtx = mObj->getHandAnmMtx();
 }
 
+void ItemJuggle::InitMoveDivested()
+{
+    JGeometry::TVec3f kartPos;
+    JGeometry::TVec3f pos;
+    pos.sub(mObj->mPos, _48);
+    ObjUtility::getKartPos(mObj->mOwnerNum, &kartPos);
+    pos.sub(kartPos);
+    mObj->mDivestedPos = pos;
+    mObj->mpHandAnmMtx = mObj->getJuggleHandAnmMtx();
+    stMtx2Qt(&mObj->_44, mObj->mModel.getBaseTRMtx());
+    stMtx2Qt(&mObj->_1d8, mObj->mpHandAnmMtx);
+    mObj->initMaxDivestedFrame();
+    ObjUtility::getKartXdir(mObj->mOrigOwnerNum, &_54);
+    _54.scale(-1.0f);
+    _54.y = 0.0f;
+    stVecNormalize(_54);
+}
+
+void ItemJuggle::MoveDivested()
+{
+    f32 ratio = (f32)mObj->mWaitFrame / (f32)mObj->mDivestedMaxFrame;
+
+    if (mObj->mSuccessionItemLink.getList() != nullptr)
+    {
+        JGeometry::TVec3f handOffset(mObj->getHandOffsetPos());
+        stMtx2Qt(&mObj->_44, mObj->mpHandAnmMtx);
+        Quaternion q;
+        stQtLerp(&q, &mObj->_1d8, &mObj->_44, ratio);
+        Mtx mtx;
+        stQt2Mtx(mtx, &q);
+        JGeometry::TVec3f pos;
+        PSMTXMultVec(mObj->mpHandAnmMtx, &handOffset, &pos);
+        JGeometry::TVec3f equipPos;
+        mObj->doPosLerp(&equipPos, pos, ratio);
+        handOffset.scale(mObj->mEquipScale);
+
+        if (_8 >= _1c)
+        {
+            switch (_38)
+            {
+            case 0:
+            {
+                JGeometry::TVec3f xdir;
+                ObjUtility::getKartXdir(mObj->mOwnerNum, &xdir);
+                xdir.scale(-1.0f);
+                xdir.y = 0.0f;
+                stVecNormalize(xdir);
+                JGeometry::TVec3f dir;
+                JMAVECLerp(&_54, &xdir, &dir, ratio);
+                doMoveJuggleEquip(equipPos, mtx, dir, getEquipScale(this));
+                break;
+            }
+            case 1:
+                doHandJuggleEquip(equipPos, mtx);
+                break;
+            }
+        }
+        else
+        {
+            _3c.z = 0.0f;
+            _3c.y = 0.0f;
+            _3c.x = 0.0f;
+            _48.z = 0.0f;
+            _48.y = 0.0f;
+            _48.x = 0.0f;
+            mObj->mPos = equipPos;
+            mObj->setModelMatrixAndScale(mObj->mpHandAnmMtx);
+            if (mObj->mSuccessionParent->IsAvailableDivested())
+                _8++;
+        }
+    }
+    else
+    {
+        mObj->doHandOneEquip(true, ratio);
+    }
+
+    if (mObj->mWaitFrame >= mObj->mDivestedMaxFrame)
+    {
+#line 217
+        JUT_ASSERT_F(mObj->getSuccessionParent()->IsAvailableDivested(), "%s", "mItem->getSuccessionParent()->IsAvailableDivested()");
+        mObj->setStateEquip(false, false);
+    }
+}
+
+void ItemJuggle::MoveEquip()
+{
+    JGeometry::TVec3f pos;
+    PSMTXMultVec(mObj->mpHandAnmMtx, &mObj->mHandOffset, &pos);
+
+    if (mObj->mSuccessionItemLink.getList() != nullptr)
+    {
+        if (_8 >= _1c)
+        {
+            switch (_38)
+            {
+            case 0:
+            {
+                JGeometry::TVec3f xdir;
+                ObjUtility::getKartXdir(mObj->mOwnerNum, &xdir);
+                xdir.scale(-1.0f);
+                xdir.y = 0.0f;
+                stVecNormalize(xdir);
+                doMoveJuggleEquip(pos, mObj->mpHandAnmMtx, xdir, getEquipScale(this));
+                break;
+            }
+            case 1:
+                doHandJuggleEquip(pos, mObj->mpHandAnmMtx);
+                break;
+            }
+        }
+        else
+        {
+            _3c.z = 0.0f;
+            _3c.y = 0.0f;
+            _3c.x = 0.0f;
+            _48.z = 0.0f;
+            _48.y = 0.0f;
+            _48.x = 0.0f;
+            mObj->mPos = pos;
+            mObj->setModelMatrixAndScale(mObj->mpHandAnmMtx);
+            _8++;
+        }
+    }
+    else
+    {
+        mObj->doHandOneEquip(false, 0.0f);
+    }
+}
+
+static inline void setJuggleParam(ItemJuggle *j, u8 d, int n, ItemObjSuc *p)
+{
+    j->_d = d;
+    j->_2c.x = p->mJuggleXLength;
+    j->_2c.y = (f32)p->mJuggleIndex;
+    j->_10 = n;
+    j->_2c.z = p->mJuggleGravity;
+}
+
+void ItemJuggle::doHandJuggleEquip(const JGeometry::TVec3f &pos, Mtx mtx)
+{
+    Mtx rmtx;
+    stQt2Mtx(rmtx, &mObj->_34);
+    if (!mObj->mSuccessionParent->mJuggleFinished)
+    {
+        if (mObj->mSuccessionParent->mJuggleFirst)
+            _c++;
+        if (_c >= _14 - 2)
+        {
+            if (getJuggleAnmFrame(mObj->mOwnerNum, mObj->mDriverNum) > _18)
+            {
+                if (_10 > 0)
+                {
+                    setJuggleParam(this, _10, 0, mObj->mSuccessionParent);
+                }
+                mObj->mpHandAnmMtx = mObj->getJuggleHandAnmMtx();
+                _38 = 0;
+                f32 angle2 = ItemObjSuc::sJuggleRndAngle2;
+                f32 angle = ItemObjSuc::sJuggleRndAngle;
+                mObj->getItemRnd()->getArbitUnitVec(_20, angle, angle2);
+                PSMTXMultVec(rmtx, &_20, &_20);
+                _c = 0;
+                mObj->mVel.y = 0.5f * (-(f32)(_d + 1) * _2c.z);
+            }
+        }
+    }
+
+    mObj->mPos = pos;
+    Mtx m;
+    PSMTXCopy(mtx, m);
+    m[2][3] = 0.0f;
+    m[1][3] = 0.0f;
+    m[0][3] = 0.0f;
+    PSMTXConcat(m, rmtx, m);
+    mObj->setModelMatrixAndScale(m);
+}
+
+void ItemJuggle::doMoveJuggleEquip(const JGeometry::TVec3f &pos, Mtx mtx, JGeometry::TVec3f dir, f32 scale)
+{
+    if (mObj->mSuccessionParent->mJuggleFirst)
+        _c++;
+
+    f32 ratio = sJuggleRotRatio;
+    f32 offset = sJuggleRotStartOffset;
+    switch (mObj->mSuccessionParent->getSuccessionItemNum())
+    {
+    case 2:
+        ratio -= sJuggleRotRatioSub;
+        break;
+    case 1:
+        ratio = 1.0f;
+        offset = 0.0f;
+        break;
+    }
+    ratio = ratio * ((f32)_c / (f32)_d) + offset;
+
+    int kartNo = mObj->mOwnerNum;
+    u8 driverNo = mObj->getDriverNum();
+    f32 xLength = _2c.x;
+    if (driverNo == ItemObjMgr::getNowTandemDriverNum(kartNo))
+    {
+        if (GetKartCtrl()->GetTandemDir(kartNo) == 1)
+            xLength = -_2c.x;
+    }
+
+    f32 sinScale = xLength * JMASSin((s16)(65535.0f * ratio));
+    JGeometry::TVec3f v(dir);
+    v.scale(sinScale);
+    _3c.x = v.x;
+    _3c.z = v.z;
+    if (mObj->mSuccessionParent->mJuggleFirst)
+        mObj->mVel.y += _2c.z;
+    _3c.y += mObj->mVel.y;
+
+    _48 = _3c;
+    _48.scale(scale);
+    mObj->mPos = pos;
+    mObj->mPos.add(_48);
+
+    Mtx m;
+    PSMTXCopy(mtx, m);
+    m[2][3] = 0.0f;
+    m[1][3] = 0.0f;
+    m[0][3] = 0.0f;
+
+    Mtx rot;
+    PSMTXRotAxisRad(rot, &_20, 6.2831855f * _2c.y * ratio * ItemObjSuc::getRotAxisRatio());
+    Mtx q;
+    stQt2Mtx(q, &mObj->_34);
+    PSMTXConcat(rot, q, q);
+    PSMTXConcat(m, q, rot);
+    mObj->setModelMatrixAndScale(rot);
+
+    if (_c >= _d)
+    {
+        mObj->mpHandAnmMtx = mObj->getHandAnmMtx();
+        _c = 0;
+        _38 = 1;
+        stMtx2Qt(&mObj->_34, q);
+        _3c.z = 0.0f;
+        _3c.y = 0.0f;
+        _3c.x = 0.0f;
+    }
+}
+
 __declspec(weak) f32 ItemObjSuc::getRotAxisRatio()
 {
     return sJuggleRotAxisRatio;
@@ -115,12 +394,16 @@ void ItemBuild::ParamInit(const JGeometry::TVec3<s16> &rot)
 
     if (mObj->mSuccessionItemLink.getList() != nullptr)
     {
-        f32 cy = JMASCos(rot.y);
-        f32 cz = JMASCos(rot.z);
-        f32 sz = JMASSin(rot.z);
-        f32 cx = JMASCos(rot.x);
-        f32 sx = JMASSin(rot.x);
-        f32 sy = JMASSin(rot.y);
+        s16 ry = rot.y;
+        s16 rx = rot.x;
+        s16 rz = rot.z;
+
+        f32 cy = JMASCos(ry);
+        f32 cz = JMASCos(rz);
+        f32 sz = JMASSin(rz);
+        f32 cx = JMASCos(rx);
+        f32 sx = JMASSin(rx);
+        f32 sy = JMASSin(ry);
 
         Mtx &mtx = mObj->_210;
         mtx[0][0] = cy * cz;
@@ -135,15 +418,15 @@ void ItemBuild::ParamInit(const JGeometry::TVec3<s16> &rot)
 
         f32 gravUp = mObj->mSuccessionParent->mJuggleGravityUp;
         f32 rnd = mObj->getItemRnd()->get_ufloat_1();
-        s16 angle = (s16)((2.0f * rnd - 1.0f) * 32767.0f * gravUp);
-        f32 s = JMASSin(angle);
+        s16 angle = (s16)(gravUp * (32767.0f * (2.0f * rnd - 1.0f)));
         f32 c = JMASCos(angle);
+        f32 s = JMASSin(angle);
 
         _38[1][1] = 1.0f;
-        _38[0][0] = s;
-        _38[2][0] = c;
-        _38[0][2] = -c;
-        _38[2][2] = s;
+        _38[0][0] = c;
+        _38[0][2] = s;
+        _38[2][0] = -s;
+        _38[2][2] = c;
         _38[2][1] = 0.0f;
         _38[1][2] = 0.0f;
         _38[1][0] = 0.0f;
@@ -231,12 +514,11 @@ void ItemBuild::setVel(f32 scale)
 {
     JGeometry::TVec3f dir;
     dir.sub(mPrev->mOffset, mOffset);
-    stVecNormalize(&dir);
+    stVecNormalize(dir);
 
-    int num = mObj->mSuccessionParent->getSuccessionItemNum();
-    f32 ratio = (f32)(num - mCount);
+    f32 ratio = mObj->mSuccessionParent->getSuccessionItemNum() - mCount;
     bool sameNum = false;
-    if (ratio == 0.0f)
+    if (ratio == 1.0f)
         sameNum = true;
     if (RaceMgr::getManager()->getRaceMode() == BOMB_BATTLE)
     {
@@ -248,8 +530,8 @@ void ItemBuild::setVel(f32 scale)
     dir.scale(0.4f * ratio);
     _18.add(dir);
 
-    f32 mag = PSVECMag((Vec *)&_18);
-    f32 limit = (f32)mCount;
+    f32 mag = _18.length();
+    f32 limit = mCount;
     if (RaceMgr::getManager()->getRaceMode() == BOMB_BATTLE)
     {
         if (mCount == 1 && sameNum)
@@ -260,8 +542,8 @@ void ItemBuild::setVel(f32 scale)
     f32 max = 3.0f * limit * scale;
     if (mag > max)
     {
-        stVecNormalize((JGeometry::TVec3f *)&_18);
-        _18 *= max;
+        stVecNormalize(_18);
+        _18.scale(max);
     }
 }
 
@@ -313,11 +595,11 @@ void ItemBuild::setRotate(Mtx mtx)
 
     ObjUtility::getKartZdir(mObj->mOwnerNum, &zdir);
     up.sub(mOffset, mPrev->mOffset);
-    stVecNormalize(&up);
+    stVecNormalize(up);
     PSVECCrossProduct(&up, &zdir, &right);
-    stVecNormalize(&right);
+    stVecNormalize(right);
     PSVECCrossProduct(&right, &up, &zdir);
-    stVecNormalize(&zdir);
+    stVecNormalize(zdir);
     stMakeRMtx(rmtx, right, up, zdir);
     if (mtx != nullptr)
         PSMTXConcat(rmtx, mtx, rmtx);
@@ -346,13 +628,12 @@ void ItemBuild::setFirstRotate(Mtx mtx)
 
     ObjUtility::getKartZdir(mObj->mOwnerNum, &zdir);
     JGeometry::setTVec3f(&mOffset.x, &up.x);
-    up.x += 90.0f;
-    up.y = zdir.y + 90.0f;
-    stVecNormalize(&up);
+    up.y += 90.0f;
+    stVecNormalize(up);
     PSVECCrossProduct(&up, &zdir, &right);
-    stVecNormalize(&right);
+    stVecNormalize(right);
     PSVECCrossProduct(&right, &up, &zdir);
-    stVecNormalize(&zdir);
+    stVecNormalize(zdir);
     stMakeRMtx(rmtx, right, up, zdir);
     if (mtx != nullptr)
         PSMTXConcat(rmtx, mtx, rmtx);
@@ -362,11 +643,12 @@ void ItemBuild::setFirstRotate(Mtx mtx)
 
 void ItemBuild::InitMoveDivested()
 {
+    JGeometry::TVec3f kartPos;
     JGeometry::TVec3f pos;
     pos.sub(mObj->mPos, mOffset);
-    JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mObj->mOwnerNum, &kartPos);
-    mObj->mDivestedPos.sub(pos, kartPos);
+    pos.sub(kartPos);
+    mObj->mDivestedPos = pos;
     mObj->mpHandAnmMtx = mObj->getJuggleHandAnmMtx();
     stMtx2Qt(&mObj->_44, mObj->mModel.getBaseTRMtx());
     stMtx2Qt(&mObj->_1d8, mObj->mpHandAnmMtx);
@@ -377,12 +659,9 @@ void ItemBuild::MoveDivested()
 {
     f32 ratio = (f32)mObj->mWaitFrame / (f32)mObj->mDivestedMaxFrame;
 
-    if (mObj->mSuccessionItemLink.getList() == nullptr)
+    if (mObj->mSuccessionItemLink.getList() != nullptr)
     {
-        mObj->doHandOneEquip(true, ratio);
-    }
-    else
-    {
+        MtxPtr mtx = mObj->_210;
         JGeometry::TVec3f pos;
         PSMTXMultVec(mObj->mpHandAnmMtx, &mObj->mHandOffset, &pos);
 
@@ -397,7 +676,6 @@ void ItemBuild::MoveDivested()
         }
         scale *= mObj->getThunderScale();
 
-        MtxPtr mtx = mObj->_210;
         if (mCount)
         {
             setVel(scale);
@@ -409,6 +687,10 @@ void ItemBuild::MoveDivested()
             setFirstPos(&equipPos, scale);
             setFirstRotate(mtx);
         }
+    }
+    else
+    {
+        mObj->doHandOneEquip(true, ratio);
     }
 
     if (mObj->mWaitFrame >= mObj->mDivestedMaxFrame)
@@ -446,16 +728,17 @@ void ItemObjSuc::initJuggleEquip()
     KartInfo *info = RaceMgr::getManager()->getKartInfo(owner);
     info->getDriverCharID(driver);
 
+    int frame = 8;
     u8 num = _1fc;
+    f32 anmOver = sJuggleAnmOverFrame;
+    int step = (int)(58.0f / (f32)num);
     mJuggleFrameStep = (50 - (num - 1) * 8) / num;
     mJuggleXLength = sJuggleXLength;
     mJuggleGravity = sJuggleGravity;
-    mJuggleIndex = num - 1;
-    int step = (int)(58.0f / (f32)num);
-    int frame = 8;
-    for (JSULink<ItemObj> *link = _1a4.getFirst(); link != nullptr; link = link->getNext())
+    mJuggleIndex = _1fc - 1;
+    for (JSUListIterator<ItemObj> it(_1a4.getFirst()); it != _1a4.getEnd(); it++)
     {
-        ItemJuggle *juggle = link->getObject()->mJuggle;
+        ItemJuggle *juggle = it->mJuggle;
         juggle->_1c = frame;
         juggle->_d = 50;
         juggle->_14 = 8;
@@ -463,13 +746,12 @@ void ItemObjSuc::initJuggleEquip()
         juggle->_2c.x = mJuggleXLength;
         juggle->_2c.y = (f32)mJuggleIndex;
         juggle->_2c.z = mJuggleGravity;
-        juggle->_18 = sJuggleAnmOverFrame;
+        juggle->_18 = anmOver;
         frame += step;
     }
     mJuggleFinished = 0;
-    mPrevSucNum = num;
+    mPrevSucNum = _1fc;
 }
-
 void ItemObjSuc::doJuggleEquip()
 {
     int num = getSuccessionItemNum();
@@ -570,21 +852,99 @@ JSUListIterator<ItemObj> ItemObjSuc::selectSucChild()
     return (this->*mSelectSucFunc)();
 }
 
+JSUListIterator<ItemObj> ItemObjSuc::selectJuggleSucChild()
+{
+    JSULink<ItemObj> *result = nullptr;
+    for (JSUListIterator<ItemObj> it(_1a4.getFirst()); it != _1a4.getEnd(); ++it)
+    {
+        if (it->mJuggle->_38 == 1)
+            return it;
+    }
+
+    if (_1a4.getNumLinks() > 1)
+    {
+        JSULink<ItemObj> *link = _1a4.getLast();
+        while (link != _1a4.getFirst())
+        {
+            ItemObj *obj = link->getObject();
+            ItemObj *first = _1a4.getFirst()->getObject();
+            link = link->getPrev();
+            if (obj->mJuggle->_c > first->mJuggle->_c)
+                _1a4.prepend(&obj->mSuccessionItemLink);
+        }
+    }
+
+    if (_1a4.getNumLinks() != 0)
+    {
+        result = _1a4.getFirst();
+        f32 min = result->getObject()->mJuggle->_3c.y;
+        for (JSULink<ItemObj> *link = result; link != nullptr; link = link->getNext())
+        {
+            ItemJuggle *juggle = link->getObject()->mJuggle;
+            if (juggle->_c >= -5 || juggle->_c <= 5u)
+            {
+                if (juggle->_3c.y < min)
+                {
+                    min = juggle->_3c.y;
+                    result = link;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+void ItemObjSuc::initDivested()
+{
+    if (mSucMultiType == cMultiType_0)
+    {
+        mJuggleFirst = 0;
+        mJuggleRot = getJuggleAnmFrame(mOrigOwnerNum, mOrigDriverNum);
+        mTransferFlags |= 0x40;
+    }
+    initmoveDivested();
+}
+
+void ItemObjSuc::doDivested()
+{
+    if (mSucMultiType == cMultiType_0)
+    {
+        f32 rot = getJuggleAnmFrame(getOwnerNum(), getDriverNum());
+        if (!mJuggleFirst)
+        {
+            if (fabs(mJuggleRot - rot) < sDivestedFrameSyncCheckFrame)
+            {
+                mJuggleFirst = 1;
+                mTransferFlags &= ~0x40;
+                doEquip();
+            }
+        }
+    }
+
+    int num = 0;
+    for (JSULink<ItemObj> *link = _1a4.getFirst(); link != nullptr; link = link->getNext())
+    {
+        if (link->getObject()->mState == 1)
+            num++;
+    }
+    if (num > 0)
+        setStateEquip(false, false);
+}
+
 void ItemObjSuc::setSucMultiType(cMultiType type)
 {
     mSucMultiType = type;
-    const SucFuncSet *funcs = sEquipFuncTable;
     switch (mSucMultiType)
     {
     case cMultiType_0:
-        mEquipInitFunc = funcs[0].init;
-        mEquipDoFunc = funcs[0].doFunc;
-        mSelectSucFunc = funcs[0].select;
+        mEquipInitFunc = &ItemObjSuc::initJuggleEquip;
+        mEquipDoFunc = &ItemObjSuc::doJuggleEquip;
+        mSelectSucFunc = &ItemObjSuc::selectJuggleSucChild;
         return;
     case cMultiType_1:
-        mEquipInitFunc = funcs[1].init;
-        mEquipDoFunc = funcs[1].doFunc;
-        mSelectSucFunc = funcs[1].select;
+        mEquipInitFunc = &ItemObjSuc::initBuildEquip;
+        mEquipDoFunc = &ItemObjSuc::doBuildEquip;
+        mSelectSucFunc = &ItemObjSuc::selectBuildSucChild;
         return;
     }
 }

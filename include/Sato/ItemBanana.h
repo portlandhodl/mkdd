@@ -80,21 +80,25 @@ public:
 
     static const char *getBckName(int anm)
     {
+        const char *name = nullptr;
         switch (anm) {
         case 0:
-            return "/Item/item_banana_sp_a.bck";
+            name = "/Item/item_banana_sp_a.bck";
+            break;
         case 1:
-            return "/Item/item_banana_sp_b.bck";
+            name = "/Item/item_banana_sp_b.bck";
+            break;
         case 2:
-            return "/Item/item_banana_sp_die.bck";
+            name = "/Item/item_banana_sp_die.bck";
+            break;
         }
-        return nullptr;
+        return name;
     }
 
     virtual ~ItemBananaBig() {} //  0x80254940
 };
 
-class ItemFakeItemBox : public ItemBanana
+class ItemFakeItemBox : public ItemBanana, public RotAnimationObj
 {
 public:
     ItemFakeItemBox(u32);
@@ -123,7 +127,7 @@ public:
     virtual ~ItemFakeItemBox() {}                                    // 0x802547f8
     void createColModel(J3DModelData *data) { ItemObj::createColModel(data); } // 0x80254918
 
-    RotAnimationObj mRotAnimation; // 2cc
+    // RotAnimationObj base at 0x2cc
     Quaternion mBaseRotQt;         // 2fc
     JPABaseEmitter *mEqEmt[4];     // 30c
     int mKartNo;                   // 31c

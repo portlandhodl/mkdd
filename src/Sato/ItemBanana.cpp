@@ -9,52 +9,53 @@
 #include "Sato/JPEffectMgr.h"
 #include "Sato/JPEffectPerformer.h"
 #include "Sato/ObjUtility.h"
+#include "mathHelper.h"
 
 #include <math.h>
 
 namespace
 {
-    const f32 sQtLerpRatio = 0.2f;
-    const f32 sGravity = -3.0f;
-    const f32 sSpGravity = -1.0f;
-    const f32 sVelMag = 15.0f;
-    const f32 sAllUseReleaseYVel = 10.0f;
-    const f32 sAllUseVelMag = 40.0f;
-    const f32 sSpVelMag = 50.0f;
-    const f32 sSpVelDownRatio = 0.998f;
-    const f32 sSpVelYRatio = 0.5f;
-    const f32 sReflectVelDownRatio = 0.2f;
-    const f32 sScale = 3.5f;
-    const f32 sScaleEquip = 1.0f;
-    const f32 sScaleUpRatio = 1.1f;
-    const f32 sAirFric = 0.97f;
-    const f32 sSpAirFric = 0.995f;
-    const f32 sReleaseHeight = 60.0f;
+    f32 sQtLerpRatio = 0.2f;
+    f32 sGravity = -3.0f;
+    f32 sSpGravity = -1.0f;
+    f32 sVelMag = 15.0f;
+    f32 sAllUseReleaseYVel = 10.0f;
+    f32 sAllUseVelMag = 40.0f;
+    f32 sSpVelMag = 50.0f;
+    f32 sSpVelDownRatio = 0.998f;
+    f32 sSpVelYRatio = 0.5f;
+    f32 sReflectVelDownRatio = 0.2f;
+    f32 sScale = 3.5f;
+    f32 sScaleEquip = 1.0f;
+    f32 sScaleUpRatio = 1.1f;
+    f32 sAirFric = 0.97f;
+    f32 sSpAirFric = 0.995f;
+    f32 sReleaseHeight = 60.0f;
     u8 sMaxNoColCnt = 10;
-    const f32 sBoundsRadius = 25.0f;
-    const f32 sBoundsHeight = 20.0f;
-    const f32 sStickMagXZ = 60.0f;
-    const f32 sStickMagY = 26.0f;
-    const f32 sItemBoundRatio = 0.6f;
-    const f32 sMaxSoundVelY = -35.0f;
-    const f32 sScaleBigEquip = 2.0f;
-    const f32 sScaleBig = 10.0f;
-    const f32 sScaleBigUpRatio = 1.1f;
-    const f32 sBoundsRadiusBig = 25.0f;
-    const f32 sBoundsHeightBig = 20.0f;
-    const f32 sBigBananaCreateVelMag = 30.0f;
-    const f32 sBigShadowScaleY = 0.5f;
-    const f32 sScaleFakeEquip = 0.35f;
-    const f32 sScaleFake = 1.0f;
-    const f32 sScaleFakeUpRatio = 1.1f;
-    const f32 sFakeGndOffsetY = 100.0f;
-    const f32 sFakeAddGndOffsetY = 35.0f;
-    const f32 sFakeBoundRadius = 130.0f;
-    const f32 sFakeItemBoxForcEfctScale = 4.5f;
-    const f32 sFakeBoundRatio = 0.6f;
-    const f32 sFakeMaxVelBoundY = 40.0f;
-    const f32 sFakeOffsetVelY = 6.0f;
-    const f32 sFakeOffsetVelDown = 0.9f;
+    f32 sBoundsRadius = 25.0f;
+    f32 sBoundsHeight = 20.0f;
+    f32 sStickMagXZ = 60.0f;
+    f32 sStickMagY = 26.0f;
+    f32 sItemBoundRatio = 0.6f;
+    f32 sMaxSoundVelY = -35.0f;
+    f32 sScaleBigEquip = 2.0f;
+    f32 sScaleBig = 10.0f;
+    f32 sScaleBigUpRatio = 1.1f;
+    f32 sBoundsRadiusBig = 25.0f;
+    f32 sBoundsHeightBig = 20.0f;
+    f32 sBigBananaCreateVelMag = 30.0f;
+    f32 sBigShadowScaleY = 0.5f;
+    f32 sScaleFakeEquip = 0.35f;
+    f32 sScaleFake = 1.0f;
+    f32 sScaleFakeUpRatio = 1.1f;
+    f32 sFakeGndOffsetY = 100.0f;
+    f32 sFakeAddGndOffsetY = 35.0f;
+    f32 sFakeBoundRadius = 130.0f;
+    f32 sFakeItemBoxForcEfctScale = 4.5f;
+    f32 sFakeBoundRatio = 0.6f;
+    f32 sFakeMaxVelBoundY = 40.0f;
+    f32 sFakeOffsetVelY = 6.0f;
+    f32 sFakeOffsetVelDown = 0.9f;
 }
 
 J3DAnmTransform *ItemBanana::mAnmTrans[3] = {nullptr, nullptr, nullptr};
@@ -69,13 +70,6 @@ namespace
 
 JGeometry::TVec3f ItemBanana::sHandOffsetPos(15.0f, 0.0f, -5.0f);
 
-namespace
-{
-    void (ItemBanana::*sUnused1)() = &ItemBanana::setInitReleaseParam;
-    const char *(*sUnused2)(int) = &ItemBananaBig::getBckName;
-    const char *(ItemFakeItemBox::*sUnused3)() = &ItemFakeItemBox::getBtkName;
-}
-
 ItemBanana::ItemBanana(u32 kind) : ItemObj(kind), mController()
 {
     reset();
@@ -89,8 +83,10 @@ void ItemBanana::reset()
     mEquipScale = 1.0f;
     if (mBounds && mBounds->getKind() == ObjColCylinder::CYLINDER) {
         ObjColCylinder *cyl = (ObjColCylinder *)mBounds;
-        cyl->setCylinderRadius(sBoundsRadius);
-        cyl->setCylinderHeight(sBoundsHeight);
+        f32 height = sBoundsHeight;
+        f32 radius = sBoundsRadius;
+        cyl->setCylinderRadius(radius);
+        cyl->setCylinderHeight(height);
     }
     mController.Reset();
     if (mController.mTrans) {
@@ -136,15 +132,19 @@ void ItemBanana::createModel(JKRSolidHeap *heap, u32 p2, u32 p3)
 
 const char *ItemBanana::getBckName(int anm)
 {
+    const char *name = nullptr;
     switch (anm) {
     case 0:
-        return "/Item/item_banana_a.bck";
+        name = "/Item/item_banana_a.bck";
+        break;
     case 1:
-        return "/Item/item_banana_b.bck";
+        name = "/Item/item_banana_b.bck";
+        break;
     case 2:
-        return "/Item/item_banana_die.bck";
+        name = "/Item/item_banana_die.bck";
+        break;
     }
-    return nullptr;
+    return name;
 }
 
 void ItemBanana::update()
@@ -160,7 +160,7 @@ void ItemBanana::doUniv()
             mController.mTrans->resetFlag();
         }
     }
-    if (!tstAnyObjectHitting() && getState() < 8) {
+    if (!tstAnyObjectHitting() && *(volatile int *)&mState < 8) {
         switch (getState()) {
         case 1:
         case 5:
@@ -170,8 +170,10 @@ void ItemBanana::doUniv()
             doForceDisappearScaleDown();
             break;
         default:
-            if (mEquipScale < sScale) {
-                mEquipScale = mEquipScale * sScaleUpRatio;
+            f32 ratio = sScaleUpRatio;
+            f32 maxScale = sScale;
+            if (mEquipScale < maxScale) {
+                mEquipScale = mEquipScale * ratio;
             }
             setScaleCol(mEquipScale);
             break;
@@ -206,8 +208,7 @@ void ItemBanana::initEquip()
     mpHandAnmMtx = getHandAnmMtx();
     mVel.zero();
     mPos.zero();
-    Quaternion qt = {0.0f, 0.0f, 0.0f, 0.0f};
-    _34 = qt;
+    QuaternionReset(&_34);
     mEquipFlags = 0;
 }
 
@@ -232,16 +233,19 @@ void ItemBanana::initRelease()
     setFrameNoColKart(sMaxNoColCnt, false);
 
     stRandom *rnd = getItemRnd();
-    QuatRotY((rnd->get_ufloat_1() * 2.0f - 1.0f) * 3.1415926f, &_44);
+    QuatRotY((rnd->get_ufloat_1() * 2.0f - 1.0f) * 3.14f, &_44);
     ObjUtility::getKartZdir(mOwnerNum, &mVel);
     mVel.scale(-mMaxVel);
     if (mAllUseFlg) {
         mVel.y += sAllUseReleaseYVel;
     }
+    f32 compLen = 0.0f;
     JGeometry::TVec3f comp;
-    f32 compLen;
     getCompVecLength(comp, compLen);
-    mVel.add(comp);
+    JGeometry::TVec3f compVel = comp;
+    f32 vy = JMAFastSqrt(2.0f * -sGravity * sReleaseHeight);
+    compVel.scale(compLen * -sGravity / vy);
+    mVel.add(compVel);
     mDoSound = 0;
 }
 
@@ -273,15 +277,29 @@ void ItemBanana::initSpRelease()
     setInitThrowDir(&_240, sSpVelYRatio, false);
     ItemObj::calcBananaFirstQuat(_240);
     mVel = _240;
+    mVel.scale(mMaxVel);
     initThrowVel(sStickMagXZ, sStickMagY, sSpGravity);
 }
 
 void ItemBanana::doSpRelease()
 {
     setAllUseBoundsScale();
-    f32 mag;
-    getCompVecLength(*(JGeometry::TVec3f *)&mVel, mag);
+    if (mVel.length() > mMaxVel) {
+        mVel.scale(sSpVelDownRatio);
+    }
+    mVel.scale(sSpAirFric);
+    mVel.y += sSpGravity;
     doMovePos();
+    doMoveColGround(calcBaseRotQt(), false);
+    if (!(mTransferFlags & 0x100) && mItemKind != 15) {
+        JGeometry::TVec3f dir(mVel);
+        if (dir.length() > 0.0f) {
+            dir.normalize();
+            stVec2QtUpdate(_44, _240, dir);
+        }
+    }
+    _240 = mVel;
+    stVecNormalize(_240);
 }
 
 void ItemBanana::initDisappear()
@@ -296,10 +314,7 @@ void ItemBanana::initDisappear()
 
 void ItemBanana::doDisappear()
 {
-    u8 anm;
-    AnmControlTrans *trans = mController.mTrans;
-    anm = trans->getNowAnmNo();
-    if (trans->getObj(anm)->mFrameCtrl.checkState(1)) {
+    if (mController.mTrans->getObjChk(mController.getNowTransNo())->mFrameCtrl.checkState(1)) {
         mState = 10;
     }
     doMovePos();
@@ -340,7 +355,7 @@ void ItemBanana::moveNormal(CrsGround &ground)
         ground.getVelocity(&vel);
         mVel.set(vel.x, 0.0f, vel.z);
     }
-    mIsOnGround = (u32)mTransferFlags << 31;
+    mIsOnGround = (mTransferFlags & 2) != 0;
 }
 
 f32 ItemBanana::getItemBoundRatio() const
@@ -390,12 +405,19 @@ ItemBananaBig::ItemBananaBig(u32 kind) : ItemBanana(kind)
 void ItemBananaBig::reset()
 {
     ItemBanana::reset();
-    if (mBounds && mBounds->getKind() == ObjColCylinder::CYLINDER) {
-        ObjColCylinder *cyl = (ObjColCylinder *)mBounds;
-        cyl->setCylinderRadius(sBoundsRadiusBig);
-        cyl->setCylinderHeight(sBoundsHeightBig);
-    }
     mKartReaction = 2;
+    mEquipScale = 1.0f;
+    if (mBounds) {
+        ObjColCylinder *cyl = (ObjColCylinder *)mBounds;
+        f32 height = sBoundsHeightBig;
+        f32 radius = sBoundsRadiusBig;
+        cyl->setCylinderRadius(radius);
+        cyl->setCylinderHeight(height);
+    }
+    mController.Reset();
+    if (mController.mTrans) {
+        mController.mTrans->setFlag();
+    }
 }
 
 const char *ItemBananaBig::getBmdFileName()
@@ -407,22 +429,7 @@ const char *ItemBananaBig::getBmdFileName()
 void ItemBananaBig::loadAnmData(J3DModelData *model)
 {
     for (int i = 0; i < 3; i++) {
-        const char *name;
-        switch (i) {
-        case 0:
-            name = "/Item/item_banana_sp_a.bck";
-            break;
-        case 1:
-            name = "/Item/item_banana_sp_b.bck";
-            break;
-        case 2:
-            name = "/Item/item_banana_sp_die.bck";
-            break;
-        default:
-            name = nullptr;
-            break;
-        }
-        void *anm = ResMgr::getPtr(ResMgr::mcArcMRAM, name);
+        void *anm = ResMgr::getPtr(ResMgr::mcArcMRAM, getBckName(i));
         J3DAnmObjTrans::setupTransAnmData(&mAnmTrans[i], &mAnmCalc[i], model, anm);
     }
 }
@@ -445,7 +452,7 @@ void ItemBananaBig::doUniv()
             mController.mTrans->resetFlag();
         }
     }
-    if (!tstAnyObjectHitting() && getState() < 8) {
+    if (!tstAnyObjectHitting() && *(volatile int *)&mState < 8) {
         switch (getState()) {
         case 1:
         case 5:
@@ -455,8 +462,10 @@ void ItemBananaBig::doUniv()
             doForceDisappearScaleDown();
             break;
         default:
-            if (mEquipScale < sScaleBig) {
-                mEquipScale = mEquipScale * sScaleBigUpRatio;
+            f32 ratio = sScaleBigUpRatio;
+            f32 maxScale = sScaleBig;
+            if (mEquipScale < maxScale) {
+                mEquipScale = mEquipScale * ratio;
             }
             setScaleCol(mEquipScale);
             break;
@@ -486,8 +495,7 @@ void ItemBananaBig::initEquip()
     mpHandAnmMtx = getHandAnmMtx();
     mVel.zero();
     mPos.zero();
-    Quaternion qt = {0.0f, 0.0f, 0.0f, 0.0f};
-    _34 = qt;
+    QuaternionReset(&_34);
     mEquipFlags = 0;
     mEquipScale = sScaleBigEquip;
 }
@@ -507,7 +515,7 @@ ItemObj::ItemColFlag ItemBananaBig::calcColReaction(ItemObj *other)
     case 1:
     case 7:
     case 8:
-    case 9:
+    case 11:
         ret = cColFlag_4;
         break;
     case 4:
@@ -527,22 +535,34 @@ void ItemBananaBig::initDisappear()
     }
 
     stRandom *rnd = getItemRnd();
-    f32 angle = rnd->get_ufloat_1() * 2.0f * 3.14159265f;
+    f32 angle = 6.2831855f * rnd->get_ufloat_1();
+    Mtx m;
+    m[0][3] = 0.0f;
+    m[1][3] = 0.0f;
+    m[2][3] = 0.0f;
     for (u8 i = 0; i < 3; i++) {
-        JGeometry::TVec3f dir;
-        dir.z = cos(angle);
-        dir.x = sin(angle);
-        dir.y = 2.0f;
+        JGeometry::TVec3f dir(0.0f, 0.0f, 1.0f);
+        f32 mag = sBigBananaCreateVelMag;
+        f32 s = sinf(angle);
+        f32 c = cosf(angle);
+        m[1][1] = 1.0f;
+        m[0][0] = c;
+        m[0][2] = s;
+        m[2][0] = -s;
+        m[2][2] = c;
+        m[2][1] = 0.0f;
+        m[1][2] = 0.0f;
+        m[1][0] = 0.0f;
+        m[0][1] = 0.0f;
+        PSMTXMultVec(m, &dir, &dir);
         angle += 2.0923009f;
-        dir.normalize();
+        dir.y += 2.0f;
+        stVecNormalize(dir);
+        dir.scale(mag);
+        JGeometry::TVec3f pos(mPos);
+        pos.add(dir);
 
-        JGeometry::TVec3f pos;
-        pos.add(mPos, dir);
-        JGeometry::TVec3f vel;
-        vel.scale(sBigBananaCreateVelMag, dir);
-        vel.add(mVel);
-
-        ItemObj *child = ItemObjMgr::getItemObjMgr()->occurItem(3, pos, vel);
+        ItemObj *child = ItemObjMgr::getItemObjMgr()->occurItem(3, pos, dir);
         if (child) {
             child->setOwnerNum(mOwnerNum);
             child->setDriverNum(mDriverNum);
@@ -550,18 +570,18 @@ void ItemBananaBig::initDisappear()
     }
 }
 
-ItemFakeItemBox::ItemFakeItemBox(u32 kind) : ItemBanana(kind), mRotAnimation()
+ItemFakeItemBox::ItemFakeItemBox(u32 kind) : ItemBanana(kind), RotAnimationObj()
 {
 }
 
 void ItemFakeItemBox::reset()
 {
     ItemBanana::reset();
-    mRotAnimation.resetRotAnimation(getItemRnd());
-    _12c &= ~0x100;
+    resetRotAnimation(getItemRnd());
+    _12c &= ~0x200;
     mKartReaction = 4;
     mEquipScale = 1.0f;
-    for (int i = 0; i < 4; i++) {
+    for (u8 i = 0; i < 4; i++) {
         mEqEmt[i] = nullptr;
     }
     mKartNo = -1;
@@ -574,14 +594,11 @@ void ItemFakeItemBox::reset()
     JGeometry::TVec3f lf;
     JGeometry::TVec3f up;
     JGeometry::TVec3f fr;
-    mBaseRotQt.x = 0.0f;
-    mBaseRotQt.y = 0.0f;
-    mBaseRotQt.z = 0.0f;
-    mBaseRotQt.w = 0.0f;
+    QuaternionReset(&mBaseRotQt);
     getModelLfDir(&lf);
     getModelUpDir(&up);
     getModelFrDir(&fr);
-    mRotAnimation.setModelXYZDir(lf, up, fr);
+    setModelXYZDir(lf, up, fr);
     mHeightOffset = sFakeGndOffsetY;
     if (mBounds && mBounds->getKind() == ObjColBase::SPHERE) {
         mBounds->setRadius(sFakeBoundRadius);
@@ -601,32 +618,35 @@ void ItemFakeItemBox::loadAnmData(J3DModelData *model)
     void *btp = ObjUtility::getPtrMainArc("/Item/niseItembox.btp");
     J3DAnmObjMaterial::setupTexPatternAnmData(&sTexPattern, model, btp);
 
-    int idx = 0;
-    u8 mode = RaceMgr::sRaceManager->mRaceInfo->mConsoleNum;
-    if (mode == 2) {
+    u8 idx = 0;
+    switch ((u8)RaceMgr::getManager()->getConsoleNumber()) {
+    case 2:
         idx = 1;
-    }
-    else if (mode < 5 && mode > 2) {
+        break;
+    case 3:
+    case 4:
         idx = 2;
+        break;
     }
     model->getTexture()->getResTIMG(2)->mLODBias = 100.0f * sFakeLODBias[idx];
 }
 
+#line 623
+
 void ItemFakeItemBox::createModel(JKRSolidHeap *heap, u32 p2, u32 p3)
 {
-    mModel.createDifferedModel(heap, p2, p3 | 0x02000200, false);
-    MatAnmInfo info = {0, 1, 1, 0};
+    mModel.createDifferedModel(heap, p2, p3 | 0x00020200, false);
+    MatAnmInfo info;
+    info.mNumBtps = 0;
+    info.mNumBtks = 0;
+    info.mNumBrks = 0;
+    info.mNumBpks = 0;
+    info.mNumBtks = 1;
+    info.mNumBtps = 1;
     mController.InitRegistrationMat(info, &mModel);
 
-    mController.mMatData->mpCtrlSRT->getObjIce(0)->mAnmBase = mAnmTex;
-    mController.mMatData->mpCtrlSRT->getObjIce(0)->initFrameCtrl(mAnmTex);
-    mController.mMatData->mpCtrlSRT->getObjIce(0)->mFrameCtrl.mAttr = 0;
-    mController.mMatData->mpCtrlSRT->mNowAnmNo = 0;
-
-    mController.mMatData->mpCtrlPattern->getObj2(0)->mAnmBase = sTexPattern;
-    mController.mMatData->mpCtrlPattern->getObj2(0)->initFrameCtrl(sTexPattern);
-    mController.mMatData->mpCtrlPattern->getObj2(0)->mFrameCtrl.mAttr = 0;
-    mController.mMatData->mpCtrlPattern->mNowAnmNo = 0;
+    mController.RegisterMatTexSRT(0, mAnmTex);
+    mController.RegisterMatTexPattern(0, sTexPattern);
 }
 
 void ItemFakeItemBox::doUniv()
@@ -636,12 +656,17 @@ void ItemFakeItemBox::doUniv()
             mController.mTrans->resetFlag();
         }
     }
-    if (!mTexPatternFrame && mState != 5) {
-        if ((mState < 5 && mState >= 2) || (mState >= 5 && mState < 7)) {
+    if (!mTexPatternFrame) {
+        switch (mState) {
+        case 2:
+        case 3:
+        case 4:
+        case 6:
             mTexPatternFrame = 1;
+            break;
         }
     }
-    if (!tstAnyObjectHitting() && getState() < 8) {
+    if (!tstAnyObjectHitting() && *(volatile int *)&mState < 8) {
         switch (getState()) {
         case 1:
         case 5:
@@ -652,22 +677,20 @@ void ItemFakeItemBox::doUniv()
             break;
         default:
             f32 ratio = sScaleFakeUpRatio;
-            f32 maxScale = sScaleFake;
-            f32 scale = mEquipScale;
-            if (scale < maxScale) {
-                mEquipScale = scale * ratio;
-                if (mEquipScale > maxScale) {
-                    mEquipScale = maxScale;
+            if (mEquipScale < sScaleFake) {
+                mEquipScale *= ratio;
+                if (mEquipScale > sScaleFake) {
+                    mEquipScale = sScaleFake;
                 }
             }
             setScaleCol(mEquipScale);
             break;
         }
     }
+    AnmControlMatTexSRT *srt = mController.mMatData->mpCtrlSRT;
     MatAnmData *mat = mController.mMatData;
-    mat->mpCtrlSRT->frameProc();
-    f32 frame = mTexPatternFrame;
-    mat->mpCtrlPattern->getObjAnt(0)->setFrame(frame);
+    srt->frameProc();
+    mat->mpCtrlPattern->getObjAnt(0)->setFrame(mTexPatternFrame);
     (this->*mStateFunc)();
     if (mDoSound && mState != 1 && mState != 8 && mState != 5 && mState != 2 && !(mTransferFlags & 0x100)) {
         mSoundMgr->setSe(0x40004);
@@ -679,8 +702,7 @@ void ItemFakeItemBox::initEquip()
     mpHandAnmMtx = getHandAnmMtx();
     mVel.zero();
     mPos.zero();
-    Quaternion qt = {0.0f, 0.0f, 0.0f, 0.0f};
-    _34 = qt;
+    QuaternionReset(&_34);
     mEquipFlags = 0;
     mEquipScale = sScaleFakeEquip;
 }
@@ -696,15 +718,15 @@ void ItemFakeItemBox::moveNormal(CrsGround &ground)
         mTransferFlags |= 2;
         mTransferFlags |= 0x100;
         if (!mGndCount) {
-            JGeometry::TVec3f normal;
-            ground.getNormal(&normal);
-            f32 dot = mVel.dot(normal);
-            mVel.x = mVel.x * sFakeBoundRatio - normal.x * dot;
-            mVel.y = mVel.y * sFakeBoundRatio - normal.y * dot;
-            mVel.z = mVel.z * sFakeBoundRatio - normal.z * dot;
-            if (mVel.y > sFakeMaxVelBoundY) {
-                mVel.y = sFakeMaxVelBoundY;
-            }
+            mVel.scale(sFakeBoundRatio);
+            JGeometry::TVec3f proj;
+            proj.scale(mNormal.dot(mVel), mNormal);
+            JGeometry::TVec3f horiz;
+            horiz.sub(mVel, proj);
+            horiz.y = 0.0f;
+            proj.scale(-1.0f);
+            mVel.add(horiz, proj);
+            mVel.y = mVel.y > sFakeMaxVelBoundY ? sFakeMaxVelBoundY : mVel.y;
             mPos.y = height;
             mGndCount++;
             mOffsetVelY = sFakeOffsetVelY;
@@ -752,7 +774,7 @@ void ItemFakeItemBox::doDisappear()
     if (mKartNo < 0) {
         createEfct(mPos);
         mState = 10;
-        doEquip();
+        initEnd();
     }
     else {
         for (u8 i = 0; i < 4; i++) {
@@ -762,8 +784,8 @@ void ItemFakeItemBox::doDisappear()
             }
             JGeometry::TVec3f pos;
             ObjUtility::getKartPos(mKartNo, &pos);
-            emt->mGlobalTrs = pos;
-            if (emt->checkStatus(8) && emt->mAlivePtclBase.getNum() + emt->mAlivePtclChld.getNum() == 0) {
+            emt->setGlobalTranslation(pos);
+            if (emt->isEnableDeleteEmitter()) {
                 JPEffectMgr::getEffectMgr()->deleteEmt(emt);
                 mEqEmt[i] = nullptr;
             }
@@ -776,7 +798,7 @@ void ItemFakeItemBox::doDisappear()
         }
         if (cnt >= 4) {
             mState = 10;
-            doEquip();
+            initEnd();
         }
     }
 }
@@ -784,7 +806,7 @@ void ItemFakeItemBox::doDisappear()
 Quaternion *ItemFakeItemBox::calcBaseRotQt()
 {
     JGeometry::TPos3f rot;
-    mRotAnimation.calcRotAnimation(rot);
+    calcRotAnimation(rot);
     stMtx2Qt(&mBaseRotQt, rot);
     return &mBaseRotQt;
 }
@@ -800,28 +822,28 @@ const bool ItemFakeItemBox::checkKartColDisappear(int kartNo)
 
 void ItemFakeItemBox::createEfct(const JGeometry::TVec3f &pos)
 {
+    char *baseName = "mk_niseItemget";
     for (u8 i = 0; i < 3; i++) {
         if (!mEqEmt[i]) {
-            mEqEmt[i] = JPEffectMgr::getEffectMgr()->createEmt(ObjUtility::concatSimpleFileName("mk_niseItemget", i), pos);
+            const char *name = ObjUtility::concatSimpleFileName(baseName, i);
+            mEqEmt[i] = JPEffectMgr::getEffectMgr()->createEmt(name, pos);
         }
     }
 
     if (mKartNo >= 0) {
-        static const char *sEfctNames[3] = {"mk_niseItemget_d_s", "mk_niseItemget_d_m", "mk_niseItemget_d_l"};
-        int mode = RaceMgr::sRaceManager->mRaceInfo->mConsoleNum;
-        int idx;
-        if (mode == 2) {
+        const char *efctNames[3] = {"mk_niseItemget_d_s", "mk_niseItemget_d_m", "mk_niseItemget_d_l"};
+        u8 idx = 0;
+        switch (RaceMgr::getManager()->getKartInfo(mKartNo)->getKartWeight()) {
+        case 1:
             idx = 1;
-        }
-        else if (mode < 5 && mode > 2) {
+            break;
+        case 2:
             idx = 2;
+            break;
         }
-        else {
-            idx = 0;
-        }
-        mEqEmt[3] = JPEffectMgr::getEffectMgr()->createEmt(sEfctNames[idx], pos);
+        mEqEmt[3] = JPEffectMgr::getEffectMgr()->createEmt(efctNames[idx], pos);
 
-        if (mKartNo < RaceMgr::sRaceManager->mRaceInfo->mKartNum) {
+        if (mKartNo >= 0 && mKartNo < RaceMgr::getManager()->getKartNumber()) {
             for (u8 i = 0; i < 4; i++) {
                 if (TstEmitterModeAndClipNotAvailableFlg(mKartNo, mEqEmt[i])) {
                     mEqEmt[i] = nullptr;
@@ -840,5 +862,7 @@ void ItemFakeItemBox::initFall()
 {
     ItemObj::initFall();
     _12c = _12c & 0xFFFFFFFEu;
-    _12c &= 0xBFFFFFFF;
+    _12c &= ~2;
 }
+
+#include "JSystem/JAudio/JASFakeMatch2.h"
