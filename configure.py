@@ -645,7 +645,7 @@ config.libs = [
             Object(NonMatching, "dolphin/ip/IPOpt.c"),
             Object(NonMatching, "dolphin/ip/IPSocket.c"),
             Object(NonMatching, "dolphin/ip/IPPPP.c"),
-            Object(NonMatching, "dolphin/ip/IPPPPoE.c"),
+            Object(Matching, "dolphin/ip/IPPPPoE.c"),
             Object(NonMatching, "dolphin/ip/IPLcp.c"),
             Object(Matching, "dolphin/ip/IPIpcp.c"),
             Object(NonMatching, "dolphin/ip/IPPap.c"),
@@ -745,7 +745,7 @@ config.libs = [
             Object(NonMatching, "dolphin/upnp/UPnPUuid.c"),
             Object(NonMatching, "dolphin/upnp/UPnPUri.c"),
             Object(NonMatching, "dolphin/upnp/UPnPHttpd.c"),
-            Object(NonMatching, "dolphin/upnp/UPnPHttpdResponse.c")
+            Object(Matching, "dolphin/upnp/UPnPHttpdResponse.c")
         ]
     ),
     DolphinLib(
@@ -1103,7 +1103,7 @@ config.libs = [
             Object(NonMatching, "Kameda/SceneRecord.cpp"),
             Object(NonMatching, "Kameda/SceneMap.cpp"),
             Object(NonMatching, "Kameda/Result2D.cpp"),
-            Object(NonMatching, "Kameda/SceneFactory.cpp"),
+            Object(Matching, "Kameda/SceneFactory.cpp"),
             Object(Matching, "Kameda/SequenceInfo.cpp"),
             Object(Matching, "Kameda/PrintDvdError.cpp"),
             Object(NonMatching, "Kameda/Race2D.cpp"),
