@@ -822,8 +822,8 @@ config.libs = [
             Object(Matching, "JSystem/J3D/GraphLoader/J3DBinaryFormat.cpp"),  # might not be in GraphLoader
             Object(Matching, "JSystem/J3D/GraphLoader/J3DClusterLoader.cpp"),            
             Object(Matching, "JSystem/J3D/GraphLoader/J3DJointFactory.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DMaterialFactory.cpp"),
-            Object(NonMatching, "JSystem/J3D/GraphLoader/J3DMaterialFactory_v21.cpp"),
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DMaterialFactory.cpp"),
+            Object(Matching, "JSystem/J3D/GraphLoader/J3DMaterialFactory_v21.cpp"),
             Object(Matching, "JSystem/J3D/GraphLoader/J3DModelLoader.cpp"),
             Object(Matching, "JSystem/J3D/GraphLoader/J3DModelLoaderCalcSize.cpp"),
             Object(Matching, "JSystem/J3D/GraphLoader/J3DModelSaver.cpp"),  # might not be in GraphLoader

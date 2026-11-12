@@ -334,7 +334,7 @@ struct J3DColorChanInfo {
 
 extern const J3DColorChanInfo j3dDefaultColorChanInfo;
 
-inline u16 calcColorChanID(u16 enable, u8 matSrc, u8 lightMask, u8 diffuseFn, u8 attnFn, u8 ambSrc)
+inline u16 calcColorChanID(u16 enable, u8 matSrc, u32 lightMask, u8 diffuseFn, GXAttnFn attnFn, u8 ambSrc)
 {
     u32 reg = 0;
     reg     = reg & ~0x0002 | enable << 1;
@@ -366,7 +366,7 @@ struct J3DColorChan {
 
     J3DColorChan(const J3DColorChanInfo& info)
     {
-        mChanCtrl = calcColorChanID(info.mEnable, info.mMatSrc, info.mLightMask, info.mDiffuseFn, info.mAttnFn,
+        mChanCtrl = calcColorChanID(info.mEnable, info.mMatSrc, info.mLightMask, info.mDiffuseFn, (GXAttnFn)info.mAttnFn,
                                     info.mAmbSrc == 0xFF ? 0 : info.mAmbSrc);
     }
 
@@ -383,7 +383,7 @@ struct J3DColorChan {
         // same logic but without the bug.
         // See J3DMaterialFactory::newColorChan - both the bugged and correct behavior are present there, as it calls
         // both constructors.
-        mChanCtrl = calcColorChanID(info.mEnable, info.mMatSrc, info.mLightMask, info.mDiffuseFn, info.mAttnFn,
+        mChanCtrl = calcColorChanID(info.mEnable, info.mMatSrc, info.mLightMask, info.mDiffuseFn, (GXAttnFn)info.mAttnFn,
                                     info.mAmbSrc == 0xFFFF ? 0 : info.mAmbSrc);
     }
 
