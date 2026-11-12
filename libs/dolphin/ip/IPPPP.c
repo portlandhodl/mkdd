@@ -716,9 +716,10 @@ void PPPIn(PPPPPP* ifp, u8* data, s32 len, s32 flag)
         }
     }
     if (!ppp) {
-        if (head->state == 9) {
-            ++head->codeRejectCount;
-            LCPOut(head, 8, head->codeRejectCount, *(u16*)(data + 4), data + 2);
+        ppp = head;
+        if (ppp->state == 9) {
+            ++ppp->codeRejectCount;
+            LCPOut(ppp, 8, ppp->codeRejectCount, *(u16*)(data + 4), data + 2);
         }
         return;
     }

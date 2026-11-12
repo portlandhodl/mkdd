@@ -233,49 +233,48 @@ void KartAnime::DoGetAnime(int idx) {
     KartBody *body = GetKartCtrl()->getKartBody(idx);
     ItemObjMgr *itemMgr = GetItemObjMgr();
     int kartNo = idx;
-    ItemObj *item;
     if (!itemMgr->getNowTandemDriverNum(idx)) {
-        item = itemMgr->getKartEquipItem(idx, 1);
-        if (item) {
-            if (item->getState() == 7)
+        ItemObj *item0 = itemMgr->getKartEquipItem(idx, 1);
+        if (item0) {
+            if (item0->getState() == 7)
                 body->mDriverModels[1]->resetItem();
             else
-                body->mDriverModels[1]->setItem(item);
+                body->mDriverModels[1]->setItem(item0);
         } else {
             body->mDriverModels[1]->resetItem();
         }
-        item = itemMgr->getKartEquipItem(kartNo, 0);
-        if (item) {
-            if (item->getState() == 7) {
+        ItemObj *item1 = itemMgr->getKartEquipItem(kartNo, 0);
+        if (item1) {
+            if (item1->getState() == 7) {
                 body->mDriverModels[0]->resetItem();
             } else {
-                body->mDriverModels[0]->setItem(item);
-                if (item->getState() != 5 && item->tstTransferPartner()) {
+                body->mDriverModels[0]->setItem(item1);
+                if (item1->getState() != 5 && item1->tstTransferPartner()) {
                     GetKartCtrl()->getKartSound(idx)->DoTandemVoice(35);
-                    item->clrTransferPartner();
+                    item1->clrTransferPartner();
                 }
             }
         } else {
             body->mDriverModels[0]->resetItem();
         }
     } else {
-        item = itemMgr->getKartEquipItem(idx, 0);
-        if (item) {
-            if (item->getState() == 7)
+        ItemObj *item2 = itemMgr->getKartEquipItem(idx, 0);
+        if (item2) {
+            if (item2->getState() == 7)
                 body->mDriverModels[1]->resetItem();
-            body->mDriverModels[1]->setItem(item);
+            body->mDriverModels[1]->setItem(item2);
         } else {
             body->mDriverModels[1]->resetItem();
         }
-        item = itemMgr->getKartEquipItem(kartNo, 1);
-        if (item) {
-            if (item->getState() == 7) {
+        item2 = itemMgr->getKartEquipItem(kartNo, 1);
+        if (item2) {
+            if (item2->getState() == 7) {
                 body->mDriverModels[0]->resetItem();
             } else {
-                body->mDriverModels[0]->setItem(item);
-                if (item->getState() != 5 && item->tstTransferPartner()) {
+                body->mDriverModels[0]->setItem(item2);
+                if (item2->getState() != 5 && item2->tstTransferPartner()) {
                     GetKartCtrl()->getKartSound(idx)->DoTandemVoice(35);
-                    item->clrTransferPartner();
+                    item2->clrTransferPartner();
                 }
             }
         } else {

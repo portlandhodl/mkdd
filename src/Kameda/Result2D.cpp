@@ -864,8 +864,8 @@ void Result2D::draw() {
     };
     PauseState *pause;
     if ((mNode->mParam.mFlag & 1) && ((pause = (PauseState *)PauseManager::getManager()), !pause->_f)) {
-        if (pause->mGameOver) {
-        } else {
+        switch (pause->mGameOver) {
+        case false:
             if (mDrawFlag && (RaceMgr::getManager()->isReplayMode() || Goal2D::mDrawEndFlag)) {
                 mOrtho->setPort();
                 (this->*mDrawFunc)();
