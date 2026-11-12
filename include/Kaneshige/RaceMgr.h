@@ -152,6 +152,13 @@ public:
     // why did this not use a getter?
     ERaceMode getRaceMode() const { return mRaceInfo->mRaceMode; }
 
+    int getRivalKartNo(int rivalNo) const
+    {
+#line 114
+        JUT_MINMAX_ASSERT(0, rivalNo, 2);
+        return mRaceInfo->mRivalKarts[rivalNo];
+    }
+
     bool isDemoCamera(int camNo) const
     {
 #line 162

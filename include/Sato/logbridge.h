@@ -188,6 +188,30 @@ public:
     void setAttr(u32 attr) {
         mAttr = attr;
     }
+    void setMaterial(u32 material) {
+        mMaterial = material;
+    }
+    void zeroVelocity() {
+        mVelocity.zero();
+    }
+    void setWallNormal(JGeometry::TVec3f normal) {
+        mWallNormal = normal;
+    }
+    void setNormal(JGeometry::TVec3f normal) {
+        mNormal = normal;
+    }
+    void setVelocity(JGeometry::TVec3f vel) {
+        mVelocity = vel;
+    }
+    void setAttrIndex(u32 idx) {
+        mAttrIndex = idx;
+    }
+    void setHeight(f32 height) {
+        mHeight = height;
+    }
+    void setColDepth(f32 depth) {
+        mColDepth = depth;
+    }
 
 protected:
     stPlaneParam mSidePlanes[4];   // _24
@@ -267,13 +291,13 @@ public:
     JGeometry::TVec3f mVel;   // 0x00
     JGeometry::TVec3f mPos;   // 0x0C
     JGeometry::TVec3f _18;    // 0x18
-    JSUPtrLink mLink;         // 0x24
+    JSULink<BridgeNode> mLink; // 0x24
 };                            // 0x34
 
-class BridgeNodeManager : public JSUPtrList
+class BridgeNodeManager : public JSUList<BridgeNode>
 {
 public:
-    BridgeNodeManager() : JSUPtrList(), mNodes(0), mNodePos(0) {}
+    BridgeNodeManager() : JSUList<BridgeNode>(), mNodes(0), mNodePos(0) {}
     ~BridgeNodeManager() {
         delete[] mNodes;
         delete[] mNodePos;
@@ -317,6 +341,7 @@ public:
     virtual void calc();
     virtual void update();
     virtual void simpleDraw(u32);
+    void calcStringPos(Mtx, u32);
     void simpleDrawString(u32);
     void updateString();
     virtual const char *getLopeBmdFileName();
@@ -354,8 +379,8 @@ public:
     f32 _264;                             // 0x264
     u32 _268;                             // 0x268
     JGeometry::TVec3f _26c;               // 0x26C
-    u16 _278;                             // 0x278
-    u16 _27a;                             // 0x27A
+    s16 _278;                             // 0x278
+    s16 _27a;                             // 0x27A
     u16 _27c;                             // 0x27C
     u8 _27e;                              // 0x27E
     u32 _280;                             // 0x280

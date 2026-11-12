@@ -18,6 +18,8 @@ public:
         void reset();
 
         int getFirstRank() const { return mRankId; }
+        void setRankId(const int &id) { mRankId = id; }
+        void setKeepRank(const int &rank) { mKeepRank = rank; }
 
         int mFirstRank; // 0
         int mRankId;    // 4
@@ -30,7 +32,7 @@ public:
     RivalBodyCtrl *getBodyCtrl();
     KartBody *getBody();
     stRandom *getRandom();
-    int getRankParamID();
+    u8 getRankParamID();
     bool tstEndRace();
     bool isRival() const;
     int getMyRank();

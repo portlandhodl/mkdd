@@ -20,13 +20,20 @@ public:
     static int getNowCrsIndex();     // 0x802850d0
     void init();                     // 0x80285210
     void doPlayerDistSpeedCtrl();    // 0x802857a8
-    bool doCurveDegSpdCtrl();        // 0x80285944
-    bool doRankSpdCtrl();            // 0x80285abc
+    u8 doCurveDegSpdCtrl();        // 0x80285944
+    u8 doRankSpdCtrl();            // 0x80285abc
     void resetRaceStrengthening();   // 0x80285fc4
     void clampMaxSpeed();            // 0x8028603c
     static f32 sCrsLevelParam[3];    // 0x803a2794
     static JSUList<RivalStartRankParam> sStartRankList; // 0x804139f4
-    static f32 *sEngineParamPtr;     // 0x80415090
+    struct EngineParam
+    {
+        f32 mParam[13];
+        f32 *mDashSuccessRate; // 34
+        f32 *mDashFailRate;    // 38
+    };
+
+    static EngineParam *sEngineParamPtr; // 0x80415090
     static s32 sComStrengthState;    // 0x80415094
     static s32 sRivalGPPoint[2];     // 0x80415098
     static void *sStartRankPtr;      // 0x80416d30, some JSUList, too lazy to implement properly now

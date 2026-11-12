@@ -5,6 +5,7 @@
 #include "JSystem/JGeometry.h"
 #include "JSystem/JGeometry/Matrix.h"
 #include "dolphin/mtx.h"
+#include "Sato/StateObserver.h"
 
 class StringNodeManager;
 class DriverModel;
@@ -16,7 +17,17 @@ struct NeckIKParam {
     f32 mC;          // 0x0c
     f32 m10;         // 0x10
     f32 m14;         // 0x14
-    u8 _18[0x48];
+    u8 _18[0xc];
+    f32 m24;         // 0x24
+    f32 m28;         // 0x28
+    u8 _2c[4];
+    f32 m30[5];      // 0x30
+    f32 m44;         // 0x44
+    u8 _48[8];
+    f32 m50;         // 0x50
+    f32 m54;         // 0x54
+    u8 m58;          // 0x58
+    u8 _59[7];
     f32 m60;         // 0x60
 };
 class LumbarCtrl;
@@ -118,9 +129,9 @@ public:
     void lockStringTieMin(float (*)[4], const JGeometry::TVec3<f32>&, f32, bool);
 };
 
-struct NeckFunc;
+class NeckCtrl;
 
-class NeckCtrl : public IKCtrl {
+class NeckCtrl : public IKCtrl, public TStateObserver<NeckCtrl> {
 public:
     NeckCtrl(int, u8, bool);
     virtual ~NeckCtrl() {}
@@ -146,16 +157,6 @@ public:
     void calcTargetQt(float (*)[4]);
     void checkLerpRatio(u32);
 
-    u8 m40;             // 0x40
-    u8 m41;             // 0x41
-    u8 m42;             // 0x42
-    u8 _43;
-    NeckCtrl* mSelf;    // 0x44
-    NeckFunc* mVec48;   // 0x48
-    NeckFunc* mVec4c;   // 0x4c
-    u32 mTimer;         // 0x50
-    u8 mCount;          // 0x54
-    u8 _55[0x58 - 0x55];
     Quaternion mQuatPrev; // 0x58
     Quaternion mQuat;   // 0x68
     Quaternion mQuat78; // 0x78
@@ -183,9 +184,6 @@ public:
     static Mtx sRotFrontDirMtx;
 };
 
-struct NeckFunc {
-    void (NeckCtrl::*mFunc)();
-};
 
 inline void CreateCharIKParamMgr() { CharIKParamMgr::createMgr(); }
 

@@ -12,70 +12,19 @@
 #include "Sato/stMath.h"
 #include "Sato/StringObj.h"
 #include "Kaneshige/SysDebug.h"
+#include "Yamamoto/kartCtrl.h"
+#include "JSystem/JGeometry/Quat.h"
 
 #include <stdio.h>
 #include "JSystem/JMath/JMath.h"
 
 static const f32 sIdentQuat[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-static u8 sResetState = 4;
-static u8 sSearchInitState = 4;
-static u8 sSearchHitState = 4;
-static u8 sSearchRabbitState = 4;
-static u8 sReturnState = 4;
-static u8 sFollowState = 4;
-static u8 sLookState = 4;
-static u8 sLookShineState = 4;
-static u8 sNeckFuncNum = 5;
 static JGeometry::TVec3f sKGravityAngle(32.0f, -0.4f, 0.0f);
 
 namespace {
-    f32 sPHairLength = 20.0f;
-    f32 sPMaxOffsetX = 10.0f;
-    f32 sPStringLength[2] = { 30.0f, 40.0f };
-    f32 sPStringAdjustRatio = 0.2f;
-    f32 sPStringAirFric = 0.99f;
-    f32 sPStringGravity = -0.8f;
-    f32 sPStringMaxAccel = 1.4f;
-    f32 sPDamageGravityDirRatio = 0.7f;
-    f32 sDStringLength = 20.0f;
-    f32 sDStringAdjustRatio = 0.2f;
-    f32 sDStringGravity = -1.5f;
-    f32 sDaisyHair2RotAngle = 20.0f;
-    f32 sDMaxOffsetX = -5.0f;
-    f32 sKStringOffset[2] = { 12.0f, 9.0f };
-    f32 sKStringAdjustRatio = 0.2f;
-    f32 sKStringAirFric = 0.99f;
-    f32 sKStringGravity = -0.5f;
-    f32 sKStringMaxAccel = 2.0f;
-    f32 sKLockStringVelDownRatio = 0.98f;
-    f32 sKColFaceOffsetXdir = 35.0f;
-    f32 sKColFaceOffsetYdir = -10.0f;
-    f32 sKColHeadRadius = 35.0f;
-    f32 sDKStringLength[2] = { 40.0f, 20.0f };
-    f32 sDKStringAdjustRatio = 0.2f;
-    f32 sDKStringAirFric = 0.99f;
-    f32 sDKStringGravity = -0.6f;
-    f32 sDKStringMaxAccel = 0.8f;
+    u8 sNeckBackFwMaxWaitCnt = 15;
+    u8 sNeckBackBwMaxWaitCnt = 30;
 }
-
-#define NECK_MAX_ASSERT(i, max) \
-    ((i) < (max)) ? (void)0 : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "StringObj.h", 109, "range over: %d <= num=%d < %d", 0, (i), (max)), OSHalt("Halt"))
-
-static NeckFunc sInitFuncs[5] = {
-    { &NeckCtrl::initFunc_Search },
-    { &NeckCtrl::initFunc_Follow },
-    { &NeckCtrl::initFunc_Look },
-    { &NeckCtrl::initFunc_Return },
-    { &NeckCtrl::initFunc_LookShine }
-};
-
-static NeckFunc sDoFuncs[5] = {
-    { &NeckCtrl::doFunc_Search },
-    { &NeckCtrl::doFunc_Follow },
-    { &NeckCtrl::doFunc_Look },
-    { &NeckCtrl::doFunc_Return },
-    { &NeckCtrl::doFunc_LookShine }
-};
 
 Mtx NeckCtrl::sRotFrontDirMtx;
 
@@ -94,34 +43,6 @@ static inline void mulVec3(register const JGeometry::TVec3f* a, register const J
     }
 }
 static inline JGeometry::TVec3f addVec(const JGeometry::TVec3f& a, const JGeometry::TVec3f& b) { JGeometry::TVec3f r; r.add(a, b); return r; }
-static inline void callCalcFront(NeckCtrl* n) { n->calcFrontDirQt(); }
-static inline void callCalcFront2(NeckCtrl* n) { callCalcFront(n); }
-
-namespace {
-        const char sName0[] __attribute__((section(".sdata2"))) = "Baby_Mario";
-        const char sName1[] __attribute__((section(".sdata2"))) = "Baby_Luigi";
-        const char sName2[] __attribute__((section(".sdata2"))) = "Patapata";
-        const char sName3[] __attribute__((section(".sdata2"))) = "Nokonoko";
-        const char sName4[] __attribute__((section(".sdata2"))) = "Peach";
-        const char sName5[] __attribute__((section(".sdata2"))) = "Daisy";
-        const char sName6[] __attribute__((section(".sdata2"))) = "Mario";
-        const char sName7[] __attribute__((section(".sdata2"))) = "Luigi";
-        const char sName8[] __attribute__((section(".sdata2"))) = "Wario";
-        const char sName9[] __attribute__((section(".sdata2"))) = "Waluigi";
-        const char sName10[] __attribute__((section(".sdata2"))) = "Yoshi";
-        const char sName11[] __attribute__((section(".sdata2"))) = "Catherine";
-        const char sName12[] __attribute__((section(".sdata2"))) = "Donkey";
-        const char sName13[] __attribute__((section(".sdata2"))) = "Diddy";
-        const char sName14[] __attribute__((section(".sdata2"))) = "Koopa";
-        const char sName15[] __attribute__((section(".sdata2"))) = "KoopaJr";
-        const char sName16[] __attribute__((section(".sdata2"))) = "Kinopio";
-        const char sName17[] __attribute__((section(".sdata2"))) = "Kinopico";
-        const char sName18[] __attribute__((section(".sdata2"))) = "KingTeresa";
-        const char sName19[] __attribute__((section(".sdata2"))) = "BossPakkun";
-    const char* sParamFileNames[20] = {
-        sName0, sName1, sName2, sName3, sName4, sName5, sName6, sName7, sName8, sName9, sName10, sName11, sName12, sName13, sName14, sName15, sName16, sName17, sName18, sName19
-    };
-}
 
 IKCtrl::IKCtrl(int index, u8 driverNo)
 {
@@ -145,33 +66,12 @@ void IKCtrl::calcJointScaleMtx(JGeometry::TPosition3<JGeometry::TMatrix34<JGeome
 
 NeckCtrl::NeckCtrl(int index, u8 driverNo, bool flag) : IKCtrl(index, driverNo)
 {
-    m40 = 0;
-    m42 = 1;
-    mTimer = 0;
-    mCount = 0;
-    mCount = sNeckFuncNum;
-    mSelf = this;
-    mVec48 = new NeckFunc[mCount];
-    mVec4c = new NeckFunc[mCount];
-    m41 = 0;
-    m40 = 0;
-    m42 = 1;
-    mTimer = 0;
-    NECK_MAX_ASSERT(0, mCount);
-    mVec48[0] = sInitFuncs[0];
-    mVec4c[0] = sDoFuncs[0];
-    NECK_MAX_ASSERT(1, mCount);
-    mVec48[1] = sInitFuncs[1];
-    mVec4c[1] = sDoFuncs[1];
-    NECK_MAX_ASSERT(2, mCount);
-    mVec48[2] = sInitFuncs[2];
-    mVec4c[2] = sDoFuncs[2];
-    NECK_MAX_ASSERT(3, mCount);
-    mVec48[3] = sInitFuncs[3];
-    mVec4c[3] = sDoFuncs[3];
-    NECK_MAX_ASSERT(4, mCount);
-    mVec48[4] = sInitFuncs[4];
-    mVec4c[4] = sDoFuncs[4];
+    createStateFunc(this, 5);
+    registStateFunc(0, &NeckCtrl::initFunc_Search, &NeckCtrl::doFunc_Search);
+    registStateFunc(1, &NeckCtrl::initFunc_Follow, &NeckCtrl::doFunc_Follow);
+    registStateFunc(2, &NeckCtrl::initFunc_Look, &NeckCtrl::doFunc_Look);
+    registStateFunc(3, &NeckCtrl::initFunc_Return, &NeckCtrl::doFunc_Return);
+    registStateFunc(4, &NeckCtrl::initFunc_LookShine, &NeckCtrl::doFunc_LookShine);
     mPtr108 = new u8[RaceMgr::sRaceManager->getKartNumber()];
     m10c = flag;
     f32 sin = JMath::sincosTable_.mTable[1579].first;
@@ -207,16 +107,10 @@ void NeckCtrl::reset()
     m115 = 0;
     m114 = 0;
     m116 = 0;
-    m41 = 0;
-    m40 = 0;
-    m42 = 1;
-    mTimer = 0;
+    resetState();
     if (RaceMgr::sRaceManager->getRaceMode() == (ERaceMode)7)
     {
-        m41 = m40;
-        m40 = sResetState;
-        m42 = 1;
-        mTimer = 0;
+        changeState(4);
     }
     for (u8 i = 0; i < RaceMgr::sRaceManager->getKartNumber(); i++)
         mPtr108[i] = 0;
@@ -235,21 +129,196 @@ void NeckCtrl::chkHitClrCount()
 {
 }
 
-#pragma inline_depth(4)
+static inline f32 stAsinClamp(f32 x)
+{
+    if (x >= 1.0f)
+        return 1.5707964f;
+    if (x <= -1.0f)
+        return -1.5707964f;
+    if (x < 0.0f)
+        return -JMath::asinAcosTable_.mTable[(u32)(1023.5f * -x)];
+    return JMath::asinAcosTable_.mTable[(u32)(1023.5f * x)];
+}
+
+static inline void stGetEulerYXZ(const Mtx m, f32& x, f32& y, f32& z)
+{
+    f32 eps = JGeometry::TUtilf::epsilon();
+    if (m[1][2] - 1.0f >= -eps)
+    {
+        y = -JGeometry::TUtilf::atan2(m[2][0], m[0][0]);
+        x = -1.5707964f;
+        z = 0.0f;
+    }
+    else if (m[1][2] + 1.0f <= eps)
+    {
+        y = -JGeometry::TUtilf::atan2(m[2][0], m[0][0]);
+        x = 1.5707964f;
+        z = 0.0f;
+    }
+    else
+    {
+        x = -stAsinClamp(m[1][2]);
+        y = -JGeometry::TUtilf::atan2(-m[0][2], m[2][2]);
+        z = -JGeometry::TUtilf::atan2(-m[1][0], m[1][1]);
+    }
+}
+
+static inline void stMakeEulerMtxYXZ(Mtx m, f32 z, f32 y, f32 x)
+{
+    f32 sx;
+    f32 sy;
+    f32 sz;
+    f32 cx;
+    f32 cy;
+    f32 cz;
+    cz = cos(z);
+    cy = cos(y);
+    cx = cos(x);
+    sz = sin(z);
+    sy = sin(y);
+    sx = sin(x);
+
+    f32 t7;
+    f32 t6;
+    f32 t5;
+    f32 t4;
+    f32 t3;
+    f32 t2;
+    f32 t1;
+    f32 t0;
+
+    t6 = cy * cz;
+    t1 = sy * cz;
+    t7 = sx * sy;
+    t0 = sx * t6;
+    t5 = sz * cx;
+    t4 = sx * cy;
+    t3 = -t1;
+    t2 = -sz;
+    t1 = t7 * cz;
+    t7 = t7 * sz + t6;
+    t6 = sz * t4 + t3;
+    t5 = t2 * cy + t1;
+    m[1][0] = sz * cx;
+    m[0][0] = t7;
+    t4 = cx * cz;
+    t3 = sy * sz + t0;
+    m[2][0] = t6;
+    t2 = cx * sy;
+    t1 = -sx;
+    m[0][1] = t5;
+    t0 = cx * cy;
+    m[1][1] = t4;
+    m[2][1] = t3;
+    m[0][2] = t2;
+    m[1][2] = t1;
+    m[2][2] = t0;
+}
+
+static inline bool isTandemDriver(NeckCtrl* n)
+{
+    u8 ret = false;
+    if (n->mDriverNo == ItemObjMgr::getNowTandemDriverNum(n->mKartNo) && GetKartCtrl())
+        ret = true;
+    return ret;
+}
+
+static inline bool isTandemBack(NeckCtrl* n, bool drv)
+{
+    u8 ret = false;
+    if (drv)
+    {
+        if (GetKartCtrl()->GetTandemDir(n->mKartNo) == 1)
+            ret = true;
+    }
+    return ret;
+}
+
 void NeckCtrl::calcFrontDirQt()
 {
-    JGeometry::TVec3f a;
-    JGeometry::TVec3f b;
-    ObjUtility::getKartPos(mKartNo, &a);
-    ObjUtility::getKartXdir(mKartNo, &b);
-    ObjUtility::getKartYdir(mKartNo, &b);
-    ObjUtility::getKartZdir(mKartNo, &b);
-    ObjUtility::getKartVel(mKartNo, &b);
-    ObjUtility::getKartEfctVel(mKartNo, &b);
-    for (int i = 0; i < mCount; i++)
-        mPtr108[i] = 0;
+    if (mED && mDriverNo == ItemObjMgr::getNowTandemDriverNum(mKartNo))
+        return;
+
+    bool spin = false;
+    if (GetKartCtrl()->GetKartStatus(mKartNo) & 3)
+        spin = true;
+    bool back = isTandemBack(this, isTandemDriver(this));
+    m10d = 0;
+    f32 sign = 1.0f;
+    Mtx mtx;
+    if (back && !spin)
+    {
+        PSMTXConcat((MtxPtr)mPtrE8, mMtx88, mtx);
+        sign = -1.0f;
+    }
+    else
+    {
+        MtxPtr body = ObjUtility::getKartBodyMtx(mKartNo);
+        if (back)
+        {
+            PSMTXConcat(body, sRotFrontDirMtx, mtx);
+            m10d = 1;
+        }
+        else if ((GetKartCtrl()->CheckReverse(mKartNo) || m115) && !m114)
+        {
+            Mtx rot;
+            s16 angle = -32767.0f * mParam->mC;
+            f32 sn = JMath::sincosTable_.sinShort(angle);
+            f32 cs = JMath::sincosTable_.cosShort(angle);
+            rot[2][1] = 0.0f;
+            rot[1][1] = 1.0f;
+            rot[1][2] = 0.0f;
+            rot[1][0] = 0.0f;
+            rot[0][2] = sn;
+            rot[0][0] = cs;
+            rot[2][0] = -sn;
+            rot[2][2] = cs;
+            rot[0][1] = 0.0f;
+            PSMTXConcat(body, rot, mtx);
+            m10d = 1;
+            if (!m116)
+            {
+                m115 = sNeckBackBwMaxWaitCnt;
+                m114 = 0;
+            }
+            if (m115)
+                m115--;
+            m116 = 1;
+        }
+        else
+        {
+            if (GetKartCtrl() && GetKartCtrl()->getKartBody(mKartNo) && mDriverNo != ItemObjMgr::getNowTandemDriverNum(mKartNo))
+            {
+                Mtx rotTire;
+                Mtx tmp;
+                stMTXRotRad(rotTire, 'Y', GetKartCtrl()->GetTireAngle(mKartNo));
+                PSMTXConcat(rotTire, body, tmp);
+                body = tmp;
+            }
+            PSMTXCopy(body, mtx);
+            if (m116)
+            {
+                m114 = sNeckBackFwMaxWaitCnt;
+                m115 = 0;
+            }
+            if (m114)
+                m114--;
+            m116 = 0;
+        }
+    }
+
+    JGeometry::TVec3f xdir;
+    ObjUtility::getKartXdir(mKartNo, &xdir);
+    f32 len = stLength2(xdir.x, xdir.z);
+    f32 tilt = atan2(xdir.y, len);
+    f32 x;
+    f32 y;
+    f32 z;
+    stGetEulerYXZ(mtx, x, y, z);
+    stMakeEulerMtxYXZ(mtx, z - tilt * sign, y, x);
+    stMtx2Qt(&mQuat, mtx);
+    ((JGeometry::TQuat4f&)mQuat).normalize((JGeometry::TQuat4f&)mQuat);
 }
-#pragma inline_depth(4)
 
 void NeckCtrl::calcTargetPosDirQt(const JGeometry::TVec3<f32>&)
 {
@@ -260,19 +329,15 @@ void NeckCtrl::initFunc_Search()
     mED = 0;
     if (GeographyObjManager::gMgr->mIsEscapeBattle && GeoRabbitMark::getSupervisor()->getRabbitKartNo() != mKartNo)
     {
-        m41 = m40;
-        m40 = sSearchInitState;
-        m42 = 1;
-        mTimer = 0;
+        changeState(4);
     }
 }
 
-#pragma inline_depth(3)
 void NeckCtrl::doFunc_Search()
 {
     if (mDriverNo != ItemObjMgr::getNowTandemDriverNum(mKartNo) || m10c || m10d)
     {
-        callCalcFront2(this);
+        calcFrontDirQt();
         return;
     }
     for (int i = 0; i < RaceMgr::sRaceManager->getKartNumber(); i++)
@@ -286,7 +351,7 @@ void NeckCtrl::doFunc_Search()
                 m104 &= ~bit;
         }
     }
-    callCalcFront2(this);
+    calcFrontDirQt();
     if ((u32)mKartNo == RaceMgr::sRaceManager->getRaceFrame() % RaceMgr::sRaceManager->getKartNumber())
     {
         mFC = searchRivalKart();
@@ -294,22 +359,15 @@ void NeckCtrl::doFunc_Search()
         {
             m104 |= 1 << mFC;
             mPtr108[mFC] = 0;
-            m41 = m40;
-            m40 = sSearchHitState;
-            m42 = 1;
-            mTimer = 0;
+            changeState(1);
         }
     }
     if (GeographyObjManager::gMgr->mIsEscapeBattle && GeoRabbitMark::getSupervisor()->getRabbitKartNo() != mKartNo)
     {
-        m41 = m40;
-        m40 = sSearchRabbitState;
-        m42 = 1;
-        mTimer = 0;
+        changeState(4);
     }
 }
 
-#pragma inline_depth(4)
 void NeckCtrl::initFunc_Follow()
 {
 }
@@ -326,23 +384,20 @@ void NeckCtrl::doFunc_Follow()
         JGeometry::TVec3f kartPos;
         ObjUtility::getKartPos(mKartNo, &kartPos);
         dir.sub(rivalPos, kartPos);
-        stVecNormalize(&dir);
+        stVecNormalize(dir);
         up.set(0.0f, 1.0f, 0.0f);
         right.set(1.0f, 0.0f, 0.0f);
         PSVECCrossProduct(&up, &dir, &right);
-        stVecNormalize(&right);
+        stVecNormalize(right);
         PSVECCrossProduct(&dir, &right, &up);
-        stVecNormalize(&up);
+        stVecNormalize(up);
         Mtx mtx;
         stMakeRMtx(mtx, right, up, dir);
         stMtx2Qt(&mQuat, mtx);
     }
-    if (mTimer >= 10)
+    if (mStateCount >= 10)
     {
-        m41 = m40;
-        m40 = sFollowState;
-        m42 = 1;
-        mTimer = 0;
+        changeState(2);
     }
 }
 
@@ -350,7 +405,6 @@ void NeckCtrl::initFunc_Look()
 {
 }
 
-#pragma inline_depth(3)
 void NeckCtrl::doFunc_Look()
 {
     Mtx mtx;
@@ -364,22 +418,19 @@ void NeckCtrl::doFunc_Look()
     {
         ObjUtility::getKartPos(mKartNo, &kartPos);
         dir.sub(rivalPos, kartPos);
-        stVecNormalize(&dir);
+        stVecNormalize(dir);
         up.set(0.0f, 1.0f, 0.0f);
         right.set(1.0f, 0.0f, 0.0f);
         PSVECCrossProduct(&up, &dir, &right);
-        stVecNormalize(&right);
+        stVecNormalize(right);
         PSVECCrossProduct(&dir, &right, &up);
-        stVecNormalize(&up);
+        stVecNormalize(up);
         stMakeRMtx(mtx, right, up, dir);
         stMtx2Qt(&mQuat, mtx);
     }
-    if (mTimer >= 30)
+    if (mStateCount >= 30)
     {
-        m41 = m40;
-        m40 = sLookState;
-        m42 = 1;
-        mTimer = 0;
+        changeState(3);
     }
 }
 
@@ -387,38 +438,29 @@ void NeckCtrl::initFunc_Return()
 {
 }
 
-#pragma inline_depth(0)
 void NeckCtrl::doFunc_Return()
 {
     calcFrontDirQt();
-    if (mTimer >= 20)
+    if (mStateCount >= 20)
     {
-        m41 = m40;
-        m40 = sReturnState;
-        m42 = 1;
-        mTimer = 0;
+        changeState(0);
     }
 }
 
-#pragma inline_depth(4)
 void NeckCtrl::initFunc_LookShine()
 {
 }
 
-#pragma inline_depth(3)
 void NeckCtrl::doFunc_LookShine()
 {
     if (GeoRabbitMark::getSupervisor()->getRabbitKartNo() == mKartNo)
     {
-        m41 = m40;
-        m40 = sLookShineState;
-        m42 = 1;
-        mTimer = 0;
+        changeState(0);
         return;
     }
     if (mDriverNo != ItemObjMgr::getNowTandemDriverNum(mKartNo))
     {
-        callCalcFront2(this);
+        calcFrontDirQt();
         return;
     }
     Mtx mtx;
@@ -432,19 +474,18 @@ void NeckCtrl::doFunc_LookShine()
     {
         ObjUtility::getKartPos(mKartNo, &kartPos);
         dir.sub(markPos, kartPos);
-        stVecNormalize(&dir);
+        stVecNormalize(dir);
         up.set(0.0f, 1.0f, 0.0f);
         right.set(1.0f, 0.0f, 0.0f);
         PSVECCrossProduct(&up, &dir, &right);
-        stVecNormalize(&right);
+        stVecNormalize(right);
         PSVECCrossProduct(&dir, &right, &up);
-        stVecNormalize(&up);
+        stVecNormalize(up);
         stMakeRMtx(mtx, right, up, dir);
         stMtx2Qt(&mQuat, mtx);
     }
 }
 
-#pragma inline_depth(4)
 void NeckCtrl::calcTargetQt(float (*)[4])
 {
 }
@@ -455,7 +496,7 @@ int NeckCtrl::searchRivalKart()
     JGeometry::TVec3f dir;
     ObjUtility::getKartPos(mKartNo, &pos);
     ObjUtility::getKartZdir(mKartNo, &dir);
-    return ObjUtility::findNearKartAngle(pos, dir, 180.0f, 90.0f);
+    return ObjUtility::findNearKartAngle(pos, dir, 1800.0f, 180.0f);
 }
 
 void NeckCtrl::checkLerpRatio(u32)
@@ -784,13 +825,13 @@ void NeckCtrl::update(float (*mtx1)[4], float (*mtx2)[4], LumbarCtrl*, u32 mode)
     else
     {
         mPtrE8 = norm1;
-        if (m42)
+        if (mIsInit)
         {
-            m42 = 0;
-            (mSelf->*(mVec48[m40].mFunc))();
+            mIsInit = 0;
+            (mOwner->*(mInitFuncs[mState]))();
         }
-        (mSelf->*(mVec4c[m40].mFunc))();
-        mTimer++;
+        (mOwner->*(mDoFuncs[mState]))();
+        mStateCount++;
     }
 
     if (mode != 0)
@@ -825,6 +866,36 @@ void NeckCtrl::update(float (*mtx1)[4], float (*mtx2)[4], LumbarCtrl*, u32 mode)
     mMtx[0][3] = tx;
     mMtx[1][3] = ty;
     mMtx[2][3] = tz;
+}
+
+namespace {
+    f32 sPHairLength = 20.0f;
+    f32 sPMaxOffsetX = 10.0f;
+    f32 sPStringLength[2] = { 30.0f, 40.0f };
+    f32 sPStringAdjustRatio = 0.2f;
+    f32 sPStringAirFric = 0.99f;
+    f32 sPStringGravity = -0.8f;
+    f32 sPStringMaxAccel = 1.4f;
+    f32 sPDamageGravityDirRatio = 0.7f;
+    f32 sDStringLength = 20.0f;
+    f32 sDStringAdjustRatio = 0.2f;
+    f32 sDStringGravity = -1.5f;
+    f32 sDaisyHair2RotAngle = 20.0f;
+    f32 sDMaxOffsetX = -5.0f;
+    f32 sKStringOffset[2] = { 12.0f, 9.0f };
+    f32 sKStringAdjustRatio = 0.2f;
+    f32 sKStringAirFric = 0.99f;
+    f32 sKStringGravity = -0.5f;
+    f32 sKStringMaxAccel = 2.0f;
+    f32 sKLockStringVelDownRatio = 0.98f;
+    f32 sKColFaceOffsetXdir = 35.0f;
+    f32 sKColFaceOffsetYdir = -10.0f;
+    f32 sKColHeadRadius = 35.0f;
+    f32 sDKStringLength[2] = { 40.0f, 20.0f };
+    f32 sDKStringAdjustRatio = 0.2f;
+    f32 sDKStringAirFric = 0.99f;
+    f32 sDKStringGravity = -0.6f;
+    f32 sDKStringMaxAccel = 0.8f;
 }
 
 HairCtrl::HairCtrl(int index, u8 driverNo) : IKCtrl(index, driverNo)
@@ -937,20 +1008,20 @@ void HairCtrl::lockStringMin(float (*mtx)[4], const JGeometry::TVec3<f32>& vec, 
 void HairCtrl::update_hair1_common(float (*mtx)[4], DriverModel* driver)
 {
     JGeometry::TVec3f dir(mtx[0][2], mtx[1][2], mtx[2][2]);
-    stVecNormalize(&dir);
+    stVecNormalize(dir);
     JGeometry::TVec3f p0;
     JGeometry::TVec3f p1;
     mNodeMgr->getNodePos(0, &p0);
     mNodeMgr->getNodePos(1, &p1);
     JGeometry::TVec3f d;
     d.sub(p1, p0);
-    stVecNormalize(&d);
+    stVecNormalize(d);
     JGeometry::TVec3f right;
     PSVECCrossProduct(&d, &dir, &right);
-    stVecNormalize(&right);
+    stVecNormalize(right);
     JGeometry::TVec3f up;
     PSVECCrossProduct(&d, &right, &up);
-    stVecNormalize(&up);
+    stVecNormalize(up);
     mMtx[0][0] = d.x;
     mMtx[1][0] = d.y;
     mMtx[2][0] = d.z;
@@ -1136,6 +1207,13 @@ void DonkeyTieCtrl::calcHairString(float (*)[4], const JGeometry::TVec3<f32>& po
 {
     mNodeMgr->setNodePos(0, JGeometry::TVec3f(pos));
     mNodeMgr->calc();
+}
+
+namespace {
+    const char* sParamFileNames[20] = {
+        "Baby_Mario", "Baby_Luigi", "Patapata", "Nokonoko", "Peach", "Daisy", "Mario", "Luigi", "Wario", "Waluigi",
+        "Yoshi", "Catherine", "Donkey", "Diddy", "Koopa", "KoopaJr", "Kinopio", "Kinopico", "KingTeresa", "BossPakkun"
+    };
 }
 
 CharIKParamMgr::CharIKParamMgr()

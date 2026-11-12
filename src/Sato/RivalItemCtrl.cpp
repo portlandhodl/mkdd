@@ -45,9 +45,7 @@ void RivalItemCtrl::doItemCtrl()
     if (getBodyCtrl()->mFlags & 0x80)
         return;
 
-    ItemObjMgr *itemMgr = ItemObjMgr::gItemMgr;
-    u8 driver = itemMgr->getNowTandemDriverNum(getMyID());
-    ItemObj *item = itemMgr->getKartEquipItem(getMyID(), driver);
+    ItemObj *item = GetItemObjMgr()->getKartEquipItem(getMyID(), GetItemObjMgr()->getNowTandemDriverNum(getMyID()));
 
     if (item)
     {
@@ -59,8 +57,6 @@ void RivalItemCtrl::doItemCtrl()
             case 0:
             case 1:
             case 9:
-            case 16:
-            case 20:
             case 21:
                 initItem_GTurtle();
                 break;
@@ -141,11 +137,12 @@ void RivalItemCtrl::startItem(ItemObj *item)
     mFlags |= 2;
     mFlags &= ~4;
 
-    int kind = item->getKind();
-    if (kind < 5)
+    switch (item->getKind())
     {
-        if (kind >= 3)
-            throwFlg = 0;
+    case 3:
+    case 4:
+        throwFlg = 0;
+        break;
     }
     setThrowFlg(throwFlg);
 }
@@ -186,8 +183,7 @@ void RivalItemCtrl::set_endItemParam()
 
 void RivalItemCtrl::setRndFlgItemFront(float stick)
 {
-    u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-    f32 rnd = *(f32 *)&bits - 1.0f;
+    f32 rnd = getRandom()->get_ufloat_1();
     triggerButtonStickFront(rnd * 0.5f + 0.5f);
 }
 
@@ -208,8 +204,7 @@ void RivalItemCtrl::setThrowFlg(bool flag)
             }
         }
 
-        u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-        f32 rnd = *(f32 *)&bits - 1.0f;
+        f32 rnd = getRandom()->get_ufloat_1();
         if (rnd >= 0.2f)
             mFlags |= 4;
         else
@@ -229,12 +224,12 @@ void RivalItemCtrl::setThrowFlg(bool flag)
     }
 }
 
-void RivalItemCtrl::chkEnableThrowBack()
+bool RivalItemCtrl::chkEnableThrowBack()
 {
+    int ret = false;
     if (getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360)
-        mFlags |= 4;
-    else
-        mFlags &= ~4;
+        ret = true;
+    return ret;
 }
 
 void RivalItemCtrl::initItem_GTurtle()
@@ -254,16 +249,14 @@ void RivalItemCtrl::useItem_GTurtle_Normal()
     }
     else
     {
-        bool b = getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360;
-        if (b)
+        if (chkEnableThrowBack())
             triggerButtonStickBack(1.0f);
     }
 }
 
 void RivalItemCtrl::initItem_GTurtleSuc()
 {
-    u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-    f32 rnd = *(f32 *)&bits - 1.0f;
+    f32 rnd = getRandom()->get_ufloat_1();
     if (rnd > 0.7f)
         mSuc = true;
 
@@ -274,7 +267,6 @@ void RivalItemCtrl::initItem_GTurtleSuc()
 void RivalItemCtrl::useItem_GTurtleSuc_Normal()
 {
     u8 used = 0;
-    u8 b = 0;
     if (mUseCnt <= mUseWait)
         return;
 
@@ -285,9 +277,7 @@ void RivalItemCtrl::useItem_GTurtleSuc_Normal()
     }
     else
     {
-        if (getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360)
-            b = 1;
-        if ((bool)b || mSuc)
+        if (chkEnableThrowBack() || mSuc)
         {
             triggerButtonStickBack(1.0f);
             used = 1;
@@ -328,8 +318,7 @@ void RivalItemCtrl::useItem_GTurtleSuc_Normal()
         }
 
         {
-            u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-            f32 rnd = *(f32 *)&bits - 1.0f;
+            f32 rnd = getRandom()->get_ufloat_1();
             if (rnd >= 0.2f)
                 mFlags |= 4;
             else
@@ -357,8 +346,7 @@ setState:
 
 void RivalItemCtrl::initItem_RTurtleSuc()
 {
-    u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-    f32 rnd = *(f32 *)&bits - 1.0f;
+    f32 rnd = getRandom()->get_ufloat_1();
     if (rnd > 0.7f)
         mSuc = true;
 
@@ -377,7 +365,7 @@ void RivalItemCtrl::useItem_RTurtleSuc_Normal()
         triggerButton();
         used = 1;
     }
-    else if (getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360)
+    else if (chkEnableThrowBack())
     {
         triggerButtonStickBack(1.0f);
         used = 1;
@@ -413,8 +401,7 @@ void RivalItemCtrl::useItem_RTurtle_Normal()
     }
     else
     {
-        bool b = getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360;
-        if (b)
+        if (chkEnableThrowBack())
             triggerButtonStickBack(1.0f);
     }
 }
@@ -427,8 +414,7 @@ void RivalItemCtrl::initItem_Bomb()
 
 void RivalItemCtrl::releaseBombFront(const float &f1, const float &f2)
 {
-    u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-    f32 rnd = *(f32 *)&bits - 1.0f;
+    f32 rnd = getRandom()->get_ufloat_1();
     triggerButtonStickFront(rnd * f1 + f2);
 }
 
@@ -445,14 +431,12 @@ void RivalItemCtrl::useItem_YoshiEgg_Normal()
 
     if (mFlags & 4)
     {
-        u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-        f32 rnd = *(f32 *)&bits - 1.0f;
+        f32 rnd = getRandom()->get_ufloat_1();
         triggerButtonStickFront(rnd * 0.8f + 0.2f);
     }
     else
     {
-        bool b = getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360;
-        if (b)
+        if (chkEnableThrowBack())
             triggerButtonStickBack(1.0f);
     }
 }
@@ -464,14 +448,12 @@ void RivalItemCtrl::useItem_Bomb_Normal()
 
     if (mFlags & 4)
     {
-        u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-        f32 rnd = *(f32 *)&bits - 1.0f;
+        f32 rnd = getRandom()->get_ufloat_1();
         triggerButtonStickFront(rnd * 0.8f + 0.2f);
     }
     else
     {
-        bool b = getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360;
-        if (b)
+        if (chkEnableThrowBack())
             triggerButtonStickBack(1.0f);
     }
 }
@@ -489,14 +471,12 @@ void RivalItemCtrl::useItem_Banana_Normal()
 
     if (mFlags & 4)
     {
-        u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-        f32 rnd = *(f32 *)&bits - 1.0f;
+        f32 rnd = getRandom()->get_ufloat_1();
         triggerButtonStickFront(rnd * 0.5f + 0.5f);
     }
     else
     {
-        bool b = getBodyCtrl()->isNeighborhoodCenter(0.5f) || mUseCnt > 360;
-        if (b)
+        if (chkEnableThrowBack())
             triggerButtonStickBack(1.0f);
     }
 }
@@ -565,7 +545,7 @@ void RivalItemCtrl::useItem_Kinoko_Normal()
         {
             if (getBodyCtrl()->_84 != 2)
         {
-            if ((bodyCtrl->getBody()->mCarStatus & (0x20030000 | 0xc000)) == 0)
+            if ((bodyCtrl->getBody()->mCarStatus & 0x2002c000) == 0)
             {
                 f32 f;
                 bodyCtrl->getTargetCurveLR(&f, 2);
@@ -585,8 +565,7 @@ void RivalItemCtrl::initItem_KinokoSuc()
 {
     mUseWait = getRandom()->getRandomMax(180) + 60;
 
-    u32 bits = (getRandom()->getRandom() >> 9) | 0x3f800000;
-    f32 rnd = *(f32 *)&bits - 1.0f;
+    f32 rnd = getRandom()->get_ufloat_1();
     if (rnd > 0.7f)
         mSuc = true;
 
@@ -600,7 +579,7 @@ void RivalItemCtrl::useItem_KinokoSuc_Normal()
 
     if (getBodyCtrl()->_84 == 2)
         return;
-    if ((getBodyCtrl()->getBody()->mCarStatus & (0x20030000 | 0xc000)) != 0)
+    if ((getBodyCtrl()->getBody()->mCarStatus & 0x2002c000) != 0)
         return;
 
     f32 f;
@@ -645,7 +624,7 @@ void RivalItemCtrl::useItem_GoldenKinoko()
         {
             if (getBodyCtrl()->_84 != 2)
             {
-                if ((bodyCtrl->getBody()->mCarStatus & (0x20030000 | 0xc000)) == 0)
+                if ((bodyCtrl->getBody()->mCarStatus & 0x2002c000) == 0)
                 {
                     f32 f;
                     bodyCtrl->getTargetCurveLR(&f, 2);
@@ -678,7 +657,7 @@ void RivalItemCtrl::useItem_Star_Normal()
 
     if (getBodyCtrl()->_84 == 2)
         return;
-    if ((getBodyCtrl()->getBody()->mCarStatus & (0x20030000 | 0xc000)) != 0)
+    if ((getBodyCtrl()->getBody()->mCarStatus & 0x2002c000) != 0)
         return;
 
     f32 f;

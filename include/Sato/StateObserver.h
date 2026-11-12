@@ -65,4 +65,55 @@ public:
     ~StateObserverT() {}
 };
 
+template <typename T>
+class TStateObserver
+{
+public:
+    typedef void (T::*StateFunc)();
+
+    TStateObserver() : mState(0), mIsInit(1), mStateCount(0), mFuncNum(0) {}
+
+    void createStateFunc(T *owner, const u8 &num)
+    {
+        mFuncNum = num;
+        mOwner = owner;
+        mInitFuncs = new StateFunc[mFuncNum];
+        mDoFuncs = new StateFunc[mFuncNum];
+        resetState();
+    }
+
+    void resetState()
+    {
+        mPrevState = 0;
+        mState = 0;
+        mIsInit = 1;
+        mStateCount = 0;
+    }
+
+    void changeState(const u8 &state)
+    {
+        mPrevState = mState;
+        mState = state;
+        mIsInit = 1;
+        mStateCount = 0;
+    }
+
+    void registStateFunc(const u8 &id, const StateFunc &initFunc, const StateFunc &doFunc)
+    {
+#line 109
+        JUT_MAX_ASSERT(id, mFuncNum);
+        mInitFuncs[id] = initFunc;
+        mDoFuncs[id] = doFunc;
+    }
+
+    u8 mState;              // 0x0
+    u8 mPrevState;          // 0x1
+    u8 mIsInit;             // 0x2
+    T *mOwner;              // 0x4
+    StateFunc *mInitFuncs;  // 0x8
+    StateFunc *mDoFuncs;    // 0xc
+    u32 mStateCount;        // 0x10
+    u8 mFuncNum;            // 0x14
+};
+
 #endif

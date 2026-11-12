@@ -132,7 +132,7 @@ void RivalBodyCtrl::reset()
     sTopPlayerIndex = -1;
     sLowestComKartIndex = -1;
     sCheckTopDistRatio = 0.0f;
-    sCrsStdDistRatio = RivalSpeedCtrl::sCrsLevelParam[2] * RCMGetCourse()->getTrackSectorDist() / 100.0f;
+    sCrsStdDistRatio = RivalSpeedCtrl::sCrsLevelParam[2] * RCMGetCourse()->getTrackSectorDist() / 270000.0f;
 }
 
 void RivalBodyCtrl::setRankArray()
@@ -197,18 +197,19 @@ void RivalBodyCtrl::chkPlayerKartCondition()
     sTopPlayerIndex = -1;
     sLowestPlayerKartIndex = -1;
 
-    for (i = 0; i < RCMGetManager()->mRaceInfo->getPlayerKartNumber(); i++)
+    for (i = 0; i < RCMGetManager()->getPlayerNumber(); i++)
     {
-        s32 rank = RCMGetManager()->getKartChecker(i)->getRank();
+        int idx = i;
+        s32 rank = RCMGetManager()->getKartChecker(idx)->getRank();
         if (rank == 1)
         {
-            sTopPlayerIndex = i;
+            sTopPlayerIndex = idx;
             sCommonFlgs |= 2;
         }
         if (rank >= lowest)
         {
             lowest = rank;
-            sLowestPlayerKartIndex = i;
+            sLowestPlayerKartIndex = idx;
         }
     }
 }
@@ -251,11 +252,12 @@ void RivalBodyCtrl::getPointRSideDir(JGeometry::TVec3f *out)
     mPointCtrl->getPrev()->getPosition(&prevPos);
     mPointCtrl->getNext()->getPosition(&nextPos);
 
-    dir.sub(prevPos, nextPos);
-    stVecNormalize(&dir);
+    dir.sub(nextPos, prevPos);
+    dir.y = 0.0f;
+    stVecNormalize(dir);
 
     PSVECCrossProduct(&dir, &up, &right);
-    out->set(right);
+    *out = right;
 }
 
 
@@ -280,28 +282,25 @@ bool RivalBodyCtrl::isNeighborhoodCenter(f32 threshold)
 
 f32 RivalBodyCtrl::getLengthFCenter()
 {
+    JGeometry::TVec3f right2, nextPos2, kartPos, diff, prevPos, nextPos;
     JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
-    JGeometry::TVec3f prevPos, nextPos;
+    JGeometry::TVec3f dir, right;
     mPointCtrl->getPrev()->getPosition(&prevPos);
     mPointCtrl->getNext()->getPosition(&nextPos);
-
-    JGeometry::TVec3f dir;
     dir.sub(nextPos, prevPos);
-    stVecNormalize(&dir);
+    dir.y = 0.0f;
+    stVecNormalize(dir);
 
-    JGeometry::TVec3f right;
     PSVECCrossProduct(&dir, &up, &right);
-    right.y = 0.0f;
-    stVecNormalize(&right);
+    right2 = right;
+    right2.y = 0.0f;
+    stVecNormalize(&right2);
 
-    JGeometry::TVec3f nextPos2;
     mPointCtrl->getNext()->getPosition(&nextPos2);
-
-    JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mRival->mNo, &kartPos);
     kartPos.y = 0.0f;
-
-    return kartPos.dot(right) - nextPos2.dot(right);
+    diff.sub(kartPos, nextPos2);
+    return right2.dot(diff);
 }
 
 
@@ -382,16 +381,14 @@ void RivalBodyCtrl::chkDriftPoint()
 bool RivalBodyCtrl::chkArrivePoint(CLPoint *point)
 {
     bool ret = false;
-    JGeometry::TVec3f kartPos;
+    JGeometry::TVec3f kartPos, tmp, pointPos, diff;
     ObjUtility::getKartPos(mRival->mNo, &kartPos);
-
-    JGeometry::TVec3f pointPos;
     point->getPosition(&pointPos);
-
-    JGeometry::TVec3f diff;
-    diff.sub(pointPos, kartPos);
-
-    if (diff.length() < 0.5f * point->getPointData()->scale)
+    tmp.sub(pointPos, kartPos);
+    diff = tmp;
+    diff.y = 0.0f;
+    f32 len = diff.length();
+    if (len < 0.5f * point->getPointData()->scale)
         ret = true;
     return ret;
 }
@@ -438,8 +435,7 @@ bool RivalBodyCtrl::isOneUpperLowerPlayer(bool upper)
     {
         if (sPlayerRank[i] == -1)
             continue;
-        s32 rank = RCMGetManager()->getKartChecker(mRival->mNo)->getRank();
-        if (rank == dir + sPlayerRank[i])
+        if (RCMGetManager()->getKartChecker(mRival->mNo)->getRank() == dir + sPlayerRank[i])
         {
             ret = true;
             break;
@@ -465,7 +461,12 @@ int RivalBodyCtrl::findMyRankOnlyCom()
     s16 kartNum = RCMGetManager()->mRaceInfo->getKartNumber();
     for (u8 i = 0; i < kartNum; i++)
     {
-        if (sComKartRankArray[i] == mRival->mNo) { rank = i + 1; break; }
+        int idx = sComKartRankArray[i];
+        if (idx == mRival->mNo)
+        {
+            rank = i + 1;
+            break;
+        }
     }
     return rank;
 }
@@ -474,35 +475,40 @@ int RivalBodyCtrl::findMyRankOnlyCom()
 int RivalBodyCtrl::getTopComKartIndex(RivalBodyCtrl *)
 {
     u8 useKartRank = 1;
-    s32 rank = sComKartRankArray[0];
+    s32 ret = sComKartRankArray[0];
     if (!RCMGetManager()->mRaceDirector->isRaceEnd())
     {
         if (!RCMGetManager()->isKartGoal(mRival->mNo))
             useKartRank = 0;
     }
     if (useKartRank)
-        rank = sKartRankArray[0];
-    JUT_ASSERT(rank >= 0);
-    return rank;
+        ret = sKartRankArray[0];
+    JUT_ASSERT(ret >= 0);
+    return ret;
 }
 
 #line 1799
 int RivalBodyCtrl::getMyFowardComKartIndex()
 {
-    s32 ret = -1;
+    s32 idx;
     s32 *rankArray = sComKartRankArray;
-    u8 useKartRank = 1;
-    s32 rank = mRival->getSpeedCtrl()->mRank;
-    s32 idx = rank - 2;
+    s32 myRank;
+    u8 useKartRank;
+    s32 ret = -1;
+    useKartRank = 1;
+    myRank = mRival->getSpeedCtrl()->mRank;
+    idx = myRank - 2;
     if (!RCMGetManager()->mRaceDirector->isRaceEnd() && !RCMGetManager()->isKartGoal(mRival->mNo))
         useKartRank = 0;
     if (useKartRank)
         rankArray = sKartRankArray;
-    if (idx < 0)
-        return ret;
+    if (idx >= 0)
+    {
 #line 1804
-    JUT_MINMAX_ASSERT(1, rank, 9);
-    return rankArray[idx];
+        JUT_MINMAX_ASSERT(1, myRank, 9);
+        ret = rankArray[idx];
+    }
+    return ret;
 }
 
 #line 1816
@@ -510,18 +516,19 @@ int RivalBodyCtrl::getMyBackwardComKartIndex(u8 offset)
 {
     s32 idx = offset - 1;
     s32 *rankArray = sComKartRankArray;
-    s32 ret = -1;
     u8 useKartRank = 1;
-    idx = mRival->getSpeedCtrl()->mRank + idx;
+    s32 ret = -1;
+    idx += mRival->getSpeedCtrl()->mRank;
     if (!RCMGetManager()->mRaceDirector->isRaceEnd() && !RCMGetManager()->isKartGoal(mRival->mNo))
         useKartRank = 0;
     if (useKartRank)
         rankArray = sKartRankArray;
-    if (idx >= RCMGetManager()->mRaceInfo->getKartNumber())
-        return ret;
+    if (idx < RCMGetManager()->mRaceInfo->getKartNumber())
+    {
 #line 1828
-    JUT_MINMAX_ASSERT(1, idx, 9);
-    ret = rankArray[idx];
+        JUT_MINMAX_ASSERT(1, idx, 9);
+        ret = rankArray[idx];
+    }
     return ret;
 }
 
@@ -532,14 +539,10 @@ CLPointControllerRivalKart::CLPointControllerRivalKart(RivalBodyCtrl *body)
 
 int CLPointControllerRivalKart::findNextPointNo(CLPoint *point)
 {
+    int ret = 0;
     if (mBody->_84 != 3)
-    {
-        findRndPointNoExceptForShortCut(point, stGetRnd(2));
-    }
-    else
-    {
-        return 0;
-    }
+        ret = findRndPointNoExceptForShortCut(point, stGetRnd(2));
+    return ret;
 }
 
 RivalAwardBodyCtrl::RivalAwardBodyCtrl(RivalKart *rival) : RivalBodyCtrl(rival) {}
@@ -551,12 +554,12 @@ bool RivalAwardBodyCtrl::doNextPoint(bool)
     mWidth = 0.5f * mPointCtrl->getNext()->getPointData()->scale;
     mPointCtrl->changeNextPoint();
     mPointCtrl->getNext()->getPosition(&_28);
-    _58.set(_28);
-    _28.set(mPointCtrl->_c);
+    _58 = _28;
+    _34 = mPointCtrl->_c;
 
     CLPoint *point = mPointCtrl->getNext()->getNextPoint(0);
     CLPoint *next = point->getNextPoint(0);
-    JGeometry::TVec3f a, b;
+    JGeometry::TVec3f b, a;
     point->getPosition(&a);
     next->getPosition(&b);
     _4c.sub(b, a);
@@ -616,22 +619,19 @@ void RivalAward2ndBodyCtrl::calcVtTargetPos()
     ObjUtility::getKartPos(0, &kartPos);
     ObjUtility::getKartZdir(0, &zdir);
     zdir.y = 0.0f;
-    stVecNormalize(&zdir);
+    stVecNormalize(zdir);
 
     JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
     JGeometry::TVec3f right;
-    PSVECCrossProduct(&zdir, &up, &right);
-    stVecNormalize(&right);
+    PSVECCrossProduct(&up, &zdir, &right);
+    stVecNormalize(right);
 
     if (mRival->mNo == 1)
-    {
-        right.x = -right.x;
-        right.z = -right.z;
-    }
+        right.negate();
 
     right.scale(sAward2ndSideLength);
     _28.add(kartPos, right);
-    _58.set(_28);
+    _58 = _28;
 }
 
 bool RivalAward2ndBodyCtrl::doNextPoint(bool) { return false; }

@@ -30,7 +30,7 @@ namespace ObjUtility
     const char *concatSimpleFileName(char *, const u8);                                     // 0x8025f514
 
     // Inline/Unused
-    void getKartDistance(int, const JGeometry::TVec3f &);
+    f32 getKartDistance(int, const JGeometry::TVec3f &);
     void getKartDegAngle(int, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void findRankKartIndex(int);
 }
@@ -72,7 +72,7 @@ public:
 
     ObjColSphere *getBlastBound() const { return mBlastBound; }
 
-    u32 _4;                                // 4
+    s32 _4;                                // 4
     ObjColSphere *mBlastBound;             // 8
     ObjColSphere *mSphere2;                // C
     JGeometry::TVec3f _10;                 // 10

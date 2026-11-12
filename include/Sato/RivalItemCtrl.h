@@ -26,7 +26,7 @@ public:
     void set_endItemParam();             // 0x8027ee44
     void setRndFlgItemFront(float);
     void setThrowFlg(bool);              // 0x8027ee74
-    void chkEnableThrowBack();
+    bool chkEnableThrowBack();
     void initItem_GTurtle();             // 0x8027efb0
     void useItem_GTurtle_Normal();       // 0x8027f00c
     void initItem_GTurtleSuc();          // 0x8027f0a0
