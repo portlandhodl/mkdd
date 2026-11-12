@@ -62,7 +62,7 @@ public:
 #endif
     }
     bool isRaceEnd() const { return mIsRaceEnd; };
-    bool isZoomWinConsole() const;
+    bool isZoomWinConsole() const { return mZoomWinCnsNo >= 0; }
     ERacePhase getRacePhase() const { return mRacePhase; };
 
     int getWaitDemoResult() const { return mWaitDemoResult; }

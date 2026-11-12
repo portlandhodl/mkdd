@@ -46,12 +46,12 @@ public:
 #line 153
     ResTIMG *getCharIconTexture(ECharID id) {
         JUT_MINMAX_ASSERT(1, id, cCharIDMax);
-        return mCharIconTex[id];
+        return mCharIconTex[id - 1];
     }
 #line 153
     ResTIMG *getCharIconTextureChecked(ECharID id) {
         JUT_MINMAX_ASSERT(1, id, cCharIDMax);
-        return mCharIconTex[id];
+        return mCharIconTex[id - 1];
     }
     ResTIMG *getKartIconTexture(int id) { return mKartIconTex[id]; }
     ResTIMG *getPosImg(int idx) { return mPosImg[idx]; }
@@ -60,9 +60,9 @@ public:
     static Kart2DCommon *ptr() { return mspKart2DCommon; }
 private:
     static Kart2DCommon *mspKart2DCommon; // 0x80416a70
-    ResTIMG *mNumberTex[10];              // 0 to 9
+    ResTIMG *mNumberTex[11];              // 0 to 9, also why are there 11?
     ResTIMG *mFontData[26];               // chars A to Z
-    ResTIMG *mCharIconTex[cCharIDMax]; 
+    ResTIMG *mCharIconTex[cCharIDMax - 1]; 
     ResTIMG *mKartIconTex[cKartIDMax];
     ResTIMG *mPartName[4];
     ResTIMG *mPartsLocName[1];

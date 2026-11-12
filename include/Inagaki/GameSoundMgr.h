@@ -28,8 +28,8 @@ public:
     virtual void init();
     virtual void setSe(u32 id);
 
-    void setEcho(JAISoundHandle *handlePtr, f32 mix);
     JAISoundHandle *startSoundCustom(u32 soundID, u32 p2);
+    void setEcho(JAISoundHandle *handlePtr, f32 mix);
 
     static void setKillSwAll(bool killSw);
 

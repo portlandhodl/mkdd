@@ -778,4 +778,3 @@ u32 RaceDirector::getDemoCameraTagName() const {
     return ret;
 }
 
-bool RaceDirector::isZoomWinConsole() const { return mZoomWinCnsNo >= 0; }

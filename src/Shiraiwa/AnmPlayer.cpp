@@ -66,7 +66,7 @@ void TAnmPlayer::init(AnmController *ctrl, TAnmInfo *info, u8 n) {
 void TAnmPlayer::reset() {
     _d = 1;
     _e = 0;
-    _11 = -1;
+    *(s8 *)&_11 = -1;
     _14 = -1.0f;
 
     mController->ChangeTransAnm(0);
@@ -86,9 +86,9 @@ void TAnmPlayer::update() {
     u8 anmNumber = getCurAnmNumber();
     if (!mController->IsTransAnm2()) {        
         if (_e & 1 || _e & 2 && isCurAnmReachEnd()) {
-            s8 anmNo = (_11 != -1) ? _11 : mAnmInfo[getCurAnmNumber()].get_12();
+            s8 anmNo = (*(s8 *)&_11 != -1) ? *(s8 *)&_11 : mAnmInfo[getCurAnmNumber()].get_12();
 
-            _11 = -1;
+            *(s8 *)&_11 = -1;
             
             if (anmNo != -1 && anmNo < mMaxAnm) {
                 _d = 1;
@@ -135,7 +135,7 @@ void TAnmPlayer::firstEndCheck(u8 anmNumber) {
 
 bool TAnmPlayer::isCurAnmReachEnd() {
     bool ret = false;
-    if (mController->getCurFrameCtrl()->checkState(1) || checkFrameEnd() || isFitBlendFrame()) {
+    if (mController->mTrans->getObjChk(mController->getNowTransNo())->getFrameCtrl()->checkState(1) || checkFrameEnd() || isFitBlendFrame()) {
         ret = true;
     }
     return ret;
