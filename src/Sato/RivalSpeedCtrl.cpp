@@ -70,12 +70,18 @@ u8 sTopWaitBackKartRank = 3;
 s16 sKartComStrengthPointWeakDif = -1025;
 s16 sKartComStrengthPointStrongDif = 1024;
 f32 sKartComAccelStdRatio = 1.0f;
-f32 sAward2ndLengthRatio = 0.01f;
-f32 sAward2ndAccelRatio = 2.0f;
-f32 sAward2ndOffsetSpd = 25.0f;
-f32 sAward2ndBrake = 0.07f;
-f32 sAward2ndLength = 500.0f;
-f32 sStaffRollDemoStdSpd = 60.0f;
+
+} // namespace
+
+RivalSpeedCtrl::EngineParam *RivalSpeedCtrl::sEngineParamPtr = &sEngineBigParam;
+s32 RivalSpeedCtrl::sComStrengthState = 1;
+s32 RivalSpeedCtrl::sRivalGPPoint[2] = { 0, 0 };
+void *RivalSpeedCtrl::sStartRankPtr;
+u8 RivalSpeedCtrl::sConfusedFightModeFlg;
+u8 RivalSpeedCtrl::sComWeakPointSwapFlg;
+
+namespace {
+
 
 inline s32 abs32(s32 v)
 {
@@ -83,7 +89,7 @@ inline s32 abs32(s32 v)
     return (mask ^ v) - mask;
 }
 
-inline f64 stConverge(f32 cur, f32 target, f32 up, f32 down)
+inline f32 stConverge(f32 cur, f32 target, f32 up, f32 down)
 {
     if (cur < target)
     {
@@ -190,12 +196,13 @@ RivalSpeedCtrl::~RivalSpeedCtrl()
 
 void RivalSpeedCtrl::StartInit()
 {
-    s32 *gpPoint = sRivalGPPoint;
+    s32 *gpPoint;
     s32 maxPlayerDist = 0;
     s32 maxComDist = 0;
+    gpPoint = sRivalGPPoint;
     sRivalGPPoint[0] = 0;
     sConfusedFightModeFlg = 0;
-    sRivalGPPoint[1] = 0;
+    sRivalGPPoint[0] = 0;
     sComStrengthState = 1;
     sComWeakPointSwapFlg = 0;
 
@@ -449,7 +456,7 @@ void RivalSpeedCtrl::doSpeedCtrl()
                 mOffsetMaxSpeed += sCrsLevelParam[0] * sKartRankOffsetSpdRatio[rankIdx];
 
             mLimitMaxSpeed = mBaseMaxSpeed + mOffsetMaxSpeed;
-            mStdMaxSpeed = mLimitMaxSpeed * (sEngineParamPtr->mParam[10] - (f32)(mRank - 1) * 0.1f * 0.125f);
+            mStdMaxSpeed = mLimitMaxSpeed * (sEngineParamPtr->mParam[10] - 0.1f * (f32)(mRank - 1) / 8.0f);
         }
         doAccelCtrl();
         doPlayerDistSpeedCtrl();
@@ -656,6 +663,17 @@ void RivalSpeedCtrl::clampMaxSpeed()
     if (getBodyCtrl()->_84 == 2 || mMaxSpeed >= mLimitMaxSpeed)
         mMaxSpeed = mLimitMaxSpeed;
 }
+
+namespace {
+
+f32 sAward2ndLengthRatio = 0.01f;
+f32 sAward2ndAccelRatio = 2.0f;
+f32 sAward2ndOffsetSpd = 25.0f;
+f32 sAward2ndBrake = 0.07f;
+f32 sAward2ndLength = 500.0f;
+f32 sStaffRollDemoStdSpd = 60.0f;
+
+} // namespace
 
 RivalAwardDemoSpeedCtrl::RivalAwardDemoSpeedCtrl(RivalKart *kart) : RivalSpeedCtrl(kart)
 {

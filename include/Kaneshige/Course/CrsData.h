@@ -169,7 +169,7 @@ public:
         u8 driftAcuteness;
         u8 driftDuration;
         u8 driftSupplement;
-        u8 isNoMushroomZone;
+        s8 isNoMushroomZone;
         u8 pad[5];
     }; // Size: 0x20
 

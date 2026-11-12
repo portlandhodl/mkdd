@@ -3,6 +3,10 @@
 #include "JSystem/J3D/J3DModelLoader.h"
 #include "JSystem/J3D/J3DTransform.h"
 #include "Kaneshige/ExModel.h"
+#include "Kameda/J2DManager.h"
+#include "Kawano/driverMgr.h"
+#include "Kawano/driverTPAnim.h"
+#include "Sato/LumbarCtrl.h"
 #include "Kaneshige/Objects/GeoRabbitMark.h"
 #include "Kaneshige/TexLODControl.h"
 #include "Kaneshige/RaceMgr.h"
@@ -605,6 +609,8 @@ bool ItemObjMgr::stockItemToKart(int kind, int kart_index, u8 driver_index, bool
 }
 
 // regswaps, functionally equivalent
+#pragma push
+#pragma auto_inline off
 bool ItemObjMgr::equipItemToKart(int kind, int kart_index, u8 driver_index, bool doEffect, u8 colorID)
 {
     bool ret = false;
@@ -646,6 +652,8 @@ bool ItemObjMgr::equipItemToKart(int kind, int kart_index, u8 driver_index, bool
     }
     return ret;
 }
+
+#pragma pop
 
 ItemObj *ItemObjMgr::occurItem(u32 kind, const JGeometry::TVec3f &p2, const JGeometry::TVec3f &p3)
 {
@@ -699,6 +707,25 @@ void ItemObjMgr::deleteItemByMoveList(ItemObj *obj)
     {
         _7fc.remove(&obj->_170);
         _73c[obj->getKind()].remove(&obj->_160);
+    }
+}
+
+void ItemObjMgr::createItemByKartStockingItemList()
+{
+    for (int i = 0; i < RCMGetManager()->getKartNumber(); i++)
+    {
+        for (u8 j = 0; j < 2; j++)
+        {
+            int kind = mStockItem[i][j].mKind;
+            bool b = mStockItem[i][j]._4;
+            u8 colorID = mStockItem[i][j].mColorID;
+            if (kind != 16 && mShuffMgr[i][j]->isNotRolling())
+            {
+                const u8 driver_index = j;
+                equipItemToKart(kind, i, driver_index, b, colorID);
+                delete_stockItemToKart(i, driver_index);
+            }
+        }
     }
 }
 
@@ -1043,18 +1070,224 @@ void ItemObjMgr::createCharShadowModel(JKRSolidHeap *heap, u32 camera_index)
     }
 }
 
-namespace
+void ItemObjMgr::calcCharShadowModel()
 {
-    const char sKartLoaderAssertFile[] = "KartLoader.h";
-    const char sKartLoaderDriverRangeAssert[] = "range over: %d <= driver=%d < %d";
-    const char sGeographyObjAssertFile[] = "GeographyObj.h";
-    const char sGeographyObjNumRangeAssert[] = "range over: %d <= num=%d < %d";
+    JGeometry::TVec3f scale(1.0f, 5.0f, 1.0f);
+    Mtx m;
+    PSMTXIdentity(m);
+    u32 kart_index = _824;
+    LumbarCtrl *lumbar;
+    for (u8 i = 0; i < 2; i++)
+    {
+        ShadowModel *shadow = mpShadowMdl[i];
+        int tandemDriver = getNowTandemDriverNum(kart_index);
+        lumbar = RCMGetKartLoader(kart_index)->getExModelDriver(i)->mLumbarCtrl;
+        if (!((tandemDriver == i || KartCtrl::getKartCtrl()->CheckChange(kart_index)) && !(lumbar->m70 & 4) &&
+            (KartCtrl::getKartCtrl()->GetGameStatus(kart_index) & 0x2000)))
+        {
+            shadow->clrVisibleAll();
+        }
+        else
+        {
+            shadow->setVisibleAll();
+            JGeometry::TVec3f pos;
+            JGeometry::TSMtxf mtx;
+            Mtx *mtx4 = RCMGetKartLoader(kart_index)->getExModelDriver(i)->getMtxP(4);
+            if (mtx4 == nullptr)
+            {
+                Mtx *mtx1 = RCMGetKartLoader(kart_index)->getExModelDriver(i)->getMtxP(1);
+                mtx.set(*mtx1);
+                pos.set((*mtx1)[0][3], (*mtx1)[1][3], (*mtx1)[2][3]);
+            }
+            else
+            {
+                Mtx *mtx8 = RCMGetKartLoader(kart_index)->getExModelDriver(i)->getMtxP(8);
+                mtx.set(*mtx4);
+                pos.set(0.5f * ((*mtx4)[0][3] + (*mtx8)[0][3]), 0.5f * ((*mtx4)[1][3] + (*mtx8)[1][3]), 0.5f * ((*mtx4)[2][3] + (*mtx8)[2][3]));
+            }
+            f32 sx = JGeometry::TUtilf::sqrt(mtx.at(0, 0) * mtx.at(0, 0) + mtx.at(1, 0) * mtx.at(1, 0) + mtx.at(2, 0) * mtx.at(2, 0));
+            f32 sy = JGeometry::TUtilf::sqrt(mtx.at(0, 1) * mtx.at(0, 1) + mtx.at(1, 1) * mtx.at(1, 1) + mtx.at(2, 1) * mtx.at(2, 1));
+            f32 sz = JGeometry::TUtilf::sqrt(mtx.at(0, 2) * mtx.at(0, 2) + mtx.at(1, 2) * mtx.at(1, 2) + mtx.at(2, 2) * mtx.at(2, 2));
+            scale.x *= sx;
+            scale.y *= sy;
+            scale.z *= sz;
+            m[0][3] = pos.x;
+            m[1][3] = pos.y;
+            m[2][3] = pos.z;
+            shadow->setBaseTRMtx(m);
+            shadow->getModel()->setBaseScale(scale);
+        }
+    }
 }
-
-void ItemObjMgr::calcCharShadowModel() {}
 
 void ItemObjMgr::calc()
 {
+    if (RCMGetManager()->getRaceMode() == BALLOON_BATTLE)
+    {
+        sTopBalloonNum = 0;
+        for (u8 i = 0; i < RCMGetManager()->getKartNumber(); i++)
+        {
+            int balloonNum = RCMGetKartChecker(i)->getBalloonNumber();
+            if (balloonNum > sTopBalloonNum)
+                sTopBalloonNum = balloonNum;
+        }
+    }
+
+    clrKartItemEquipTriggerList();
+    ItemShuffleMgr::setAllDynamicRate();
+    checkItemByShuffle();
+
+    createItemByKartStockingItemList();
+
+    if (mThunderDisableTimer != 0)
+        mThunderDisableTimer--;
+
+    JSUList<ItemObj> *list = _3e8;
+    for (int i = 0; i < 16; i++, list++)
+    {
+        for (JSUListIterator<ItemObj> it(list->getFirst()); it.isAvailable(); ++it)
+        {
+            it->mTransferFlags &= ~1;
+            it->mHitObjNum = 0;
+            it->mTransferFlags &= ~8;
+            it->mReflectWallVec.zero();
+        }
+    }
+
+    clrKartHittingList();
+
+    for (int i = 0; i < RCMGetManager()->getKartNumber(); i++)
+    {
+        if (!(KartCtrl::getKartCtrl()->GetGameStatus(i) & 0x2000))
+            continue;
+
+        JSUList<ItemObj> *itemList = _3e8;
+        bool noCheck = !GetGeoObjMgr()->IsCheckKartToObject(i);
+        for (int j = 0; j < 16; j++, itemList++)
+        {
+            for (JSUListIterator<ItemObj> it(itemList->getFirst()); it.isAvailable(); ++it)
+            {
+                if (noCheck && !it->IsAlwaysColItemToKart())
+                    continue;
+                if (!(it->mEquipFlags & (1 << i)))
+                    continue;
+
+                JGeometry::TVec3f kartPos;
+                f32 kartRadius;
+                GetGeoObjMgr()->getKartCollidePosRadius(kartPos, kartRadius, i);
+                if (tstHaveItemHeart(i))
+                    kartRadius = sHeartEquipKartColRadius;
+
+                if (!it->IsHitKart(i, kartPos, kartRadius))
+                    continue;
+
+                if (!(it->_12c & 0x2000) && tstHaveItemHeart(i))
+                {
+                    if (executeColHitHeart(it.getObject(), i))
+                        it->initHeartDisappear();
+                    else
+                        it->setStateDisappear(true);
+                }
+                else
+                {
+                    setKartHittingList(it, i);
+                    if (it->checkKartColDisappear(i))
+                        it->setStateDisappear(true);
+                    it->callHitKartSound(i);
+                }
+            }
+        }
+    }
+
+    JSUList<GeographyObj> *geoLists[2] = {&GetGeoObjMgr()->mGeoObjList, &GetGeoObjMgr()->mGenObjList};
+    list = _3e8;
+    for (int i = 0; i < 16; i++, list++)
+    {
+        for (JSUListIterator<ItemObj> it(list->getFirst()); it.isAvailable(); ++it)
+        {
+            if (!(it->_12c & 2))
+                continue;
+
+            for (u8 j = 0; j < 2; j++)
+            {
+                for (JSUListIterator<GeographyObj> geoIt(geoLists[j]->getFirst()); geoIt.isAvailable(); ++geoIt)
+                {
+                    GeographyObj *geo = geoIt.getObject();
+                    if ((geo->mGeoObjFlag & 2) && !(geo->mObjFlag & 0x80) && geoIt->getAllBoundsNum() != 0)
+                    {
+                        JGeometry::TVec3f geoPos(geo->getBoundsGlPos(0));
+                        ObjColBase *bounds = it->mBounds;
+                        if (it->getKind() == 8 && (geoIt->mObjFlag & 0x10))
+                            bounds = it->mBounds2;
+
+                        if (it->IsHitObject(bounds, geoPos, geoIt->getBounds(0)))
+                        {
+                            it->mTransferFlags |= 8;
+                            it->doGeoObjectCol(geoIt.getObject());
+                            geoIt->mGeoObjFlag |= 4;
+                            geoIt->mColItemObj = it.getObject();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    list = _3e8;
+    for (int i = 0; i < 16; i++, list++)
+    {
+        for (JSUListIterator<ItemObj> it1(list->getFirst()); it1.isAvailable(); ++it1)
+        {
+            if (!(it1->_12c & 1))
+                continue;
+
+            JSUListIterator<ItemObj> it2(it1);
+            for (++it2; it2.isAvailable(); ++it2)
+                calcIsHitItem(it1, it2);
+
+            if (i != 15)
+            {
+                JSUList<ItemObj> *list2 = list + 1;
+                for (int k = i + 1; k < 16; k++, list2++)
+                {
+                    for (JSUListIterator<ItemObj> it3(list2->getFirst()); it3.isAvailable(); ++it3)
+                        calcIsHitItem(it1, it3);
+                }
+            }
+        }
+    }
+
+    list = _3e8;
+    for (int i = 0; i < 16; i++, list++)
+    {
+        for (JSUListIterator<ItemObj> it(list->getFirst()); it.isAvailable(); ++it)
+        {
+            if ((it->mTransferFlags & 1) || (it->mTransferFlags & 8))
+                it->mPos.add(it->mReflectWallVec);
+        }
+    }
+
+    list = _3e8;
+    for (int i = 0; i < 22; i++, list++)
+    {
+        JSUListIterator<ItemObj> it(list->getFirst());
+        while (it.isAvailable())
+        {
+            it->calc();
+            ItemObj *obj = it.getObject();
+            if (obj->getState() == 10)
+            {
+                if (mEquipItem[obj->getOwnerNum()][obj->getDriverNum()] == obj)
+                    mEquipItem[obj->getOwnerNum()][obj->getDriverNum()] = nullptr;
+                removeItem(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     if (_820)
     {
         calcCharShadowModel();
@@ -1091,9 +1324,76 @@ void ItemObjMgr::calcIsHitItem(JSUListIterator<ItemObj> &list1, JSUListIterator<
 void ItemObjMgr::setKartHittingList(JSUListIterator<ItemObj> &list, int kart_index)
 {
     mHitList[kart_index].mObjects[list->getKartReaction()] = list.getObject();
+    list->mHitObjNum |= (1 << kart_index);
+    if (list->getOwnerNum() != -1 && kart_index != list->getOwnerNum() && list->getKind() != 5 && list->getKind() != 6)
+    {
+        u8 owner = list->getOwnerNum();
+        u8 driver = list->getDriverNum();
+        DriverTPAnim *tpAnim = RCMGetKartLoader(owner)->getExModelDriver(driver)->mTPAnim;
+        if (DriverManager::ptr()->getDriverFlag(tpAnim->mDataID))
+        {
+            tpAnim->setDriverTPAnim(DriverTPAnim::TPA_SPEAK);
+            tpAnim->startDriverTPAnim(DriverTPAnim::TPA_SPEAK);
+        }
+        GETJ2DManager()->setUsisi(kart_index, RCMGetManager()->getKartInfo(list->getOwnerNum())->getDriverCharID(list->getDriverNum()));
+    }
 }
 
-void ItemObjMgr::checkItemByShuffle() {}
+void ItemObjMgr::checkItemByShuffle()
+{
+    for (int i = 0; i < RCMGetManager()->getKartNumber(); i++)
+    {
+        for (u8 j = 0; j < 2; j++)
+        {
+            if (mStockItem[i][j]._4)
+            {
+                mShuffMgr[i][j]->reset();
+            }
+            else if (mShuffMgr[i][j]->doShuffle())
+            {
+                const u8 driver_index = j;
+                int kind = mShuffMgr[i][j]->SlotItem(i, driver_index);
+                if (GetGeoObjMgr()->isMiniGame())
+                {
+                    ItemObjSuc *sucObj = (ItemObjSuc *)getKartEquipItem(i, driver_index);
+                    if (sucObj == nullptr)
+                    {
+                        stockItemToKart(kind, i, driver_index, false, 0);
+                    }
+                    else
+                    {
+                        sucObj->mUseHandAnm = 1;
+                        for (u8 k = 0; k < 1; k++)
+                        {
+                            ItemObj *obj = equipItem(kind);
+                            if (obj)
+                            {
+                                removeMiniGameList(obj);
+                                sucObj->_1a4.append(&obj->mSuccessionItemLink);
+                                obj->setMultiType(ItemObj::cMultiType_1);
+                                obj->mSuccessionParent = sucObj;
+                                obj->setOwnerNum(sucObj->getOwnerNum());
+                                obj->setDriverNum(sucObj->getDriverNum());
+                                obj->setStateEquip(true, false);
+                            }
+                        }
+                        sucObj->setInitBuildAppend();
+                    }
+                }
+                else
+                {
+                    if (kind == 0x11 && RCMGetKartChecker(i)->getRank() != 1 && ObjUtility::isPlayerDriver(i))
+                    {
+                        if (stGetRnd(0)->get_ufloat_1() > 0.4f && !GetGeoObjMgr()->isBalloonBattle())
+                            kind = 0x13;
+                    }
+                    stockItemToKart(kind, i, driver_index, false, 0);
+                }
+                ItemShuffleMgr::setAllDynamicRate();
+            }
+        }
+    }
+}
 
 void ItemObjMgr::abortItemShuffle(int kart_index)
 {
@@ -1171,11 +1471,11 @@ bool ItemObjMgr::tstHaveItemHeart(int kart_index)
     return (mHeartItem[kart_index] && mHeartItem[kart_index]->hasHeartsRemaining());
 }
 
-void ItemObjMgr::executeColHitHeart(ItemObj *obj, int kart_index)
+int ItemObjMgr::executeColHitHeart(ItemObj *obj, int kart_index)
 {
 #line 2439
     JUT_MINMAX_ASSERT(0, kart_index, 8);
-    mHeartItem[kart_index]->setHitItem(*obj);
+    return mHeartItem[kart_index]->setHitItem(*obj);
 }
 
 ItemHeart *ItemObjMgr::getHeartItem(int kart_index)

@@ -268,7 +268,7 @@ public:
     void setHeartItem(int, ItemHeart *);                                           // 0x80240cac
     void deleteHeartItem(int);                                                     // 0x80240d48
     bool tstHaveItemHeart(int);                                                    // 0x80240e28
-    void executeColHitHeart(ItemObj *, int);                                       // 0x80240edc
+    int executeColHitHeart(ItemObj *, int);                                        // 0x80240edc
     ItemHeart *getHeartItem(int);                                                  // 0x80240f80
     void setItemUseTrigger(int, u8);                                               // 0x80241018
     int tstItemUseTrigger(int, u8) const;                                          // 0x80241100

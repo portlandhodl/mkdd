@@ -23,6 +23,15 @@ public:
 class RivalBodyCtrl : public RivalCtrlBase, JKRDisposer
 {
 public:
+    struct EngineBParam
+    {
+        f32 mWaitRatio;        // 00
+        f32 mDecayRatio;       // 04
+        f32 mMiniTurboRate;    // 08
+        f32 mInnerRatio;       // 0c
+        f32 *mDriftSuccessRate; // 10
+    };
+
     RivalBodyCtrl(RivalKart *);                    // 0x802804f4
     void init();                                   // 0x802805e4
     static void reset();                           // 0x80280724
@@ -38,7 +47,7 @@ public:
     f32 getLengthFCenter();                       // 0x802811b4
     bool isNeighborhoodCenter(float);              // 0x8028135c
     void getDriftTargetDir(JGeometry::TVec3f *);   // 0x802813d0
-    void getTargetCurveLR(float *, short);         // 0x80281558
+    bool getTargetCurveLR(float *, short);         // 0x80281558
     void chkDriftPoint();                          // 0x802818a8
     bool chkArrivePoint(CLPoint *);                // 0x80281a54
     void initDrift(bool, CLPoint *);               // 0x80281b24    
@@ -55,6 +64,8 @@ public:
     int getMyBackwardComKartIndex(unsigned char); // 0x802834e0
     void setDriftInfo();                           // 0x802835f4
     void doRotPose(JGeometry::TVec3f, float);      // 0x80283858
+    void doRotTurnAndChangeState(RivalCtrlBase::RivalMoveState);
+    int getLRKartTargetDir();
 
     // Vtable
     virtual ~RivalBodyCtrl();                              // 0x8028056c, 14
@@ -66,27 +77,24 @@ public:
     virtual bool doNextPoint(bool);                        // 0x80280d5c, 2c
     virtual void resetPointData();                         // 0x80282dd4, 30
 
-    static s32 sKartRankArray[24];                       // 0x804138d4
-    static s32 sComKartRankArray[8];                     // 0x80413994
+    static int sKartRankArray[24];                       // 0x804138d4
+    static int sComKartRankArray[8];                     // 0x80413994
     static f32 sKartTotalDist[8];                        // 0x804139b4
-    static s32 sPlayerRank[8];                           // 0x804139d4
-    static s32 sTopPlayerIndex;                          // 0x8041503c
-    static s32 sLowestPlayerKartIndex;                   // 0x80415040
-    static s32 sLowestComKartIndex;                      // 0x80415044
+    static int sPlayerRank[8];                           // 0x804139d4
+    static int sTopPlayerIndex;                          // 0x8041503c
+    static int sLowestPlayerKartIndex;                   // 0x80415040
+    static int sLowestComKartIndex;                      // 0x80415044
     static f32 sCrsStdDistRatio;                         // 0x80415048
-    static void *sEngineBParamPtr;                       // 0x80416d20
+    static EngineBParam *sEngineBParamPtr;                    // 0x80416d20
     static u32 sCommonFlgs;                              // 0x80416d24
     static f32 sCheckTopDistRatio;                       // 0x80416d28
 
-    // void getNthCLPoint(CLPoint *, short);
     // void getVtLengthFCenter();
     // void calcDriftTargetDir();
     // void getPointDir(const CLPoint *, JGeometry::TVec3f *);
-    // void getLRKartTargetDir();
     // void getAngleKartZdirTargetDir();
     // void doDriftStageCount();
     // void setDriftStageWaitFrame();
-    // void doRotTurnAndChangeState(RivalCtrlBase::RivalMoveState);
     // void isRank1st();
     // void isLowerPlayer(const float &);
     // void isLowestRankOfCom();
@@ -96,6 +104,22 @@ public:
     // void findRivalDistanceFrontAngle(float, float);
     // void findRivalDistanceRearAngle(float, float);
     
+    CLPoint *getNthCLPoint(CLPoint *point, short n)
+    {
+        u8 i = 0;
+        if (n >= 0)
+        {
+            for (; i < n; i++)
+                point = point->getNextPoint(0);
+        }
+        else
+        {
+            for (; i < n; i++)
+                point = point->getPrevPoint(0);
+        }
+        return point;
+    }
+
     static bool isPlayerFirst() { return (sCommonFlgs & 2) != 0; }
 
 
@@ -124,9 +148,9 @@ public:
     u8 _a7;                                  // a7
     s32 _a8;                                 // a8
     u32 mFlags;                              // ac
-    s32 _b0;                                 // b0
-    s32 _b4;                                 // b4
-    s32 _b8;                                 // b8
+    u32 _b0;                                 // b0
+    u32 _b4;                                 // b4
+    u32 _b8;                                 // b8
     f32 _bc;                                 // bc
     f32 _c0;                                 // c0
     u8 _c4;                                  // c4

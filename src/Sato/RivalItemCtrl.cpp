@@ -487,78 +487,39 @@ void RivalItemCtrl::initItem_Kinoko()
     mUseWait = getRandom()->getRandomMax(180) + 60;
 }
 
-void RivalItemCtrl::doUseKinoko()
+u8 RivalItemCtrl::doUseKinoko()
 {
     RivalBodyCtrl *bodyCtrl = getBodyCtrl();
-    const CrsData::SCLPoint *pointData = bodyCtrl->mPointCtrl->getNext()->getPointData();
-    int swerve = (s8)pointData->swerve;
-    if (bodyCtrl->_84 == 2)
-        return;
-    if ((s8)pointData->isNoMushroomZone)
-        return;
-
+    CLPoint *point = bodyCtrl->mPointCtrl->getNext();
+    int swerve = point->getPointData()->swerve;
     bool use = false;
+    if (bodyCtrl->_84 == 2 || point->getPointData()->isNoMushroomZone)
+        return false;
+
     if (swerve == 0)
     {
         use = true;
     }
-    else if (__abs(swerve) < 2)
+    else if (__abs(swerve) < 2 && getBodyCtrl()->_84 != 2 && (bodyCtrl->getBody()->mCarStatus & 0x2002c000) == 0)
     {
-        if (getBodyCtrl()->_84 != 2)
-        {
-            if ((bodyCtrl->getBody()->mCarStatus & 0x2003c000) == 0)
-            {
-                f32 f;
-                bodyCtrl->getTargetCurveLR(&f, 2);
-                f = 180.0f - f;
-                if (f < 30.0f)
-                    use = true;
-            }
-        }
+        f32 f;
+        bodyCtrl->getTargetCurveLR(&f, 2);
+        f = 180.0f - f;
+        if (f < 30.0f)
+            use = true;
     }
 
     if (use)
         triggerButton();
+    return use;
 }
 
 void RivalItemCtrl::useItem_Kinoko_Normal()
 {
-    bool use = false;
     if (mUseCnt <= mUseWait)
         return;
 
-    RivalBodyCtrl *bodyCtrl = getBodyCtrl();
-    const CrsData::SCLPoint *pointData = bodyCtrl->mPointCtrl->getNext()->getPointData();
-    int swerve = (s8)pointData->swerve;
-    if (bodyCtrl->_84 == 2)
-        return;
-    if ((s8)pointData->isNoMushroomZone)
-        return;
-
-    if (swerve == 0)
-    {
-        use = true;
-    }
-    else
-    {
-        if (__abs(swerve) < 2)
-        {
-            if (getBodyCtrl()->_84 != 2)
-        {
-            if ((bodyCtrl->getBody()->mCarStatus & 0x2002c000) == 0)
-            {
-                f32 f;
-                bodyCtrl->getTargetCurveLR(&f, 2);
-                f = 180.0f - f;
-                if (f < 30.0f)
-                    use = true;
-            }
-        }
-        }
-    }
-
-    if (use)
-        triggerButton();
+    doUseKinoko();
 }
 
 void RivalItemCtrl::initItem_KinokoSuc()
@@ -598,48 +559,9 @@ void RivalItemCtrl::initItem_GoldenKinoko()
 void RivalItemCtrl::useItem_GoldenKinoko()
 {
     u8 use = 0;
-    if (mUseCnt <= mUseWait)
-        return;
+    if (mUseCnt > mUseWait)
+        use = doUseKinoko();
 
-    RivalBodyCtrl *bodyCtrl = getBodyCtrl();
-    const CrsData::SCLPoint *pointData = bodyCtrl->mPointCtrl->getNext()->getPointData();
-    int swerve = (s8)pointData->swerve;
-    u8 b = 0;
-
-    if (bodyCtrl->_84 == 2)
-    {
-        b = 0;
-    }
-    else if ((s8)pointData->isNoMushroomZone)
-    {
-        b = 0;
-    }
-    else if (swerve == 0)
-    {
-        b = 1;
-    }
-    else
-    {
-        if (__abs(swerve) < 2)
-        {
-            if (getBodyCtrl()->_84 != 2)
-            {
-                if ((bodyCtrl->getBody()->mCarStatus & 0x2002c000) == 0)
-                {
-                    f32 f;
-                    bodyCtrl->getTargetCurveLR(&f, 2);
-                    f = 180.0f - f;
-                    if (f < 30.0f)
-                        b = 1;
-                }
-            }
-        }
-    }
-
-    if (b)
-        triggerButton();
-
-    use = b;
     if (use)
         mUseWait = getRandom()->getRandomMax(40) + 30;
 }

@@ -11,6 +11,16 @@ struct stRandom;
 class RivalCtrlBase
 {
 public:
+    enum RivalMoveState
+    {
+        MOVE_NORMAL = 0,
+        MOVE_WAIT_DRIFT = 1,
+        MOVE_DRIFT = 2,
+        MOVE_REVERSE = 3,
+        MOVE_REVERSE_END = 4,
+        MOVE_RESCUE = 5,
+    };
+
     class RankParam
     {
     public:

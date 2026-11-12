@@ -44,7 +44,7 @@ public:
     void initItem_Banana();              // 0x8027f710
     void useItem_Banana_Normal();        // 0x8027f764
     void initItem_Kinoko();              // 0x8027f840
-    void doUseKinoko();
+    u8 doUseKinoko();
     void useItem_Kinoko_Normal();        // 0x8027f89c
     void initItem_KinokoSuc();           // 0x8027f9bc
     void useItem_KinokoSuc_Normal();     // 0x8027fa6c
