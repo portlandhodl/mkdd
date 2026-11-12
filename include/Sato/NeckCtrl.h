@@ -8,6 +8,7 @@
 #include "Sato/StateObserver.h"
 
 class StringNodeManager;
+class ObjColSphere;
 class DriverModel;
 
 struct NeckIKParam {
@@ -17,17 +18,23 @@ struct NeckIKParam {
     f32 mC;          // 0x0c
     f32 m10;         // 0x10
     f32 m14;         // 0x14
-    u8 _18[0xc];
+    f32 m18;         // 0x18
+    f32 m1c;         // 0x1c
+    f32 m20;         // 0x20
     f32 m24;         // 0x24
     f32 m28;         // 0x28
-    u8 _2c[4];
+    u8 m2c;          // 0x2c
+    u8 m2d;          // 0x2d
+    u8 _2e[2];
     f32 m30[5];      // 0x30
     f32 m44;         // 0x44
-    u8 _48[8];
+    f32 m48;         // 0x48
+    f32 m4c;         // 0x4c
     f32 m50;         // 0x50
     f32 m54;         // 0x54
     u8 m58;          // 0x58
-    u8 _59[7];
+    u8 _59[3];
+    f32 m5c;         // 0x5c
     f32 m60;         // 0x60
 };
 class LumbarCtrl;
@@ -112,12 +119,9 @@ public:
     void offsetMtxPos(u32);
     void lockStringKp(float (*)[4], const JGeometry::TVec3<f32>&);
     JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > mMtx48; // 0x48
-    u8 m78; // 0x78
-    u8 _79[3];
-    u8 _7c[4];
-    f32 m80; // 0x80
-    f32 m84; // 0x84
-    f32 m88; // 0x88
+    KHairLR mLR; // 0x78
+    ObjColSphere* mHeadCol; // 0x7c
+    JGeometry::TVec3f mHeadPos; // 0x80
 };
 
 class DonkeyTieCtrl : public HairCtrl {

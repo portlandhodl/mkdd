@@ -102,6 +102,12 @@ public:
         _3c = val;
     }
 
+    StringNode *getNodeObj(u32 num) {
+#line 98
+        JUT_MAX_ASSERT(num, mStrNodeList.getNumLinks());
+        return mStrNodeList.getNth(num)->getObject();
+    }
+
     StringNode *getStringNode(u32 num) {
 #line 112
         JUT_MAX_ASSERT(num, mStrNodeList.getNumLinks());
