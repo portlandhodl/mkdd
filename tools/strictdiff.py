@@ -409,6 +409,59 @@ class Comparer:
             return ("abs", disp)
         return ("self", i * 4 + disp)
 
+    def _track_pool(self, i, w, ro, rt, bases, issues, add):
+        """Follow pool-base registers and compare strings reached by offset.
+
+        Only strings are checked (printable, NUL-terminated in the target):
+        they are what pools are addressed by offset for (assert file names,
+        format strings), and a mis-tracked register can then at worst compare
+        two equal byte runs."""
+        op = w >> 26
+        rd, ra = (w >> 21) & 31, (w >> 16) & 31
+        if op == 14 and ro is not None and rt is not None and \
+                ro[0] == rt[0] == 4:  # addi rD, rA, sym@l
+            refo = resolve(self.o, ro[1], ro[2])
+            reft = resolve(self.t, rt[1], rt[2])
+            if refo.kind == reft.kind == "obj" and refo.addr is not None \
+                    and reft.addr is not None:
+                bases[rd] = (refo, reft)
+            else:
+                bases.pop(rd, None)
+            return
+        if op == 14 and ro is None and rt is None and ra in bases and ra != 0:
+            imm = _sext(w & 0xFFFF, 16)
+            if imm:
+                bo, bt = bases[ra]
+                tb = self.t.section_bytes(bt.shndx, bt.addr + imm, 256) or b""
+                end = tb.find(b"\0")
+                if end >= 2 and all(32 <= c < 127 or c in (9, 10)
+                                    for c in tb[:end]):
+                    ob = self.o.section_bytes(bo.shndx, bo.addr + imm,
+                                              end + 1) or b""
+                    if ob != tb[:end + 1]:
+                        msg = (f"string at pool+0x{imm:x}: "
+                               f"{tb[:end].decode('latin-1')!r} vs ours "
+                               f"{ob.split(b'\0')[0].decode('latin-1')!r}")
+                        add(issues, "literal", i, msg, dedupe=msg)
+            if rd != ra:
+                bases.pop(rd, None)
+            return
+        if op == 18 and w & 1:  # bl: volatile registers are clobbered
+            for r in range(0, 13):
+                bases.pop(r, None)
+            return
+        if op in (16, 18, 19):
+            return  # branches (bctrl/blrl clobber via the bl rule only)
+        if 36 <= op <= 45 or op == 47 or op in (52, 53, 54, 55):
+            return  # stores
+        if op in (48, 49, 50, 51, 59, 63):
+            if op in (49, 51):  # lfsu/lfdu update rA
+                bases.pop(ra, None)
+            return  # FPR destination
+        bases.pop(rd, None)
+        if op in (24, 25, 26, 27, 28, 29, 21, 20, 23, 31, 30):
+            bases.pop(ra, None)  # logical/rotate ops write rA
+
     def compare(self, symbol, loose_lines=None):
         """Return (issues, notes): lists of {kind, offset, message}."""
         fo = self.o.func(symbol)
@@ -437,12 +490,21 @@ class Comparer:
                            "message": f"size {nt * 4:#x} vs ours {no * 4:#x}"})
         orel = self.o.relocs.get(so, {})
         trel = self.t.relocs.get(st_, {})
+        # GPR -> (ours Ref, target Ref): registers holding the address of an
+        # anonymous data pool (``addi rD, rA, pool@l``). Later ``addi rX,
+        # rD, imm`` reach a string inside the pool by a plain immediate, so
+        # the relocation alone only proves the pool *base* matches.
+        bases = {}
         for i in range(min(no, nt)):
             wo = self.o.word(so, fo["value"] + i * 4)
             wt = self.t.word(st_, ft["value"] + i * 4)
             ro = orel.get(fo["value"] + i * 4)
             rt = trel.get(ft["value"] + i * 4)
             op = wt >> 26
+            if wo == wt:
+                self._track_pool(i, wt, ro, rt, bases, issues, add)
+            else:
+                bases.clear()
             if op in (16, 18) and op == wo >> 26 and \
                     ((ro is None or ro[0] in R_BRANCH)
                      and (rt is None or rt[0] in R_BRANCH)):

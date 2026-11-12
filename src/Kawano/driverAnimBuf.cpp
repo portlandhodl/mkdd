@@ -99,7 +99,7 @@ void DriverAnimBufMgr::LoadAnimation(int idx, int anmID, int dataID) {
         DriverAnimBuf *buf = &mAnimBufs[idx];
         if (!buf->readResAsync(folder, (char *)DriverLoader::getAnmFileName(anmID))) {
 #line 327
-            JUT_ASSERT_F(false, "%s", "ARAM tensou command error?(kawano)");
+            JUT_ASSERT_F(false, "%s", "ARAM tensou command error?(kawano).");
         } else {
             buf->setID(anmID);
         }
