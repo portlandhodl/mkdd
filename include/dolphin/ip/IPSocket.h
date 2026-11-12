@@ -32,7 +32,7 @@ s32 SOBind(s32 s, u8* addr);
 s32 SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, s32 len);
 s32 SORecvFrom(s32 s, void* buf, s32 len, u32 flags, u8* addr);
 s32 SOSendTo(s32 s, const void* buf, s32 len, s32 flags, u8* addr);
-s32 SOPoll(SOPollFd* fds, s32 nfds, s64 timeout);
+s32 SOPoll(SOPollFd* fds, u32 nfds, s64 timeout);
 char* SOInetNtoP(s32 af, const u8* addr, char* buf, u32 len);
 
 #endif

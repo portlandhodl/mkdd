@@ -124,7 +124,7 @@ s32 IPUpdateRecordRoute(IPHeader* ip, u8* addr)
     u8* opt;
     int optlen;
     int i;
-    u8 type;
+    u32 type;
     u8 ptr;
 
     if (ip == NULL || addr == NULL) {

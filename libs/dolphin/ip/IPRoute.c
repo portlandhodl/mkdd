@@ -205,6 +205,18 @@ static BOOL Hit(RouteEntry* route, const u8* addr)
     return TRUE;
 }
 
+static BOOL MatchNet(const u8* dst, const u8* mask, const u8* addr)
+{
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        if (dst[i] != (addr[i] & mask[i])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 BOOL IPIsBroadcastAddr(u8* interface, const u8* addr)
 {
     u32 mask;
@@ -283,8 +295,8 @@ void* IPGetRoute(u8* addr, u8* gateway)
 
     for (route = Up.head, next = !route ? NULL : route->next; route;
          route = next, next = !route ? NULL : route->next) {
-        if (Hit(route, addr)) {
-            if (gateway != NULL) {
+        if (MatchNet(route->dst, route->mask, addr)) {
+            if (gateway) {
                 if (route->flags & 1) {
                     memmove(gateway, route->gateway, 4);
                 } else {
@@ -316,8 +328,8 @@ static BOOL AddRoute(u8* dst, u8* mask, u8* gateway, u32 flags)
         flags |= 1;
     }
 
-    for (p = Up.head, next = !p ? NULL : p->next; p;
-         p = next, next = !p ? NULL : p->next) {
+    for (p = Up.head, next = p == NULL ? NULL : p->next; p;
+         p = next, next = p == NULL ? NULL : p->next) {
         for (i = 0; i < 4; i++) {
             if ((p->dst[i] & p->mask[i]) != (dst[i] & mask[i])) {
                 break;
@@ -426,10 +438,8 @@ BOOL IPRedirect(u8* addr, u8* gateway, u8* src)
     if (interface == NULL) {
         return FALSE;
     }
-    if ((*(u32*)gateway & *(u32*)(interface + 0x48)) != (*(u32*)(interface + 0x44) & *(u32*)(interface + 0x48))) {
-        return FALSE;
-    }
-    if (IPIsBroadcastAddr(interface, gateway)) {
+    if ((*(u32*)gateway & *(u32*)(interface + 0x48)) != (*(u32*)(interface + 0x44) & *(u32*)(interface + 0x48)) ||
+        IPIsBroadcastAddr(interface, gateway)) {
         return FALSE;
     }
     if (*(u32*)gw != *(u32*)src) {

@@ -26,6 +26,11 @@ typedef struct PPPHeader {
 
 static const u8 OptPAP[4] = { 3, 4, 0xC0, 0x23 };
 
+static inline u8* NextOpt(u8* opt)
+{
+    return opt + opt[1];
+}
+
 static s32 ReceiveConfigureRequest(PPPPPP* ppp, PPPHeader* data)
 {
     u8* opts;
@@ -214,7 +219,7 @@ static s32 ReceiveConfigureReject(PPPPPP* ppp, PPPHeader* data)
         u8 type = *p;
         u8* oend = ppp->opt + ppp->optLen;
 
-        for (; type != *q; q += q[1]) {
+        for (; type != *q; q = NextOpt(q)) {
             if (oend <= q) {
                 return 0;
             }
