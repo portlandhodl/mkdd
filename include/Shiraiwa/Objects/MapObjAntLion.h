@@ -44,8 +44,8 @@ public:
     static int sJointNo;                             // 0x80417120
     //  Inline
     virtual ~TMapObjAntLion(); // 0x802ce010
-    void InitExec();           // 0x802ce304
     void MoveExec();           // 0x802ce370
+    void InitExec();           // 0x802ce304
     u32 _158;                                // 0x158
     GameAudio::CircleSoundMgr *mCircleSoundMgr; // 0x15c
 };

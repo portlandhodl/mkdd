@@ -35,7 +35,7 @@ static u8 HW2GXFiltConv[8] = { 0, 2, 4, 0, 1, 3, 5, 0 };
 		case GX_CTF_R8: \
 		case GX_CTF_G8: \
 		case GX_CTF_B8: \
-		case GX_CTF_RG8: \
+		case GX_CTF_A8: \
 		case GX_CTF_Z8M: \
 		case GX_CTF_Z8L: \
 			*(widthTiles) = 3; \
@@ -49,6 +49,7 @@ static u8 HW2GXFiltConv[8] = { 0, 2, 4, 0, 1, 3, 5, 0 };
 		case GX_TF_Z16: \
 		case GX_TF_Z24X8: \
 		case GX_CTF_RA8: \
+		case GX_CTF_RG8: \
 		case GX_CTF_GB8: \
 		case GX_CTF_Z16L: \
 			*(widthTiles) = 2; \

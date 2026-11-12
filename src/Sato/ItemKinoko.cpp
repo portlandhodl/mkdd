@@ -175,5 +175,5 @@ void ItemKinokoSuc::reset()
     mKartReaction = 0xf;
     _1fc = 3;
     mSucKind = 5;
-    _2f8 = 0.15f;
+    mJuggleGravityUp = 0.15f;
 }

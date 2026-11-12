@@ -4,7 +4,7 @@
 
 void LANBackground::setup(JKRArchive* archive)
 {
-    setPriority("Back1.blo", 0x20000, archive);
+    mScreen.setPriority("Back1.blo", 0x20000, archive);
     J2DAnmColor* bpk;
     J2DAnmTransform* bck = (J2DAnmTransform*)JKRFileLoader::getGlbResource("Back1.bck", archive);
     J2DAnmTextureSRTKey* btk = (J2DAnmTextureSRTKey*)JKRFileLoader::getGlbResource("Back1.btk", archive);
@@ -14,9 +14,9 @@ void LANBackground::setup(JKRArchive* archive)
     mTexSRTKey = (J2DAnmTextureSRTKey*)J2DAnmLoaderDataBase::load(btk);
     mColor = (J2DAnmColor*)J2DAnmLoaderDataBase::load(bpk);
 
-    setAnimation(mTransform);
-    setAnimation(mTexSRTKey);
-    setAnimation(mColor);
+    mScreen.setAnimation(mTransform);
+    mScreen.setAnimation(mTexSRTKey);
+    mScreen.setAnimation(mColor);
 }
 
 void LANBackground::calc()
@@ -29,7 +29,7 @@ void LANBackground::calc()
     if (++mColorFrame >= 360)
         mColorFrame = 0;
 
-    animation();
+    mScreen.animation();
 }
 
 void LANBackground::entry()

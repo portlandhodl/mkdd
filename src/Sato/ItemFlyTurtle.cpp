@@ -671,7 +671,7 @@ void ItemFlyTurtle::initDisappear() {
         norm.set(0.0f, 1.0f, 0.0f);
     }
 
-    JGeometry::TMtx34f r_m;
+    JGeometry::TPos3f r_m;
     ObjUtility::setRMtx(r_m, norm, frDir);
     r_m[0][3] = mColPos.x;
     r_m[1][3] = mColPos.y;

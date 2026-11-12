@@ -9,11 +9,10 @@
 struct J3DVertexData {
     J3DVertexData();
 
-    // Unused/inlined:
-    bool isDeformablePositionFormat();
-    bool isDeformableNormalFormat();
-    bool isCpuSkinningPositionFormat();
-    bool isCpuSkinningNormalFormat();
+    bool isDeformablePositionFormat() const;
+    bool isDeformableNormalFormat() const;
+    bool isCpuSkinningPositionFormat() const;
+    bool isCpuSkinningNormalFormat() const;
 
     void* getVtxPosArray() const { return mVtxPos; }
     void* getVtxNrmArray() const { return mVtxNorm; }

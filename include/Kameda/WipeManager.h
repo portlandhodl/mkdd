@@ -44,6 +44,7 @@ public:
 
 class WipeManager
 {
+    friend class PreRace2D;
 public:
     WipeManager(JKRHeap *);                                             // 0x80138720
     void reset();                                                       // 0x80138b38
@@ -72,6 +73,7 @@ public:
     void stopWipe(int idx) { mMoveFlag[idx] = false; }
     int getScreenCount() const { return mScrnCount; }
     TWipeCurtain *getWipeCurtain() { return mWipeCurtain; }
+    Mario *getMario() { return mMario; }
 
     static WipeManager *getManager() { return mThis; }
 

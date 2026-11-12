@@ -15,9 +15,11 @@ public:
     virtual void reset();
     virtual const char *getBmdFileName();
     virtual void calc();
+
+    static ObjBmdEntry sObjList[4];
 };
 
-static ObjBmdEntry sObjList[] = {
+ObjBmdEntry TMapObjNoMove::sObjList[4] = {
     { 0x1199, "/Objects/DonkyWood.bmd" },
     { 0x1070, "/Objects/Wl_Dokan1.bmd" },
     { 0x13f3, "/Objects/Lights1.bmd" },

@@ -33,6 +33,7 @@ public:
     void doSafety(); // 0x801c7bb4
     void doRunning(bool); // 0x801c7c14
     s16 checkZoomWinConsoleNo(); // 0x801c8008
+    int getZoomWinConsoleNo() const;
     bool isAllGoalAnmEnd(); // 0x801c8108
     void doEnding(); // 0x801c81a8
     void setEndingPhaseZoomConsole(); // 0x801c8608
@@ -46,6 +47,8 @@ public:
     bool checkRaceEndForEscapeBattle(); // 0x801c8cf8
     int requestDemoCameraID() const; // 0x801c8d60
     bool isPlayingDemoWinnerAnm() const; // 0x801c8dac
+    bool isPlayingWinnerAnm() const { return mPlayingWinAnm; }
+    bool isMovingToStartPoint() const { return mMovingToStart; }
     u32 getDemoCameraTagName() const; // 0x801c8df8
     bool isFrameRenewal() const {
 #ifdef DEBUG
@@ -59,7 +62,7 @@ public:
 #endif
     }
     bool isRaceEnd() const { return mIsRaceEnd; };
-    bool isZoomWinConsole() const { return mZoomWinCnsNo >= 0; }
+    bool isZoomWinConsole() const;
     ERacePhase getRacePhase() const { return mRacePhase; };
 
     int getWaitDemoResult() const { return mWaitDemoResult; }

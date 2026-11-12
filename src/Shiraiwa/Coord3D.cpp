@@ -108,14 +108,14 @@ inline void JGeometry::TQuat4<f32>::slerp(const JGeometry::TQuat4<f32> &other, f
 
 TFreeMove::TFreeMove() {
     _18 = false;
-    _1c = 0.0f;
+    _1c = -1.0f;
 }
 
 void TFreeMove::init(JGeometry::TVec3f *pos, JGeometry::TVec3f *vel, f32 p3) {
     mpPos = pos;
     mpVel = vel;
     _24 = p3;
-    _1c = 0.0f;
+    _1c = -1.0f;
     reset();
 #line 84
     JUT_ASSERT(pos != 0 && vel != 0);
@@ -366,7 +366,7 @@ void TFreeRotate::angleUpdate() {
     }
 
     f32 sq = q.squared();
-    if (sq <= 2.0f * FLT_EPSILON) {
+    if (sq <= JGeometry::TUtilf::epsilon()) {
         q.set(0.0f, 0.0f, 0.0f, 1.0f);
     } else {
         q.scale(JGeometry::TUtilf::inv_sqrt(sq));

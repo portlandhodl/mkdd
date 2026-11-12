@@ -13,7 +13,7 @@ class J3DEfctSplashDown : public J3DEffectObj
 {
 public:
     J3DEfctSplashDown();
-    void loadAnmData();
+    static void loadAnmData();
     static const char *getBmdFileName();
     static const char *getBckFileName();
     static const char *getBtkFileName();
@@ -35,7 +35,6 @@ public:
     JGeometry::TPos3f *getRotMtx() { return (JGeometry::TPos3f *)((u8 *)this + 0x94); }
     int &getLife() { return *(int *)((u8 *)this + 0x90); }
 
-    int mKartNo;               // d8
     AnmController mAnmCtrl;    // dc
     u8 _f0;                    // f0
 };
@@ -44,7 +43,7 @@ class J3DEfctMudSplashDown : public J3DEfctSplashDown
 {
 public:
     J3DEfctMudSplashDown();
-    void loadAnmData();
+    static void loadAnmData();
     static const char *getBmdFileName();
     static const char *getBckFileName();
     static const char *getBtkFileName();

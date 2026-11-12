@@ -5,6 +5,7 @@
 #include "JSystem/J3DU/J3DUClipper.h"
 #include "JSystem/JGeometry/Vec.h"
 #include "JSystem/JSupport/JSUList.h"
+#include "JSystem/JUtility/JUTAssert.h"
 #include "Kaneshige/DarkAnmMgr.h"
 #include "Kaneshige/ExModel.h"
 #include "Sato/ObjCollision.h"
@@ -14,6 +15,7 @@ class ExStringNodeManager;
 class StringNodeManager;
 
 class StringObj {
+public:
     StringObj(u8, bool);
     virtual ~StringObj() { return; };
     void createModel(JKRSolidHeap *, u32);
@@ -98,6 +100,24 @@ public:
 
     void set_3c(u32 val) {
         _3c = val;
+    }
+
+    StringNode *getStringNode(u32 num) {
+#line 112
+        JUT_MAX_ASSERT(num, mStrNodeList.getNumLinks());
+        return mStrNodeList.getNth(num)->getObject();
+    }
+
+    StringNode *getStringNodeAt(u32 num) {
+#line 202
+        JUT_MAX_ASSERT(num, mStrNodeList.getNumLinks());
+        return mStrNodeList.getNth(num)->getObject();
+    }
+
+    StringNode *getNode(u32 num) {
+#line 206
+        JUT_MINMAX_ASSERT(0, num, mStrNodeList.getNumLinks());
+        return mStrNodeList.getNth(num)->getObject();
     }
 
     // VTBL: 0x0

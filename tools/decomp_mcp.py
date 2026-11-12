@@ -98,25 +98,27 @@ TOOLS = [
     },
     {
         "name": "decomp_diff",
-        "description": "Compile one translation unit in isolation and diff the named symbols against the target. Returns MATCH or a score plus hints.",
+        "description": "Compile one translation unit in isolation and diff the named symbols against the target. Returns MATCH or a score plus hints. Strict by default: branch targets, immediates, call/relocation targets, literal values and jump tables must match too (loose_match/strict_reason explain strict-only failures); set loose=true for the old text-only check.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "unit": {"type": "string", "description": "Unit name or src path"},
                 "symbols": {"type": "array", "items": {"type": "string"}},
                 "diff_text": {"type": "boolean"},
+                "loose": {"type": "boolean", "description": "Skip strict checks"},
             },
             "required": ["unit", "symbols"],
         },
     },
     {
         "name": "decomp_diff_unit",
-        "description": "Compile a translation unit and summarize all function diffs (worst first).",
+        "description": "Compile a translation unit and summarize all function diffs (worst first). Strict by default (see decomp_diff); strict_only_failures lists functions that only match loosely.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "unit": {"type": "string"},
                 "worst": {"type": "integer", "minimum": 1, "maximum": 100},
+                "loose": {"type": "boolean", "description": "Skip strict checks"},
             },
             "required": ["unit"],
         },
@@ -211,6 +213,7 @@ FLAG_ARGS = {
     "ours": "--ours",
     "diff_text": "--diff-text",
     "ascending": "--ascending",
+    "loose": "--loose",
 }
 
 

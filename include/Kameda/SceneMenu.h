@@ -4,6 +4,8 @@
 #include "Kameda/Scene.h"
 #include "kartEnums.h"
 #include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J2D/J2DPane.h"
+#include "JSystem/JUtility/TColor.h"
 #include "JSystem/JGeometry/Box.h"
 
 class J2DAnmBase;
@@ -60,6 +62,14 @@ public:
         int mCharB;   // 10
         int mKart;    // 14
         int mState;   // 18
+    };
+
+    struct ViewRect // fabricated
+    {
+        f32 x; // 00
+        f32 y; // 04
+        f32 w; // 08
+        f32 h; // 0C
     };
 
     struct SelectAnm // fabricated
@@ -140,7 +150,7 @@ private:
     static const u32 mCharGoVoice[20];           // 0x80371388
     static const int mCharIndex[20];             // 0x803713d8
     static const int mKartIndex[21];             // 0x803715d4
-    static const u8 mKartPerf[63];               // 0x80371628
+    static const s8 mKartPerf[21][3];               // 0x80371628
     static const ERaceLevel mLevelID[4];         // 0x80371668
     static const u64 mPlayerIconBckTag[33];      // 0x80371678
     static const u64 mHowManyDriversBckTag[13];  // 0x803717b0
@@ -171,7 +181,7 @@ private:
     static const char *mPowerMojiName[4];        // 0x803956a8
     static const char *mPowerPicName[4];         // 0x803956b8
     static const char *mBattleName[3];           // 0x803956c8
-    static const char *mCharCCName[8];           // 0x803956d4
+    static const char *mCharCCName[2][4];        // 0x803956d4
 
     struct MenuInfo // fabricated (only "mInfo.nextScene" is known)
     {
@@ -204,8 +214,15 @@ private:
     BrkData mModeBrk[30];                  // 0x10C8
     BrkData mModeBpk[6];                   // 0x1230
     BckData mBattleBck[15];                // 0x1278
-    BckData mBattleBrk[3];                 // 0x132C
-    u8 _1350[0x136C - 0x1350];             // 0x1350
+    BckData mBattleBrk;                    // 0x132C
+    JUtility::TColor mBarWhite[2];         // 0x1338
+    JUtility::TColor mBarBlack[2];         // 0x1340
+    JUtility::TColor mWordWhite[2];        // 0x1348
+    JUtility::TColor mBtlPWhite[2];        // 0x1350
+    void *mColorRes;                       // 0x1358
+    void *mMsgRes;                         // 0x135C
+    J2DTextBox *mTextBox;                  // 0x1360
+    J2DTextBox::TFontSize mFontSize;       // 0x1364
     BckData mCharPane[10][2];              // 0x136C (select_character.bck, per-char cell anm)
     BckData mCharCCBck[10];                // 0x145C
     BckData mCharCCBrk[10][4];             // 0x14D4
@@ -233,7 +250,7 @@ private:
     J2DScreen *mScreenSelectMode;          // 0x1F6C
     J2DScreen *mScreenSelectBattle;        // 0x1F70
     J2DScreen *mScreenCharLayout;          // 0x1F74
-    u8 _1f78[0x1F88 - 0x1F78];             // 0x1F78
+    JGeometry::TVec2f mCharBasePos[2];      // 0x1F78
     J2DScreen *mCharScreens[10];           // 0x1F88 (select_character_cc.blo copies)
     JGeometry::TVec2f mCharPos[10];        // 0x1FB0
     J2DScreen *mScreenChar1;               // 0x2000 (select_character1.blo)
@@ -243,22 +260,23 @@ private:
     J2DScreen *mScreenChar4;               // 0x2010
     CharacterSelect3D *mCharacterSelect3D; // 0x2014
     J2DOrthoGraph *mGrafs[10];             // 0x2018
-    JGeometry::TBox2f mCharRect[10];       // 0x2040
+    ViewRect mCharRect[10];                // 0x2040
     MenuInfo mInfo;                        // 0x20E0
     u8 _2108[3];                           // 0x2108
     u8 _210b;                              // 0x210B
     int _210c;                             // 0x210C
     int _2110;                             // 0x2110
     int _2114;                             // 0x2114
-    int _2118;                             // 0x2118
+    int mMsgId;                            // 0x2118
     int mPlayerPadNo[4];                   // 0x211C
     PlayerData mPlayerData[4];             // 0x212C
-    u8 _219c[0x21EC - 0x219C];             // 0x219C
+    int mCharState[20];                    // 0x219C
     SelectAnm mSelectAnm[10][2];           // 0x21EC
     u8 mCharacterFlag[20];                 // 0x228C
     u8 mCharSelFlag[20];                   // 0x22A0
     NameEntryHelper *mNameEntry;           // 0x22B4
-    u8 _22b8[0x22C0 - 0x22B8];             // 0x22B8
+    char mName[4];                         // 0x22B8
+    int mRouletteTimer;                    // 0x22BC
 }; // Size: 0x22c0
 
 #endif

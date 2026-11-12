@@ -13,6 +13,8 @@ public:
 
     void *getCupTexture(ERaceGpCup cup, int rank);  // 0x80198014
 
+    static Cup2D *ptr() { return mCup2D; }
+
 private:
     static Cup2D *mCup2D;  // 0x80416388
 

@@ -101,6 +101,8 @@ public:
         JUT_MINMAX_ASSERT(0, driverNo, 2);
         return mKartCharacters[driverNo].getPlayerKind();
     }
+    int getPlayerKind() const { return mKartCharacters[0].getPlayerKind(); }
+    KartGamePad *getPad() { return mKartCharacters[0].getPad(); }
 
     KartGamePad *getPad(int driverNo) {
 #line 126
@@ -120,7 +122,7 @@ public:
         return mKartCharacters[driverNo].getWeight();
     }
 
-    EKartID getKartID() const { return (mKartDB) ? mKartDB->id : cKartIDNone; }
+    EKartID getKartID() const { return (mKartDB) ? mKartDB->id : cKartIDNone; } const KartCharacter *getKartCharacter(int driverNo) const { return &mKartCharacters[driverNo]; }
     EKartWeight getKartWeight() const { return mKartDB ? mKartDB->weight : UNK_3; }
     int getWheelNumber() const { return mKartDB ? mKartDB->wheelCount : 0; }
     bool isComKart() const { return isComDriver(0); }
@@ -128,7 +130,7 @@ public:
     bool isRealPlayerKart() const { return getPlayerKind(0) == 1; }
     bool isGhostKart() const { return getPlayerKind(0) == 4; }
     bool isPlayerKart() const { return !isComKart(); }
-    bool isTagMode() const { return (mKartCharacters) != 0; }
+    bool isTagMode() const { return !mKartCharacters[1].isComPlayer(); }
     int getWeight() const { return (mKartDB) ? mKartDB->weight : 3; }
 
     static const SCharDB cBabyMarioCharDB;

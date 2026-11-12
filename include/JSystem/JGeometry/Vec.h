@@ -102,10 +102,38 @@ namespace JGeometry {
             y += other.y;
         }
 
+        void sub(const TVec2<T> &other)
+        {
+            x -= other.x;
+            y -= other.y;
+        }
+
         void scale(T scalar) {
             x *= scalar;
             y *= scalar;
         }
+
+        TVec2<T> &operator+=(const TVec2<T> &other)
+        {
+            add(other);
+            return *this;
+        }
+
+        TVec2<T> &operator-=(const TVec2<T> &other)
+        {
+            sub(other);
+            return *this;
+        }
+
+        TVec2<T> &operator*=(T scalar)
+        {
+            scale(scalar);
+            return *this;
+        }
+
+        TVec2<T> operator+(const TVec2<T> &other) const { return TVec2<T>(*this) += other; }
+        TVec2<T> operator-(const TVec2<T> &other) const { return TVec2<T>(*this) -= other; }
+        TVec2<T> operator*(T scalar) const { return TVec2<T>(*this) *= scalar; }
 
         void zero() { x = y = 0; }
 
@@ -439,7 +467,9 @@ namespace JGeometry {
     // These need to be specialized or explicitly instantiated here to emit them in the right order in RaceMgr, and
     // MWCC doesn't allow explicitly instantiating template constructors, so they're probably both specialized
     template <> template <> inline TVec3f::TVec3(f32 X, f32 Y, f32 Z) { set(X, Y, Z); }
+#ifndef JGEOM_NO_TVEC3_SET
     template <> template <> inline void TVec3f::set(f32 X, f32 Y, f32 Z) { x = X; y = Y; z = Z; }
+#endif
 }
 
 #endif

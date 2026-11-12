@@ -51,8 +51,8 @@ public:
     u32 GetItemButton(int);
     void DoLod();
     int GetPortPtr(int);
-    void GetCamFovy(int);
-    void GetCamAspect(int);
+    f32 GetCamFovy(int);
+    f32 GetCamAspect(int);
     // TODO: do these return references or pointers?
     CrsGround *GetBodyGround(int);
     CrsGround *GetRRTireGround(int);
@@ -61,9 +61,9 @@ public:
     void GetBodyVel(int, JGeometry::TVec3f *);
     bool GetLeftFTirePos(int, Vec *);
     bool GetRightFTirePos(int, Vec *);
-    void GetLeftTirePos(int, Vec *);
-    void GetRightTirePos(int, Vec *);
-    int GetTirePos(int, int, Vec *);
+    bool GetLeftTirePos(int, Vec *);
+    bool GetRightTirePos(int, Vec *);
+    bool GetTirePos(int, int, Vec *);
     f32 GeTireG(int);
     f32 GetCarSpeed(int);
     f32 GetCarRpm(int);
@@ -94,14 +94,14 @@ public:
     bool CheckTandemItmRollingGet(int);
     void SetObjectPos(int, JGeometry::TVec3f);
     bool CheckThunderBolt(int);
-    double GetTireRadius(int);
+    f32 GetTireRadius(int);
     bool IsBurn(int);
     bool IsWallReact(int);
     bool HaveBalloon(int);
     int GetDriftCnt(int);
     bool IsMiniGame();
     bool IsMiniGameEnd();
-    u8 CheckWinner();
+    int CheckWinner();
     void GetKartEffctVel(int, JGeometry::TVec3f *);
     bool CheckChange(int);
     bool CheckMatchless(int);
@@ -146,6 +146,7 @@ public:
     void HaveRabbit();
 
     void AnimeInit(int idx) { getKartAnime(idx)->Init(); }
+    void DoAnime(int idx) { getKartAnime(idx)->DoAnime(idx); }
     void ApeendixInit(int idx)
     {
         for (int i = 0; i < 2; i++)

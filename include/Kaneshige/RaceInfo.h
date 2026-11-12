@@ -78,6 +78,12 @@ public:
         mPointTable[kartNo] = point;
     }
 
+    int getPointTable(int kartNo) const {
+#line 107
+        JUT_MINMAX_ASSERT(0, kartNo, 8);
+        return mPointTable[kartNo];
+    }
+
     void setRivalKartNo(int rivalNo, int kartNo) {
 #line 114
         JUT_MINMAX_ASSERT(0, rivalNo, 2);

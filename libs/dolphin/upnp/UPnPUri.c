@@ -16,10 +16,10 @@ int UPnPReplaceEscaped(char* str)
             if (sscanf(str + 1, "%2x", &val) == 1) {
                 str += 3;
                 *dst++ = (char)val;
-                continue;
             }
+        } else {
+            *dst++ = *str++;
         }
-        *dst++ = *str++;
     }
     *dst = 0;
     return dst - start;
@@ -164,7 +164,7 @@ L_d_dotdot:
     cmplwi r3,0
     bne L_d_dotdotok
     li r3,-1
-    b L_d_end
+    b L_d_ret
 L_d_dotdotok:
     li r6,1
     b L_d_cond
@@ -198,6 +198,7 @@ L_d_end:
     li r0,0
     stb r0,0(r3)
     subf r3,r31,r3
+L_d_ret:
     lwz r0,28(r1)
     lwz r31,20(r1)
     lwz r30,16(r1)

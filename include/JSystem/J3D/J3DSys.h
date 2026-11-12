@@ -37,10 +37,27 @@ struct J3DSys
     void setViewMtx(const Mtx mtx) { PSMTXCopy(mtx, mViewMtx); }
     Mtx &getViewMtx() { return mViewMtx; }
     J3DDrawBuffer *getDrawBuffer(int idx) { return mDrawBuffer[idx]; }
+    J3DTexture *getTexture() { return _58; }
 
     J3DModel *getModel() { return _38; }
 
     static void setCurrentMtx(const Mtx m) { PSMTXCopy(m, mCurrentMtx); }
+
+    void setVtxPos(void *p) { _10C = (u32)p; }
+    void setVtxNrm(void *p) { _110 = (u32)p; }
+    void setVtxCol(void *p) { _114 = (u32)p; }
+    void *getVtxPos() { return (void *)_10C; }
+    void *getVtxNrm() { return (void *)_110; }
+    void *getVtxCol() { return (void *)_114; }
+
+    void setModel(J3DModel *pModel) { _38 = pModel; }
+    void setShapePacket(J3DShapePacket *pPacket) { mShapePacket = pPacket; }
+    J3DShapePacket *getShapePacket() { return mShapePacket; }
+    void setModelDrawMtx(Mtx *pMtx) { _104 = pMtx; GXSetArray(GX_POS_MTX_ARRAY, _104, sizeof(*_104)); }
+    void setModelNrmMtx(Mtx33 *pMtx) { _108 = (Mtx *)pMtx; GXSetArray(GX_NRM_MTX_ARRAY, _108, sizeof(Mtx33)); }
+
+    bool checkFlag(u32 flag) const { return _34 & flag; }
+    void setNBTScale(const Vec *scale) { _118 = (Vec *)scale; }
 
     Mtx mViewMtx;                  // _000
     J3DMtxCalc *mMtxCalc;          // _030
@@ -54,8 +71,9 @@ struct J3DSys
     u32 _54;                       // _054
     J3DTexture *_58;               // _058
     u8 _5C[4];                     // _05C
-    u32 _60;                       // _060
-    u8 _64[0xA0];                  // _064
+    u32 mTexCacheRegionNum;        // _060
+    GXTexRegion mTexCacheRegion[8]; // _064
+    u8 _E4[0x20];                  // _0E4
     Mtx *_104;                     // _104
     Mtx *_108;                     // _108
     /*

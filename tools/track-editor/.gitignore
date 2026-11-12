@@ -1,0 +1,8 @@
+/target/
+/www/pkg/
+/private-fixtures/
+*.bol
+*.bco
+*.bmd
+*.bti
+*.szs

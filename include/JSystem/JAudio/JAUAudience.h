@@ -501,11 +501,18 @@ public:
         }
     }
 
+    static void newMemPool(int count);
+
     static const int MAX_PLAYERS = N;
 
     int numPlayers_;
     State state[N];
 };
+
+template <int N, class Audible, class State, class Audience>
+void JAUAudience_<N, Audible, State, Audience>::newMemPool(int count) {
+    Audible::newMemPool(count);
+}
 
 template <int N>
 class JAUAudible : public JAUGenericAudible_<N, JAUAudibleChannel, JAUAudibleAbsPos>, public JASPoolAllocObject< JAUAudible<N> > {

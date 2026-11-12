@@ -71,6 +71,7 @@ public:
     }; // Size: 0x18
 
     class SelectableItem : public Item {
+        friend class LANPlayInfo;
     public:
         SelectableItem(u32, J2DScreen *, void *, void *, void *, int, int, u32); // 0x80212f00
         bool changeValueUp(); // 0x802132d8
@@ -152,6 +153,7 @@ public:
     }; // Size: 0x64
 
     class SelectableItemSw : public SelectableItem1 {
+        friend class LANPlayInfo;
     public:
         enum ValueMode {
             cValueMode_0,
@@ -184,6 +186,7 @@ public:
     void setDisplayMax(); // 0x80216358    
     
 private: 
+    friend class LANPlayInfo;
     u32 mState;
     bool _4;
     bool _5;

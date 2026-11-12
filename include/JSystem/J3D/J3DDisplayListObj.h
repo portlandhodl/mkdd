@@ -17,15 +17,17 @@ struct J3DDisplayListObj {
     J3DErrType newDisplayList(u32);
     J3DErrType newSingleDisplayList(u32);
     J3DErrType single_To_Double();
+    void setDisplayList(void*, u32);
     void setSingleDisplayList(void*, u32);
     void callDL() const;
+    void fifoWrite() const;
+    void swapBuffer();
     void beginDL();
     u32 endDL();
     void beginPatch();
     u32 endPatch();
 
     // unused/inlined:
-    void swapBuffer();
 
     u8* getDisplayList(int idx) const { return mDisplayList[idx]; }
     u32 getDisplayListSize() const { return mSize; }

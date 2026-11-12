@@ -3,7 +3,6 @@
 #include "macros.h"
 
 extern "C" void* __vt__11J3DTexNoAnm[];
-extern "C" void __as__13J3DTexMtxInfoFRC13J3DTexMtxInfo(J3DTexMtxInfo*, const J3DTexMtxInfo&);
 
 void J3DMaterialTable::clear()
 {
@@ -234,31 +233,26 @@ J3DErrType J3DMaterialTable::entryTexNoAnimator(J3DAnmTexPattern* anm)
 
 inline int J3DMaterialTable::createTexMtxForAnimator(J3DAnmTextureSRTKey* anm)
 {
-	J3DTexMtx* mtx;
 	u16 matID;
-	J3DMaterial* material;
 	J3DMaterialAnm* materialAnm;
 	u8 texMtxID;
+	J3DTexMtx* mtx;
 	int result = 0;
 	u16 count  = anm->getUpdateMaterialNum();
-	u16 i;
 	if (isLocked()) {
 		return 2;
 	}
 
-	for (i = 0; i < count; i++) {
+	for (u16 i = 0; i < count; i++) {
 		matID = anm->getUpdateMaterialID(i);
 		if (matID != 0xFFFF) {
-			material                    = getMaterialNodePointer(matID);
+			J3DMaterial* material       = getMaterialNodePointer(matID);
 			texMtxID                    = anm->mUpdateTexMtxID[i];
 			materialAnm                 = material->getMaterialAnm();
 			if (materialAnm == NULL) {
 				result = 1;
 			} else if (texMtxID != 0xFF && material->getTexMtx(texMtxID) == NULL) {
-				mtx = (J3DTexMtx*)::operator new(0x94);
-				if (mtx != NULL) {
-					__as__13J3DTexMtxInfoFRC13J3DTexMtxInfo((J3DTexMtxInfo*)mtx, j3dDefaultTexMtxInfo);
-				}
+				mtx = new J3DTexMtx();
 				result = 4;
 				material->mTexGenBlock->setTexMtx(texMtxID, mtx);
 			}
@@ -303,10 +297,7 @@ int J3DMaterialTable::entryTexMtxAnimator(J3DAnmTextureSRTKey* anm)
 					u16 index;
 					u16 flag;
 					J3DAnmTextureSRTKey* anm;
-				} texMtxAnm;
-				texMtxAnm.index = no;
-				texMtxAnm.flag  = 1;
-				texMtxAnm.anm   = anm;
+				} texMtxAnm = { no, 1, anm };
 				materialAnm->setTexMtxAnm(texMtxID, (J3DTexMtxAnm*)&texMtxAnm);
 			}
 		}

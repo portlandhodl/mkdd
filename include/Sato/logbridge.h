@@ -188,6 +188,30 @@ public:
     void setAttr(u32 attr) {
         mAttr = attr;
     }
+    void setMaterial(u32 material) {
+        mMaterial = material;
+    }
+    void zeroVelocity() {
+        mVelocity.zero();
+    }
+    void setWallNormal(JGeometry::TVec3f normal) {
+        mWallNormal = normal;
+    }
+    void setNormal(JGeometry::TVec3f normal) {
+        mNormal = normal;
+    }
+    void setVelocity(JGeometry::TVec3f vel) {
+        mVelocity = vel;
+    }
+    void setAttrIndex(u32 idx) {
+        mAttrIndex = idx;
+    }
+    void setHeight(f32 height) {
+        mHeight = height;
+    }
+    void setColDepth(f32 depth) {
+        mColDepth = depth;
+    }
 
 protected:
     stPlaneParam mSidePlanes[4];   // _24
@@ -267,18 +291,21 @@ public:
     JGeometry::TVec3f mVel;   // 0x00
     JGeometry::TVec3f mPos;   // 0x0C
     JGeometry::TVec3f _18;    // 0x18
-    JSUPtrLink mLink;         // 0x24
+    JSULink<BridgeNode> mLink; // 0x24
 };                            // 0x34
 
-class BridgeNodeManager : public JSUPtrList
+class BridgeNodeManager : public JSUList<BridgeNode>
 {
 public:
-    BridgeNodeManager() : JSUPtrList(), mNodes(0), mNodePos(0) {}
-    ~BridgeNodeManager() {}
+    BridgeNodeManager() : JSUList<BridgeNode>(), mNodes(0), mNodePos(0) {}
+    ~BridgeNodeManager() {
+        delete[] mNodes;
+        delete[] mNodePos;
+    }
 
-    void setPosition(const JGeometry::TVec3f &, const JGeometry::TVec3f &, u32);
+    void setPosition(JGeometry::TVec3f &, JGeometry::TVec3f &, u32);
 
-    BridgeNode **mNodes;      // 0x0C
+    BridgeNode *mNodes;       // 0x0C
     JGeometry::TVec3f *mNodePos; // 0x10
     u32 _14;                  // 0x14
     f32 _18;                  // 0x18
@@ -290,13 +317,23 @@ class StringBridge : public ExGeographyObj
 public:
     StringBridge(const CrsData::SObject &);
 
-    virtual ~StringBridge();
+    virtual ~StringBridge() {
+        delete[] mBridgeNodeMgr[0].mNodes;
+        delete[] mBridgeNodeMgr[0].mNodePos;
+        delete[] mBridgeNodeMgr[1].mNodes;
+        delete[] mBridgeNodeMgr[1].mNodePos;
+        delete[] _28c;
+        delete[] _290;
+        delete[] _294;
+        delete[] _298;
+        delete[] _29c;
+    }
 
     void reset();
     void init();
     void setParam();
     void loadmodel_base(J3DModelData *);
-    virtual void createColModel(J3DModelData *);
+    virtual void createColModel(J3DModelData *modelData) { mExBounds = new ObjColBlock(modelData, mScale); }
     virtual void loadmodel(J3DModelData *modelData);
     virtual void createModel(JKRSolidHeap *, u32);
     virtual void makeSharedDL();
@@ -304,30 +341,31 @@ public:
     virtual void calc();
     virtual void update();
     virtual void simpleDraw(u32);
+    void calcStringPos(Mtx, u32);
     void simpleDrawString(u32);
     void updateString();
+    virtual const char *getLopeBmdFileName();
     virtual void calcMtx(Mtx, JGeometry::TVec3f, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void calcBridgeModelMtx(Mtx, JGeometry::TVec3f, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void calcStringMtx(Mtx, JGeometry::TVec3f &, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void calcVertiMtx(Mtx, JGeometry::TVec3f &, BridgeNode *, BridgeNode *);
     void calcparallel(BridgeNode *, BridgeNode *);
     u32 findNthCenter(const JGeometry::TVec3f &);
-    void getcollideNormalandDir(u32, JGeometry::TVec3f &, JGeometry::TVec3f &);
+    JGeometry::TVec3f getcollideNormalandDir(u32, JGeometry::TVec3f &, JGeometry::TVec3f &);
     virtual void AddVel(const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     void addVelNode();
     u32 getWaveNodeNum(u8);
-    virtual bool Search_Bound(const JGeometry::TVec3f &);
-    virtual bool Search_BoundRadius(const JGeometry::TVec3f &, f32);
+    virtual u8 Search_Bound(const JGeometry::TVec3f &);
+    virtual u8 Search_BoundRadius(const JGeometry::TVec3f &, f32);
     virtual void Search(const JGeometry::TVec3f &, const JGeometry::TVec3f &);
     virtual void Search_Wall(const JGeometry::TVec3f &, f32);
     f32 calcXZLength(JGeometry::TVec3f &, const JGeometry::TVec3f &, const JGeometry::TVec3f &);
-    void getSidePlaneParam(const JGeometry::TVec3f &, u32);
+    stPlaneParam getSidePlaneParam(const JGeometry::TVec3f &, u32);
     f32 getplaneHeight(stPlaneParam &, const JGeometry::TVec3f &);
     f32 getplaneHeight(stPlaneParam &, JGeometry::TVec3f, u32, const JGeometry::TVec3f &, f32 &);
     f32 getRightnodeVelRatio(const JGeometry::TVec3f &);
     virtual const char *getBmdFileName();
-    virtual const char *getLopeBmdFileName();
-    virtual f32 getMaxHeight() const;
+    virtual f32 getMaxHeight() const { return _264; }
 
     BridgeNodeManager mBridgeNodeMgr[2]; // 0x170
     f32 _1b0;                             // 0x1B0
@@ -341,8 +379,9 @@ public:
     f32 _264;                             // 0x264
     u32 _268;                             // 0x268
     JGeometry::TVec3f _26c;               // 0x26C
-    u16 _278;                             // 0x278
-    u16 _27a;                             // 0x27A
+    s16 _278;                             // 0x278
+    s16 _27a;                             // 0x27A
+    u16 _27c;                             // 0x27C
     u8 _27e;                              // 0x27E
     u32 _280;                             // 0x280
     u8 _284;                              // 0x284

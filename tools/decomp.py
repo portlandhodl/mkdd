@@ -14,6 +14,13 @@ Examples:
     python tools/decomp.py asm main/Sato/stParticle SomeSymbol
     python tools/decomp.py diff src/Sato/stParticle.cpp SomeSymbol
     python tools/decomp.py diff-unit src/Sato/stParticle.cpp
+    python tools/decomp.py diff --loose src/Sato/stParticle.cpp SomeSymbol
+
+diff/diff-unit are strict by default: after the normalized-text comparison
+they also check raw instruction words (branch targets, immediates), call and
+relocation targets, the values of float/double/string literals and the
+contents of switch jump tables (tools/strictdiff.py). --loose restores the
+old text-only comparison.
     python tools/decomp.py asm --orig main/Kameda/Race2D getGoalRankPos__...
     python tools/decomp.py regress
 """
@@ -31,7 +38,8 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from fndiff import disasm  # noqa: E402
+from fndiff import disasm, function_bounds, objdump_code  # noqa: E402
+import strictdiff  # noqa: E402
 from fntry import find_build  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -190,23 +198,11 @@ def suggest(symbol: str, candidates: list, n=5) -> list:
 
 
 def raw_disasm(obj: str, symbol: str) -> list:
-    r = subprocess.run(
-        [OBJDUMP, "-dr", "-j", ".text", obj], capture_output=True, text=True
-    )
-    lines = r.stdout.splitlines()
-    start = None
-    for i, line in enumerate(lines):
-        m = re.match(r"^[0-9a-f]+ <(.+)>:$", line)
-        if m and m.group(1) == symbol:
-            start = i
-            break
-    if start is None:
+    lines = objdump_code(obj, check=False)
+    bounds = function_bounds(lines, symbol)
+    if bounds is None:
         raise SystemExit(f"symbol not found: {symbol}")
-    end = len(lines)
-    for i in range(start + 1, len(lines)):
-        if re.match(r"^[0-9a-f]+ <.+>:$", lines[i]):
-            end = i
-            break
+    start, end = bounds
     return lines[start:end]
 
 
@@ -243,18 +239,43 @@ def classify(orig_lines: list, our_lines: list) -> list:
     return seen[:40]
 
 
-def diff_symbol(our_obj: str, orig_obj: str, symbol: str) -> dict:
+def strict_check(our_obj: str, orig_obj: str, symbol: str,
+                 target_lines: list) -> dict:
+    """Strict verification of a loose match (see tools/strictdiff.py)."""
+    try:
+        issues, notes = strictdiff.compare_symbol(our_obj, orig_obj, symbol,
+                                                  target_lines)
+    except Exception as e:  # never let the checker break a diff
+        return {"strict_error": f"{type(e).__name__}: {e}",
+                "strict_issues": [], "strict_notes": []}
+    return {"strict_issues": issues[:60], "strict_notes": notes[:30]}
+
+
+def diff_symbol(our_obj: str, orig_obj: str, symbol: str,
+                strict: bool = True) -> dict:
     try:
         a = disasm(our_obj, symbol)
         b = disasm(orig_obj, symbol)
-    except SystemExit:
+    except (SystemExit, subprocess.CalledProcessError):
         return {"symbol": symbol, "error": "not disassemblable",
-                "match": False, "score": 0.0, "our_instructions": 0,
-                "target_instructions": 0, "hints": []}
+                "match": False, "loose_match": False, "score": 0.0,
+                "our_instructions": 0, "target_instructions": 0, "hints": []}
     if a == b:
-        return {"symbol": symbol, "match": True, "score": 100.0,
-                "our_instructions": len(a), "target_instructions": len(b),
-                "hints": []}
+        r = {"symbol": symbol, "match": True, "loose_match": True,
+             "strict": strict, "score": 100.0,
+             "our_instructions": len(a), "target_instructions": len(b),
+             "hints": []}
+        if not strict:
+            return r
+        r.update(strict_check(our_obj, orig_obj, symbol, b))
+        issues = r["strict_issues"]
+        if issues:
+            bad = len({i["offset"] for i in issues})
+            r["match"] = False
+            r["score"] = round(min(99.99, 100.0 * (1 - bad / max(len(b), 1))), 3)
+            r["strict_reason"] = strictdiff.summarize(issues)
+            r["hints"] = [f"[{i['kind']}] {i['message']}" for i in issues[:40]]
+        return r
     ratio = difflib.SequenceMatcher(a=b, b=a).ratio() * 100.0
     udiff = list(
         difflib.unified_diff(b, a, "target", "ours", lineterm="", n=2)
@@ -262,6 +283,8 @@ def diff_symbol(our_obj: str, orig_obj: str, symbol: str) -> dict:
     return {
         "symbol": symbol,
         "match": False,
+        "loose_match": False,
+        "strict": strict,
         "score": round(ratio, 3),
         "our_instructions": len(a),
         "target_instructions": len(b),
@@ -564,7 +587,8 @@ def cmd_diff(d: Data, args):
                 results.append({"symbol": sym, "error": "not emitted by this TU",
                                 "suggestions": suggest(sym, obj_symbols(tmp))})
                 continue
-            results.append(diff_symbol(tmp, orig_obj, sym))
+            results.append(diff_symbol(tmp, orig_obj, sym,
+                                       strict=not args.loose))
     finally:
         try:
             os.unlink(tmp)
@@ -578,7 +602,19 @@ def cmd_diff(d: Data, args):
                 print(f"{r['symbol']}: {r['error']}  suggestions: {', '.join(r['suggestions'])}")
                 continue
             if r["match"]:
-                print(f"{r['symbol']}: MATCH ({r['target_instructions']} instrs)")
+                tag = "" if r.get("strict") else ", loose"
+                print(f"{r['symbol']}: MATCH ({r['target_instructions']} instrs{tag})")
+                if r.get("strict_error"):
+                    print(f"  ? strict check failed to run: {r['strict_error']}")
+                for n in r.get("strict_notes", [])[:6]:
+                    print(f"  ~ note: {n['message']}")
+                continue
+            if r.get("loose_match"):
+                print(f"{r['symbol']}: MATCH (loose) but {r['strict_reason']}")
+                for i in r["strict_issues"][3:15]:
+                    print(f"  ! [{i['kind']}] {i['message']}")
+                if len(r["strict_issues"]) > 15:
+                    print(f"  ! ... {len(r['strict_issues']) - 15} more")
                 continue
             print(f"{r['symbol']}: DIFF score={r['score']:.2f}% "
                   f"ours={r['our_instructions']} target={r['target_instructions']}")
@@ -586,7 +622,8 @@ def cmd_diff(d: Data, args):
                 print(f"  ! {h}")
             if args.diff_text:
                 print("\n".join(r["diff"]))
-    out({"source": src, "all_match": ok, "results": results}, args.json, text)
+    out({"source": src, "strict": not args.loose, "all_match": ok,
+         "results": results}, args.json, text)
     if not ok:
         sys.exit(1)
 
@@ -601,29 +638,51 @@ def cmd_diff_unit(d: Data, args):
         ours = set(obj_symbols(tmp))
         results = []
         for sym in sorted(target & ours):
-            results.append(diff_symbol(tmp, orig_obj, sym))
+            results.append(diff_symbol(tmp, orig_obj, sym,
+                                       strict=not args.loose))
     finally:
         try:
             os.unlink(tmp)
         except OSError:
             pass
     results.sort(key=lambda r: r["score"])
-    matched = sum(1 for r in results if r["match"])
     exact = sum(1 for r in results if r["match"])
+    loose = sum(1 for r in results if r.get("loose_match"))
     total = len(results)
     data = {
         "source": src,
+        "strict": not args.loose,
         "functions": total,
         "exact_matches": exact,
+        "loose_matches": loose,
+        "strict_only_failures": [
+            {"symbol": r["symbol"], "reason": r.get("strict_reason", "")}
+            for r in results if r.get("loose_match") and not r["match"]],
         "missing_from_ours": sorted(target - ours)[:50],
         "extra_in_ours": sorted(ours - target)[:50],
         "avg_score": round(sum(r["score"] for r in results) / total, 2) if total else 0.0,
         "worst": [r for r in results if not r["match"]][: args.worst],
     }
-    out(data, args.json, lambda x: (
-        print(f"{x['source']}: {x['exact_matches']}/{x['functions']} exact, "
-              f"avg {x['avg_score']:.2f}%, {len(x['missing_from_ours'])} missing"),
-        [print(f"  {r['score']:6.2f}% {r['symbol']}") for r in x["worst"]]))
+    def text(x):
+        mode = "strict" if x["strict"] else "loose"
+        extra = ""
+        if x["strict"] and x["loose_matches"] != x["exact_matches"]:
+            extra = (f" ({x['loose_matches'] - x['exact_matches']} more "
+                     f"match only loosely)")
+        print(f"{x['source']}: {x['exact_matches']}/{x['functions']} exact "
+              f"({mode}){extra}, avg {x['avg_score']:.2f}%, "
+              f"{len(x['missing_from_ours'])} missing")
+        for r in x["worst"]:
+            if r.get("loose_match"):
+                print(f"  {r['score']:6.2f}% {r['symbol']}  MATCH (loose) but "
+                      f"{r.get('strict_reason', '')}")
+            else:
+                print(f"  {r['score']:6.2f}% {r['symbol']}")
+        shown = {r["symbol"] for r in x["worst"]}
+        for f in x.get("strict_only_failures", []):
+            if f["symbol"] not in shown:
+                print(f"  MATCH (loose) but {f['reason']}  [{f['symbol']}]")
+    out(data, args.json, text)
 
 
 def cmd_check(d: Data, args):
@@ -803,11 +862,15 @@ def build_parser(version_holder):
     s.add_argument("unit")
     s.add_argument("symbols", nargs="+")
     s.add_argument("--diff-text", action="store_true")
+    s.add_argument("--loose", action="store_true",
+                   help="text-only comparison (skip strict checks)")
     s.set_defaults(fn=cmd_diff)
 
     s = sub.add_parser("diff-unit", help="compile one TU and summarize all diffs")
     s.add_argument("unit")
     s.add_argument("--worst", type=int, default=20)
+    s.add_argument("--loose", action="store_true",
+                   help="text-only comparison (skip strict checks)")
     s.set_defaults(fn=cmd_diff_unit)
 
     s = sub.add_parser("check", help="compile one TU only")

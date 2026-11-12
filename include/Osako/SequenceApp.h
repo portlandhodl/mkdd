@@ -33,6 +33,7 @@ public:
     }
 
     static SequenceApp *ptr() { return mspSequenceApp; }
+    Scene::SceneType getPrevScene() const { return mPrevScene; }
     void setNextScene(Scene::SceneType next) {
 #line 55
         JUT_ASSERT(next < Scene::SCENE_MAX);
@@ -42,7 +43,9 @@ public:
 
 private:
     static Scene::SceneType msScene;     // 0x80414868
+public:
     static Scene::SceneType msNextScene; // 0x8041486c
+private:
     static SequenceApp *mspSequenceApp;  // 0x80416a18
 
     Scene *mNextScene;

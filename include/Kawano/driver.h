@@ -5,36 +5,13 @@
 
 #include "Kaneshige/ExModel.h"
 #include "Kaneshige/KartInfo.h"
+#include "Kawano/driverData.h"
 #include "Sato/ItemObj.h"
+#include "JSystem/J3D/J3DJoint.h"
 
 class J3DAnmTransform; // TODO: JSystem
+class J3DJoint;
 class KartLoader;
-
-class DriverDataChild
-{
-    static int mInitCounter;
-    static f32 mDriverDataDefault[91][14];
-
-    f32 data[91][14];
-
-public:
-    DriverDataChild();
-    virtual ~DriverDataChild();
-
-}; // Size: 0x180
-
-class DriverData : public JKRDisposer
-{
-    u8 _18[0x7c - 0x18];
-
-public:
-    DriverData(); // Auto Inlined
-    virtual ~DriverData();
-    static DriverData *create();
-
-    static DriverDataChild msDriverData[14];
-    static DriverData *mspDriverData;
-}; // Size: 0x7c
 
 class NullAnimator
 {
@@ -105,6 +82,7 @@ class DriversAnimator
 {
 public:
     DriversAnimator() { reset(); }
+    ~DriversAnimator();
 
     void reset()
     {
@@ -432,7 +410,7 @@ public:
     };
 
     DriverModel(KartLoader *, int, u16, bool, int);
-    virtual ~DriverModel();
+    virtual __declspec(weak) ~DriverModel();
 
     // -- driver.cpp (this unit) --
     static int convCharIDToDataID(ECharID);
@@ -441,31 +419,110 @@ public:
     void initMtxCalc();
     void initAnmTrans_BossPakkun(J3DAnmTransform *);
     void InitMpaMtxCalc(StateEnum, J3DAnmTransform *, J3DAnmTransform *, J3DAnmTransform *, J3DAnmTransform *);
+    void InitMpaMtxCalcThrow(J3DAnmTransform *);
     void restart(int);
     void setDriveAnm(f32);
     void setTandemAnm(f32, f32);
+    void setTandemAnm(f32);
     void Start1ShotAnm_base(DriversAnimator *, StateEnum);
     void StartAnimation2();
+    void StartAnimationWC(StateEnum);
     void StartAnimation(StateEnum);
+    void setShakeAnm(StateEnum, f32);
+    void setShakeAnm2(StateEnum, f32, int, int);
+    void setShakeAnm3(StateEnum, f32);
+    void setCommon1ShotAnm_Single(f32, int);
+    void setCommon1ShotAnm(f32);
+    void setCommon1ShotAnm_Single2(int, f32, int);
+    void setCommon1ShotAnm2(int, f32);
+    void setCommonAnm_Base(int, f32, int);
+    void setCommonAnm2(int, f32);
+    void setCommonAnm(f32);
+    void setCommonAnm_Blend(f32, int);
+    void Change_next_mState(StateEnum);
     void updateFrame();
     void updateFrame_base(DriversAnimator *, StateEnum);
+    void updateSetFrame_base(StateEnum);
     void updateSetFrame();
     void updateLoad_Animation();
+    void updateLoadCommand(int);
+    void updateLoadCommand_Sound(int);
+    void updateLoad_Sound();
     void updateLoad();
     int updateCheckRenew_Animation();
+    int updateCheckRenew_Sound();
     int updateCheckRenew();
+    f64 BlendValue(f32);
+    void updateBlendCount_Func1(u8, u8);
+    void updateBlendCount_Func2(u8);
     void updateBlendCount();
-    void updateSetBlendWeight_GetBlendTime(StateEnum);
+    u8 updateSetBlendWeight_GetBlendTime(StateEnum);
+    f32 updateSetBlendWeight_Func1(u8, u8);
+    void updateSetBlendWeight_FuncABCD(f32, f32, f32, f32);
+    void updateSetBlendWeight_mStateThrow();
     void updateSetBlendWeight();
+    void update_mIsSpeakBCA();
     void BacktoDWait() { StartAnimation((StateEnum)0x95); }
+    void TurnBack() { StartAnimation((StateEnum)104); }
+    void StartNormalStart() { StartAnimation((StateEnum)34); }
+    void StartRocketStart() { StartAnimation((StateEnum)94); }
+    void StartRocketStartFailure() { StartAnimation((StateEnum)95); }
     void setItem(ItemObj *);
     void resetItem();
+    void setLODLevel(int);
     Mtx *getMtxP_HandR();
     Mtx *getMtxP_HandR2();
     Mtx *getMtxP(int);
     J3DAnmTransform *getAnmTransformPtr(int);
     int IsAnmResInMRAM(int);
     int IsAnmSoundResInMRAM(int);
+    bool IsARAMDMAFinished();
+
+    // -- driver_ik.cpp (this unit) --
+    void setDirMtx(JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > > *);
+    void calcMPos(JGeometry::TVec3f &, JGeometry::TVec3f &, JGeometry::TVec3f &, float, float, JGeometry::TVec3f *);
+    void calc1stJnt(J3DModel *, u16, u16, u16, u16, u16);
+    void calc2ndJnt(J3DModel *, u16, u16, u16);
+    void calc3rdJnt(J3DModel *, u16, u16, bool);
+    bool CheckNoIK();
+    static bool koshiCallBack(J3DJoint *, int);
+    static bool spinCallBack(J3DJoint *, int);
+    static bool footL1CallBack(J3DJoint *, int);
+    static bool footL2CallBack(J3DJoint *, int);
+    static bool footL3CallBack(J3DJoint *, int);
+    static bool footLPosCallBack(J3DJoint *, int);
+    static bool footR1CallBack(J3DJoint *, int);
+    static bool footR2CallBack(J3DJoint *, int);
+    static bool footR3CallBack(J3DJoint *, int);
+    static bool footRPosCallBack(J3DJoint *, int);
+    static bool armL1CallBack(J3DJoint *, int);
+    static bool armL2CallBack(J3DJoint *, int);
+    static bool armL3CallBack(J3DJoint *, int);
+    static bool armR1CallBack(J3DJoint *, int);
+    static bool armR2CallBack(J3DJoint *, int);
+    static bool armR3CallBack(J3DJoint *, int);
+    static bool handRCallBack(J3DJoint *, int);
+    static bool faceCallBack(J3DJoint *, int);
+    static bool mouthCallBack(J3DJoint *, int);
+    static bool skirtCallBack(J3DJoint *, int);
+    static bool skirtPosCallBack(J3DJoint *, int);
+    static bool dHair1CallBack(J3DJoint *, int);
+    static bool dHair2CallBack(J3DJoint *, int);
+    static bool pHair1CallBack(J3DJoint *, int);
+    static bool pHair2CallBack(J3DJoint *, int);
+    static bool tie1CallBack(J3DJoint *, int);
+
+    static int IsFootLIKOn(DriverModel *);
+    static int IsFootRIKOn(DriverModel *);
+    static int IsArmLIKOn(DriverModel *);
+    static int IsArmRIKOn(DriverModel *);
+    static int IsAllIKOff(DriverModel *);
+    static int IsAllIKOffWithoutFace(DriverModel *);
+    void SetOffset(J3DModel *, DriverModel *, u16);
+    void SetOffset2(DriverModel *, u16);
+
+    static DriverModel *sCurDriver;
+    static J3DJointCallBack mscaCallBackTbl[27];
 
     virtual void update(u16);                           // override
     virtual bool createModel(JKRSolidHeap *, u32, u32); // override
@@ -476,9 +533,12 @@ public:
     void goFront();
     void TurnFront();
     void StartThrow(int, int, int);
+    void StartThrow(int);
     void StartDriverThrow(int, int);
     void StartJump(int);
+    void StartJump();
     void StartSit();
+    void StartSit(int);
     void StartStand();
     void StartStart();
     void StartAttackL();
@@ -507,6 +567,8 @@ public:
     void StartGoalMotion();
     void StartGood();
     void StartBad();
+    void StartFire();
+    void StartFireEnd();
     void StartJuggle();
     void StartSpeak();
     void SetDriverFlags(StateEnum);
@@ -523,16 +585,31 @@ public:
     int IsSit();
     int IsStand();
     int IsBack();
+    int IsFront();
     int IsDemo();
+    int IsDemoBack();
+    int IsDemoFront();
     int IsDrive();
     int IsDanger();
     int IsDangerPlus();
+    int IsDangerEnd();
     int IsDash();
+    int IsDash1();
+    int IsDash2();
+    int IsTire();
+    int IsWait();
+    int IsWait(StateEnum);
+    int IsTurn();
+    int IsJuggle();
+    int IsBeforeStart();
     int IsDamage();
     int IsDamageL();
+    int IsDamageL12();
+    int IsDamageS12();
     int IsAttack();
     int IsThrow();
     int IsTandem();
+    int IsDrift();
     int IsDriftLeft();
     int IsDriftEnd();
     int IsDriftFinish();
@@ -549,19 +626,58 @@ public:
     int IsChange();
     int IsChangeBack();
     int IsChangeFront();
-    void StartAnimationWC(StateEnum);
+    int IsStart();
+    int IsNormalStart();
+    int IsTurnBack();
+    int IsTurnFront();
+    int IsDamageS();
+    int IsItemThrowOK();
+    int IsAppeal();
+    int IsDriftStart();
+    int IsDriftRight();
+    int IsRun();
+    int IsJump();
+    int IsFire();
+    int IsDriverDamage();
+    void SetFreeze();
+    void ResetFreeze();
+    void StartHappy();
+    void StartGood1st();
+    void StartAppeal();
+    void StartHokanDWait();
+    void StartAttack(int, int);
+    void StartAttack(int);
+    void StartWait();
+    void StartWaitBack();
+    void StartRun2();
+    void StartDRunAnim(DriversAnimator *);
+    void Check4StartDrift();
+    void StartDrift();
+    void StartDriftEnd();
+    void StartHokanDash();
+    void StartHokanDash2();
+    void SetHangRate(f32);
+    void StartDanger(int);
+    void StartDriverPiyo();
+    void StartSetTire(int);
+    void StartSetTireL();
+    void StartSetTireR();
+    int IsThrowBack();
+    int IsTire2();
+    int IsDamage2();
+    int IsDamageS2();
+    int IsDamageL2();
+    int IsAppeal(StateEnum);
+    int IsDemoFront(StateEnum);
+    int IsDemoBack(StateEnum);
     void InitDriverOffsetPosition();
     void SetDriverOffsetPosition();
-    void InitMpaMtxCalcThrow(J3DAnmTransform *);
-    void updateLoadCommand(int);
-    void updateLoadCommand_Sound(int);
-    void updateLoad_Sound();
-    void updateCheckRenew_Sound();
-    void Change_next_mState(StateEnum);
-    void update_mIsSpeakBCA();
+    void SetDriverOffsetPosition_Func1(JGeometry::TVec3<f32> *);
+    void SetDriverOffsetPosition_Change(DriverData *);
+    void SetDriverOffsetPosition_Demo(DriverData *);
 
-    static u8 msNext_mState_HokanDamages[2];
-    static const u32 msAnmBlendList[152][2]; // state -> 2 animation ids
+    static const s8 msNext_mState_HokanDamages[2];
+    static const s32 msAnmBlendList[152][2]; // state -> 2 animation ids
     static void *msAnmSabunList;
 
     GameAudio::CharacterSoundMgr *getCharSoundMgr() { return mCharSoundMgr; }
@@ -585,10 +701,10 @@ public:
     u8 m_ba;                                     // 0xBA
     u8 m_bb;                                     // 0xBB
     u8 mHokanDamageCnt;                          // 0xBC
-    u16 m_be;                                    // 0xBE
-    u16 m_c0;                                    // 0xC0
-    u16 m_c2;                                    // 0xC2
-    u16 m_c4;                                    // 0xC4
+    s16 m_be;                                    // 0xBE
+    s16 m_c0;                                    // 0xC0
+    s16 m_c2;                                    // 0xC2
+    s16 m_c4;                                    // 0xC4
     s32 m_c8;                                    // 0xC8
     s32 m_cc;                                    // 0xCC
     s32 m_d0;                                    // 0xD0
@@ -618,8 +734,8 @@ public:
     s32 mBeforeState;                            // 0x4FC
     s32 m_500;                                   // 0x500
     s32 m_504;                                   // 0x504
-    s32 mNext_mState_Hokan;                      // 0x508
-    s32 m_50c;                                   // 0x50C
+    s32 next_mState_Hokan;                       // 0x508
+    s32 next_before_mState_Hokan;                // 0x50C
     s32 m_510;                                   // 0x510
     s32 m_514;                                   // 0x514
     DriversAnimator mDriveAnim;                  // 0x518..0x588
@@ -627,7 +743,9 @@ public:
     DriversAnimator mAdditiveAnim;               // 0x5F8..0x668
     LoopAnimatorWind m_668;                      // 0x668..0x688
     LoopAnimatorWind m_688;                      // 0x688..0x6A8
-    u8 _6a8[0xc];                                // 0x6A8..0x6B4
+    s32 mOffsetMode;                             // 0x6A8
+    s32 mOffsetDir;                              // 0x6AC
+    f32 mOffsetBlend;                            // 0x6B0
     Vec mPos;                                    // 0x6B4..0x6C0
     GameAudio::CharacterSoundMgr *mCharSoundMgr; // 0x6C0
     JGeometry::TVec3f m_6c4[4];                  // 0x6C4..0x6F4
@@ -636,7 +754,7 @@ public:
     f32 m_754[4];                                // 0x754..0x764
     f32 mAnmWorkFrame[8];                        // 0x764..0x784
     s32 mAnmWorkID[8];                           // 0x784..0x7A4
-    s32 mAnmSabunNum;                            // 0x7A4
+    s32 mAnmID_debug_index;                            // 0x7A4
 }; // Size: 0x7A8
 
 #endif // DRIVER_H

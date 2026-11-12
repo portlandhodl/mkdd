@@ -35,6 +35,8 @@ public:
         _18 = false;
     }
 
+    void setMaxSpeed(f32 speed) { _24 = speed; }
+
 private:
     JGeometry::TVec3f mTagret;
     JGeometry::TVec3f *mpPos;
@@ -63,6 +65,13 @@ public:
     void setTargetNode(f32, f32);
     void setTargetNode(u16);
     void getNodeDir(u16, JGeometry::TVec3f *);
+
+    void setSpeed(f32 accel, f32 maxSpeed) {
+        _14 = accel;
+        _18 = maxSpeed;
+        f32 half = 0.5f * maxSpeed;
+        _20 = half * half;
+    }
 
 public:
     const CrsData::SObject *mpObj; // 0x04
@@ -114,28 +123,30 @@ public:
 };
 class TFreeFall {
 public:
+    TFreeFall();
     TFreeFall(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
-    virtual ~TFreeFall() {}
-    virtual void update();
+    virtual ~TFreeFall();
+    void init(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
+    virtual u8 update();
     virtual void reset();
-    virtual void addAccel(const JGeometry::TVec3f &);
-    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
-    virtual void getGravity(JGeometry::TVec3f *);
-    virtual void rotate();
-    virtual void reflect(const JGeometry::TVec3f &);
     virtual void roll();
+    virtual void reflect(const JGeometry::TVec3f &);
+    virtual void rotate();
+    virtual void getGravity(JGeometry::TVec3f *);
+    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
+    virtual void addAccel(const JGeometry::TVec3f &);
 
-    JGeometry::TVec3f *mPos;    // 04
-    JGeometry::TVec3f *mVel;    // 08
-    JGeometry::TPos3f *mMtx;    // 0C
-    void *_10;                  // 10
+    f32 _04;                    // 04
+    f32 _08;                    // 08
+    f32 _0C;                    // 0C
+    f32 _10;                    // 10
     f32 _14;                    // 14
     f32 _18;                    // 18
     u8 _1C;                     // 1C
     u8 _1D[3];                  // 1D
-    f32 _20;                    // 20
-    f32 _24;                    // 24
-    f32 _28;                    // 28
+    JGeometry::TVec3f *mPos;    // 20
+    JGeometry::TVec3f *mVel;    // 24
+    JGeometry::TPos3f *mMtx;    // 28
     stRandom *_2C;              // 2C
 };
 
@@ -147,16 +158,16 @@ public:
         _2C = NULL;
     }
     virtual ~TFreeFallShakeSky() {}
-    virtual void update();
     virtual void reset();
-    virtual void addAccel(const JGeometry::TVec3f &);
-    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
-    virtual void getGravity(JGeometry::TVec3f *);
-    virtual void rotate();
     virtual void reflect(const JGeometry::TVec3f &);
-    virtual void roll();
+    virtual void rotate();
+    virtual void getGravity(JGeometry::TVec3f *);
+    virtual void getReflect(const JGeometry::TVec3f &, JGeometry::TVec3f *);
 
-    u8 _30[12];
+    f32 _30;
+    f32 _34;
+    u8 _38;
+    u8 _39[3];
 }; // Size: 0x3C
 
 #endif // COORD3D_H

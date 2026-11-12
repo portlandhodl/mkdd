@@ -5,6 +5,7 @@
 #include "Inagaki/GameSoundMgr.h"
 #include "Kaneshige/RaceMgr.h"
 
+
 StateObserver::StateFuncSet<TMapObjVentilator> TMapObjVentilator::sTable[4] = {
     { 0, &TMapObjVentilator::initFunc_Slow, &TMapObjVentilator::doFunc_Slow },
     { 1, &TMapObjVentilator::initFunc_Slow2Fast, &TMapObjVentilator::doFunc_Slow2Fast },
@@ -20,7 +21,7 @@ TMapObjVentilator::TMapObjVentilator(const CrsData::SObject &obj) : TMapObjHioNo
 TMapObjVentilator::~TMapObjVentilator() {}
 
 const char *TMapObjVentilator::getBmdFileName() {
-    static const char *cBmdName = "/ObjFcts/Fan1.bmd";
+    static const char *cBmdName = "/Objects/Fan1.bmd";
     return cBmdName;
 }
 
@@ -30,6 +31,13 @@ void TMapObjVentilator::InitExec() {
 
 void TMapObjVentilator::MoveExec() {
     Observer_FindAndExec(TMapObjVentilator, 4);
+}
+
+static inline void setRotQuat(JGeometry::TQuat4f &q, f32 halfAngle)
+{
+    f32 s = sin(halfAngle);
+    f32 c = cos(halfAngle);
+    q.set<f32>(s, 0.0f, 0.0f, c);
 }
 
 void TMapObjVentilator::reset() {
@@ -43,19 +51,20 @@ void TMapObjVentilator::reset() {
     mRotMtx.setQuat(mCurQuat);
 
     mFastQuat.set(0.0f, 0.0f, 0.0f, 1.0f);
-    mFastQuat.set<f32>((f32)sin(0.05), 0.0f, 0.0f, (f32)cos(0.05));
+    setRotQuat(mFastQuat, 0.05f);
 
     mSlowQuat.set(0.0f, 0.0f, 0.0f, 1.0f);
-    mSlowQuat.set<f32>((f32)sin(0.015), 0.0f, 0.0f, (f32)cos(0.015));
-
-    mSpeed = 0.0f;
+    setRotQuat(mSlowQuat, 0.015f);
 }
 
-void TMapObjVentilator::calc() {
-    StateObserver::ExecuteState();
 
+void TMapObjVentilator::calc() {
+    ExecuteState();
     f32 vel = 0.3f;
     switch (getState()) {
+    case 0:
+        vel = 0.3f;
+        break;
     case 2:
         vel = 1.0f;
         break;
@@ -64,11 +73,8 @@ void TMapObjVentilator::calc() {
         break;
     case 1:
         vel = 0.7f * mSpeed;
-    case 0:
-    default:
         break;
     }
-
     mSoundMgr->setSeWithVelocityP(0x4007f, vel);
 }
 

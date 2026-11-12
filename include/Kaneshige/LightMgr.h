@@ -85,6 +85,7 @@ public:
     virtual void setGXObj();   // overide
     virtual void draw();       // overide
     virtual void getColor(JUTColor *out) const { out->set(mColor); } // overide
+    void setColor(const JUTColor &color) { mColor.set(color); }
     void load(GXLightID id);
 
     MtxPtr getViewMtx() const { return mViewMtx; }

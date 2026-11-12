@@ -14,6 +14,9 @@ public:
     virtual void reset();
     virtual void calc();
     virtual const char *getShadowBmdFileName() { return "/Objects/mareL_a_sh.bmd"; }
+
+    static J3DAnmTransform *sMareWBckAnmTrans;
+    static J3DMtxCalc *sMareWBckMtxCalc;
 };
 
 class TMapObjMareW_A : public TMapObjMareWBase

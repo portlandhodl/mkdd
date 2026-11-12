@@ -63,6 +63,8 @@ public:
     }
 
     void setDemoPoint(JugemPoint *point) { mDemoPoint = point; }
+    JugemPoint *getDemoPoint() { return mDemoPoint; }
+    void clrDemoPoint() { mDemoPoint = nullptr; }
 
     const RaceTime &getLapSplit(int lap)
     {
@@ -85,6 +87,15 @@ public:
         return mKartGamePads[driverNo];
     }
 
+    int getTargetKartNo() const { return mTargetKartNo; }
+
+    int getBombPointKart(int pointNo)
+    {
+#line 264
+        JUT_MINMAX_ASSERT(0, pointNo, 10);
+        return mBombPointTable[pointNo];
+    }
+
     void setGoal()
     {
         mIsInRace = false;
@@ -96,6 +107,7 @@ public:
 
     int getBalloonNumber() const { return mBalloonNum; };    
     int getBombPoint() const { return mBombPoint; };
+    int getPlayerKartColor() const { return mPlayerKartColor; }
     int getRabbitTimer() const { return mRabbitWinFrame; }
     int getGoalFrame() const { return mGoalFrame; };
     f32 getTotalUnitDist() const { return mRaceProgression; };
@@ -140,6 +152,7 @@ public:
     Course::Sector *getCheckSector() const { return mSector2; }
 
     static bool isInsideSector(f32 unitDist) { return (unitDist >= 0.0f && unitDist < 1.0f); }
+    static int getWinBombPoint();
     static int getWinBombPointForMenu(int p1)
     {
         if (p1 <= 2)

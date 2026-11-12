@@ -7,7 +7,7 @@ static GXFifoObj FifoObj;
 static GXData gxData;
 GXData* const __GXData = &gxData;
 
-char* __GXVersion = "<< Dolphin SDK - GX\trelease build: Nov 26 2003 05:19:07 (0x2301) >>";
+char* __GXVersion = "<< Dolphin SDK - GX\trelease build: Jul 23 2003 11:27:39 (0x2301) >>";
 
 void* __piReg  = nullptr;
 void* __cpReg  = nullptr;

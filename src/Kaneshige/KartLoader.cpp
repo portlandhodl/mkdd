@@ -63,7 +63,7 @@ void KartLoader::load() {
     mBodyModel.setLODBias(TexLODControl::getCharacterLODBias());
     RCMGetCourse()->setFogInfo(&mBodyModel);
     pModelData->newSharedDisplayList(0x40000);
-    pModelData->simpleCalcMaterial(j3dDefaultMtx);
+    pModelData->simpleCalcMaterial(*(Mtx*)&j3dDefaultMtx);
     pModelData->makeSharedDL();
 
     J3DModelData *pLTireModelData;
@@ -119,12 +119,12 @@ void KartLoader::load() {
         pShockModel->newSharedDisplayList(0x40000);
 
 
-    pLTireModelData->simpleCalcMaterial(j3dDefaultMtx);
+    pLTireModelData->simpleCalcMaterial(*(Mtx*)&j3dDefaultMtx);
     if (pRTireModelData)
-        pRTireModelData->simpleCalcMaterial(j3dDefaultMtx);
-    pArmModelData->simpleCalcMaterial(j3dDefaultMtx);
+        pRTireModelData->simpleCalcMaterial(*(Mtx*)&j3dDefaultMtx);
+    pArmModelData->simpleCalcMaterial(*(Mtx*)&j3dDefaultMtx);
     if (pShockModel)
-        pShockModel->simpleCalcMaterial(j3dDefaultMtx);
+        pShockModel->simpleCalcMaterial(*(Mtx*)&j3dDefaultMtx);
 
     pLTireModelData->makeSharedDL();
     if (pRTireModelData)

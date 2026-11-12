@@ -146,6 +146,7 @@ public:
     void setLinkJugemPoint(CLPoint *, u16);                                             // 0x8019a098
     JugemPoint *searchJugemPoint(u16);                                                  // 0x8019a134
     Sector *searchSector(s16);                                                          // 0x8019a20c
+    bool isFreeze() { return mCrsData->isSnow(); }
     void createCLPoint(bool);                                                           // 0x8019a294
     CLPoint *getFirstCLPoint(int) const;                                                // 0x8019aef0
     void createArea();                                                                  // 0x8019afa0
@@ -230,6 +231,7 @@ public:
     f32 getGroundThickness() const { return sGndThickness; }
 
 private: // add all documented stuff from Ghidra
+    friend class TMapObjPool; friend class TSMABird;
     static u16 sDrawAreaModel;
     static bool sForceDebugFogSetting;
     static bool sConfigFog;

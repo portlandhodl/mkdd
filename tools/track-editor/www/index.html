@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#151618">
+  <meta name="description" content="Double Dash Studio — an offline course editor for Mario Kart Double Dash.">
+  <title>Double Dash Studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e74545'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='sans-serif' font-size='32' font-weight='700' fill='white'%3EDD%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#viewport">Skip to the course viewport</a>
+
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="icon-open" viewBox="0 0 24 24"><path d="M3 7.5V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2M3 7.5h16.8a1.5 1.5 0 0 1 1.46 1.84l-2.1 9A2 2 0 0 1 17.2 20H5a2 2 0 0 1-2-2V7.5Z"/></symbol>
+    <symbol id="icon-link" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-add-object" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.3 7.7 7.7 4.4 7.7-4.4M12 12v9"/></symbol>
+    <symbol id="icon-duplicate" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="icon-delete" viewBox="0 0 24 24"><path d="M4 7h16M9 3h6l1 4H8l1-4ZM6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="icon-undo" viewBox="0 0 24 24"><path d="m9 7-5 5 5 5M4 12h9a7 7 0 0 1 7 7"/></symbol>
+    <symbol id="icon-redo" viewBox="0 0 24 24"><path d="m15 7 5 5-5 5M20 12h-9a7 7 0 0 0-7 7"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5"/></symbol>
+    <symbol id="icon-archive" viewBox="0 0 24 24"><path d="M4 8v12h16V8M3 3h18v5H3V3ZM9 12h6"/></symbol>
+    <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></symbol>
+    <symbol id="icon-frame" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="icon-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3Z"/><path d="M14 3v5h4M9 13h6M9 17h4"/></symbol>
+    <symbol id="icon-object" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.3 7.7 7.7 4.4 7.7-4.4M12 12v9"/></symbol>
+    <symbol id="icon-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5M12 17v.1"/></symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.1"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="icon-replace" viewBox="0 0 24 24"><path d="M20 7h-9a5 5 0 0 0-5 5M17 4l3 3-3 3M4 17h9a5 5 0 0 0 5-5M7 20l-3-3 3-3"/></symbol>
+    <symbol id="icon-select" viewBox="0 0 24 24"><path d="m5 3 14 8-6 1.5L10 19 5 3Z"/></symbol>
+    <symbol id="icon-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></symbol>
+    <symbol id="icon-rotate" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></symbol>
+    <symbol id="icon-scale" viewBox="0 0 24 24"><rect x="3" y="11" width="10" height="10" rx="1"/><path d="M13 3h8v8M21 3l-9 9"/></symbol>
+    <symbol id="icon-magnet" viewBox="0 0 24 24"><path d="M6 3v8a6 6 0 0 0 12 0V3h-4v8a2 2 0 0 1-4 0V3H6ZM6 7h4M14 7h4"/></symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="icon-camera" viewBox="0 0 24 24"><path d="M3 7h4l2-3h6l2 3h4v13H3V7Z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="icon-top" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="icon-floor" viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M3 20h18"/></symbol>
+    <symbol id="icon-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="icon-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
+    <symbol id="icon-library" viewBox="0 0 24 24"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16 5l3.5-.8 3 15.6-3.5.8z"/></symbol>
+  </svg>
+
+  <div id="app" class="app-shell">
+    <header class="app-header">
+      <div class="brand" aria-label="Double Dash Studio">
+        <span class="brand-mark" aria-hidden="true"><span>D</span><span>D</span></span>
+        <span class="brand-copy"><strong>Double Dash</strong><span>STUDIO</span></span>
+      </div>
+
+      <div id="toolbar" class="toolbar" role="toolbar" aria-label="File and history">
+        <div class="tool-group">
+          <button id="open-file-button" class="tool-button" type="button" title="Open a course BOL or ARC (Ctrl+O)" disabled>
+            <svg class="icon"><use href="#icon-open"/></svg><span>Open</span>
+          </button>
+          <button id="related-file-button" class="tool-button" type="button" title="Add related files: BCO collision, BMD models, BTI textures, or ARC model libraries such as MRAM.arc" disabled>
+            <svg class="icon"><use href="#icon-link"/></svg><span>Add Files</span>
+          </button>
+        </div>
+        <span class="tool-divider" aria-hidden="true"></span>
+        <div class="tool-group">
+          <button id="undo-button" class="tool-button icon-button" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" disabled><svg class="icon"><use href="#icon-undo"/></svg></button>
+          <button id="redo-button" class="tool-button icon-button" type="button" title="Redo (Ctrl+Y)" aria-label="Redo" disabled><svg class="icon"><use href="#icon-redo"/></svg></button>
+        </div>
+        <span class="tool-divider" aria-hidden="true"></span>
+        <div class="tool-group export-group">
+          <div id="export-menu-root" class="menu-root">
+            <button id="export-bol-menu-button" class="tool-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-bol-menu" title="Export course BOL" disabled>
+              <svg class="icon"><use href="#icon-download"/></svg><span>Export BOL</span><svg class="icon chevron"><use href="#icon-chevron"/></svg>
+            </button>
+            <div id="export-bol-menu" class="dropdown-menu" role="menu" aria-labelledby="export-bol-menu-button" hidden>
+              <button id="export-bol-button" class="menu-item" type="button" role="menuitem" tabindex="-1">
+                <svg class="icon"><use href="#icon-download"/></svg><span><strong>Export BOL</strong><small>Save the edited course</small></span>
+              </button>
+              <button id="export-original-bol-button" class="menu-item" type="button" role="menuitem" tabindex="-1">
+                <svg class="icon"><use href="#icon-file"/></svg><span><strong>Export Original BOL</strong><small>Discard edits in the downloaded copy</small></span>
+              </button>
+            </div>
+          </div>
+          <button id="export-archive-button" class="tool-button" type="button" title="Export the course archive with the edited BOL (Ctrl+S)" disabled>
+            <svg class="icon"><use href="#icon-archive"/></svg><span>Export ARC</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="help-button" class="tool-button icon-button" type="button" title="Keyboard and mouse controls (?)" aria-label="Show controls"><svg class="icon"><use href="#icon-keyboard"/></svg></button>
+        <div id="engine-badge" class="engine-badge" data-state="loading" title="Local editor engine status">
+          <span class="engine-dot" aria-hidden="true"></span><span id="engine-label">Starting</span>
+        </div>
+      </div>
+    </header>
+
+    <input id="open-file-input" class="file-input" type="file" accept=".bol,.arc,.szs" aria-label="Choose a course BOL or ARC file">
+    <input id="related-file-input" class="file-input" type="file" accept=".bco,.bti,.bmd,.arc,.szs" aria-label="Choose related BCO, BTI, BMD, or ARC files" multiple>
+    <input id="replace-asset-input" class="file-input" type="file" accept=".bti,.bco,.bmd,.bdl,.bck,.bca,.btk,.brk,.btp,.bpk,.bpa,.bol,.arc" aria-label="Choose replacement bytes for the selected asset">
+
+    <main id="workspace" class="workspace">
+      <aside id="left-panel" class="side-panel left-panel" aria-label="Course outliner">
+        <div class="document-identity">
+          <span class="document-icon"><svg class="icon"><use href="#icon-file"/></svg></span>
+          <div><strong id="outliner-file-name">No course open</strong><span id="document-kind">BOL / ARC workspace</span></div>
+        </div>
+        <div class="panel-tabs" role="tablist" aria-label="Left panel">
+          <button class="panel-tab" type="button" role="tab" id="tab-outliner" aria-controls="pane-outliner" aria-selected="true">Outliner <span id="entity-count" class="count-badge">0</span></button>
+          <button class="panel-tab" type="button" role="tab" id="tab-place" aria-controls="pane-place" aria-selected="false">Place</button>
+          <button class="panel-tab" type="button" role="tab" id="tab-files" aria-controls="pane-files" aria-selected="false">Files <span id="archive-count" class="count-badge">0</span></button>
+        </div>
+
+        <section id="pane-outliner" class="panel-pane" role="tabpanel" aria-labelledby="tab-outliner">
+          <label class="search-box"><svg class="icon"><use href="#icon-search"/></svg><input id="outliner-search" type="search" placeholder="Search course…" aria-label="Search the outliner"></label>
+          <div id="course-summary" class="course-summary" aria-label="Course object counts" hidden></div>
+          <ul id="entity-list" class="tree-list outliner-tree"></ul>
+        </section>
+
+        <section id="pane-place" class="panel-pane" role="tabpanel" aria-labelledby="tab-place" hidden>
+          <label class="search-box"><svg class="icon"><use href="#icon-search"/></svg><input id="place-search" type="search" placeholder="Search objects…" aria-label="Search placeable objects"></label>
+          <div class="place-toolbar">
+            <label class="toggle-chip"><input id="place-models-only" type="checkbox"><span>With models</span></label>
+            <label class="toggle-chip"><input id="place-show-internal" type="checkbox"><span>Internal</span></label>
+            <button id="add-object-button" class="mini-button" type="button" title="Add an Item Box at the view center" disabled><svg class="icon"><use href="#icon-add-object"/></svg>Item Box</button>
+          </div>
+          <p class="pane-hint">Drag an object into the viewport, or double-click to drop it at the view center.</p>
+          <ul id="place-list" class="tree-list place-list"></ul>
+        </section>
+
+        <section id="pane-files" class="panel-pane" role="tabpanel" aria-labelledby="tab-files" hidden>
+          <div class="library-box">
+            <div class="section-heading"><h2><svg class="icon"><use href="#icon-library"/></svg>Model Libraries</h2><button id="add-library-button" class="mini-button" type="button" title="Add an ARC such as MRAM.arc to draw shared objects like item boxes">Add ARC</button></div>
+            <ul id="library-list" class="library-list"></ul>
+            <p class="pane-hint">Libraries are remembered in this browser. Add <strong>MRAM.arc</strong> to see item boxes and other shared models.</p>
+          </div>
+          <div class="section-heading"><h2>Archive Files</h2></div>
+          <ul id="file-list" class="tree-list"></ul>
+        </section>
+        <input id="library-file-input" class="file-input" type="file" accept=".arc,.szs" multiple aria-label="Choose model library archives">
+      </aside>
+      <div class="panel-resizer" data-resize="left" role="separator" aria-orientation="vertical" aria-label="Resize outliner"></div>
+
+      <section id="viewport-panel" class="viewport-panel" aria-label="Course editor">
+        <div id="viewport-wrap" class="viewport-wrap">
+          <canvas id="viewport" width="1280" height="720" tabindex="0" role="img" aria-label="Interactive 3D course viewport" aria-describedby="canvas-navigation-help">
+            The interactive course viewport requires a browser with canvas and WebGL support.
+          </canvas>
+
+          <div class="viewport-toolbar" role="toolbar" aria-label="Viewport tools">
+            <div class="segmented" role="radiogroup" aria-label="Transform tool">
+              <button class="seg-button" type="button" data-tool="select" title="Select (Q)" aria-label="Select tool"><svg class="icon"><use href="#icon-select"/></svg></button>
+              <button class="seg-button" type="button" data-tool="translate" title="Move (W)" aria-label="Move tool"><svg class="icon"><use href="#icon-move"/></svg></button>
+              <button class="seg-button" type="button" data-tool="rotate" title="Rotate (E)" aria-label="Rotate tool"><svg class="icon"><use href="#icon-rotate"/></svg></button>
+              <button class="seg-button" type="button" data-tool="scale" title="Scale (R)" aria-label="Scale tool"><svg class="icon"><use href="#icon-scale"/></svg></button>
+            </div>
+            <div class="segmented">
+              <button id="snap-toggle" class="seg-button" type="button" title="Toggle snapping (hold Ctrl while dragging to invert)" aria-pressed="false"><svg class="icon"><use href="#icon-magnet"/></svg></button>
+              <select id="snap-translate" class="seg-select" title="Move snap step" aria-label="Move snap step">
+                <option value="10">10</option><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="250">250</option><option value="500">500</option><option value="1000">1000</option>
+              </select>
+              <select id="snap-rotate" class="seg-select" title="Rotation snap step" aria-label="Rotation snap step">
+                <option value="5">5°</option><option value="10">10°</option><option value="15" selected>15°</option><option value="45">45°</option><option value="90">90°</option>
+              </select>
+            </div>
+            <div class="segmented">
+              <button id="shading-button" class="seg-button labeled" type="button" title="Toggle Lit (GX materials) / Simple shading (L)"><svg class="icon"><use href="#icon-sun"/></svg><span id="shading-label">Lit</span></button>
+              <div class="menu-root" id="show-menu-root">
+                <button id="show-button" class="seg-button labeled" type="button" aria-haspopup="true" aria-expanded="false" title="Show/hide viewport layers"><svg class="icon"><use href="#icon-eye"/></svg><span>Show</span><svg class="icon chevron"><use href="#icon-chevron"/></svg></button>
+                <div id="show-menu" class="dropdown-menu show-menu" hidden>
+                  <div id="layer-list" class="layer-list"></div>
+                  <button id="game-view-button" class="menu-item compact" type="button"><span><strong>Game view</strong><small>Hide all editor helpers (G)</small></span></button>
+                </div>
+              </div>
+            </div>
+            <div class="segmented">
+              <button id="perspective-button" class="seg-button labeled" type="button" title="Perspective view"><svg class="icon"><use href="#icon-camera"/></svg><span>Persp</span></button>
+              <button id="top-button" class="seg-button labeled" type="button" title="Top-down view (T)"><svg class="icon"><use href="#icon-top"/></svg><span>Top</span></button>
+            </div>
+            <label class="speed-control" title="Camera fly speed (scroll while holding right mouse)">
+              <svg class="icon"><use href="#icon-camera"/></svg>
+              <input id="camera-speed" type="range" min="1" max="8" step="1" value="4" aria-label="Camera speed">
+              <span id="camera-speed-label">4</span>
+            </label>
+          </div>
+
+          <div class="viewport-topbar">
+            <div class="viewport-file-chip"><span class="viewport-dot" aria-hidden="true"></span><span id="viewport-file-name">No course</span><span id="viewport-dirty-mark" class="viewport-dirty-mark" hidden>Edited</span></div>
+            <button id="frame-button" class="floating-button" type="button" title="Frame selection, or everything (F)" disabled><svg class="icon"><use href="#icon-frame"/></svg><span>Frame</span><kbd>F</kbd></button>
+          </div>
+
+          <div id="empty-state" class="empty-state">
+            <div class="empty-card">
+              <div class="empty-hero-mark" aria-hidden="true"><span>D</span><span>D</span><i></i></div>
+              <span id="empty-kicker" class="eyebrow accent-text">LOCAL COURSE WORKSPACE</span>
+              <h2 id="empty-title">Your next lap starts here.</h2>
+              <p id="empty-description">Open a course to inspect geometry, tune objects, and package related assets — entirely on your machine.</p>
+              <button id="empty-open-button" class="primary-button" type="button" disabled><svg class="icon"><use href="#icon-open"/></svg>Open a course ARC</button>
+              <div id="empty-instructions" class="quick-start">
+                <h3>Getting started</h3>
+                <ol>
+                  <li><span>1</span><p><strong>Open a course ARC</strong> (for example <code>Course/Luigi.arc</code>). Models, textures, sky, and collision load automatically.</p></li>
+                  <li><span>2</span><p><strong>Add MRAM.arc</strong> once under Files → Model Libraries to see item boxes and shared objects.</p></li>
+                  <li><span>3</span><p><strong>Hold right mouse + WASD</strong> to fly, click to select, and drag the gizmo to move things.</p></li>
+                </ol>
+              </div>
+              <p class="asset-note"><svg class="icon"><use href="#icon-info"/></svg>No game data is bundled. Use files you legally own. Files never leave this browser.</p>
+            </div>
+          </div>
+
+          <div class="navigation-hints" id="canvas-navigation-help" aria-label="Viewport navigation instructions">
+            <span><strong>RMB</strong> + WASD fly</span>
+            <span><strong>LMB drag</strong> orbit</span>
+            <span><strong>MMB</strong> pan</span>
+            <span><strong>Wheel</strong> zoom</span>
+            <span><strong>F</strong> focus</span>
+            <span><strong>?</strong> all controls</span>
+          </div>
+          <div id="viewport-tip" class="viewport-tip" hidden></div>
+
+          <div id="drop-overlay" class="drop-overlay" role="status" hidden>
+            <div><svg class="icon"><use href="#icon-download"/></svg><strong>Drop to bring it on track</strong><span>BOL/ARC opens a course · BCO, BMD, BTI, and extra ARCs add related data</span></div>
+          </div>
+        </div>
+      </section>
+      <div class="panel-resizer" data-resize="right" role="separator" aria-orientation="vertical" aria-label="Resize details"></div>
+
+      <aside id="right-panel" class="side-panel right-panel" aria-label="Details">
+        <div class="panel-titlebar">
+          <div><span class="eyebrow">DETAILS</span></div>
+          <label class="search-box compact"><svg class="icon"><use href="#icon-search"/></svg><input id="details-search" type="search" placeholder="Filter properties" aria-label="Filter properties"></label>
+        </div>
+        <div id="inspector-scroll" class="inspector-scroll">
+          <section id="selection-section" class="inspector-section" aria-labelledby="selection-title">
+            <div id="selection-empty" class="inspector-empty">
+              <span class="empty-selection-icon"><svg class="icon"><use href="#icon-object"/></svg></span>
+              <h3>Nothing selected</h3>
+              <p>Open a course, then click an object in the viewport or outliner to edit its properties.</p>
+            </div>
+            <div id="selection-content" hidden>
+              <div class="selection-heading">
+                <span id="selection-swatch" class="selection-swatch" aria-hidden="true"></span>
+                <div class="selection-copy"><span id="selection-kind" class="type-badge">OBJECT</span><h3 id="selection-title">Selection</h3></div>
+                <span class="selection-index" id="selection-index"></span>
+              </div>
+              <div class="selection-actions">
+                <button id="focus-button" class="mini-button" type="button" title="Focus the camera on the selection (F)"><svg class="icon"><use href="#icon-focus"/></svg>Focus</button>
+                <button id="floor-button" class="mini-button" type="button" title="Drop onto the course surface (End)"><svg class="icon"><use href="#icon-floor"/></svg>To floor</button>
+                <button id="duplicate-button" class="mini-button" type="button" title="Duplicate (Ctrl+D)" disabled><svg class="icon"><use href="#icon-duplicate"/></svg>Duplicate</button>
+                <button id="delete-button" class="mini-button danger" type="button" title="Delete (Del)" disabled><svg class="icon"><use href="#icon-delete"/></svg>Delete</button>
+              </div>
+              <div id="selection-fields" class="field-groups"></div>
+              <details id="raw-data-details" class="raw-data">
+                <summary>Raw record bytes <svg class="icon"><use href="#icon-chevron"/></svg></summary>
+                <pre id="raw-hex" tabindex="0"></pre>
+              </details>
+            </div>
+          </section>
+
+          <details id="course-header-section" class="inspector-section collapsible-section" hidden>
+            <summary><span>Course Settings</span><small>BOL header</small><svg class="icon chevron"><use href="#icon-chevron"/></svg></summary>
+            <div id="header-fields" class="field-list"></div>
+          </details>
+
+          <section id="asset-section" class="inspector-section asset-section" aria-labelledby="asset-name" hidden>
+            <div class="inspector-section-heading"><h3>Selected Asset</h3><span>RESOURCE</span></div>
+            <div class="asset-heading"><span class="document-icon"><svg class="icon"><use href="#icon-file"/></svg></span><div><h4 id="asset-name">Texture</h4><p id="asset-metadata"></p></div></div>
+            <div id="texture-preview-wrap" class="texture-preview-wrap">
+              <canvas id="texture-preview" width="2" height="2" role="img" aria-label="Selected texture preview" hidden></canvas>
+              <div id="texture-empty" class="texture-empty"><svg class="icon"><use href="#icon-object"/></svg><span>Texture preview unavailable</span></div>
+            </div>
+            <p id="asset-info" class="asset-info"></p>
+            <div class="asset-actions">
+              <button id="replace-asset-button" class="secondary-button" type="button"><svg class="icon"><use href="#icon-replace"/></svg>Replace</button>
+              <button id="download-asset-button" class="secondary-button" type="button"><svg class="icon"><use href="#icon-download"/></svg>Download</button>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </main>
+
+    <footer id="bottom-panel" class="bottom-panel">
+      <section id="issues-drawer" class="issues-drawer" aria-labelledby="issues-title" hidden>
+        <div class="issues-heading"><div><svg class="icon"><use href="#icon-alert"/></svg><h2 id="issues-title">Course Issues</h2><span id="issues-drawer-count" class="count-badge">0</span></div><button id="issues-close-button" class="icon-button subtle-button" type="button" aria-label="Close issues"><svg class="icon"><use href="#icon-close"/></svg></button></div>
+        <ul id="issues-list" class="issues-list"></ul>
+      </section>
+      <div class="status-bar">
+        <button id="issues-toggle" class="issues-toggle" type="button" aria-expanded="false" aria-controls="issues-drawer"><svg class="icon"><use href="#icon-check"/></svg><span>Issues</span><span id="issues-count" class="count-badge">0</span></button>
+        <span class="status-separator" aria-hidden="true"></span>
+        <div class="status-message-wrap"><span id="status-message" role="status" aria-live="polite">Loading the local editor engine…</span></div>
+        <span id="cursor-position" class="status-readout" title="World position under the cursor">—</span>
+        <span id="tool-readout" class="status-readout" title="Active tool">Move</span>
+        <div id="transfer-status" class="transfer-status" hidden><span id="transfer-label">Reading file…</span><progress id="transfer-progress" max="100" aria-label="File upload progress"></progress></div>
+        <div class="document-status"><span id="dirty-indicator" class="dirty-indicator" data-dirty="false"><span aria-hidden="true"></span><span id="dirty-label">Saved</span></span><span id="status-file-name" title="No course open">No course</span></div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="help-overlay" class="help-overlay" hidden>
+    <div class="help-card" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <div class="help-heading"><h2 id="help-title">Controls</h2><button id="help-close" class="icon-button" type="button" aria-label="Close controls"><svg class="icon"><use href="#icon-close"/></svg></button></div>
+      <div class="help-columns">
+        <section><h3>Camera</h3><dl>
+          <dt>RMB + mouse</dt><dd>Look around</dd>
+          <dt>RMB + W A S D</dt><dd>Fly forward / left / back / right</dd>
+          <dt>RMB + Q / E</dt><dd>Fly down / up</dd>
+          <dt>RMB + wheel</dt><dd>Change fly speed</dd>
+          <dt>Shift (while flying)</dt><dd>Fly faster</dd>
+          <dt>LMB drag (empty space)</dt><dd>Orbit around the pivot</dd>
+          <dt>Alt + LMB</dt><dd>Orbit</dd>
+          <dt>MMB / Shift + LMB</dt><dd>Pan</dd>
+          <dt>Wheel</dt><dd>Zoom toward the cursor</dd>
+          <dt>F</dt><dd>Focus selection (or frame all)</dd>
+          <dt>Home</dt><dd>Frame the whole course</dd>
+          <dt>T</dt><dd>Top-down view</dd>
+        </dl></section>
+        <section><h3>Editing</h3><dl>
+          <dt>Click</dt><dd>Select (click empty space to clear)</dd>
+          <dt>Q / W / E / R</dt><dd>Select / Move / Rotate / Scale tool</dd>
+          <dt>Space</dt><dd>Cycle transform tool</dd>
+          <dt>Drag gizmo</dt><dd>Transform; Ctrl inverts snapping, Esc cancels</dd>
+          <dt>End</dt><dd>Drop selection to the floor</dd>
+          <dt>Ctrl + D</dt><dd>Duplicate object</dd>
+          <dt>Delete</dt><dd>Delete object</dd>
+          <dt>Ctrl + Z / Ctrl + Y</dt><dd>Undo / Redo</dd>
+          <dt>Ctrl + S</dt><dd>Export ARC (or BOL)</dd>
+          <dt>G</dt><dd>Toggle game view (hide helpers)</dd>
+          <dt>L</dt><dd>Toggle Lit / Simple shading</dd>
+          <dt>Drag a field's X/Y/Z label</dt><dd>Scrub the value</dd>
+        </dl></section>
+      </div>
+    </div>
+  </div>
+
+  <div id="notice-region" class="notice-region" aria-live="assertive" aria-relevant="additions"></div>
+  <noscript><div class="noscript-message">Double Dash Studio requires JavaScript and WebAssembly to run locally.</div></noscript>
+  <script type="module" src="./bootstrap.js"></script>
+</body>
+</html>

@@ -41,7 +41,7 @@ void TTestRollObj::doKartColCallBack(int kartNo) {
     dir.sub(mPos, kartPos);
     dir.normalize();
     dir.y = 0.5f;
-    dir.scale(1.5f);
+    dir.scale(3.0f);
     mVel.add(dir);
 }
 

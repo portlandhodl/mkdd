@@ -8,11 +8,6 @@ const u32 TMapObjDemoObj::scCameraID[11] = {
     'mare', 'item', 'topp', 'endd', 'next'
 };
 f32 TMapObjDemoObj::sTurnSpeed = 0.03f;
-static const f32 cZero = 0.0f;
-static const f32 c32 = 32.0f;
-static const f32 cHalf = 0.5f;
-static const f32 cThree = 3.0f;
-
 
 TMapObjDemoObj::TMapObjDemoObj(const CrsData::SObject &obj) : TMapObjHioNode(obj)
 {
@@ -105,13 +100,12 @@ bool TMapObjDemoObj::checkKartLength()
     {
         JGeometry::TVec3f diff;
         diff.sub(mKartPos, mPos);
+        diff.y = 0.0f;
         mLength2 = diff.squared();
     }
-
     mCounter++;
     if (mCounter > 30)
         mCounter = 0;
-
     return mLength2 < mLengthSq;
 }
 
@@ -145,45 +139,32 @@ bool TMapObjDemoObj::checkVisible()
 
 void TMapObjDemoObj::turnToKart()
 {
-    JGeometry::TVec3f target;
-    target.sub(mKartPos, mPos);
-    target.y = 0.0f;
-    f32 sq = target.squaredZX();
+    JGeometry::TVec3f dir;
+    dir.sub(mKartPos, mPos);
+    dir.y = 0.0f;
+    dir.normalize();
 
-    if (sq > JGeometry::TUtilf::epsilon())
-        target.scale(JGeometry::TUtilf::inv_sqrt(sq));
+    JGeometry::TVec3f side;
+    JGeometry::TVec3f up;
+    JGeometry::TVec3f front;
+    mRotMtx.getXDir(side);
+    mRotMtx.getYDir(up);
+    mRotMtx.getZDir(front);
+    if (dir.isZero())
+        dir.set(front);
 
-    JGeometry::TVec3f right(mRotMtx[0][0], mRotMtx[1][0], mRotMtx[2][0]);
-    JGeometry::TVec3f up(mRotMtx[0][1], mRotMtx[1][1], mRotMtx[2][1]);
-    JGeometry::TVec3f forward(mRotMtx[0][2], mRotMtx[1][2], mRotMtx[2][2]);
-
-    if (target.squaredZX() <= 0.5f * JGeometry::TUtilf::epsilon())
-        target = forward;
-
-    JGeometry::TVec3f cross;
-    cross.cross(target, forward);
-    f32 sin = cross.length();
-    if (sin > sTurnSpeed)
-    {
-        cross.scale(sTurnSpeed / sin);
-        forward.add(cross);
-    }
-
-    forward.normalize();
-    right.cross(up, forward);
-    right.normalize();
-    up.cross(forward, right);
-    up.normalize();
-
-    mRotMtx[0][0] = right.x;
-    mRotMtx[1][0] = right.y;
-    mRotMtx[2][0] = right.z;
-    mRotMtx[0][1] = up.x;
-    mRotMtx[1][1] = up.y;
-    mRotMtx[2][1] = up.z;
-    mRotMtx[0][2] = forward.x;
-    mRotMtx[1][2] = forward.y;
-    mRotMtx[2][2] = forward.z;
+    JGeometry::TVec3f diff;
+    diff.sub(dir, front);
+    diff.y = 0.0f;
+    if (diff.length() > sTurnSpeed)
+        diff.setLength(sTurnSpeed);
+    if (front.dot(dir) < 0.0f)
+        diff.scale(3.0f);
+    front.add(diff);
+    front.normalize();
+    side.cross(up, front);
+    side.normalize();
+    mRotMtx.setXYZDir(side, up, front);
 }
 
 #include "JSystem/JAudio/JASFakeMatch2.h"

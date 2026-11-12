@@ -19,34 +19,15 @@ struct J3DGXColor : public GXColor {
         a = _a;
     }
 
-    J3DGXColor(const J3DGXColor& other)
-    {
-        r = other.r;
-        g = other.g;
-        b = other.b;
-        a = other.a;
-    }
+    J3DGXColor(const J3DGXColor& other) { *(u32*)this = *(const u32*)&other; }
 
-    J3DGXColor(const GXColor& other)
-    {
-        r = other.r;
-        g = other.g;
-        b = other.b;
-        a = other.a;
-    }
+    J3DGXColor(const GXColor& other) { *(u32*)this = *(const u32*)&other; }
 
-    J3DGXColor(const u32& other)
-    {
-        GXColor* otherBytes = (GXColor*)&other;
-        r                   = otherBytes->r;
-        g                   = otherBytes->g;
-        b                   = otherBytes->b;
-        a                   = otherBytes->a;
-    }
+    J3DGXColor(const u32& other) { *(u32*)this = other; }
 
     J3DGXColor& operator=(const GXColor& color)
     {
-        *(GXColor*)this = color;
+        *(u32*)this = *(const u32*)&color;
         return *this;
     }
 
@@ -73,9 +54,13 @@ struct J3DGXColorS10 : public GXColorS10 {
         a = _a;
     }
 
-    J3DGXColorS10(const J3DGXColorS10 & other) { __memcpy(this, &other, sizeof(J3DGXColorS10)); }
+    J3DGXColorS10(const J3DGXColorS10& other)
+    {
+        ((u32*)this)[0] = ((const u32*)&other)[0];
+        ((u32*)this)[1] = ((const u32*)&other)[1];
+    }
 
-    J3DGXColorS10(const GXColorS10& other) { *(u64*)this = *(u64*)&other; }
+    J3DGXColorS10(const GXColorS10& other) : GXColorS10(other) { }
 
     J3DGXColorS10(const u64& other)
     {

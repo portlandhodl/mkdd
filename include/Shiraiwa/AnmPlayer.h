@@ -38,13 +38,21 @@ public:
 
     u8 getCurAnmNumber() const { return mController->getNowTransNo(); }
 
+    void setAnm(u8 anmNo) {
+        if ((s8)anmNo != mController->mTrans->mNowAnmNo) {
+            _11 = anmNo;
+            _10 = 1;
+            _e |= 1;
+        }
+    }
+
     AnmController *mController; // 4
     TAnmInfo *mAnmInfo;         // 8
     u8 mMaxAnm;                 // c
     u8 _d;
     u16 _e;
     u8 _10;
-    s8 _11;
+    u8 _11;
     f32 _14;
 }; // Size: 0x18
 #endif // ANMPLAYER_H

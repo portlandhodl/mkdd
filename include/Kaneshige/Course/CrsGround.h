@@ -45,6 +45,19 @@ public:
     {
         // TODO
         Mat_1 = 1,
+        Mat_5 = 5,
+        Mat_6 = 6,
+        Mat_7 = 7,
+        Mat_8 = 8,
+        Mat_9 = 9,
+        Mat_10 = 10,
+        Mat_15 = 15,
+        Mat_16 = 16,
+        Mat_17 = 17,
+        Mat_18 = 18,
+        Mat_19 = 19,
+        Mat_25 = 25,
+        Mat_27 = 27,
         Mat_255 = 0xff,
     };
 
@@ -62,7 +75,8 @@ public:
     bool isInsideGrid(const JGeometry::TVec3f &, f32, f32, f32, f32);                                                                             // 0x801a2ec0
     static void searchGridIndex(int *, int *, Course *, const JGeometry::TVec3f &, f32, f32, f32, f32, int, int);                                        // 0x801a3004
     f32 getHeight() const;                                                                                                                        // 0x801a3168
-    void getNormal(JGeometry::TVec3f *) const;                                                                                                    // 0x801a3170
+    void getNormal(JGeometry::TVec3f *) const;
+    const JGeometry::TVec3f &getNormalVec() const { return mNormal; }                                                                                                    // 0x801a3170
     u8 getCameraCode() const;                                                                                                                     // 0x801a319c
     bool isItemInvalGround() const;                                                                                                               // 0x801a3204
     u8 getAddThickness() const;                                                                                                                   // 0x801a3268

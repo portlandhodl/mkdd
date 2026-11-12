@@ -19,6 +19,8 @@ namespace GameAudio
         virtual ~CustomArcLoader();
         virtual bool readCommandMore(u32 cmd);
 
+        const void *getData() const { return mData; } // fabricated
+
     private:
         const void *mData; // points to SceneJPN.baac
     };

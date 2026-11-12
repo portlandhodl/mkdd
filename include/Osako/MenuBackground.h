@@ -14,6 +14,13 @@ public:
 
     static MenuBackground *ptr() { return mspMenuBackground; }
 
+    static MenuBackground *create(JKRArchive *archive)
+    {
+        if (mspMenuBackground == nullptr)
+            mspMenuBackground = new MenuBackground(archive);
+        return mspMenuBackground;
+    }
+
 private:
     static MenuBackground *mspMenuBackground; // 0x80416a88
 

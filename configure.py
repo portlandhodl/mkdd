@@ -473,7 +473,7 @@ config.libs = [
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msgbuf.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/serpoll.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/dispatch.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msghndlr.c"),
+            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msghndlr.c", extra_cflags=["-sdata2", "0"]),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/support.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mutex_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/notify.c"),
@@ -654,12 +654,20 @@ config.libs = [
             Object(NonMatching, "dolphin/ip/IPUuid.c")
         ]
     ),
-    DolphinLib(
-        "lg",  # unofficial name
-        [
+    {
+        "lib": "lg",  # unofficial name
+        "src_dir": "libs",
+        "mw_version": "GC/2.6",
+        "cflags": [
+            *[f for f in cflags_dolphin if f not in ("-fp_contract off", "-O4,p")],
+            "-O4,s",
+        ],
+        "progress_category": "sdk",
+        "host": True,
+        "objects": [
             Object(NonMatching, "dolphin/lg/allsrc.c")
-        ]
-    ),
+        ],
+    },
     DolphinLib(
         "mtx",
         [
@@ -1032,7 +1040,7 @@ config.libs = [
     ),
     JSystemLib(
         "Logitech",
-        ["-O4,p"],
+        ["-O4,s"],
         [
             Object(NonMatching, "JSystem/Logitech/Conditon.cpp"),
             Object(NonMatching, "JSystem/Logitech/Constant.cpp"),
@@ -1061,7 +1069,7 @@ config.libs = [
             Object(NonMatching, "Inagaki/GameAudioMain.cpp"),
             Object(Matching, "Inagaki/GameAudioMgr.cpp"),
             Object(Matching, "Inagaki/GameAudioParam.cpp"),
-            Object(NonMatching, "Inagaki/KartSoundMgr.cpp"),
+            Object(Matching, "Inagaki/KartSoundMgr.cpp"),
             Object(Matching, "Inagaki/NpcCarSoundMgr.cpp"),
             Object(Matching, "Inagaki/ObjectSoundMgr.cpp"),
             Object(Matching, "Inagaki/RockSoundMgr.cpp"),

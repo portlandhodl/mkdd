@@ -14,31 +14,7 @@ struct J3DAnmKRegKeyTable;
  * @size{0x70}
  */
 struct J3DAnmTevRegKey : public J3DAnmBase {
-    inline J3DAnmTevRegKey()
-        : mCRegNameTable()
-        , mKRegNameTable()
-    {
-        mKRegUpdateMaterialNum = 0;
-        mCRegUpdateMaterialNum = 0;
-        _16                    = 0;
-        _14                    = 0;
-        _12                    = 0;
-        _10                    = 0;
-        _1E                    = 0;
-        _1C                    = 0;
-        _1A                    = 0;
-        _18                    = 0;
-        mKRegUpdateMaterialID  = nullptr;
-        mCRegUpdateMaterialID  = nullptr;
-        mCAlphaVals            = nullptr;
-        mCBlueVals             = nullptr;
-        mCGreenVals            = nullptr;
-        mCRedVals              = nullptr;
-        mKAlphaVals            = nullptr;
-        mKBlueVals             = nullptr;
-        mKGreenVals            = nullptr;
-        mKRedVals              = nullptr;
-    }
+        J3DAnmTevRegKey();
 
     virtual ~J3DAnmTevRegKey() { }     // _08 (weak)
     virtual J3DAnmKind getKind() const // _0C (weak)

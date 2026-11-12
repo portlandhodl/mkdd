@@ -1,8 +1,6 @@
-#include <dolphin/types.h>
+#include <dolphin/ip/ip.h>
 
 #include <string.h>
-
-extern void ICMPSendError(u8*, u32, u32, u32);
 extern void OSCancelAlarm(void*);
 extern BOOL OSDisableInterrupts(void);
 extern void OSRestoreInterrupts(BOOL);
@@ -20,7 +18,7 @@ static asm void TimeoutHandler(void)
 {
     nofralloc
     mflr r0
-    lis r3, Control@h
+    lis r3, Control@ha
     stw r0,4(r1)
     stwu r1,-40(r1)
     stw r31,36(r1)
@@ -85,7 +83,7 @@ asm u32 IPSetReassemblyBuffer(u8* buffer, u32 size, u32 mtu)
     mflr r0
     cmpwi r5,576
     stw r0,4(r1)
-    lis r6, Control@h
+    lis r6, Control@ha
     stwu r1,-48(r1)
     stmw r27,28(r1)
     addi r29,r3,0
@@ -146,7 +144,7 @@ L_srb_5:
     lis r5,-32768
     lwz r0,248(r5)
     addi r5,r3,0
-    lis r3, TimeoutHandler@h
+    lis r3, TimeoutHandler@ha
     addi r9,r3,TimeoutHandler@l
     srwi r8,r0,2
     addi r3,r30,0
@@ -354,7 +352,7 @@ L_sf_3:
     li r3,1
     b L_sf_end
 L_sf_5:
-    lis r3, Control@h
+    lis r3, Control@ha
     lhz r6,2(r29)
     addi r3,r3,Control@l
     addi r4,r5,-20
@@ -396,7 +394,7 @@ asm u8* IPReassemble(u8* ip, u32 id, u32 src, u32 dst)
 {
     nofralloc
     mflr r0
-    lis r6, Control@h
+    lis r6, Control@ha
     stw r0,4(r1)
     stwu r1,-48(r1)
     stmw r26,24(r1)

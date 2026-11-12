@@ -17,7 +17,10 @@ struct TBoidParam {
 
 class TBoid {
 public:
-    TBoid(const TBoidParam &);
+    TBoid(f32 c, f32 maxSpeed) {
+        _c = c;
+        mMaxSpeed = maxSpeed;
+    }
     virtual ~TBoid() {}
 
     void update(const JGeometry::TVec3<f32> &, f32);
@@ -45,7 +48,6 @@ public:
 
     static TBoidParam sParams[3];
 
-private:
     TBoidParam *mParam;              // 0x04
     TBoid **mBoids;                  // 0x08
     u32 mNum;                        // 0x0c

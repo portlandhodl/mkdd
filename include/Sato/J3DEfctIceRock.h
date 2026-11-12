@@ -12,7 +12,7 @@ class J3DEfctIceRock : public J3DEffectObj
 {
 public:
     J3DEfctIceRock();
-    void loadAnmData();
+    static void loadAnmData();
     static const char *getBmdFileName();
     static const char *getBckFileName(u8);
     static const char *getBtkFileName();
@@ -28,7 +28,6 @@ public:
     static J3DMtxCalc *sBckMtxCalc[1];
     static J3DAnmTextureSRTKey *sTexSRTKey;
 
-    int mKartNo;            // d8
     AnmController mAnmCtrl; // dc
     u8 _f0;                 // f0
     u8 _f1;                 // f1

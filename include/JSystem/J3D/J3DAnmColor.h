@@ -60,10 +60,7 @@ struct J3DAnmColorFullTable
  */
 struct J3DAnmColorFull : public J3DAnmColor
 {
-    inline J3DAnmColorFull()
-        : _2C(nullptr), _30(nullptr), _34(nullptr), _38(nullptr), mTable(nullptr)
-    {
-    }
+        J3DAnmColorFull();
 
     virtual ~J3DAnmColorFull() {}                                       // _08 (weak)
     virtual J3DAnmKind getKind() const { return J3DAnmKind_ColorFull; } // _0C (weak)
@@ -98,10 +95,7 @@ struct J3DAnmColorFullData : J3DFileBlockBase {
  */
 struct J3DAnmColorKey : public J3DAnmColor
 {
-    inline J3DAnmColorKey()
-        : _2C(nullptr), _30(nullptr), _34(nullptr), _38(nullptr), mTable(nullptr)
-    {
-    }
+        J3DAnmColorKey();
 
     virtual ~J3DAnmColorKey() {}                                       // _08 (weak)
     virtual J3DAnmKind getKind() const { return J3DAnmKind_ColorKey; } // _0C (weak)

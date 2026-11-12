@@ -1,6 +1,23 @@
 #include "Kameda/CharacterSelect3D.h"
 #include "dolphin/mtx.h"
 
+#include "JSystem/J3D/J3DSys.h"
+#include "JSystem/J3D/J3DAnmLoader.h"
+#include "JSystem/J3D/J3DModelLoader.h"
+#include "JSystem/J3D/J3DTransform.h"
+#include "JSystem/J3D/J3DShape.h"
+#include "JSystem/J3D/J3DTypes.h"
+#include "JSystem/J3D/J3DPE.h"
+#include "Kameda/SceneFactory.h"
+#include "Kaneshige/RaceLight.h"
+#include "Kaneshige/SysDebug.h"
+#include "Kawano/accessory.h"
+#include "Kawano/osage.h"
+#include "Osako/ResMgr.h"
+#include "JSystem/JFramework/JFWDisplay.h"
+#include "JSystem/JUtility/JUTAssert.h"
+#include "Kaneshige/LightMgr.h"
+#include "Kaneshige/SimpleDrawer.h"
 #include "mathHelper.h"
 
 const f32 CharacterSelect3D::mCharacterDefScale[20] = {
@@ -652,51 +669,1129 @@ const f32 CharacterSelect3D::mBonusTire[4][9] = {
 };
 
 
+
 void *CharacterSelect3D::mDiddyDump;
 void *CharacterSelect3D::mKinopioDump;
 CharacterSelect3D *CharacterSelect3D::mCharacterSelect3D;
 
-CharacterSelect3DParam::CharacterSelect3DParam() {}
 
-CharacterSelect3D::CharacterSelect3D(JKRHeap *) {}
-
-void CharacterSelect3D::init() {}
-
-CharacterSelect3D::~CharacterSelect3D() {}
-
-void CharacterSelect3D::draw(int, float) {
-    //SimpleDrawer::~SimpleDrawer() {}
-
-    //void MenuSubLight::getEffectMtx() {}
-
-    //void MenuSceneLight::getEffectMtx() {}
+CharacterSelect3DParam::CharacterSelect3DParam()
+{
+    JGeometry::TVec3f eye(0.0f, 345.0f, 1000.0f);
+    JGeometry::TVec3f target(0.0f, 135.0f, 0.0f);
+    JGeometry::TVec3f bodyPos0(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f bodyTarget0(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f bodyPos1(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f bodyTarget1(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f kartPos(0.0f, 0.0f, 0.0f);
+    JGeometry::TVec3f kartTarget(0.0f, 0.0f, 0.0f);
+    mAdjust = 0;
+    mFovy = 30.0f;
+    mEye = eye;
+    mTarget = target;
+    mBodyPos[0] = bodyPos0;
+    mBodyTarget[0] = bodyTarget0;
+    mBodyScale[0] = 1.0f;
+    mBodyPos[1] = bodyPos1;
+    mBodyTarget[1] = bodyTarget1;
+    mBodyScale[1] = 1.0f;
+    mKartPos = kartPos;
+    mKartTarget = kartTarget;
+    mKartScale = 1.0f;
 }
 
-void CharacterSelect3D::draw(int, float, JGeometry::TVec3f, JGeometry::TVec3f) {}
 
-void CharacterSelect3D::calc() {}
+CharacterSelect3D::CharacterSelect3D(JKRHeap *heap)
+{
+    CharacterSelect3DParam *param = new (heap, 0) CharacterSelect3DParam();
+    mNode = new (heap, 0) HioNode("キャラクターセレクト３Ｄ表示調整", param, 0, 0);
+    mSceneID = (int)SceneFactory::ptr()->getArchive(13);
 
-void CharacterSelect3D::setCharacter(int, int, ECharID, JGeometry::TVec3f, JGeometry::TVec3f, float) {}
+    for (int i = 0; i < 4; ++i)
+    {
+        mDrawBufferA[i] = new (heap, 0) J3DDrawBuffer(8);
+        j3dSys.setDrawBuffer(mDrawBufferA[i], 0);
+        mDrawBufferB[i] = new (heap, 0) J3DDrawBuffer(8);
+        j3dSys.setDrawBuffer(mDrawBufferB[i], 1);
+    }
 
-void CharacterSelect3D::setCharacterStatus(int, int, CharacterSelect3D::CHARACTER_STATUS) {}
+    SysDebug::getManager()->setHeapGroup("3DModel", heap);
 
-void CharacterSelect3D::setKart(int, EKartID, JGeometry::TVec3f, JGeometry::TVec3f, float) {}
+    for (int i = 0; i < 21; ++i)
+    {
+        if (i != 20)
+        {
+            mCharacterModel[i].mModelData = J3DModelLoaderDataBase::load(
+                ResMgr::getPtr(ResMgr::mcDriverDataBmd, (ResMgr::DriverId)i), 0x11020030);
+        }
+        else
+        {
+            mCharacterModel[i].mModelData = J3DModelLoaderDataBase::load(
+                ResMgr::getPtr(ResMgr::mcArcMRAM, OsageMgr::mscaOsageBmdFileName), 0x11020030);
+        }
 
-void CharacterSelect3D::isCancel(int) {}
+        ExModel::disableTexLOD(mCharacterModel[i].mModelData);
+        for (u16 j = 0; j < mCharacterModel[i].mModelData->getShapeNum(); ++j)
+        {
+            J3DShape *shape = mCharacterModel[i].mModelData->getShapeNodePointer(j);
+            shape->mFlags = (shape->mFlags & ~0xF000) | 0x2000;
+        }
+        mCharacterModel[i].mModelData->newSharedDisplayList(0x40000);
 
-void CharacterSelect3D::isNext(int) {}
+        mCharacterModel[i].mModel = new (heap, 0) ExModel(1);
+        mCharacterModel[i].mModel->setModelData(mCharacterModel[i].mModelData);
+    }
+
+    JKRSolidHeap *solidHeap = JKRSolidHeap::create(heap->getFreeSize(), heap, false);
+    JKRHeap *currentHeap = solidHeap->becomeCurrentHeap();
+
+    Mtx mtx;
+    PSMTXIdentity(mtx);
+    j3dSys.setViewMtx(mtx);
+
+    for (int i = 0; i < 21; ++i)
+    {
+        mCharacterModel[i].mModel->createDifferedModel(solidHeap, 1, 0x1080202, true);
+        mCharacterModel[i].mModel->makeSharedDL();
+        mCharacterModel[i].mModel->lock();
+    }
+
+    solidHeap->adjustSize();
+    currentHeap->becomeCurrentHeap();
+
+    const char *anmFile[3][21] = {
+        {
+            "BabyMario/enter.bck", "BabyLuigi/enter.bck", "Patapata/enter.bck",
+            "Nokonoko/enter.bck", "Peach/enter.bck", "Daisy/enter.bck",
+            "Mario/enter.bck", "Luigi/enter.bck", "Wario/enter.bck",
+            "Waluigi/enter.bck", "Yoshi/enter.bck", "Catherine/enter.bck",
+            "DK/enter.bck", "DKjr/enter.bck", "Koopa/enter.bck",
+            "KoopaJr/enter.bck", "Kinopio/enter.bck", "Kinopico/enter.bck",
+            "KingTeresa/enter.bck", "BossPakkun/enter.bck", "Kinopico/hair_enter.bck",
+        },
+        {
+            "BabyMario/wait.bck", "BabyLuigi/wait.bck", "Patapata/wait.bck",
+            "Nokonoko/wait.bck", "Peach/wait.bck", "Daisy/wait.bck",
+            "Mario/wait.bck", "Luigi/wait.bck", "Wario/wait.bck",
+            "Waluigi/wait.bck", "Yoshi/wait.bck", "Catherine/wait.bck",
+            "DK/wait.bck", "DKjr/wait.bck", "Koopa/wait.bck",
+            "KoopaJr/wait.bck", "Kinopio/wait.bck", "Kinopico/wait.bck",
+            "KingTeresa/wait.bck", "BossPakkun/wait.bck", "Kinopico/hair_wait.bck",
+        },
+        {
+            "BabyMario/gut.bck", "BabyLuigi/gut.bck", "Patapata/gut.bck",
+            "Nokonoko/gut.bck", "Peach/gut.bck", "Daisy/gut.bck",
+            "Mario/gut.bck", "Luigi/gut.bck", "Wario/gut.bck",
+            "Waluigi/gut.bck", "Yoshi/gut.bck", "Catherine/gut.bck",
+            "DK/gut.bck", "DKjr/gut.bck", "Koopa/gut.bck",
+            "KoopaJr/gut.bck", "Kinopio/gut.bck", "Kinopico/gut.bck",
+            "KingTeresa/gut.bck", "BossPakkun/gut.bck", "Kinopico/hair_gut.bck",
+        },
+    };
+
+    for (int i = 0; i < 21; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            J3DAnmTransform *anm = (J3DAnmTransform *)J3DAnmLoaderDataBase::load(
+                ((JKRArchive *)mSceneID)->getResource(anmFile[j][i]), J3DLOADER_UNK_FLAG0);
+            mCharacterModel[i].mAnm[j].mAnmTransform = anm;
+            mCharacterModel[i].mAnm[j].mMtxCalc = J3DNewMtxCalcAnm(
+                mCharacterModel[i].mModelData->getMtxCalcType(),
+                mCharacterModel[i].mAnm[j].mAnmTransform);
+        }
+
+        mCharacterModel[i].mMtxCalc01 = J3DUNewMtxCalcAnm(
+            mCharacterModel[i].mModelData->getMtxCalcType(),
+            mCharacterModel[i].mAnm[0].mAnmTransform, mCharacterModel[i].mAnm[1].mAnmTransform,
+            nullptr, nullptr, MTXCalc_Blend);
+        mCharacterModel[i].mMtxCalc02 = J3DUNewMtxCalcAnm(
+            mCharacterModel[i].mModelData->getMtxCalcType(),
+            mCharacterModel[i].mAnm[1].mAnmTransform, mCharacterModel[i].mAnm[2].mAnmTransform,
+            nullptr, nullptr, MTXCalc_Blend);
+        mCharacterModel[i].mMtxCalc12 = J3DUNewMtxCalcAnm(
+            mCharacterModel[i].mModelData->getMtxCalcType(),
+            mCharacterModel[i].mAnm[0].mAnmTransform, mCharacterModel[i].mAnm[2].mAnmTransform,
+            nullptr, nullptr, MTXCalc_Blend);
+    }
+
+        const char *texFile[21] = {
+        "BabyMario/gut.btp", "BabyLuigi/gut.btp", "Patapata/gut.btp",
+        "Nokonoko/gut.btp", "Peach/gut.btp", "Daisy/gut.btp",
+        "Mario/gut.btp", "Luigi/gut.btp", "Wario/gut.btp",
+        "Waluigi/gut.btp", "Yoshi/gut.btp", "Catherine/gut.btp",
+        "DK/gut.btp", "DKjr/gut.btp", "Koopa/gut.btp",
+        "KoopaJr/gut.btp", "Kinopio/gut.btp", "Kinopico/gut.btp",
+        "KingTeresa/gut.btp",
+        "Mario/gut.btp", "Mario/gut.btp",
+    };
+
+    for (int i = 0; i < 21; ++i)
+    {
+        mCharacterModel[i].mAnmTexPattern = (J3DAnmTexPattern *)J3DAnmLoaderDataBase::load(
+            ((JKRArchive *)mSceneID)->getResource(texFile[i]), J3DLOADER_UNK_FLAG0);
+        mCharacterModel[i].mAnmTexPattern->searchUpdateMaterialID(mCharacterModel[i].mModelData);
+
+        for (u16 j = 0; j < mCharacterModel[i].mModelData->getMaterialNum(); ++j)
+        {
+            J3DMaterialAnm *anm = new (heap, 0) J3DMaterialAnm();
+            mCharacterModel[i].mModelData->getMaterialNodePointer(j)->change();
+            mCharacterModel[i].mModelData->getMaterialNodePointer(j)->setMaterialAnm(anm);
+        }
+        mCharacterModel[i].mModelData->getMaterialTable().entryTexNoAnimator(mCharacterModel[i].mAnmTexPattern);
+    }
+
+        const ResMgr::KartDataId kartDataId[5] = {
+        ResMgr::mcKartDataBody, ResMgr::mcKartDataArm, ResMgr::mcKartDataShock,
+        ResMgr::mcKartTireRight, ResMgr::mcKartTireLeft,
+    };
+
+
+    for (int kartID = 0; kartID < 21; ++kartID)
+    {
+        for (int j = 0; j < 5; ++j)
+        {
+            if ((kartID == 9 || kartID == 16 || kartID == 17) && j == 2)
+            {
+                mKartModelData[kartID][j] = nullptr;
+            }
+            else
+            {
+                mKartModelData[kartID][j] = J3DModelLoaderDataBase::load(
+                    ResMgr::getPtr(kartDataId[j], (EKartID)kartID), 0x18020010);
+                ExModel::disableTexLOD(mKartModelData[kartID][j]);
+                ExModel::setLightMask(mKartModelData[kartID][j], GX_LIGHT1);
+                mKartModelData[kartID][j]->newSharedDisplayList(0x40000);
+                mKartModelData[kartID][j]->simpleCalcMaterial(0, *(Mtx *)&j3dDefaultMtx);
+                mKartModelData[kartID][j]->makeSharedDL();
+            }
+        }
+    }
+
+    for (int kartID = 0; kartID < 21; ++kartID)
+    {
+        mKartModel[kartID] = nullptr;
+        for (int j = 0; j < 6; ++j)
+        {
+            mKartPartsA[kartID][j] = nullptr;
+            mKartPartsB[kartID][j] = nullptr;
+            mKartPartsC[kartID][j] = nullptr;
+        }
+    }
+
+    JKRSolidHeap *kartHeap = JKRSolidHeap::create(heap->getFreeSize(), heap, false);
+    JKRHeap *kartCurrentHeap = kartHeap->becomeCurrentHeap();
+
+    for (int kartID = 0; kartID < 21; ++kartID)
+    {
+        mKartModel[kartID] = new (kartHeap, 0) ExModel(1);
+        mKartModel[kartID]->setModelData(mKartModelData[kartID][0]);
+
+        int count;
+        if (kartID == 7 || kartID == 9)
+            count = 6;
+        else
+            count = 4;
+        for (int i = 0; i < count; ++i)
+        {
+            mKartPartsA[kartID][i] = new (kartHeap, 0) ExModel(1);
+            mKartPartsA[kartID][i]->setModelData(mKartModelData[kartID][1]);
+
+            if (mKartModelData[kartID][2] != nullptr)
+            {
+                mKartPartsB[kartID][i] = new (kartHeap, 0) ExModel(1);
+                mKartPartsB[kartID][i]->setModelData(mKartModelData[kartID][2]);
+            }
+
+            mKartPartsC[kartID][i] = new (kartHeap, 0) ExModel(1);
+            if (i % 2 != 0)
+                mKartPartsC[kartID][i]->setModelData(mKartModelData[kartID][4]);
+            else
+                mKartPartsC[kartID][i]->setModelData(mKartModelData[kartID][3]);
+        }
+    }
+
+    kartHeap->adjustSize();
+    kartCurrentHeap->becomeCurrentHeap();
+
+    mDefaultTable[0] = mMarioBody;
+    mDefaultTable[4] = mDkBody;
+    mDefaultTable[8] = mYoshiBody;
+    mDefaultTable[12] = mNokoBody;
+    mDefaultTable[16] = mPeachBody;
+    mDefaultTable[20] = mBabyBody;
+    mDefaultTable[24] = mWarioBody;
+    mDefaultTable[28] = mKoopaBody;
+    mDefaultTable[32] = mMarioBody;
+    mDefaultTable[36] = mDiddyBody;
+    mDefaultTable[40] = mCatherineBody;
+    mDefaultTable[44] = mNokoBody;
+    mDefaultTable[48] = mPeachBody;
+    mDefaultTable[52] = mBabyBody;
+    mDefaultTable[56] = mWaluigiBody;
+    mDefaultTable[60] = mKoopaJrBody;
+    mDefaultTable[64] = mKinopioBody;
+    mDefaultTable[68] = mKinopioBody;
+    mDefaultTable[72] = mKingTeresaBody;
+    mDefaultTable[76] = mKingTeresaBody;
+    mDefaultTable[80] = mBonusBody;
+    mDefaultTable[1] = mMarioArm[0];
+    mDefaultTable[5] = mDkArm[0];
+    mDefaultTable[9] = mYoshiArm[0];
+    mDefaultTable[13] = mNokoArm[0];
+    mDefaultTable[17] = mPeachArm[0];
+    mDefaultTable[21] = mBabyArm[0];
+    mDefaultTable[25] = mWarioArm[0];
+    mDefaultTable[29] = mKoopaArm[0];
+    mDefaultTable[33] = mMarioArm[0];
+    mDefaultTable[37] = mDiddyArm[0];
+    mDefaultTable[41] = mCatherineArm[0];
+    mDefaultTable[45] = mNokoArm[0];
+    mDefaultTable[49] = mPeachArm[0];
+    mDefaultTable[53] = mBabyArm[0];
+    mDefaultTable[57] = mWaluigiArm[0];
+    mDefaultTable[61] = mKoopaJrArm[0];
+    mDefaultTable[65] = mKinopioArm[0];
+    mDefaultTable[69] = mKinopioArm[0];
+    mDefaultTable[73] = mKingTeresaArm[0];
+    mDefaultTable[77] = mKingTeresaArm[0];
+    mDefaultTable[81] = mBonusArm[0];
+    mDefaultTable[2] = mMarioDump[0];
+    mDefaultTable[6] = mDkDump[0];
+    mDefaultTable[10] = mYoshiDump[0];
+    mDefaultTable[14] = mNokoDump[0];
+    mDefaultTable[18] = mPeachDump[0];
+    mDefaultTable[22] = mBabyDump[0];
+    mDefaultTable[26] = mWarioDump[0];
+    mDefaultTable[30] = mKoopaDump[0];
+    mDefaultTable[34] = mMarioDump[0];
+    mDefaultTable[38] = (const f32 *)mDiddyDump;
+    mDefaultTable[42] = mCatherineDump[0];
+    mDefaultTable[46] = mNokoDump[0];
+    mDefaultTable[50] = mPeachDump[0];
+    mDefaultTable[54] = mBabyDump[0];
+    mDefaultTable[58] = mWaluigiDump[0];
+    mDefaultTable[62] = mKoopaJrDump[0];
+    mDefaultTable[66] = (const f32 *)mKinopioDump;
+    mDefaultTable[70] = (const f32 *)mKinopioDump;
+    mDefaultTable[74] = mKingTeresaDump[0];
+    mDefaultTable[78] = mKingTeresaDump[0];
+    mDefaultTable[82] = mBonusDump[0];
+    mDefaultTable[3] = mMarioTire[0];
+    mDefaultTable[7] = mDkTire[0];
+    mDefaultTable[11] = mYoshiTire[0];
+    mDefaultTable[15] = mNokoTire[0];
+    mDefaultTable[19] = mPeachTire[0];
+    mDefaultTable[23] = mBabyTire[0];
+    mDefaultTable[27] = mWarioTire[0];
+    mDefaultTable[31] = mKoopaTire[0];
+    mDefaultTable[35] = mMarioTire[0];
+    mDefaultTable[39] = mDiddyTire[0];
+    mDefaultTable[43] = mCatherineTire[0];
+    mDefaultTable[47] = mNokoTire[0];
+    mDefaultTable[51] = mPeachTire[0];
+    mDefaultTable[55] = mBabyTire[0];
+    mDefaultTable[59] = mWaluigiTire[0];
+    mDefaultTable[63] = mKoopaJrTire[0];
+    mDefaultTable[67] = mKinopioTire[0];
+    mDefaultTable[71] = mKinopioTire[0];
+    mDefaultTable[75] = mKingTeresaTire[0];
+    mDefaultTable[79] = mKingTeresaTire[0];
+    mDefaultTable[83] = mBonusTire[0];
+
+    mAccessoryModelData = J3DModelLoaderDataBase::load(
+        ResMgr::getPtr(ResMgr::mcArcMRAM, AccessoryMgr::mscaAccessoryBmdFileName), 0x18020010);
+
+    for (u16 i = 0; i < mAccessoryModelData->getMaterialNum(); ++i)
+    {
+        mAccessoryModelData->getMaterialNodePointer(i)->getPEBlock()->getZMode()->setUpdateEnable(0);
+    }
+
+    ExModel::disableTexLOD(mAccessoryModelData);
+    mAccessoryModelData->newSharedDisplayList(0x40000);
+    mAccessoryModelData->simpleCalcMaterial(0, *(Mtx *)&j3dDefaultMtx);
+    mAccessoryModelData->makeSharedDL();
+
+    JKRSolidHeap *accessoryHeap = JKRSolidHeap::create(heap->getFreeSize(), heap, false);
+    JKRHeap *accessoryCurrentHeap = accessoryHeap->becomeCurrentHeap();
+
+    mAccessoryModel = new (accessoryHeap, 0) ExModel(1);
+    mAccessoryModel->setModelData(mAccessoryModelData);
+    mAccessoryModel->_18 |= 2;
+
+    accessoryHeap->adjustSize();
+    accessoryCurrentHeap->becomeCurrentHeap();
+
+    mAccessoryAnm = (J3DAnmTextureSRTKey *)J3DAnmLoaderDataBase::load(
+        ResMgr::getPtr(ResMgr::mcArcMRAM, AccessoryMgr::mscaAccessoryBtkFileName), J3DLOADER_UNK_FLAG0);
+    mAccessoryAnm->searchUpdateMaterialID(mAccessoryModelData);
+
+    for (u16 i = 0; i < mAccessoryModelData->getMaterialNum(); ++i)
+    {
+        J3DMaterialAnm *anm = new (heap, 0) J3DMaterialAnm();
+        mAccessoryModelData->getMaterialNodePointer(i)->change();
+        mAccessoryModelData->getMaterialNodePointer(i)->setMaterialAnm(anm);
+    }
+    mAccessoryModelData->entryTexMtxAnimator(mAccessoryAnm);
+
+    SysDebug::getManager()->setHeapGroup("CharacterSelect3D", heap);
+
+    PSMTXIdentity(mCameraMatrix);
+    PSMTXIdentity(mEffectMatrix);
+
+    LightMgr::createManager();
+    mSceneLight = MenuSceneLight::createAndAppend(heap, mCameraMatrix);
+    for (int i = 0; i < 2; ++i)
+    {
+        mSubLight[i] = MenuSubLight::createAndAppend(heap, i, mSceneLight, i + 1);
+    }
+
+    mSceneLight->setColor(JUtility::TColor(200, 185, 180, 255));
+
+    mSceneLight->mOffsetPos.set(-10300.0f, 15600.0f, 21000.0f);
+    mSubLight[0]->mOffsetPos.set(-10300.0f, 15600.0f, 21000.0f);
+    mSubLight[1]->mOffsetPos.set(3000.0f, 11500.0f, 18000.0f);
+
+    JUtility::TColor ambient(100, 100, 100, 255);
+    MenuAmbient::createAndAppend(heap, ambient);
+
+    init();
+}
+
+
+void CharacterSelect3D::init()
+{
+    JGeometry::TVec3f zero(0.0f, 0.0f, 0.0f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 2; ++j)
+        {
+            mCharacterStatus[i][j].mActive = 0;
+            mCharacterStatus[i][j].mCharID = (ECharID)0;
+            mCharacterStatus[i][j].mPos = zero;
+            mCharacterStatus[i][j].mScale = 1.0f;
+            mCharacterStatus[i][j].mState = 0;
+            mCharacterStatus[i][j].mPrevState = 0;
+            for (int k = 0; k < 3; ++k)
+            {
+                mCharacterStatus[i][j].mTimer[k] = 0.0f;
+            }
+        }
+
+        mKartStatus[i].mActive = 0;
+        mKartStatus[i].mKartID = (EKartID)0xff;
+        mKartStatus[i].mPos = zero;
+        mKartStatus[i].mScale = 1.0f;
+    }
+
+    mAccessoryScale = 0.0f;
+    mKartHeight = 0.0f;
+}
+
+CharacterSelect3D::~CharacterSelect3D()
+{
+    if (mCharacterSelect3D != nullptr)
+    {
+        mCharacterSelect3D = nullptr;
+    }
+}
+
+void CharacterSelect3D::draw(int player, f32 aspect)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+    j3dSys.drawInit();
+
+    Mtx44 projMtx;
+    Mtx tmp;
+
+    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
+    GXSetProjection(projMtx, GX_PERSPECTIVE);
+
+    Vec eye = JGeometry::TVec3f(param->mEye);
+    Vec up = {0.0f, 1.0f, 0.0f};
+    Vec target = JGeometry::TVec3f(param->mTarget);
+
+    if (player == 0)
+    {
+        C_MTXLookAt(mCameraMatrix, &eye, &up, &target);
+
+        if (ExModel::isMtxCombinationOn())
+        {
+            PSMTXCopy(mCameraMatrix, tmp);
+            for (int i = 0; i < 3; ++i)
+            {
+                for (int k = 0; k < 4; ++k)
+                {
+                    mCameraMatrix[i][k] = (tmp[i][k] - mEffectMatrix[i][k]) *
+                                              JFWDisplay::getManager()->getCombinationRatio() +
+                                          mEffectMatrix[i][k];
+                }
+            }
+            PSMTXCopy(tmp, mEffectMatrix);
+        }
+    }
+
+    mSceneLight->mCameraPos.set(JGeometry::TVec3f(eye));
+    mSceneLight->mTargetPos.set(JGeometry::TVec3f(target));
+    j3dSys.setViewMtx(mCameraMatrix);
+
+    LightMgr::getManager()->setCurrentViewNo(0);
+    LightMgr::getManager()->draw();
+
+    if (mKartStatus[player].mActive)
+    {
+        drawKart(mKartStatus[player].mKartID);
+    }
+
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 2; ++j)
+        {
+            if (!mCharacterStatus[i][j].mActive)
+                continue;
+
+            int index = mCharacterStatus[i][j].mCharID - 1;
+            mCharacterModel[index].mModel->setCurrentViewNo(0);
+
+            MtxPtr effectMtx = mSceneLight->getEffectMtx();
+            if (j == 1)
+                effectMtx = mSubLight[1]->getEffectMtx();
+            mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
+
+            if (index + 1 == 17)
+            {
+                mCharacterModel[20].mModel->setCurrentViewNo(0);
+                mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+            }
+        }
+    }
+
+    j3dSys.setDrawModeOpaTexEdge();
+    mDrawBufferA[player]->draw();
+    j3dSys.setDrawModeXlu();
+    mDrawBufferB[player]->draw();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        if (mCharacterStatus[player][i].mActive && mCharacterStatus[player][i].mCharID == 19)
+        {
+            SimpleDrawer drawer;
+            drawer.drawInit(mAccessoryModel);
+            while (drawer.loadPreDrawSetting())
+            {
+                mAccessoryModel->simpleDraw(0, nullptr, 1);
+            }
+        }
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        mCharacterStatus[player][i].mActive = 0;
+    }
+    mKartStatus[player].mActive = 0;
+}
+
+void CharacterSelect3D::draw(int player, f32 aspect, JGeometry::TVec3f eye, JGeometry::TVec3f target)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+    j3dSys.drawInit();
+
+    Mtx44 projMtx;
+    Mtx tmp;
+    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
+    GXSetProjection(projMtx, GX_PERSPECTIVE);
+
+    Vec up = {0.0f, 1.0f, 0.0f};
+
+    if (player == 0)
+    {
+        C_MTXLookAt(mCameraMatrix, &eye, &up, &target);
+
+        if (ExModel::isMtxCombinationOn())
+        {
+            PSMTXCopy(mCameraMatrix, tmp);
+            for (int i = 0; i < 3; ++i)
+            {
+                for (int k = 0; k < 4; ++k)
+                {
+                    mCameraMatrix[i][k] = (tmp[i][k] - mEffectMatrix[i][k]) *
+                                              JFWDisplay::getManager()->getCombinationRatio() +
+                                          mEffectMatrix[i][k];
+                }
+            }
+            PSMTXCopy(tmp, mEffectMatrix);
+        }
+    }
+
+    mSceneLight->mCameraPos.set(eye);
+    mSceneLight->mTargetPos.set(target);
+    j3dSys.setViewMtx(mCameraMatrix);
+
+    LightMgr::getManager()->setCurrentViewNo(0);
+    LightMgr::getManager()->draw();
+
+    if (mKartStatus[player].mActive)
+    {
+        drawKart(mKartStatus[player].mKartID);
+    }
+
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 2; ++j)
+        {
+            if (!mCharacterStatus[i][j].mActive)
+                continue;
+
+            int index = mCharacterStatus[i][j].mCharID - 1;
+            mCharacterModel[index].mModel->setCurrentViewNo(0);
+
+            MtxPtr effectMtx = mSceneLight->getEffectMtx();
+            if (j == 1)
+                effectMtx = mSubLight[1]->getEffectMtx();
+            mCharacterModel[index].mModel->setEffectMtx(effectMtx, 1);
+
+            if (index + 1 == 17)
+            {
+                mCharacterModel[20].mModel->setCurrentViewNo(0);
+                mCharacterModel[20].mModel->setEffectMtx(effectMtx, 1);
+            }
+        }
+    }
+
+    j3dSys.setDrawModeOpaTexEdge();
+    mDrawBufferA[player]->draw();
+    j3dSys.setDrawModeXlu();
+    mDrawBufferB[player]->draw();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        if (mCharacterStatus[player][i].mActive && mCharacterStatus[player][i].mCharID == 19)
+        {
+            SimpleDrawer drawer;
+            drawer.drawInit(mAccessoryModel);
+            while (drawer.loadPreDrawSetting())
+            {
+                mAccessoryModel->simpleDraw(0, nullptr, 1);
+            }
+        }
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        mCharacterStatus[player][i].mActive = 0;
+    }
+    mKartStatus[player].mActive = 0;
+}
+
+void CharacterSelect3D::calc()
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        mDrawBufferA[i]->frameInit();
+        mDrawBufferB[i]->frameInit();
+    }
+
+    for (int player = 0; player < 4; ++player)
+    {
+        j3dSys.setDrawBuffer(mDrawBufferA[player], 0);
+        j3dSys.setDrawBuffer(mDrawBufferB[player], 1);
+
+        for (int position = 0; position < 2; ++position)
+        {
+            if (!mCharacterStatus[player][position].mActive)
+                continue;
+
+            ExModel::setLightMask(mCharacterModel[mCharacterStatus[player][position].mCharID - 1].mModelData,
+                                  position == 0 ? GX_LIGHT0 : GX_LIGHT2);
+            if (mCharacterStatus[player][position].mCharID == 17)
+            {
+                ExModel::setLightMask(mCharacterModel[20].mModelData, position == 0 ? GX_LIGHT0 : GX_LIGHT2);
+            }
+
+            calcCharacter(player, position, mCharacterStatus[player][position].mCharID,
+                          mCharacterStatus[player][position].mPos,
+                          mCharacterStatus[player][position].mTarget,
+                          mCharacterStatus[player][position].mScale);
+
+            if (mCharacterStatus[player][position].mCharID == 19)
+            {
+                int index = mCharacterStatus[player][position].mCharID - 1;
+                mAccessoryAnm->setFrame(mAccessoryScale);
+
+                int rootIdx = mCharacterModel[index].mModelData->getJointName()->getIndex("skl_root");
+                Mtx mtx;
+                PSMTXCopy(mCharacterModel[index].mModel->getModel()->getAnmMtx(rootIdx), mtx);
+
+                f32 scale = 1.75f * (mCharacterStatus[player][position].mScale * mCharacterDefScale[index]);
+                JGeometry::TVec3f scaleVec(scale, scale, scale);
+
+                mAccessoryModel->setCurrentViewNo(0);
+                mAccessoryModel->setBaseTRMtx(mtx);
+                mAccessoryModel->setBaseScale(scaleVec);
+                mAccessoryModel->update(0);
+            }
+        }
+    }
+
+    if (mAccessoryScale++ >= mAccessoryAnm->getFrameMax())
+        mAccessoryScale = 0.0f;
+
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+    for (int player = 0; player < 4; ++player)
+    {
+        if (!mKartStatus[player].mActive)
+            continue;
+
+        EKartID kartID = mKartStatus[player].mKartID;
+        JGeometry::TVec3f pos(mKartStatus[player].mPos);
+        JGeometry::TVec3f target(mKartStatus[player].mTarget);
+        f32 scale = mKartStatus[player].mScale;
+
+        int count;
+        if (kartID == 7 || kartID == 9)
+            count = 6;
+        else
+            count = 4;
+
+        scale *= mKartDefScale[kartID];
+
+        Mtx mtx;
+        const f32 *body = mDefaultTable[kartID * 4];
+        PSMTXTrans(mtx, body[0] * scale, body[1] * scale, body[2] * scale);
+
+        if (param->mAdjust & 1)
+            calcRotTrans(mtx, param->mKartPos, param->mKartTarget);
+        else
+            calcRotTrans(mtx, pos, target);
+
+        mKartModel[kartID]->setCurrentViewNo(0);
+        mKartModel[kartID]->setBaseTRMtx(mtx);
+        JGeometry::TVec3f bodyScale(scale, scale, scale);
+        mKartModel[kartID]->setBaseScale(bodyScale);
+
+        for (int i = 0; i < count; ++i)
+        {
+            PSMTXTrans(mtx, 0.0f, 0.0f, 0.0f);
+            const f32 *part = mDefaultTable[kartID * 4 + 1] + i * 9;
+            JGeometry::TVec3f partPos(scale * part[0], scale * part[1], scale * part[2]);
+            JGeometry::TVec3f partRot(part[3], part[4], part[5]);
+            calcRotTrans(mtx, partPos, partRot);
+            if (param->mAdjust & 1)
+                calcRotTrans(mtx, param->mKartPos, param->mKartTarget);
+            else
+                calcRotTrans(mtx, pos, target);
+            mKartPartsA[kartID][i]->setCurrentViewNo(0);
+            mKartPartsA[kartID][i]->setBaseTRMtx(mtx);
+            part = mDefaultTable[kartID * 4 + 1] + i * 9;
+            JGeometry::TVec3f partScale(scale * part[6], scale * part[7], scale * part[8]);
+            mKartPartsA[kartID][i]->setBaseScale(partScale);
+        }
+
+        if (!(kartID == 9 || kartID == 16 || kartID == 17))
+        {
+            for (int i = 0; i < count; ++i)
+            {
+                PSMTXTrans(mtx, 0.0f, 0.0f, 0.0f);
+                const f32 *part = mDefaultTable[kartID * 4 + 2] + i * 9;
+                JGeometry::TVec3f partPos(scale * part[0], scale * part[1], scale * part[2]);
+                JGeometry::TVec3f partRot(part[3], part[4], part[5]);
+                calcRotTrans(mtx, partPos, partRot);
+                if (param->mAdjust & 1)
+                    calcRotTrans(mtx, param->mKartPos, param->mKartTarget);
+                else
+                    calcRotTrans(mtx, pos, target);
+                mKartPartsB[kartID][i]->setCurrentViewNo(0);
+                mKartPartsB[kartID][i]->setBaseTRMtx(mtx);
+                part = mDefaultTable[kartID * 4 + 2] + i * 9;
+                JGeometry::TVec3f partScale(scale * part[6], scale * part[7], scale * part[8]);
+                mKartPartsB[kartID][i]->setBaseScale(partScale);
+            }
+        }
+
+        for (int i = 0; i < count; ++i)
+        {
+            PSMTXTrans(mtx, 0.0f, 0.0f, 0.0f);
+            const f32 *part = mDefaultTable[kartID * 4 + 3] + i * 9;
+            JGeometry::TVec3f partPos(scale * part[0], scale * part[1], scale * part[2]);
+            JGeometry::TVec3f partRot(part[3], part[4], part[5]);
+            calcRotTrans(mtx, partPos, partRot);
+            if (param->mAdjust & 1)
+                calcRotTrans(mtx, param->mKartPos, param->mKartTarget);
+            else
+                calcRotTrans(mtx, pos, target);
+            mKartPartsC[kartID][i]->setCurrentViewNo(0);
+            mKartPartsC[kartID][i]->setBaseTRMtx(mtx);
+            part = mDefaultTable[kartID * 4 + 3] + i * 9;
+            JGeometry::TVec3f partScale(scale * part[6], scale * part[7], scale * part[8]);
+            mKartPartsC[kartID][i]->setBaseScale(partScale);
+        }
+    }
+
+    for (int kartID = 0; kartID < 21; ++kartID)
+    {
+        mKartModel[kartID]->update(0);
+        for (int i = 0; i < 6; ++i)
+        {
+            if (mKartPartsA[kartID][i] != nullptr)
+                mKartPartsA[kartID][i]->update(0);
+            if (mKartPartsB[kartID][i] != nullptr)
+                mKartPartsB[kartID][i]->update(0);
+            if (mKartPartsC[kartID][i] != nullptr)
+                mKartPartsC[kartID][i]->update(0);
+        }
+    }
+
+    LightMgr::getManager()->calc();
+
+    mKartHeight += 1.0f;
+    if (mKartHeight >= 360.0f)
+        mKartHeight -= 360.0f;
+}
+
+void CharacterSelect3D::setCharacter(int player, int position, ECharID character,
+                                     JGeometry::TVec3f pos, JGeometry::TVec3f target, f32 scale)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+
+#line 1448
+    JUT_MINMAX_ASSERT(0, player, 4);
+    JUT_MINMAX_ASSERT(0, position, 2);
+    JUT_ASSERT(cCharIDNone < character && character < cCharIDMax);
+#line 723
+
+    mCharacterStatus[player][position].mActive = 1;
+    mCharacterStatus[player][position].mCharID = character;
+    mCharacterStatus[player][position].mPos = pos;
+    mCharacterStatus[player][position].mTarget = target;
+    mCharacterStatus[player][position].mScale = scale;
+
+    if (param->mAdjust & 1)
+    {
+        mCharacterStatus[player][position].mScale = param->mBodyScale[position];
+    }
+}
+
+void CharacterSelect3D::setCharacterStatus(int player, int position, CharacterSelect3D::CHARACTER_STATUS status)
+{
+#line 1475
+    JUT_MINMAX_ASSERT(0, player, 4);
+    JUT_MINMAX_ASSERT(0, position, 2);
+#line 745
+
+    switch (status)
+    {
+    case STATUS_0:
+        mCharacterStatus[player][position].mState = status;
+        mCharacterStatus[player][position].mPrevState = status;
+        mCharacterStatus[player][position].mTimer[0] = 0.0f;
+        mCharacterStatus[player][position].mTimer[1] = 0.0f;
+        mCharacterStatus[player][position].mTimer[2] = 0.0f;
+        break;
+    case STATUS_1:
+        if (mCharacterStatus[player][position].mState != STATUS_0 &&
+            mCharacterStatus[player][position].mState == STATUS_2)
+        {
+            mCharacterStatus[player][position].mPrevState = mCharacterStatus[player][position].mState;
+            mCharacterStatus[player][position].mState = status;
+            mCharacterStatus[player][position].mTimer[1] = 0.0f;
+        }
+        break;
+    case STATUS_2:
+        if (mCharacterStatus[player][position].mState != STATUS_2)
+        {
+            mCharacterStatus[player][position].mPrevState = mCharacterStatus[player][position].mState;
+            mCharacterStatus[player][position].mState = status;
+            mCharacterStatus[player][position].mTimer[2] = 0.0f;
+        }
+        break;
+    default:
+#line 1503
+        JUT_ASSERT(0);
+    }
+}
+
+void CharacterSelect3D::setKart(int player, EKartID kartType, JGeometry::TVec3f pos,
+                                JGeometry::TVec3f target, f32 scale)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
+
+#line 1523
+    JUT_MINMAX_ASSERT(0, player, 4);
+    JUT_MINMAX_ASSERT(0, kartType, 21);
+#line 784
+
+    mKartStatus[player].mActive = 1;
+    mKartStatus[player].mKartID = kartType;
+    mKartStatus[player].mPos = pos;
+    mKartStatus[player].mTarget = target;
+    mKartStatus[player].mTarget.y = mKartHeight;
+    mKartStatus[player].mScale = scale;
+
+    if (param->mAdjust & 1)
+    {
+        mKartStatus[player].mScale = param->mKartScale;
+    }
+}
+
+int CharacterSelect3D::isCancel(int player)
+{
+    if (mCharacterStatus[player][0].mState == STATUS_2 &&
+        mCharacterStatus[player][1].mState == STATUS_2 &&
+        mCharacterStatus[player][0].mTimer[2] >= 58.0f &&
+        mCharacterStatus[player][1].mTimer[2] >= 58.0f)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int CharacterSelect3D::isNext(int player)
+{
+    if (mCharacterStatus[player][0].mState == STATUS_2 &&
+        mCharacterStatus[player][1].mState == STATUS_2 &&
+        mCharacterStatus[player][0].mTimer[2] >= 43.0f &&
+        mCharacterStatus[player][1].mTimer[2] >= 43.0f)
+    {
+        return 1;
+    }
+    return 0;
+}
 
 MtxPtr CharacterSelect3D::getCameraMatrix() {
-    return _fb8;
+    return mCameraMatrix;
 }
 
-f32 CharacterSelect3D::getFovy() {}
+f32 CharacterSelect3D::getFovy()
+{
+    return ((CharacterSelect3DParam *)mNode->getReflexible())->mFovy;
+}
 
-void CharacterSelect3D::calcCharacter(int, int, ECharID, JGeometry::TVec3f, JGeometry::TVec3f, float) {}
+void CharacterSelect3D::calcCharacter(int player, int position, ECharID character,
+                                      JGeometry::TVec3f pos, JGeometry::TVec3f target, f32 scale)
+{
+    CharacterSelect3DParam *param = (CharacterSelect3DParam *)mNode->getReflexible();
 
-void CharacterSelect3D::drawKart(EKartID) {}
+#line 1622
+    JUT_MINMAX_ASSERT(0, player, 4);
+    JUT_MINMAX_ASSERT(0, position, 2);
+    JUT_ASSERT(cCharIDNone < character && character < cCharIDMax);
+#line 1670
 
-void CharacterSelect3D::calcRotTrans(float (*) [4], JGeometry::TVec3f, JGeometry::TVec3f) {}
+    int index = character - 1;
+    Mtx mtx;
+    PSMTXTrans(mtx, 0.0f, 0.0f, 0.0f);
+    if (param->mAdjust & 1)
+        calcRotTrans(mtx, param->mBodyPos[position], param->mBodyTarget[position]);
+    else
+        calcRotTrans(mtx, pos, target);
+
+    mCharacterModel[index].mModel->setBaseTRMtx(mtx);
+    if (index + 1 == 18)
+        mCharacterModel[20].mModel->setBaseTRMtx(mtx);
+
+    scale *= mCharacterDefScale[index];
+    JGeometry::TVec3f scaleVec;
+    scaleVec.set(scale, scale, scale);
+    mCharacterModel[index].mModel->setBaseScale(scaleVec);
+    if (index + 1 == 18)
+        mCharacterModel[20].mModel->setBaseScale(scaleVec);
+
+    switch (mCharacterStatus[player][position].mState)
+    {
+    case STATUS_0:
+    {
+        if (mCharacterStatus[player][position].mTimer[0]++ >= mCharacterModel[index].mAnm[0].mAnmTransform->getFrameMax())
+        {
+            mCharacterStatus[player][position].mPrevState = STATUS_0;
+            mCharacterStatus[player][position].mState = STATUS_1;
+        }
+        break;
+    }
+    case STATUS_1:
+    {
+        if (mCharacterStatus[player][position].mTimer[1]++ >= mCharacterModel[index].mAnm[1].mAnmTransform->getFrameMax())
+        {
+            mCharacterStatus[player][position].mPrevState = STATUS_1;
+            mCharacterStatus[player][position].mTimer[1] = 0.0f;
+        }
+        break;
+    }
+    case STATUS_2:
+    {
+        if (mCharacterStatus[player][position].mTimer[2]++ >= mCharacterModel[index].mAnm[2].mAnmTransform->getFrameMax())
+        {
+            mCharacterStatus[player][position].mTimer[2] =
+                mCharacterModel[index].mAnm[2].mAnmTransform->getFrameMax() - 1;
+        }
+        break;
+    }
+    default:
+#line 1670
+        JUT_ASSERT(0);
+    }
+
+    int state = mCharacterStatus[player][position].mState;
+    int prevState = mCharacterStatus[player][position].mPrevState;
+    f32 frame = mCharacterStatus[player][position].mTimer[state];
+
+    mCharacterModel[index].mAnm[state].mAnmTransform->setFrame(frame);
+    if (index + 1 == 18)
+        mCharacterModel[20].mAnm[state].mAnmTransform->setFrame(frame);
+
+    if (frame < 15.0f && prevState != state)
+    {
+        if (prevState == STATUS_0 && state == STATUS_1)
+        {
+            mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
+                mCharacterModel[index].mAnm[state].mMtxCalc);
+            if (index + 1 == 18)
+                mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
+                    mCharacterModel[20].mAnm[state].mMtxCalc);
+        }
+        else if (prevState == STATUS_1 && state == STATUS_2)
+        {
+            mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
+                mCharacterModel[index].mMtxCalc02);
+            mCharacterModel[index].mMtxCalc02->setWeight(0, 1.0 - 0.066 * frame);
+            mCharacterModel[index].mMtxCalc02->setWeight(1, 0.1f * frame);
+            if (index + 1 == 18)
+            {
+                mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
+                    mCharacterModel[20].mMtxCalc02);
+                mCharacterModel[20].mMtxCalc02->setWeight(0, 1.0 - 0.066 * frame);
+                mCharacterModel[20].mMtxCalc02->setWeight(1, 0.1f * frame);
+            }
+        }
+        else if (prevState == STATUS_2 && state == STATUS_1)
+        {
+            mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
+                mCharacterModel[index].mMtxCalc02);
+            mCharacterModel[index].mMtxCalc02->setWeight(1, 1.0 - 0.066 * frame);
+            mCharacterModel[index].mMtxCalc02->setWeight(0, 0.1f * frame);
+            if (index + 1 == 18)
+            {
+                mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
+                    mCharacterModel[20].mMtxCalc02);
+                mCharacterModel[20].mMtxCalc02->setWeight(1, 1.0 - 0.066 * frame);
+                mCharacterModel[20].mMtxCalc02->setWeight(0, 0.1f * frame);
+            }
+        }
+        else if (prevState == STATUS_0 && state == STATUS_2)
+        {
+            mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
+                mCharacterModel[index].mMtxCalc12);
+            mCharacterModel[index].mMtxCalc12->setWeight(0, 1.0 - 0.066 * frame);
+            mCharacterModel[index].mMtxCalc12->setWeight(1, 0.1f * frame);
+            if (index + 1 == 18)
+            {
+                mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
+                    mCharacterModel[20].mMtxCalc12);
+                mCharacterModel[20].mMtxCalc12->setWeight(0, 1.0 - 0.066 * frame);
+                mCharacterModel[20].mMtxCalc12->setWeight(1, 0.1f * frame);
+            }
+        }
+        else
+        {
+#line 1724
+            JUT_ASSERT(0);
+        }
+    }
+    else
+    {
+        mCharacterModel[index].mModelData->getJointNodePointer(0)->setMtxCalc(
+            mCharacterModel[index].mAnm[state].mMtxCalc);
+        if (index + 1 == 18)
+            mCharacterModel[20].mModelData->getJointNodePointer(0)->setMtxCalc(
+                mCharacterModel[20].mAnm[state].mMtxCalc);
+    }
+
+    if (state == STATUS_2)
+    {
+        mCharacterModel[index].mAnmTexPattern->setFrame(frame);
+        if (index + 1 == 18)
+            mCharacterModel[20].mAnmTexPattern->setFrame(frame);
+    }
+    else
+    {
+        mCharacterModel[index].mAnmTexPattern->setFrame(0.0f);
+        if (index + 1 == 18)
+            mCharacterModel[20].mAnmTexPattern->setFrame(0.0f);
+    }
+
+    mCharacterModel[index].mModel->update(0);
+    if (index + 1 == 18)
+        mCharacterModel[20].mModel->update(0);
+}
+
+void CharacterSelect3D::drawKart(EKartID kartType)
+{
+#line 1765
+    JUT_MINMAX_ASSERT(0, kartType, 21);
+#line 837
+
+    SimpleDrawer drawer;
+    int count;
+    if (kartType == 7 || kartType == 9)
+    {
+        count = 6;
+    }
+    else
+    {
+        count = 4;
+    }
+
+    drawer.drawInit(mKartModel[kartType]);
+    while (drawer.loadPreDrawSetting())
+    {
+        mKartModel[kartType]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+    }
+
+    for (int i = 0; i < count; ++i)
+    {
+        drawer.drawInit(mKartPartsA[kartType][i]);
+        while (drawer.loadPreDrawSetting())
+        {
+            mKartPartsA[kartType][i]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+        }
+    }
+
+    if (kartType != 9 && (u32)(kartType - 16) > 1)
+    {
+        for (int i = 0; i < count; ++i)
+        {
+            drawer.drawInit(mKartPartsB[kartType][i]);
+            while (drawer.loadPreDrawSetting())
+            {
+                mKartPartsB[kartType][i]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+            }
+        }
+    }
+
+    for (int i = 0; i < count; ++i)
+    {
+        drawer.drawInit(mKartPartsC[kartType][i]);
+        while (drawer.loadPreDrawSetting())
+        {
+            mKartPartsC[kartType][i]->simpleDraw(0, mSubLight[0]->getEffectMtx(), 1);
+        }
+    }
+}
+
+void CharacterSelect3D::calcRotTrans(Mtx m, JGeometry::TVec3f pos, JGeometry::TVec3f rot)
+{
+    Mtx rotX, rotY, rotZ, trans;
+
+    PSMTXRotRad(rotX, 'X', 0.017453292f * rot.x);
+    PSMTXRotRad(rotY, 'Y', 0.017453292f * rot.y);
+    PSMTXRotRad(rotZ, 'Z', 0.017453292f * rot.z);
+    PSMTXTrans(trans, pos.x, pos.y, pos.z);
+
+    PSMTXConcat(rotX, m, m);
+    PSMTXConcat(rotY, m, m);
+    PSMTXConcat(rotZ, m, m);
+    PSMTXConcat(trans, m, m);
+}
 
 
 #include "JSystem/JAudio/JASFakeMatch2.h"

@@ -59,6 +59,7 @@ public:
 
 private:
     friend class ItemThunder;
+    friend class GeographyObjManager;
     JSULink<GeoObjSupervisor> mLink;
     JSULink<GeoObjSupervisor> mLink2;
 };
@@ -120,6 +121,8 @@ public:
     void setItemColReaction(u8 p1, u8 p2) { mReaction.setFlg(p1, p2); }
 
     bool IsPathMove() const { return mObjData->pathID != 0xffff; }
+
+    const CrsData::SObject *getObjData() const { return mObjData; }
 
     template<class T>
     static GeographyObj *New(const CrsData::SObject &object) { return new T(object); }
@@ -298,8 +301,8 @@ public:
 
     ~ExGeographyObj() {}
     // TODO: check return types
-    virtual bool Search_Bound(const JGeometry::TVec3f &) { return false; }
-    virtual bool Search_BoundRadius(const JGeometry::TVec3f &, f32) { return false; }
+    virtual u8 Search_Bound(const JGeometry::TVec3f &) { return false; }
+    virtual u8 Search_BoundRadius(const JGeometry::TVec3f &, f32) { return false; }
     virtual void Search(const JGeometry::TVec3f &, const JGeometry::TVec3f &) {}
     virtual void AddVel(const JGeometry::TVec3f &, const JGeometry::TVec3f &) {}
     virtual void Search_Wall(const JGeometry::TVec3f &, f32) { }

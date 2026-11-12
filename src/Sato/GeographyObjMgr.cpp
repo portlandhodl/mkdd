@@ -71,6 +71,10 @@
 #include "Shiraiwa/Objects/MapObjIceBlock.h"
 #include "Shiraiwa/Objects/MapObjPool.h"
 #include "Shiraiwa/Objects/MapObjWanwan.h"
+#include "Shiraiwa/ShineArrow.h"
+#include "Shiraiwa/Objects/MapObjGeyser.h"
+#include "Shiraiwa/Objects/MapObjMoveItemBox.h"
+#include "Shiraiwa/Objects/MapObjJetCoaster.h"
 #include "Yamamoto/kartCtrl.h"
 
 // Sato/ObjUtility.h is intentionally not included, because its declaration of
@@ -84,6 +88,8 @@ namespace ObjUtility
     void chkAvailableEnemyByDistande(bool *, f32);
     Mtx &getKartBodyMtx(int);
 } // namespace ObjUtility
+
+static const f32 sDummy[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 GeographyObjManager *GeographyObjManager::gMgr = nullptr;
 
@@ -197,28 +203,6 @@ public:
 
 private:
     u8 _stub[0x4]; // 0x150
-};
-
-class TMapObjGeyser : public GeographyObj
-{
-public:
-    TMapObjGeyser(const CrsData::SObject &);
-    virtual ~TMapObjGeyser() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x7c]; // 0x1c8
-};
-
-class TMapObjGeyserSearch : public GeographyObj
-{
-public:
-    TMapObjGeyserSearch(const CrsData::SObject &);
-    virtual ~TMapObjGeyserSearch() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x7c]; // 0x1c8
 };
 
 class TMapObjPeachTree : public GeographyObj
@@ -377,39 +361,6 @@ private:
     u8 _stub[0x90]; // 0x1dc
 };
 
-class TMapObjMoveItemBoxLimit : public GeographyObj
-{
-public:
-    TMapObjMoveItemBoxLimit(const CrsData::SObject &);
-    virtual ~TMapObjMoveItemBoxLimit() {}
-    void calc() {}
-
-private:
-    u8 _stub[0xec]; // 0x238
-};
-
-class TMapObjJetCoasterHead : public GeographyObj
-{
-public:
-    TMapObjJetCoasterHead(const CrsData::SObject &);
-    virtual ~TMapObjJetCoasterHead() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x2c]; // 0x178
-};
-
-class TMapObjJetCoasterBody : public GeographyObj
-{
-public:
-    TMapObjJetCoasterBody(u32 = 0);
-    virtual ~TMapObjJetCoasterBody() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x1c]; // 0x168
-};
-
 class TMapObjDeBalloon : public GeographyObj
 {
 public:
@@ -419,17 +370,6 @@ public:
 
 private:
     u8 _stub[0x24]; // 0x170
-};
-
-class TMapObjKpFire : public GeographyObj
-{
-public:
-    TMapObjKpFire(const CrsData::SObject &);
-    virtual ~TMapObjKpFire() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x58]; // 0x1a4
 };
 
 class TMapObjRollTable : public GeographyObj
@@ -443,28 +383,6 @@ private:
     u8 _stub[0x2c]; // 0x178
 };
 
-class TMapObjMoveItemBox : public GeographyObj
-{
-public:
-    TMapObjMoveItemBox(const CrsData::SObject &);
-    virtual ~TMapObjMoveItemBox() {}
-    void calc() {}
-
-private:
-    u8 _stub[0xd4]; // 0x220
-};
-
-class TMapObjNossie : public GeographyObj
-{
-public:
-    TMapObjNossie(const CrsData::SObject &);
-    virtual ~TMapObjNossie() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x60]; // 0x1ac
-};
-
 class TMapObjMeteor : public GeographyObj
 {
 public:
@@ -476,16 +394,6 @@ private:
     u8 _stub[0x44]; // 0x190
 };
 
-class TMapObjUkleleMonte : public GeographyObj
-{
-public:
-    TMapObjUkleleMonte(const CrsData::SObject &);
-    virtual ~TMapObjUkleleMonte() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x24]; // 0x170
-};
 
 class TMapObjPakkun : public GeographyObj
 {
@@ -536,27 +444,7 @@ private:
     u8 _stub[0x48]; // 0x194
 };
 
-class TMapObjSwimNossie : public GeographyObj
-{
-public:
-    TMapObjSwimNossie(const CrsData::SObject &);
-    virtual ~TMapObjSwimNossie() {}
-    void calc() {}
 
-private:
-    u8 _stub[0x24]; // 0x170
-};
-
-class TMapObjPtera : public GeographyObj
-{
-public:
-    TMapObjPtera(const CrsData::SObject &);
-    virtual ~TMapObjPtera() {}
-    void calc() {}
-
-private:
-    u8 _stub[0x3c]; // 0x188
-};
 
 class TMapObjPeachTree2 : public GeographyObj
 {
@@ -692,17 +580,6 @@ public:
 
 private:
     u8 _stub[0x1a0]; // 0x310
-};
-
-class TShineArrow : public GeographyObj
-{
-public:
-    TShineArrow();
-    virtual ~TShineArrow() {}
-    void calc() {}
-
-private:
-    u8 _stub[0xe4]; // 0x230
 };
 
 // ---------------------------------------------------------------------------
@@ -978,15 +855,16 @@ GeographyObjManager::~GeographyObjManager()
 
 void GeographyObjManager::clrKartHittingList()
 {
-    for (int i = 0; i < 8; i++)
+    GeographyObj **list = mKartHittingList[0];
+    for (int i = 0; i < 8; i++, list += 20)
     {
         for (u8 j = 0; j < 20; j++)
         {
-            mKartHittingList[i][j] = nullptr;
+            list[j] = nullptr;
         }
         mKartHitRefVec[i].zero();
-        mKartHitItemBox[i] = false;
         mKartHitDepth[i] = 0.0f;
+        mKartHitItemBox[i] = false;
     }
 }
 
@@ -1099,12 +977,15 @@ void GeographyObjManager::resetAllGeoObj()
 void GeographyObjManager::checkObjList(const CrsData &crsData)
 {
     int state;
-    if (mIsLoaded)
-        state = 2;
-    else if (mNormObjNum != 0)
-        state = 1;
+    if (!mIsLoaded)
+    {
+        if (mNormObjNum != 0)
+            state = 1;
+        else
+            state = 0;
+    }
     else
-        state = 0;
+        state = 2;
 
     if (state == 1)
     {
@@ -1146,12 +1027,15 @@ void GeographyObjManager::checkObjList(const CrsData &crsData)
 void GeographyObjManager::checkItemBoxObjList(const CrsData &crsData)
 {
     int state;
-    if (mIsLoaded)
-        state = 2;
-    else if (mNormObjNum != 0)
-        state = 1;
+    if (!mIsLoaded)
+    {
+        if (mNormObjNum != 0)
+            state = 1;
+        else
+            state = 0;
+    }
     else
-        state = 0;
+        state = 2;
 
     if (state == 2)
     {
@@ -1310,76 +1194,66 @@ void GeographyObjManager::checkJugemObjList(const CrsData &crsData)
 #line 825 "GeographyObjMgr.cpp"
     mJugem = new TJugem *[mJugemNum];
 
-    RaceInfo *raceInfo = RaceMgr::getManager()->mRaceInfo;
-    for (u8 kartIdx = 0; kartIdx < (u32)mJugemNum; kartIdx++)
+    for (int kartIdx = 0; kartIdx < mJugemNum; kartIdx++)
     {
         mJugem[kartIdx] = nullptr;
 
-        TJugem *jugem = nullptr;
-        TJugemHeadHear *headHear = nullptr;
-        TJugemHeadLamp *headLamp = nullptr;
         TJugemVoidRod *voidRod = nullptr;
-        TJugemFlag *flag = nullptr;
-        TJugemRodPukuPuku *rodPuku = nullptr;
-        TJugemRodBoardRev *rodRev = nullptr;
-        TJugemRodBoard2 *rodB2 = nullptr;
         TJugemRodBoard *rodB1 = nullptr;
+        TJugemRodBoard2 *rodB2 = nullptr;
+        TJugemRodBoardRev *rodRev = nullptr;
+        TJugemRodPukuPuku *rodPuku = nullptr;
+        TJugemHeadHear *headHear = nullptr;
+        TJugemFlag *flag = nullptr;
+        TJugemHeadLamp *headLamp = nullptr;
+        u32 kind;
+        TJugem *jugem;
 
         CrsData::SObject *object = crsData.getObjectTable();
-        for (int kind = 0x109; kind >= 0xff; kind--)
+        for (kind = 0x109; kind >= 0xff; kind--)
         {
             GeographyObj *obj = createObj(kind, object);
             if (obj == nullptr)
                 continue;
 
-            switch (obj->getKind())
+            u32 objKind = obj->getKind();
+            if (objKind == 0x101)
             {
-            case 0x101:
                 voidRod = (TJugemVoidRod *)obj;
                 voidRod->setJugemRodItem(rodRev, 4);
-                voidRod->setJugemRodItem(rodPuku, 3);
+                voidRod->setJugemRodItem(rodB2, 3);
                 voidRod->setJugemRodItem(rodB1, 1);
-                voidRod->setJugemRodItem(rodB2, 2);
-                break;
-            case 0x104:
+                voidRod->setJugemRodItem(rodPuku, 2);
+            }
+            else if (objKind == 0x104)
                 rodB1 = (TJugemRodBoard *)obj;
-                break;
-            case 0x105:
+            else if (objKind == 0x105)
                 rodB2 = (TJugemRodBoard2 *)obj;
-                break;
-            case 0x106:
+            else if (objKind == 0x106)
                 rodRev = (TJugemRodBoardRev *)obj;
-                break;
-            case 0x107:
+            else if (objKind == 0x107)
                 rodPuku = (TJugemRodPukuPuku *)obj;
-                break;
-            case 0x102:
+            else if (objKind == 0x102)
                 flag = (TJugemFlag *)obj;
-                break;
-            case 0x100:
+            else if (objKind == 0x100)
                 headHear = (TJugemHeadHear *)obj;
-                break;
-            case 0x109:
+            else if (objKind == 0x109)
                 headLamp = (TJugemHeadLamp *)obj;
-                break;
-            case 0xff:
+            else if (objKind == 0xff)
+            {
                 jugem = (TJugem *)obj;
                 jugem->setJugemItem(voidRod, 1);
                 *(void **)((char *)jugem + 0x26c) = *(void **)((char *)voidRod + 0x190); // TODO: name these members
                 jugem->setJugemItem(flag, 2);
                 jugem->setJugemHeadItem(headHear, 0);
                 jugem->setCameraNum(kartIdx);
-#line 283 "GeographyObjMgr.cpp"
-                JUT_MINMAX_ASSERT(0, kartIdx, 4);
-#line 284 "GeographyObjMgr.cpp"
-                jugem->setKartNum((u8)raceInfo->mTargetKarts[kartIdx]);
+                jugem->setKartNum(RaceMgr::getManager()->getTargetKartNo(kartIdx));
                 jugem->setJugemHeadItem(headLamp, 1);
                 mJugem[kartIdx] = jugem;
-                break;
             }
         }
 
-        for (int kind = 0x109; kind >= 0xff; kind--)
+        for (kind = 0x109; kind >= 0xff; kind--)
         {
             jugemappend(mJugem[kartIdx]);
             jugemappend(headHear);
@@ -1387,8 +1261,8 @@ void GeographyObjManager::checkJugemObjList(const CrsData &crsData)
             jugemappend(voidRod);
             jugemappend(flag);
             jugemappend(rodPuku);
-            jugemappend(rodB2);
             jugemappend(rodB1);
+            jugemappend(rodB2);
             jugemappend(rodRev);
         }
     }
@@ -1399,49 +1273,45 @@ void GeographyObjManager::setSequentialID()
     GeoFuncTableMax = 132;
     GeoPrevDrawFuncTableMax = 2;
 
-    u16 sum = GeoFuncTableMax + GeoPrevDrawFuncTableMax;
-    mSeqObjAnmTbl = new GeoObjSupervisor **[sum];
-
     u16 seq = 0;
     GeoFuncTable::GeoFuncTblEntry *entry = GeoFuncTable::GeoFuncTbl;
-    for (u16 i = 0; i < sum; i++, entry++)
+    u16 num = GeoFuncTableMax + GeoPrevDrawFuncTableMax;
+    mSeqObjAnmTbl = new GeoObjAnmData *[num];
+    for (u16 i = 0; i < num; i++, seq++, entry++)
     {
         entry->sequentialID = seq;
         mSeqObjAnmTbl[i] = nullptr;
-        seq++;
     }
 
     GenGeoFuncTableMax = 24;
     GeoFuncTable::GeoFuncTblEntry *genEntry = GeoFuncTable::GenGeoFuncTbl;
-    for (u16 i = 0; i < GenGeoFuncTableMax; i++, genEntry++)
+    for (u16 i = 0; i < GenGeoFuncTableMax; i++, seq++, genEntry++)
     {
         genEntry->sequentialID = seq;
-        seq++;
     }
 
-    mKindObjTbl = new GeographyObj *[(u16)(GeoFuncTableMax + GeoPrevDrawFuncTableMax + GenGeoFuncTableMax)];
-    for (u16 i = 0; i < (u16)(GeoFuncTableMax + GeoPrevDrawFuncTableMax + GenGeoFuncTableMax); i++)
+    num = GeoFuncTableMax + GeoPrevDrawFuncTableMax + GenGeoFuncTableMax;
+    mKindObjTbl = new GeographyObj *[num];
+    for (u16 i = 0; i < num; i++)
     {
         mKindObjTbl[i] = nullptr;
     }
 
     BlockGeoFuncTableMax = 1;
     GeoFuncTable::GeoExFuncTblEntry *blockEntry = GeoFuncTable::BlockGeoFuncTbl;
-    for (u8 i = 0; i < BlockGeoFuncTableMax; i++, blockEntry++)
+    for (u8 i = 0; i < BlockGeoFuncTableMax; i++, seq++, blockEntry++)
     {
         blockEntry->sequentialID = seq;
-        seq++;
     }
 
     SpecialGeoFuncTableMax = 1;
     GeoFuncTable::GeoExFuncTblEntry *specialEntry = GeoFuncTable::SpecialGeoFuncTbl;
-    for (u8 i = 0; i < SpecialGeoFuncTableMax; i++, specialEntry++)
+    for (u8 i = 0; i < SpecialGeoFuncTableMax; i++, seq++, specialEntry++)
     {
         specialEntry->sequentialID = seq;
-        seq++;
     }
 
-    mGeoObjNum = (u16)(sum + GenGeoFuncTableMax + BlockGeoFuncTableMax + SpecialGeoFuncTableMax);
+    mGeoObjNum = num + BlockGeoFuncTableMax + SpecialGeoFuncTableMax;
 }
 
 void GeographyObjManager::countObjNum(const CrsData::SObject *obj)
@@ -1532,22 +1402,13 @@ GeographyObj *GeographyObjManager::createObj(u32 kind, const CrsData::SObject *o
 
 GeographyObj *GeographyObjManager::createSubObj(u32 kind)
 {
-    GeographyObj *obj = nullptr;
-    GeoFuncTable::GeoFuncTblEntry *entry = GeoFuncTable::GeoFuncTbl;
-    for (u16 i = 0; i < GeoFuncTableMax; i++, entry++)
-    {
-        if (entry->kind == kind)
-        {
-            obj = entry->createFunc(*(const CrsData::SObject *)nullptr);
-            obj->_110 = entry->sequentialID;
-        }
-    }
+    GeographyObj *obj = createObj(kind, nullptr);
     if (obj != nullptr)
         append(obj);
     return obj;
 }
 
-GeographyObj *GeographyObjManager::createPrevDrawSubObj(u32 kind)
+inline GeographyObj *GeographyObjManager::createPrevDrawObj(u32 kind, const CrsData::SObject *object)
 {
     GeographyObj *obj = nullptr;
     GeoFuncTable::GeoFuncTblEntry *entry = GeoFuncTable::GeoPrevDrawFuncTbl;
@@ -1555,29 +1416,41 @@ GeographyObj *GeographyObjManager::createPrevDrawSubObj(u32 kind)
     {
         if (entry->kind == kind)
         {
-            obj = entry->createFunc(*(const CrsData::SObject *)nullptr);
+            obj = entry->createFunc(*object);
             obj->_110 = entry->sequentialID;
         }
     }
+    return obj;
+}
+
+GeographyObj *GeographyObjManager::createPrevDrawSubObj(u32 kind)
+{
+    GeographyObj *obj = createPrevDrawObj(kind, nullptr);
     if (obj != nullptr)
         prevdraw_append(obj);
     return obj;
 }
 
-GeographyObj *GeographyObjManager::createGenSubObj(u32 kind)
+inline GeographyObj *GeographyObjManager::createGenObj(u32 kind, const CrsData::SObject *object)
 {
-    GeoFuncTable::GeoFuncTblEntry *entry = GeoFuncTable::GenGeoFuncTbl;
     GeographyObj *obj = nullptr;
-    for (int i = GenGeoFuncTableMax; i != 0; i--)
+    GeoFuncTable::GeoFuncTblEntry *entry = GeoFuncTable::GenGeoFuncTbl;
+    for (int i = 0; i < GenGeoFuncTableMax; i++)
     {
         if (entry->kind == kind)
         {
-            obj = entry->createFunc(*(const CrsData::SObject *)nullptr);
+            obj = entry->createFunc(*object);
             obj->_110 = entry->sequentialID;
             break;
         }
         entry++;
     }
+    return obj;
+}
+
+GeographyObj *GeographyObjManager::createGenSubObj(u32 kind)
+{
+    GeographyObj *obj = createGenObj(kind, nullptr);
     if (obj != nullptr)
     {
         genappend(obj);
@@ -1586,13 +1459,58 @@ GeographyObj *GeographyObjManager::createGenSubObj(u32 kind)
     return obj;
 }
 
-void GeographyObjManager::checkGenObjList(const CrsData &)
+#pragma push
+#pragma auto_inline off
+void GeographyObjManager::checkGenObjList(const CrsData &crsData)
 {
-}
+    int state;
+    if (!mIsLoaded)
+    {
+        if (mGenGeoObjNum != 0)
+            state = 1;
+        else
+            state = 0;
+    }
+    else
+        state = 2;
 
-GeographyObj *GeographyObjManager::createAppendGenObj(u32, const CrsData::SObject *)
+    if (state == 2)
+    {
+    }
+    else if (state == 1)
+    {
+        for (int i = 0; i < crsData.getObjectEntryNum(); i++)
+        {
+            CrsData::SObject *object = &crsData.getObjectTable()[i];
+            if (object->isAvailableObject())
+                createAppendGenObj(object->objID, object);
+        }
+    }
+
+    if (state != 2)
+    {
+        if (isMiniGame() && !mIsBombBattle && !mIsEscapeBattle)
+            createAllBalloonObj();
+    }
+
+    if (mIsEscapeBattle && mShineArrowMgr == nullptr)
+    {
+        mShineArrowMgr = new TShineArrowManager();
+        mShineArrowMgr->create();
+    }
+}
+#pragma pop
+
+GeographyObj *GeographyObjManager::createAppendGenObj(u32 kind, const CrsData::SObject *object)
 {
-    return nullptr;
+    GeographyObj *obj = createGenObj(kind, object);
+    if (obj != nullptr)
+    {
+        genappend(obj);
+        appendKindObjList(obj);
+        obj->createColModel(nullptr);
+    }
+    return obj;
 }
 
 void GeographyObjManager::createAllBalloonObj()
@@ -1601,57 +1519,246 @@ void GeographyObjManager::createAllBalloonObj()
     if (mIsBalloonBattle)
         teamNum = 3;
 
-    RaceInfo *raceInfo = RaceMgr::getManager()->mRaceInfo;
 #line 1364 "GeographyObjMgr.cpp"
-    u8 playerNum = (u8)raceInfo->mPlayerNum;
+    u8 playerNum = RaceMgr::getManager()->getPlayerNumber();
     JUT_ASSERT_MSG(playerNum > 0, "playernum > 0");
 
-    u8 map[8];
-    u8 *mapEnd = map;
-    int i;
-    for (i = 8; i != 0; i--, mapEnd++)
-        *mapEnd = -1;
+    char map[8];
+    for (int i = 0; i < 8; i++)
+        map[i] = -1;
 
-    for (u8 i = 0; i < raceInfo->mConsoleNum; i++)
-    {
-#line 283 "GeographyObjMgr.cpp"
-        JUT_MINMAX_ASSERT(0, i, 4);
-#line 1390 "GeographyObjMgr.cpp"
-        map[raceInfo->mTargetKarts[i]] = i;
-    }
+    for (u32 i = 0; i < RaceMgr::getManager()->getConsoleNumber(); i++)
+        map[RaceMgr::getManager()->getTargetKartNo(i)] = i;
 
     for (u8 i = 0; i < playerNum; i++)
     {
-        GeographyObj *mgr = nullptr;
-        GeoFuncTable::GeoFuncTblEntry *entry = GeoFuncTable::GenGeoFuncTbl;
-        for (int j = GenGeoFuncTableMax; j != 0; j--)
-        {
-            if (entry->kind == 0x26af)
-            {
-                mgr = entry->createFunc(*(const CrsData::SObject *)nullptr);
-                mgr->_110 = entry->sequentialID;
-                break;
-            }
-            entry++;
-        }
+        mBalloonMgr[i] = (TBalloonManager *)createAppendGenObj(0x26af, nullptr);
+        mBalloonMgr[i]->init(i, map[i], teamNum);
+    }
+}
 
-        if (mgr != nullptr)
+inline GeographyObj *GeographyObjManager::chkCreatePrevDrawObj(const CrsData::SObject *object, u32 kind)
+{
+    GeographyObj *obj = createPrevDrawObj(kind, object);
+    if (obj != nullptr)
+    {
+        prevdraw_append(obj);
+        appendKindObjList(obj);
+    }
+    return obj;
+}
+
+inline void GeographyObjManager::checkPrevDrawObjList(const CrsData &crsData)
+{
+    int state;
+    if (!mIsLoaded)
+    {
+        if (mPrevDrawGeoObjNum != 0)
+            state = 1;
+        else
+            state = 0;
+    }
+    else
+        state = 2;
+
+    if (state == 1)
+    {
+        for (int i = 0; i < crsData.getObjectEntryNum(); i++)
         {
-            genappend(mgr);
-            appendKindObjList(mgr);
-            mgr->createColModel(nullptr);
-            mBalloonMgr[i] = (TBalloonManager *)mgr;
-            ((TBalloonManager *)mgr)->init(i, map[i], teamNum);
+            CrsData::SObject *object = &crsData.getObjectTable()[i];
+            if (object->isAvailableObject())
+                chkCreatePrevDrawObj(object, object->objID);
         }
     }
 }
 
-void GeographyObjManager::setObjectByCrsData(const CrsData &)
+inline GeographyObj *GeographyObjManager::createSubItemBoxObj(u32 kind)
 {
+    GeographyObj *obj = createObj(kind, nullptr);
+    if (obj != nullptr)
+        boxappend(obj);
+    return obj;
 }
 
-void GeographyObjManager::setGeoObjNum(const CrsData &)
+inline void GeographyObjManager::createAllItemBox()
 {
+    if (RaceMgr::getManager()->isItemBoxValid() && !mIsLoaded)
+    {
+        int normalNum = (f32)mItemBoxObjNum;
+        int doubleNum = 0.6f * (f32)mItemBoxObjNum;
+        for (u16 i = 0; i < (u16)normalNum; i++)
+        {
+            GeographyObj *box = createSubItemBoxObj(1);
+            if (box != nullptr)
+                boxremove(box, 0);
+        }
+        for (u16 i = 0; i < (u16)doubleNum; i++)
+        {
+            GeographyObj *box = createSubItemBoxObj(0xc);
+            if (box != nullptr)
+                boxremove(box, 1);
+        }
+    }
+}
+
+inline ExGeographyObj *GeographyObjManager::createBlockObj(u32 kind, const CrsData::SObject *object)
+{
+    ExGeographyObj *obj = nullptr;
+    GeoFuncTable::GeoExFuncTblEntry *entry = GeoFuncTable::BlockGeoFuncTbl;
+    for (int i = 0; i < BlockGeoFuncTableMax; i++)
+    {
+        if (entry->kind == kind)
+        {
+            obj = entry->createFunc(*object);
+            obj->_110 = entry->sequentialID;
+            break;
+        }
+        entry++;
+    }
+    return obj;
+}
+
+inline void GeographyObjManager::checkBlockObjList(const CrsData &crsData)
+{
+    int state;
+    if (!mIsLoaded)
+    {
+        if (mBlockGeoObjNum != 0)
+            state = 1;
+        else
+            state = 0;
+    }
+    else
+        state = 2;
+
+    if (state == 2)
+    {
+    }
+    else if (state == 1)
+    {
+        for (int i = 0; i < crsData.getObjectEntryNum(); i++)
+        {
+            CrsData::SObject *object = &crsData.getObjectTable()[i];
+            ExGeographyObj *obj = createBlockObj(object->objID, object);
+            if (obj != nullptr)
+                blockappend(obj);
+        }
+    }
+}
+
+inline ExGeographyObj *GeographyObjManager::createSpecialObj(u32 kind, const CrsData::SObject *object)
+{
+    ExGeographyObj *obj = nullptr;
+    GeoFuncTable::GeoExFuncTblEntry *entry = GeoFuncTable::SpecialGeoFuncTbl;
+    for (int i = 0; i < SpecialGeoFuncTableMax; i++)
+    {
+        if (entry->kind == kind)
+        {
+            obj = entry->createFunc(*object);
+            obj->_110 = entry->sequentialID;
+            if (mSpecialHeadObj == nullptr)
+                mSpecialHeadObj = obj;
+            break;
+        }
+        entry++;
+    }
+    return obj;
+}
+
+inline void GeographyObjManager::checkSpObjList(const CrsData &crsData)
+{
+    int state;
+    if (!mIsLoaded)
+    {
+        if (mSpecialGeoObjNum != 0)
+            state = 1;
+        else
+            state = 0;
+    }
+    else
+        state = 2;
+
+    if (state == 2)
+    {
+    }
+    else if (state == 1)
+    {
+        for (int i = 0; i < crsData.getObjectEntryNum(); i++)
+        {
+            CrsData::SObject *object = &crsData.getObjectTable()[i];
+            ExGeographyObj *obj = createSpecialObj(object->objID, object);
+            if (obj != nullptr)
+                spappend(obj);
+        }
+    }
+}
+
+inline void GeographyObjManager::initClassCreateNumFunc()
+{
+    for (u16 i = 0; i < GeoFuncTableMax + GeoPrevDrawFuncTableMax + GenGeoFuncTableMax; i++)
+    {
+        if (mKindObjTbl[i] != nullptr)
+            mKindObjTbl[i]->initClassCreateNum();
+    }
+}
+
+inline void GeographyObjManager::checkSupervisorObjList()
+{
+    for (u16 i = 0; i < GeoFuncTableMax + GeoPrevDrawFuncTableMax + GenGeoFuncTableMax; i++)
+    {
+        if (mKindObjTbl[i] != nullptr)
+        {
+            GeoObjSupervisor *supervisor = mKindObjTbl[i]->getSupervisor();
+            if (supervisor != nullptr)
+                mSupervisorList.append(&supervisor->mLink);
+        }
+    }
+}
+
+void GeographyObjManager::setObjectByCrsData(const CrsData &crsData)
+{
+    if (crsData.mObjectData == nullptr)
+        return;
+
+    setGeoObjNum(crsData);
+    checkObjList(crsData);
+    checkPrevDrawObjList(crsData);
+
+    createAllItemBox();
+
+    checkItemBoxObjList(crsData);
+    checkGenObjList(crsData);
+
+    initClassCreateNumFunc();
+
+    checkJugemObjList(crsData);
+
+    checkSupervisorObjList();
+
+    checkBlockObjList(crsData);
+    checkSpObjList(crsData);
+
+    if (mIsLoaded)
+        resetAllGeoObj();
+}
+
+void GeographyObjManager::setGeoObjNum(const CrsData &crsData)
+{
+    if (mIsLoaded)
+        return;
+
+    mNormObjNum = mPrevDrawGeoObjNum = mGenGeoObjNum = mBlockGeoObjNum = mSpecialGeoObjNum = mItemBoxObjNum = 0;
+    for (u16 i = 0; i < (int)crsData.getObjectEntryNum(); i++)
+        countObjNum(&crsData.getObjectTable()[i]);
+}
+
+static inline void checkObjResource(void *data, char *path) // fabricated
+{
+    if (data == nullptr)
+        OSReport("not found %s\n", path);
+
+#line 1603 "GeographyObjMgr.cpp"
+    JUT_ASSERT_F(data != nullptr, "can't find %s", path);
 }
 
 void GeographyObjManager::setModelData(GeographyObj *obj)
@@ -1664,42 +1771,42 @@ void GeographyObjManager::setModelData(GeographyObj *obj)
     const char *name = obj->getBmdFileName();
 
     char buf[64];
-    const char *path = name;
+    char *path;
     if (obj != nullptr && obj->mObjFlag & 0x20)
     {
         snprintf(buf, sizeof(buf), "/Objects/%s", name);
         path = buf;
     }
+    else
+    {
+        path = (char *)name;
+    }
 
     void *data;
     if (obj->mObjFlag & 0x2)
     {
-        data = ObjUtility::getPtrMainArc((char *)path);
+        data = ObjUtility::getPtrMainArc(path);
         if (data == nullptr)
-            data = ObjUtility::getPtrCourseArc((char *)path);
+            data = ObjUtility::getPtrCourseArc(path);
     }
     else
     {
-        data = ObjUtility::getPtrCourseArc((char *)path);
+        data = ObjUtility::getPtrCourseArc(path);
         if (data == nullptr)
-            data = ObjUtility::getPtrMainArc((char *)path);
+            data = ObjUtility::getPtrMainArc(path);
         if (data == nullptr)
-            data = ObjUtility::getPtrMainLocaleArc((char *)path);
+            data = ObjUtility::getPtrMainLocaleArc(path);
     }
 
     if (RaceMgr::getManager()->mRaceInfo->mRaceMode == AWARD_DEMO && data == nullptr)
         data = (*(JKRArchive **)((char *)RaceMgr::getManager() + 0x90))->getResource(path); // mAwardArc
 
-    if (data == nullptr)
-        OSReport("not found %s\n", name);
-
-#line 1603 "GeographyObjMgr.cpp"
-    JUT_ASSERT_F(data != nullptr, "can't find %s", name);
+    checkObjResource(data, path);
 #line 1604 "GeographyObjMgr.cpp"
-    mModelData[seqID] = (J3DModelData *)J3DModelLoaderDataBase::load(data, (tevStageNum << 16) | 0x192000 | 0x10);
+    mModelData[seqID] = (J3DModelData *)J3DModelLoaderDataBase::load(data, tevStageNum | 0x19200010);
 
     if (obj->getKind() >= 0xff && obj->getKind() < 0x10a)
-        ExModel::setLightMask(mModelData[seqID], GX_LIGHT2);
+        ExModel::setLightMask(mModelData[seqID], GX_LIGHT1);
 
     if (obj->mObjFlag & 0x400)
         ExModel::setLightMask(mModelData[seqID], GX_LIGHT7);
@@ -1714,7 +1821,7 @@ void GeographyObjManager::setModelData(GeographyObj *obj)
 
     if (obj->mObjFlag & 1)
     {
-        mModelData[seqID]->simpleCalcMaterial(0, j3dDefaultMtx);
+        mModelData[seqID]->simpleCalcMaterial(0, *(Mtx*)&j3dDefaultMtx);
         mModelData[seqID]->makeSharedDL();
         mSimpleModelFlags[seqID] = 1;
     }
@@ -1806,7 +1913,7 @@ void GeographyObjManager::createModel_norm(const JSUListIterator<GeographyObj> &
 
 void GeographyObjManager::createModel_shadow(GeographyObj *obj, GeographyObj **out, JKRSolidHeap *heap, u32 param)
 {
-    SysDebug::getManager()->setHeapGroup("OBJECT SHADOW", nullptr);
+    SysDebug::getManager()->setHeapGroup("OBJECT SHADOW MODEL", nullptr);
     obj->createShadowModel(heap, param);
     makeShadowSharedDL(obj, out);
     SysDebug::getManager()->setHeapGroup("OBJECT MODEL", nullptr);
@@ -1819,29 +1926,260 @@ void GeographyObjManager::createModel_shadow(GeographyObj *obj, GeographyObj **o
 
 struct GeoObjTransAnmInfo
 {
-    /* 0x00 */ void *mTransAnm;
-    /* 0x04 */ void *_04;
-    /* 0x08 */ void *_08;
+    /* 0x00 */ void *mData;
+    /* 0x04 */ J3DAnmTransform *mTrans;
+    /* 0x08 */ J3DMtxCalc *mCalc;
 
     GeoObjTransAnmInfo() // 0x80225e44
     {
-        mTransAnm = 0;
-        _04 = 0;
-        _08 = 0;
+        mData = 0;
+        mTrans = 0;
+        mCalc = 0;
     }
 };
 
-void GeographyObjManager::loadAnimation(GeographyObj *obj, GeographyObj **)
+struct GeoObjTransAnmData
 {
-    (new GeoObjTransAnmInfo[obj->_110]);
+    /* 0x00 */ GeoObjTransAnmInfo *mInfo;
+    /* 0x04 */ u8 mNum;
+};
+
+template <class T>
+struct GeoObjMatAnmInfo
+{
+    /* 0x00 */ void *mData;
+    /* 0x04 */ T *mAnm;
+};
+
+struct GeoObjMatAnmData
+{
+    GeoObjMatAnmData()
+    {
+        mColor = nullptr;
+        mTexSRT = nullptr;
+        mTexPattern = nullptr;
+        mTevReg = nullptr;
+        mInfo.mNumBrks = mInfo.mNumBtps = mInfo.mNumBtks = mInfo.mNumBpks = 0;
+    }
+
+    /* 0x00 */ GeoObjMatAnmInfo<J3DAnmColor> *mColor;
+    /* 0x04 */ GeoObjMatAnmInfo<J3DAnmTextureSRTKey> *mTexSRT;
+    /* 0x08 */ GeoObjMatAnmInfo<J3DAnmTexPattern> *mTexPattern;
+    /* 0x0c */ GeoObjMatAnmInfo<J3DAnmTevRegKey> *mTevReg;
+    /* 0x10 */ MatAnmInfo mInfo;
+};
+
+struct GeoObjAnmData
+{
+    /* 0x00 */ GeoObjTransAnmData *mTrans;
+    /* 0x04 */ GeoObjMatAnmData *mMat;
+    /* 0x08 */ u8 mNum;
+};
+
+static inline void *getObjAnmResource(GeographyObj *obj, char *path) // fabricated
+{
+    void *data;
+    if (obj->mObjFlag & 0x2)
+    {
+        data = ObjUtility::getPtrMainArc(path);
+        if (data == nullptr)
+            data = ObjUtility::getPtrCourseArc(path);
+    }
+    else
+    {
+        data = ObjUtility::getPtrCourseArc(path);
+        if (data == nullptr)
+            data = ObjUtility::getPtrMainArc(path);
+        if (data == nullptr)
+            data = ObjUtility::getPtrMainLocaleArc(path);
+    }
+
+    if (RaceMgr::getManager()->mRaceInfo->mRaceMode == AWARD_DEMO && data == nullptr)
+        data = (*(JKRArchive **)((char *)RaceMgr::getManager() + 0x90))->getResource(path); // mAwardArc
+
+    checkObjResource(data, path);
+    return data;
 }
 
-void GeographyObjManager::chkAnmTableNum(GeographyObj *, u8 *, MatAnmInfo *)
+void GeographyObjManager::loadAnimation(GeographyObj *obj, GeographyObj **loaded)
 {
+    if (loaded[obj->_110] != nullptr)
+        return;
+
+    if (obj->getAnmTbl() == nullptr)
+    {
+        obj->loadAnimation();
+        return;
+    }
+
+    u8 transNum;
+    MatAnmInfo matInfo;
+    transNum = 0;
+    matInfo.mNumBrks = matInfo.mNumBtps = matInfo.mNumBtks = matInfo.mNumBpks = 0;
+    chkAnmTableNum(obj, &transNum, &matInfo);
+
+    if (transNum != 0)
+    {
+        if (mSeqObjAnmTbl[obj->_110] == nullptr)
+        {
+            mSeqObjAnmTbl[obj->_110] = new GeoObjAnmData;
+            mSeqObjAnmTbl[obj->_110]->mTrans = nullptr;
+            mSeqObjAnmTbl[obj->_110]->mMat = nullptr;
+        }
+        mSeqObjAnmTbl[obj->_110]->mTrans = new GeoObjTransAnmData;
+        mSeqObjAnmTbl[obj->_110]->mTrans->mInfo = new GeoObjTransAnmInfo[transNum];
+    }
+
+    if ((u8)(matInfo.mNumBpks + matInfo.mNumBtks + matInfo.mNumBtps + matInfo.mNumBrks) != 0)
+    {
+        if (mSeqObjAnmTbl[obj->_110] == nullptr)
+        {
+            mSeqObjAnmTbl[obj->_110] = new GeoObjAnmData;
+            mSeqObjAnmTbl[obj->_110]->mTrans = nullptr;
+            mSeqObjAnmTbl[obj->_110]->mMat = nullptr;
+        }
+        mSeqObjAnmTbl[obj->_110]->mMat = new GeoObjMatAnmData();
+        GeoObjMatAnmData *mat = mSeqObjAnmTbl[obj->_110]->mMat;
+        if (matInfo.mNumBpks != 0)
+            mat->mColor = new GeoObjMatAnmInfo<J3DAnmColor>[matInfo.mNumBpks];
+        if (matInfo.mNumBtks != 0)
+            mat->mTexSRT = new GeoObjMatAnmInfo<J3DAnmTextureSRTKey>[matInfo.mNumBtks];
+        if (matInfo.mNumBtps != 0)
+            mat->mTexPattern = new GeoObjMatAnmInfo<J3DAnmTexPattern>[matInfo.mNumBtps];
+        if (matInfo.mNumBrks != 0)
+            mat->mTevReg = new GeoObjMatAnmInfo<J3DAnmTevRegKey>[matInfo.mNumBrks];
+    }
+
+    mSeqObjAnmTbl[obj->_110]->mNum = transNum + (u8)(matInfo.mNumBpks + matInfo.mNumBtks + matInfo.mNumBtps + matInfo.mNumBrks);
+
+    GeoAnmTableEntry *tbl = obj->getAnmTbl();
+    GeoObjTransAnmData *trans = mSeqObjAnmTbl[obj->_110]->mTrans;
+    u8 num = mSeqObjAnmTbl[obj->_110]->mNum;
+    GeoObjMatAnmData *mat = mSeqObjAnmTbl[obj->_110]->mMat;
+    if (trans != nullptr)
+        trans->mNum = 0;
+    if (mat != nullptr)
+        mat->mInfo.mNumBrks = mat->mInfo.mNumBtps = mat->mInfo.mNumBtks = mat->mInfo.mNumBpks = 0;
+
+    for (u8 i = 0; i < num; i++, tbl++)
+    {
+        const char *name = tbl->fileName;
+        u32 len = strlen(name);
+        char buf[64];
+        if (obj->mObjFlag & 0x20)
+            snprintf(buf, sizeof(buf), "/Objects/%s", tbl->fileName);
+        else
+            strcpy(buf, tbl->fileName);
+
+        const char *ext = &name[len - 3];
+        if (strcmp(ext, "bck") == 0 || strcmp(ext, "bca") == 0)
+        {
+            GeoObjTransAnmInfo *info = &trans->mInfo[trans->mNum];
+            info->mData = getObjAnmResource(obj, buf);
+            J3DAnmObjTrans::setupTransAnmData(&info->mTrans, &info->mCalc, obj->mModel.getModelData(), info->mData);
+            trans->mNum++;
+        }
+
+        if (strcmp(ext, "bpk") == 0)
+        {
+            GeoObjMatAnmInfo<J3DAnmColor> *info = &mat->mColor[mat->mInfo.mNumBpks];
+            info->mData = getObjAnmResource(obj, buf);
+            J3DAnmObjMaterial::setupColorAnmData(&info->mAnm, obj->mModel.getModelData(), info->mData);
+            mat->mInfo.mNumBpks++;
+        }
+        else if (strcmp(ext, "btk") == 0)
+        {
+            GeoObjMatAnmInfo<J3DAnmTextureSRTKey> *info = &mat->mTexSRT[mat->mInfo.mNumBtks];
+            info->mData = getObjAnmResource(obj, buf);
+            J3DAnmObjMaterial::setupTexSRTAnmData(&info->mAnm, obj->mModel.getModelData(), info->mData);
+            mat->mInfo.mNumBtks++;
+        }
+        else if (strcmp(ext, "btp") == 0)
+        {
+            GeoObjMatAnmInfo<J3DAnmTexPattern> *info = &mat->mTexPattern[mat->mInfo.mNumBtps];
+            info->mData = getObjAnmResource(obj, buf);
+            J3DAnmObjMaterial::setupTexPatternAnmData(&info->mAnm, obj->mModel.getModelData(), info->mData);
+            mat->mInfo.mNumBtps++;
+        }
+        else if (strcmp(ext, "brk") == 0)
+        {
+            GeoObjMatAnmInfo<J3DAnmTevRegKey> *info = &mat->mTevReg[mat->mInfo.mNumBrks];
+            info->mData = getObjAnmResource(obj, buf);
+            J3DAnmObjMaterial::setupTevRegAnmData(&info->mAnm, obj->mModel.getModelData(), info->mData);
+            mat->mInfo.mNumBrks++;
+        }
+    }
 }
 
-void GeographyObjManager::registerAnimation(GeographyObj *)
+void GeographyObjManager::chkAnmTableNum(GeographyObj *obj, u8 *transNum, MatAnmInfo *matInfo)
 {
+    *transNum = 0;
+    matInfo->mNumBpks = matInfo->mNumBtks = matInfo->mNumBtps = matInfo->mNumBrks = 0;
+
+    GeoAnmTableEntry *tbl = obj->getAnmTbl();
+    u8 num = obj->getSizeAnmTbl() / sizeof(GeoAnmTableEntry);
+    for (u8 i = 0; i < num; i++, tbl++)
+    {
+        const char *name = tbl->fileName;
+        const char *ext = &name[strlen(name) - 3];
+        if (strcmp(ext, "bck") == 0 || strcmp(ext, "bca") == 0)
+            (*transNum)++;
+        else if (strcmp(ext, "bpk") == 0)
+            matInfo->mNumBpks++;
+        else if (strcmp(ext, "btk") == 0)
+            matInfo->mNumBtks++;
+        else if (strcmp(ext, "btp") == 0)
+            matInfo->mNumBtps++;
+        else if (strcmp(ext, "brk") == 0)
+            matInfo->mNumBrks++;
+    }
+}
+
+void GeographyObjManager::registerAnimation(GeographyObj *obj)
+{
+    if (mSeqObjAnmTbl[(u16)obj->_110] == nullptr)
+        return;
+
+    obj->NewAnmCtrl();
+
+    GeoObjTransAnmData *trans = mSeqObjAnmTbl[(u16)obj->_110]->mTrans;
+    if (trans != nullptr)
+    {
+        AnmController *ctrl;
+        u8 num = trans->mNum;
+        ctrl = obj->mAnmCtrl;
+        ctrl->mTrans = new AnmControlTrans();
+        ctrl->mTrans->initAnm(num, &obj->mModel);
+        GeoObjTransAnmInfo *info = trans->mInfo;
+        for (u8 i = 0; i < num; i++, info++)
+            obj->mAnmCtrl->RegisterTrans(i, info->mTrans, info->mCalc);
+    }
+
+    GeoObjMatAnmData *mat = mSeqObjAnmTbl[(u16)obj->_110]->mMat;
+    if (mat != nullptr)
+    {
+        obj->mAnmCtrl->InitRegistrationMat(mat->mInfo, &obj->mModel);
+
+        u8 num = mat->mInfo.mNumBpks;
+        GeoObjMatAnmInfo<J3DAnmColor> *color = mat->mColor;
+        for (u8 i = 0; i < num; i++, color++)
+            obj->mAnmCtrl->RegisterMatColor(i, color->mAnm);
+
+        num = mat->mInfo.mNumBtks;
+        GeoObjMatAnmInfo<J3DAnmTextureSRTKey> *srt = mat->mTexSRT;
+        for (u8 i = 0; i < num; i++, srt++)
+            obj->mAnmCtrl->RegisterMatTexSRT(i, srt->mAnm);
+
+        num = mat->mInfo.mNumBtps;
+        GeoObjMatAnmInfo<J3DAnmTexPattern> *pattern = mat->mTexPattern;
+        for (u8 i = 0; i < num; i++, pattern++)
+            obj->mAnmCtrl->RegisterMatTexPattern(i, pattern->mAnm);
+
+        num = mat->mInfo.mNumBrks;
+        GeoObjMatAnmInfo<J3DAnmTevRegKey> *tevReg = mat->mTevReg;
+        for (u8 i = 0; i < num; i++, tevReg++)
+            obj->mAnmCtrl->RegisterMatTevReg(i, tevReg->mAnm);
+    }
 }
 
 void GeographyObjManager::makeSharedDL(GeographyObj *obj, GeographyObj **out)
@@ -2011,35 +2349,36 @@ void GeographyObjManager::load()
             if (name != nullptr)
             {
                 char buf[64];
-                const char *path = name;
-                void *data;
+                char *path;
                 if (obj != nullptr && obj->mObjFlag & 0x20)
                 {
                     snprintf(buf, sizeof(buf), "/Objects/%s", name);
                     path = buf;
                 }
-
+                else
+                {
+                    path = (char *)name;
+                }
+                void *data;
                 if (obj->mObjFlag & 0x2)
                 {
-                    data = ObjUtility::getPtrMainArc((char *)path);
+                    data = ObjUtility::getPtrMainArc(path);
                     if (data == nullptr)
-                        data = ObjUtility::getPtrCourseArc((char *)path);
+                        data = ObjUtility::getPtrCourseArc(path);
                 }
                 else
                 {
-                    data = ObjUtility::getPtrCourseArc((char *)path);
+                    data = ObjUtility::getPtrCourseArc(path);
                     if (data == nullptr)
-                        data = ObjUtility::getPtrMainArc((char *)path);
+                        data = ObjUtility::getPtrMainArc(path);
                     if (data == nullptr)
-                        data = ObjUtility::getPtrMainLocaleArc((char *)path);
+                        data = ObjUtility::getPtrMainLocaleArc(path);
                 }
+
                 if (RaceMgr::getManager()->mRaceInfo->mRaceMode == AWARD_DEMO && data == nullptr)
                     data = (*(JKRArchive **)((char *)RaceMgr::getManager() + 0x90))->getResource(path); // mAwardArc
 
-                if (data == nullptr)
-                    OSReport("not found %s\n", name);
-#line 1603 "GeographyObjMgr.cpp"
-                JUT_ASSERT_F(data != nullptr, "can't find %s", name);
+                checkObjResource(data, path);
 #line 1604 "GeographyObjMgr.cpp"
                 mShadowModelData[(u16)obj->_110] = J3DModelLoaderDataBase::load(data, 0x192110);
                 ExModel::patchModelData(mShadowModelData[(u16)obj->_110]);
@@ -2082,34 +2421,36 @@ void GeographyObjManager::loadObjects(L *list, I &iterator)
             if (name != nullptr)
             {
                 char buf[64];
-                const char *path = name;
+                char *path;
                 if (obj != nullptr && obj->mObjFlag & 0x20)
                 {
                     snprintf(buf, sizeof(buf), "/Objects/%s", name);
                     path = buf;
                 }
+                else
+                {
+                    path = (char *)name;
+                }
                 void *data;
                 if (obj->mObjFlag & 0x2)
                 {
-                    data = ObjUtility::getPtrMainArc((char *)path);
+                    data = ObjUtility::getPtrMainArc(path);
                     if (data == nullptr)
-                        data = ObjUtility::getPtrCourseArc((char *)path);
+                        data = ObjUtility::getPtrCourseArc(path);
                 }
                 else
                 {
-                    data = ObjUtility::getPtrCourseArc((char *)path);
+                    data = ObjUtility::getPtrCourseArc(path);
                     if (data == nullptr)
-                        data = ObjUtility::getPtrMainArc((char *)path);
+                        data = ObjUtility::getPtrMainArc(path);
                     if (data == nullptr)
-                        data = ObjUtility::getPtrMainLocaleArc((char *)path);
+                        data = ObjUtility::getPtrMainLocaleArc(path);
                 }
+
                 if (RaceMgr::getManager()->mRaceInfo->mRaceMode == AWARD_DEMO && data == nullptr)
                     data = (*(JKRArchive **)((char *)RaceMgr::getManager() + 0x90))->getResource(path); // mAwardArc
 
-                if (data == nullptr)
-                    OSReport("not found %s\n", name);
-#line 1603 "GeographyObjMgr.cpp"
-                JUT_ASSERT_F(data != nullptr, "can't find %s", name);
+                checkObjResource(data, path);
 #line 1604 "GeographyObjMgr.cpp"
                 mShadowModelData[seqIdx] = (J3DModelData *)J3DModelLoaderDataBase::load(data, 0x192110);
                 ExModel::patchModelData(mShadowModelData[seqIdx]);
@@ -2361,8 +2702,8 @@ ExGeographyObj *GeographyObjManager::search_boundEx(const JGeometry::TVec3f &pos
         ExGeographyObj *obj = it.getObject();
         if (obj == searcher)
             continue;
-        if (obj->mExBounds->IsHitBound(obj->mPos, pos))
-            return obj;
+        if (obj->getExBounds()->IsHitBound(obj->mPos, pos))
+            return it.getObject();
     }
     return nullptr;
 }
@@ -2371,9 +2712,8 @@ ExGeographyObj *GeographyObjManager::search_boundSp(const JGeometry::TVec3f &pos
 {
     for (JSUListIterator<ExGeographyObj> it(mSpObjList.getFirst()); it.isAvailable(); ++it)
     {
-        ExGeographyObj *obj = it.getObject();
-        if (obj != searcher && obj->Search_Bound(pos))
-            return obj;
+        if (it.getObject() != searcher && it->Search_Bound(pos))
+            return it.getObject();
     }
     return nullptr;
 }
@@ -2382,9 +2722,8 @@ ExGeographyObj *GeographyObjManager::search_boundSp(const JGeometry::TVec3f &pos
 {
     for (JSUListIterator<ExGeographyObj> it(mSpObjList.getFirst()); it.isAvailable(); ++it)
     {
-        ExGeographyObj *obj = it.getObject();
-        if (obj->Search_BoundRadius(pos, radius))
-            return obj;
+        if (it->Search_BoundRadius(pos, radius))
+            return it.getObject();
     }
     return nullptr;
 }
@@ -2403,7 +2742,7 @@ void GeographyObjManager::drawSimpleModel(u32 viewNo)
         if (mSimpleModelFlags[i] != 0 && mModelData[i] != nullptr)
         {
             drawer.drawInit(mModelData[i]);
-            do
+            while (drawer.loadPreDrawSetting())
             {
                 for (JSUListIterator<GeographyObj> it(mGeoObjList.getFirst()); it.isAvailable(); ++it)
                 {
@@ -2417,7 +2756,7 @@ void GeographyObjManager::drawSimpleModel(u32 viewNo)
                     if (i == obj->_110)
                         obj->simpleDraw(viewNo);
                 }
-            } while (drawer.loadPreDrawSetting());
+            }
         }
     }
 }
@@ -2430,15 +2769,14 @@ void GeographyObjManager::drawSimpleModel_groundObj(u32 viewNo)
         if (mSimpleModelFlags[i] != 0 && mModelData[i] != nullptr)
         {
             drawer.drawInit(mModelData[i]);
-            do
+            while (drawer.loadPreDrawSetting())
             {
                 for (JSUListIterator<GeographyObj> it(mPrevDrawObjList.getFirst()); it.isAvailable(); ++it)
                 {
-                    GeographyObj *obj = it.getObject();
-                    if (i == obj->_110)
-                        obj->simpleDraw(viewNo);
+                    if (i == it->_110)
+                        it->simpleDraw(viewNo);
                 }
-            } while (drawer.loadPreDrawSetting());
+            }
         }
     }
 

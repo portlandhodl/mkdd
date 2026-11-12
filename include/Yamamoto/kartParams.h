@@ -27,6 +27,11 @@ struct TireOp
     f32 _0, _4, _8, _c, _10, _14, _18, _1c, _20, _24, _28, _2c, _30;
 }; // 34
 
+struct CamOp
+{
+    f32 _0, _4, _8;
+}; // c
+
 struct CubeParam
 {
     JGeometry::TVec3f _0[8];
@@ -36,6 +41,12 @@ struct TireParamData
 {
     f32 _0, _4, _8, _c, _10, _14, _18, _1c, _20, _24;
 }; // 28
+
+struct SusParamData
+{
+    f32 _0, _4, _8, _c, _10, _14, _18, _1c,
+        _20, _24, _28, _2c, _30, _34, _38, _3c;
+}; // 40
 
 struct BodyParamData 
 {
@@ -147,7 +158,7 @@ extern CubeParam *CubeParamsData[21];
 // extern UNK babyCamOp;
 // extern UNK waruCamOp;
 // extern UNK kuppaCamOp;
-// extern UNK CameraOpData;
+extern CamOp *CameraOpData[21];
 extern f32 RescueSeaDepth[21];
 extern f32 floorDepth[21];
 extern f32 floorThunderDepth[21];
@@ -175,14 +186,14 @@ extern f32 tireOffsetPos[21];
 // extern UNK kinopioSus;
 // extern UNK demoSus;
 // extern UNK normalTire;
-// extern UNK Jdata;
+extern f32 Jdata[63];
 extern f32 BodyFullHeightData[21];
 extern f32 BodyFullBumpData[21];
-// extern UNK SusPowerData;
+extern f32 SusPowerData[21];
 extern JGeometry::TVec2f ThunderOffet[21];
 extern f32 SusDushDive[21];
 extern f32 SetEngineClassData[3];
-// extern UNK SusParamsData;
+extern SusParamData *SusParamsData[21];
 extern TireParamData *TireParamsData[21];
 extern BodyParamData *BodyParamsData[21];
 

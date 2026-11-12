@@ -12,6 +12,8 @@ public:
 
     void *getCourseNameTexture(ECourseID courseId);  // 0x80190bb0
 
+    static CourseName2D *ptr() { return mCourseName2D; }
+
 private:
     static CourseName2D *mCourseName2D;  // 0x80416378
 

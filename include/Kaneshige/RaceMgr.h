@@ -140,6 +140,7 @@ public:
     bool isWaitDemoMode() const { return mRaceInfo->isWaitDemo(); }
     bool isLastWaitDemo() const { return mRaceInfo->isLastWaitDemo(); } 
     int getKartNumber() const { return mRaceInfo->getKartNumber(); }
+    int getPlayerNumber() const { return mRaceInfo->getPlayerKartNumber(); }
     int getAwardKartNo() const { return mRaceInfo->getAwardKartNo(); }
     int getConsoleNumber() const { return mRaceInfo->getConsoleNumber(); }
     int getItemSlotType() const { return mRaceInfo->getItemSlotType(); }
@@ -150,6 +151,13 @@ public:
     ERaceGpCup getRaceGpCup() const { return mRaceInfo->getGpCup(); }
     // why did this not use a getter?
     ERaceMode getRaceMode() const { return mRaceInfo->mRaceMode; }
+
+    int getRivalKartNo(int rivalNo) const
+    {
+#line 114
+        JUT_MINMAX_ASSERT(0, rivalNo, 2);
+        return mRaceInfo->mRivalKarts[rivalNo];
+    }
 
     bool isDemoCamera(int camNo) const
     {
@@ -170,8 +178,12 @@ public:
 #endif
     }
 
+    int requestDemoCameraID() const { return mRaceDirector->requestDemoCameraID(); }
     bool isRaceEnd() const { return mRaceDirector->isRaceEnd(); };
     bool checkRaceEnd() { return mRaceDirector->checkRaceEnd(); }
+    bool isPlayingWinnerAnm() const { return mRaceDirector->isPlayingWinnerAnm(); }
+    bool isPlayingDemoWinnerAnm() const { return mRaceDirector->isPlayingDemoWinnerAnm(); }
+    bool isMovingToStartPoint() const { return mRaceDirector->isMovingToStartPoint(); }
 
     BlurScreen *getBlurScreen() { return mRaceDrawer->getBlurScreen(); }
     void setBlurColor(const JUTColor &color) { mRaceDrawer->setBlurColor(color); }
@@ -179,6 +191,8 @@ public:
     KartDrawer *getKartDrawer(int idx) { return mRaceDrawer->getKartDrawer(idx); };
     MaskScreen *getMaskScreen() { return mRaceDrawer->getMaskScreen(); }
     int getCameraNumber() const { return getConsoleNumber(); }
+    int getZoomWinConsoleNo() const;
+    bool isZoomWinConsole() const;
 
     bool isCrsDemoMode() { return getRacePhase() == PHASE_CRS_DEMO; }
     // RaceMgr get/sets
@@ -211,6 +225,7 @@ public:
     }
     KartChecker *getKartChecker(int index) const
     {
+#line 267 "RaceMgr.h"
         JUT_MINMAX_ASSERT(0, index, 8);
         return mKartChecker[index];
     }
@@ -246,9 +261,9 @@ public:
     RaceInfo *mRaceInfo;
     RaceBGMPlayer *mRaceBGMPlayer;
     Console *mConsole;
-private:
     Course *mCourse;
     KartChecker *mKartChecker[8];
+private:
     KartLoader *mKartLoader[8];
     Award2D *mAward2D;
     StaffRoll2D *mStaffRoll2D;

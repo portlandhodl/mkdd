@@ -4,8 +4,14 @@
 #include <dolphin/mtx.h>
 #include "JSystem/J3D/J3DTypes.h"
 
-extern Mtx j3dDefaultMtx;
+extern const Mtx j3dDefaultMtx;
+extern const Vec j3dDefaultScale;
+extern const J3DTransformInfo j3dDefaultTransformInfo;
 
+void __MTGQR7(u32);
+void J3DGQRSetup7(u32, u32, u32, u32);
+void __MTGQR6(u32);
+void J3DGQRSetup6(u32, u32, u32, u32);
 void J3DCalcBBoardMtx(f32 (*)[4]);
 void J3DCalcYBBoardMtx(f32 (*)[4]);
 void J3DPSCalcInverseTranspose(f32 (*)[4], f32 (*)[3]);
@@ -18,6 +24,8 @@ void J3DGetTextureMtxMayaOld(const J3DTextureSRTInfo&, f32 (*)[4]);
 void J3DScaleNrmMtx(f32 (*)[4], const Vec&);
 void J3DScaleNrmMtx33(f32 (*)[3], const Vec&);
 void J3DMtxProjConcat(f32 (*)[4], f32 (*)[4], f32 (*)[4]);
+void J3DCalcHalfAngleVec(Vec*, Vec*, Vec*);
+void J3DCalcHalfAngleMtx(Vec*, Vec*, f32 (*)[4]);
 void J3DPSMtxArrayConcat(f32 (*)[4], f32 (*)[4], f32 (*)[4], unsigned long);
 
 // clang-format off
@@ -39,6 +47,33 @@ inline void J3DPSMtx33Copy
         psq_st      fp4, 0(dst),   0, 0
         psq_st      fp3, 8(dst),   0, 0
         psq_st      fp2, 16(dst),  0, 0
+        psq_st      fp1, 24(dst),  0, 0
+        stfs        fp0, 32(dst)
+    }
+}
+// clang-format on
+
+// clang-format off
+/**
+ * @fabricated
+ */
+inline void J3DPSMtx33CopyFrom34
+(
+    const register Mtx src,
+    register Mtx33 dst
+)
+{
+    __asm {
+        psq_l       fp5, 0(src),   0, 0
+        lfs         fp4, 8(src)
+        psq_l       fp3, 16(src),  0, 0
+        lfs         fp2, 24(src)
+        psq_l       fp1, 32(src),  0, 0
+        lfs         fp0, 40(src)
+        psq_st      fp5, 0(dst),   0, 0
+        stfs        fp4, 8(dst)
+        psq_st      fp3, 12(dst),  0, 0
+        stfs        fp2, 20(dst)
         psq_st      fp1, 24(dst),  0, 0
         stfs        fp0, 32(dst)
     }

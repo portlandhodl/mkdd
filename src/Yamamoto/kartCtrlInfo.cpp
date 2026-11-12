@@ -222,12 +222,12 @@ int KartCtrl::GetPortPtr(int portNumber) {
     return (int)&viewdata[offset];
 }
 
-void KartCtrl::GetCamFovy(int camIndex) {
-    getKartCam(camIndex)->GetFovy();
+f32 KartCtrl::GetCamFovy(int camIndex) {
+    return getKartCam(camIndex)->GetFovy();
 }
 
-void KartCtrl::GetCamAspect(int camIndex) {
-    getKartCam(camIndex)->GetAspect();
+f32 KartCtrl::GetCamAspect(int camIndex) {
+    return getKartCam(camIndex)->GetAspect();
 }
 
 CrsGround *KartCtrl::GetBodyGround(int kartIndex) {
@@ -267,19 +267,19 @@ bool KartCtrl::GetRightFTirePos(int kartIndex, Vec *vec) {
     GetTirePos(kartIndex, 0, vec);
 }
 
-void KartCtrl::GetLeftTirePos(int kartIndex, Vec *vec) {
+bool KartCtrl::GetLeftTirePos(int kartIndex, Vec *vec) {
     getKartBody(kartIndex);
     RaceMgr::getCurrentManager();
-    GetTirePos(kartIndex, 3, vec);
+    return GetTirePos(kartIndex, 3, vec);
 }
 
-void KartCtrl::GetRightTirePos(int kartIndex, Vec *vec) {
+bool KartCtrl::GetRightTirePos(int kartIndex, Vec *vec) {
     getKartBody(kartIndex);
     RaceMgr::getCurrentManager();
-    GetTirePos(kartIndex, 2, vec);
+    return GetTirePos(kartIndex, 2, vec);
 }
 
-int KartCtrl::GetTirePos(int kartIndex, int kartTireIndex, Vec *kartTireVect) {
+bool KartCtrl::GetTirePos(int kartIndex, int kartTireIndex, Vec *kartTireVect) {
     KartBody* kartBody = getKartBody(kartIndex);
     RaceMgr::getCurrentManager();
     
@@ -291,7 +291,7 @@ int KartCtrl::GetTirePos(int kartIndex, int kartTireIndex, Vec *kartTireVect) {
         + tireOffsetPos[idx];
     kartTireVect->z = (kartBody->mKartSus[kartOffset]->mWheel->getBaseTRMtx()[2][3] - kartBody->_2fc.z * kartBody->mKartSus[kartOffset]->mTireRadius);
     
-    return (u8)(kartBody->mKartSus[kartOffset]->_124 & 1);
+    return (kartBody->mKartSus[kartOffset]->_124 & 1) != 0;
 }
 
 f32 KartCtrl::GeTireG(int kartIndex) {
@@ -647,7 +647,7 @@ bool KartCtrl::CheckThunderBolt(int kartIndex) {
     return getKartBody(kartIndex)->getThunder()->mFlags & 1;
 }
 
-double KartCtrl::GetTireRadius(int kartIndex) {
+f32 KartCtrl::GetTireRadius(int kartIndex) {
     return getKartBody(kartIndex)->mKartSus[2]->mTireRadius;
 }
 
@@ -660,7 +660,7 @@ bool KartCtrl::IsWallReact(int kartIndex) {
     KartBody *kartBody = getKartBody(kartIndex);
     KartTumble *kartTumble = kartBody->getTumble();
     
-    if ((kartTumble->_0[4] & 1) != 0) {
+    if ((kartTumble->_4 & 1) != 0) {
         return true;
     }
     else {
@@ -701,7 +701,7 @@ bool KartCtrl::IsMiniGameEnd() {
     return false;
 }
 
-u8 KartCtrl::CheckWinner() {
+int KartCtrl::CheckWinner() {
     int kartNumber = GetKartCtrl()->GetKartNumber();
     
     for (int kartIndex = 0; kartIndex < kartNumber; kartIndex++) {
@@ -1065,18 +1065,18 @@ void KartCtrl::HaveRabbit() {
     bool haveRabbit = false;
     for (int i = 0; i < kartNumber; i++) {
         kartBody = getKartBody(i);
-        if (kartBody->getItem()->_0[8] != 0) {
+        if (kartBody->getItem()->_8 != 0) {
             haveRabbit = true;
         }
     }
 
     // MJB - Shine thief's music controls, maybe...?
     //       Rabbit might refer to the person with the shine...
-    if (haveRabbit && (kartBody->getItem()->_0[9] == 0)) {
+    if (haveRabbit && (kartBody->getItem()->_9 == 0)) {
         getKartSound(kartBody->mMynum)->DoShineStartBGM();
-        kartBody->getItem()->_0[9] = 1;
-    } else if (!haveRabbit && (kartBody->getItem()->_0[9] != 0)) {
+        kartBody->getItem()->_9 = 1;
+    } else if (!haveRabbit && (kartBody->getItem()->_9 != 0)) {
         getKartSound(kartBody->mMynum)->DoShineStopBGM();
-        kartBody->getItem()->_0[9] = 0;
+        kartBody->getItem()->_9 = 0;
     }
 }

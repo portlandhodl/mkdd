@@ -11,17 +11,19 @@ class CrsGround;
 class PermissionCounter
 {
 public:
-    PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
+    PermissionCounter();
+    ~PermissionCounter();
 
     u8 mCount;        // 0x0
     u8 mPermission;   // 0x1
-    JSUPtrLink mLink; // 0x4
+    JSULink<PermissionCounter> mLink; // 0x4
 };
 
-class PermissionCounterObserver : public JSUPtrList
+class PermissionCounterObserver : public JSUList<PermissionCounter>
 {
 public:
     PermissionCounterObserver() { initiate(); }
+    ~PermissionCounterObserver();
 
     void init() { initiate(); }
     void reset();
@@ -45,6 +47,7 @@ public:
         Effect_Unknown12 = 0x12,
         Effect_Burn = 0x13,
         Effect_Star = 0x1c,
+        Effect_Cannon = 0x23,
         Effect_Fireball = 0x24,
     };
 

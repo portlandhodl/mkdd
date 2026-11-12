@@ -4,6 +4,11 @@
 #include "types.h"
 
 struct J3DModelData;
+
+struct J3DUMemRequest
+{
+    static u32 sBusTransactionMax;
+};
 struct J3DShape;
 struct J3DShapeMtx;
 

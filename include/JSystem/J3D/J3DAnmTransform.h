@@ -22,6 +22,8 @@ struct J3DAnmTransform : public J3DAnmBase {
     {
     }
 
+    J3DAnmTransform(s16, f32*, s16*, f32*);
+
     virtual ~J3DAnmTransform() { }     // _08 (weak)
     virtual J3DAnmKind getKind() const // _0C (weak)
     {
@@ -45,7 +47,8 @@ struct J3DAnmTransform : public J3DAnmBase {
  */
 struct J3DAnmTransformFull : public J3DAnmTransform {
     inline J3DAnmTransformFull()
-        : mTable(nullptr)
+        : J3DAnmTransform(0, nullptr, nullptr, nullptr)
+        , mTable(nullptr)
     {
     }
 
@@ -56,6 +59,15 @@ struct J3DAnmTransformFull : public J3DAnmTransform {
     // _00     = VTBL
     // _00-_20 = J3DAnmTransform
     J3DAnmTransformFullTable* mTable; // _20
+};
+
+struct J3DAnmTransformFullWithLerp : public J3DAnmTransformFull {
+    virtual ~J3DAnmTransformFullWithLerp() { } // _08 (weak)
+    virtual J3DAnmKind getKind() const // _0C (weak)
+    {
+        return (J3DAnmKind)16;
+    }
+    virtual void getTransform(u16, J3DTransformInfo*) const; // _10
 };
 
 struct J3DAnmTransformFullData : J3DAnmFullData {
@@ -80,7 +92,7 @@ struct J3DAnmTransformFullTable {
  */
 struct J3DAnmTransformKey : public J3DAnmTransform {
     inline J3DAnmTransformKey()
-        : J3DAnmTransform()
+        : J3DAnmTransform(0, nullptr, nullptr, nullptr)
         , _20(0)
         , mTable(nullptr)
     {

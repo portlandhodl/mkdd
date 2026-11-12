@@ -11,6 +11,8 @@ namespace GameAudio
     class CustomSoundTable : public JAISoundInfo, public JAUSoundInfo, public JAIStreamDataMgr
     {
     public:
+        CustomSoundTable() : JAISoundInfo(true), JAUSoundInfo(true) {}
+
         virtual u32 getSoundType(JAISoundID soundID) const;
         virtual int getCategory(JAISoundID soundID) const;
 

@@ -12,9 +12,9 @@
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
 
-void J3DAnmObjBase::loadJ3DModelData(void *param_1, u32 param_2) {
+J3DModelData *J3DAnmObjBase::loadJ3DModelData(void *param_1, u32 param_2) {
     // FIX: Identify what the bitmask here is really used for.
-    J3DModelLoaderDataBase().load(this, (u32)param_1 | 0x19200010);
+    return (J3DModelData *)J3DModelLoaderDataBase().load(param_1, param_2 | 0x19200010);
 }
 
 void J3DAnmObjBase::initFrameCtrl(J3DAnmBase *initAnmBase) {
@@ -55,23 +55,69 @@ void J3DAnmObjTrans::anmFrameProc() {
     mAnmBase->mCurrentFrame = mFrameCtrl.getFrame();
 }
 
-void J3DAnmObjMaterial::setupColorAnmData(J3DAnmColor **, J3DModelData *, void *) {}
-
-void J3DAnmObjMaterial::setupTexSRTAnmData(J3DAnmTextureSRTKey **, J3DModelData *, void *) {}
-
-void J3DAnmObjMaterial::setupTexPatternAnmData(J3DAnmTexPattern **, J3DModelData *, void *) {}
-
-void J3DAnmObjMaterial::setupTevRegAnmData(J3DAnmTevRegKey **param_1, J3DModelData *param_2, void *param_3) {}
-
-template<> void J3DAnmObjMaterial::setMaterialAnmTev<J3DAnmTevRegKey>(J3DAnmTevRegKey **param_1, J3DModelData *param_2) {
-    
+void J3DAnmObjMaterial::setupColorAnmData(J3DAnmColor **anm, J3DModelData *modelData, void *data) {
+    *anm = (J3DAnmColor *)J3DAnmLoaderDataBase::load(data, J3DLOADER_UNK_FLAG0);
+    (*anm)->searchUpdateMaterialID(modelData);
+    u16 num = (*anm)->getUpdateMaterialNum();
+    for (u16 i = 0; i < num; i++) {
+        setMaterialAnm(modelData, (*anm)->getUpdateMaterialID(i));
+    }
+    modelData->getMaterialTable().entryMatColorAnimator(*anm);
 }
 
-void J3DAnmObjCluster::loadClusterData(J3DDeformData **, void *) {}
+void J3DAnmObjMaterial::setupTexSRTAnmData(J3DAnmTextureSRTKey **anm, J3DModelData *modelData, void *data) {
+    *anm = (J3DAnmTextureSRTKey *)J3DAnmLoaderDataBase::load(data, J3DLOADER_UNK_FLAG0);
+    (*anm)->searchUpdateMaterialID(modelData);
+    u16 num = (*anm)->getUpdateMaterialNum();
+    for (u16 i = 0; i < num; i++) {
+        setMaterialAnm(modelData, (*anm)->getUpdateMaterialID(i));
+    }
+    modelData->getMaterialTable().entryTexMtxAnimator(*anm);
+}
 
-void J3DAnmObjCluster::loadClusterAnmData(J3DAnmCluster **anmCluster, void *) {}
+void J3DAnmObjMaterial::setupTexPatternAnmData(J3DAnmTexPattern **anm, J3DModelData *modelData, void *data) {
+    *anm = (J3DAnmTexPattern *)J3DAnmLoaderDataBase::load(data, J3DLOADER_UNK_FLAG0);
+    (*anm)->searchUpdateMaterialID(modelData);
+    u16 num = (*anm)->mUpdateMaterialNum;
+    for (u16 i = 0; i < num; i++) {
+        setMaterialAnm(modelData, (*anm)->mUpdateMaterialID[i]);
+    }
+    modelData->getMaterialTable().entryTexNoAnimator(*anm);
+}
 
-void J3DAnmObjCluster::setDeformData(ExModel *param_1, J3DDeformData *param_2, bool param_3) {}
+void J3DAnmObjMaterial::setupTevRegAnmData(J3DAnmTevRegKey **anm, J3DModelData *modelData, void *data) {
+    *anm = (J3DAnmTevRegKey *)J3DAnmLoaderDataBase::load(data, J3DLOADER_UNK_FLAG0);
+    (*anm)->searchUpdateMaterialID(modelData);
+    setMaterialAnmTev(anm, modelData);
+    modelData->getMaterialTable().entryTevRegAnimator(*anm);
+}
+
+template<> void J3DAnmObjMaterial::setMaterialAnmTev<J3DAnmTevRegKey>(J3DAnmTevRegKey **anm, J3DModelData *modelData) {
+    u16 i;
+    u16 num = (*anm)->getCRegUpdateMaterialNum();
+    for (i = 0; i < num; i++) {
+        setMaterialAnm(modelData, (*anm)->getCRegUpdateMaterialID(i));
+    }
+    num = (*anm)->getKRegUpdateMaterialNum();
+    for (i = 0; i < num; i++) {
+        setMaterialAnm(modelData, (*anm)->getKRegUpdateMaterialID(i));
+    }
+}
+
+void J3DAnmObjCluster::loadClusterData(J3DDeformData **deformData, void *data) {
+    *deformData = (J3DDeformData *)J3DClusterLoaderDataBase::load(data);
+}
+
+void J3DAnmObjCluster::loadClusterAnmData(J3DAnmCluster **anmCluster, void *data) {
+    *anmCluster = (J3DAnmCluster *)J3DAnmLoaderDataBase::load(data, J3DLOADER_UNK_FLAG0);
+}
+
+void J3DAnmObjCluster::setDeformData(ExModel *model, J3DDeformData *deformData, bool p3) {
+    u32 flag = 1;
+    if (p3)
+        flag = 0;
+    model->getModel()->setDeformData(deformData, flag);
+}
 
 void J3DAnmObjCluster::attach(J3DAnmCluster *anmCluster) {
     mAnmBase = anmCluster;

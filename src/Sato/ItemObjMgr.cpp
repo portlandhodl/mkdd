@@ -6,6 +6,8 @@
 #include "Kaneshige/Objects/GeoRabbitMark.h"
 #include "Kaneshige/TexLODControl.h"
 #include "Kaneshige/RaceMgr.h"
+#include "Kaneshige/SimpleDrawer.h"
+#include "Kaneshige/LightMgr.h"
 #include "Sato/GeographyObjMgr.h"
 #include "Sato/ItemObjMgr.h"
 #include "Sato/ItemBanana.h"
@@ -1413,24 +1415,37 @@ void ItemObjMgr::removeMiniGameList(ItemObj *obj)
     mMiniGameList.remove(&obj->mMiniGameLink);
 }
 
+static inline bool isEquipState(const ItemObj *obj)
+{
+    return obj->mState == 1 || obj->mState == 5;
+}
+
+static inline bool isSameOwnerEquip(const ItemObj *obj, int owner)
+{
+    bool ret = false;
+    if (owner == obj->mOwnerNum) {
+        bool equip = true;
+        if (obj->mState != 1 && obj->mState != 5)
+            equip = false;
+        if (equip)
+            ret = true;
+    }
+    return ret;
+}
+
 void ItemObjMgr::update(ItemObjMgr::eDrawSimplModelItemType type, int id) {
 
     for(int i = 0; i < 15; i++) {
-        for (JSUListIterator<ItemObj> it(_3e8[sJ3DUpdateItemKind[i]].getFirst()); it.isAvailable(); ++it) {
+        for (JSULink<ItemObj> *link = _3e8[sJ3DUpdateItemKind[i]].getFirst(); link != nullptr; link = link->getNext()) {
+            JSUListIterator<ItemObj> it(link);
             bool doUpdate = true;
             switch(type) {
-            case ItemType_1: {
-                if (it->IsState1or5AndSameOwner(id))
-                    doUpdate = false;
+            case ItemType_1:
+                doUpdate = isSameOwnerEquip(it.getObject(), id);
                 break;
-            }
-            case ItemType_2: {
-                doUpdate = false;
-                int state = it->getState();
-                if (state != 1 && state != 5)
-                    doUpdate = true;
+            case ItemType_2:
+                doUpdate = it->IsState1or5();
                 break;
-            }
             }
 
             if (doUpdate) {
@@ -1472,28 +1487,64 @@ void ItemObjMgr::setCurrentViewNo(u32 viewNo)
     }
 }
 
-void ItemObjMgr::drawSimpleModel(u32 viewNo, ItemObjMgr::eDrawSimplModelItemType type, int owner, LightObj *lightObj) {
-    
-    for (JSUListIterator<ItemObj> it(_3e8[7].getFirst()); it.isAvailable(); ++it) {
-        bool doUpdate = true;
-        switch(type) {
-        case ItemType_1: {
-            if (it->IsState1or5AndSameOwner(owner))
-                doUpdate = false;
-            break;
+void ItemObjMgr::drawSimpleModel(u32 viewNo, ItemObjMgr::eDrawSimplModelItemType type, int owner, LightObj *lightObj)
+{
+    J3DUClipper *clipper = GetKartCtrl()->getKartCam(viewNo)->GetClipper();
+    const Mtx &viewMtx = j3dSys.getViewMtx();
+    MtxPtr lightMtx = nullptr;
+    if (lightObj)
+        lightMtx = lightObj->getEffectMtx();
+
+    SimpleDrawer drawer;
+    for (int i = 0; i < 5; i++)
+    {
+        JSUList<ItemObj> *list = &_3e8[sSimpleDrawItemKind[i]];
+        if (list->getFirst() == nullptr)
+            continue;
+        ItemObj *first = list->getFirst()->getObject();
+        if (first->mModel.getModelData() == nullptr)
+            continue;
+
+        drawer.drawInit(&first->mModel);
+        while (drawer.loadPreDrawSetting())
+        {
+            for (JSUListIterator<ItemObj> it(list->getFirst()); it.isAvailable(); ++it)
+            {
+                bool doDraw = true;
+                switch (type)
+                {
+                case ItemType_1:
+                    doDraw = isSameOwnerEquip(it.getObject(), owner);
+                    break;
+                case ItemType_2:
+                    doDraw = it->IsState1or5();
+                    break;
+                }
+
+                if (doDraw)
+                {
+                    it->setTevColor();
+                    it->simpleDraw(viewNo, lightMtx, sSimpleDrawSpeqEnvTexMapID[i]);
+                }
+            }
         }
-        case ItemType_2: {
-            doUpdate = false;
-            int state = it->getState();
-            if (state != 1 && state != 5)
-                doUpdate = true;
+    }
+
+    for (JSUListIterator<ItemObj> it(_3e8[7].getFirst()); it.isAvailable(); ++it)
+    {
+        bool doDraw = true;
+        switch (type)
+        {
+        case ItemType_1:
+            doDraw = isSameOwnerEquip(it.getObject(), owner);
             break;
-        }
+        case ItemType_2:
+            doDraw = it->IsState1or5();
+            break;
         }
 
-        if (doUpdate) {
-            //it->drawSimpleModel(viewNo, j3dSys.getViewMtx(), );
-        }
+        if (doDraw)
+            it->drawSimpleModel(viewNo, (MtxPtr)viewMtx, clipper, lightMtx);
     }
 }
 
@@ -1618,7 +1669,7 @@ u32 ItemShuffleMgr::getRndItemKindPossibilityGetting(stRandom *rnd, const int ka
 
     u32 randomNum = rnd->getRandomMax(numItems + numSpecialItems - 1);
     if (randomNum < numItems) {
-        return sRndSpecialSlotIndex[randomNum];
+        return sRndNormalSlotIndex[randomNum];
     }
 
     if (!special) {
@@ -1988,7 +2039,7 @@ void ItemShuffleMgr::calcSpecialItemNum(u32 *pTotal, ItemShuffleMgr::KartSlotRan
         if (itemID1 == sSlotKindIndexArray[i]) {
             data->specialItemIndex = i;
 
-            if (ItemObj::IsSpecialItem(itemID2) || (itemID1 == 0xe && ItemObjMgr::getItemObjMgr()->getHeartItem(data->kart_index))) {
+            if ((u8)ItemObj::IsSpecialItem(itemID2) || (itemID1 == 0xe && ItemObjMgr::getItemObjMgr()->getHeartItem(data->kart_index))) {
                 sTempSlotUseItem[sSlotNormalItemNum] = false;
             }
             else {
@@ -2109,7 +2160,7 @@ void ItemRndSpecialShuffleMgr::calcRaceUseNormalItem(u32 *pTotal, ItemShuffleMgr
 }
 
 void ItemRndSpecialShuffleMgr::calcSpecialItemNum(u32 *pTotal, ItemShuffleMgr::KartSlotRankDataSet *data, int itemID1, int itemID2, bool charCombi) {
-    if (ItemObj::IsSpecialItem(itemID2)) {
+    if ((u8)ItemObj::IsSpecialItem(itemID2)) {
         for (int i = 0; i < sSlotSpecialItemNum; i++) {
             sTempSlotUseItem[i + sSlotNormalItemNum] = false;
         }

@@ -56,6 +56,12 @@ struct J3DCurrentMtx : public J3DCurrentMtxInfo
 
     u32 getMtxIdxRegA() const { return mMtxIdxRegA; }
     u32 getMtxIdxRegB() const { return mMtxIdxRegB; }
+    void setCurrentTexMtx(u8 p1, u8 p2, u8 p3, u8 p4, u8 p5, u8 p6, u8 p7, u8 p8)
+    {
+        mMtxIdxRegA = ((u32)p1 << 6) | ((u32)p2 << 0xc) | ((u32)p3 << 0x12) | ((u32)p4 << 0x18);
+        mMtxIdxRegB = (p5) | p6 << 6 | p7 << 0xc | p8 << 0x12;
+    }
+
 
     inline void load() const
     {
@@ -74,9 +80,9 @@ struct J3DCurrentMtx : public J3DCurrentMtxInfo
  */
 struct J3DMaterial
 {
-    inline J3DMaterial() { initialize(); }
+    J3DMaterial();
 
-    ~J3DMaterial();
+    ~J3DMaterial() { }
 
     virtual void calc(const Mtx);            // _08
     virtual void calcDiffTexMtx(const Mtx); // _0C
@@ -102,6 +108,8 @@ struct J3DMaterial
     static J3DTevBlock *createTevBlock(int);
     static J3DTexGenBlock *createTexGenBlock(u32);
     void initialize();
+    void copy(J3DMaterial *);
+    void makeDisplayList_private(J3DDisplayListObj *);
     J3DErrType newSharedDisplayList(u32);
     J3DErrType newSingleSharedDisplayList(u32);
     void setCurrentMtx();
@@ -194,6 +202,12 @@ struct J3DLockedMaterial : public J3DMaterial
  */
 struct J3DPatchedMaterial : public J3DMaterial
 {
+    inline J3DPatchedMaterial()
+        : J3DMaterial()
+    {
+        initialize();
+    }
+
     virtual void makeDisplayList();          // _10
     virtual void makeSharedDisplayList(); // _14
     virtual void load();                  // _18

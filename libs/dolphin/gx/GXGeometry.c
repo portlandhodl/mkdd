@@ -49,13 +49,14 @@ void GXBegin(GXPrimitive type, GXVtxFmt fmt, u16 vert_num)
 void __GXSendFlushPrim(void)
 {
   u32 i;
-  u32 sz = (gx->vNum * gx->vLim);
+  u16 vNum = gx->vNum;
+  u32 sz = (vNum * gx->vLim);
 
-  GX_WRITE_U8(0x98);
-  GX_WRITE_U16(gx->vNum);
+  (*(volatile u8*)GXFIFO_ADDR) = 0x98;
+  (*(volatile u16*)GXFIFO_ADDR) = vNum;
 
   for (i = 0; i < sz; i += 4) {
-    GX_WRITE_U32(0);
+    (*(volatile u32*)GXFIFO_ADDR) = 0;
   }
 
   gx->bpSentNot = GX_TRUE;

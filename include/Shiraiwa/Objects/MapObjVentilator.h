@@ -18,8 +18,9 @@ public:
     virtual void calc();
     virtual const char *getBmdFileName();
 
-    void InitExec();
     void MoveExec();
+
+    void InitExec();
 
     void initFunc_Slow();
     void doFunc_Slow();

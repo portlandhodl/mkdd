@@ -174,7 +174,7 @@ struct J3DColorBlockLightOn : public J3DColorBlock {
 };
 
 struct J3DColorBlockNull : public J3DColorBlock {
-    virtual JBlockType getType();    // _2C (weak)
+    virtual JBlockType getType() { return JBT_ColorNull; }    // _2C (weak)
     virtual ~J3DColorBlockNull() { } // _84 (weak)
 
     // _00 = VTBL

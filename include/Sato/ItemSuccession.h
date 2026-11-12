@@ -44,7 +44,19 @@ public:
     static f32 sJuggleRotRatio;
     static f32 sJuggleRotRatioSub;
 
-    u8 _8[0x60 - 0x8];
+    int _8;              // 8
+    u8 _c;               // c
+    u8 _d;               // d
+    int _10;             // 10
+    u8 _14;              // 14
+    f32 _18;             // 18
+    int _1c;             // 1c
+    JGeometry::TVec3f _20; // 20
+    JGeometry::TVec3f _2c; // 2c
+    int _38;             // 38
+    JGeometry::TVec3f _3c; // 3c
+    JGeometry::TVec3f _48; // 48
+    JGeometry::TVec3f _54; // 54
 };
 
 class ItemBuild : public ItemMultiBase
@@ -66,9 +78,19 @@ public:
     virtual void InitMoveDivested();                       // 14
     virtual void MoveEquip();                              // 18
 
-    u8 _8[0x35 - 0x8];
-    u8 _35;
-    u8 _36[0x68 - 0x36];
+    JGeometry::TVec3f mOffset; // 8
+    f32 mHeight;               // 14
+    JGeometry::TVec3f _18;     // 18
+    s16 mAngle;                // 24
+    f32 mRadAngle;             // 28
+    u8 mCount;                 // 2c
+    u8 _2d;                    // 2d
+    u8 mFirstPos;              // 2e
+    ItemBuild *mPrev;          // 30
+    u8 _34;                    // 34
+    u8 _35;                    // 35
+    u8 _36;                    // 36
+    Mtx _38;                   // 38
 };
 
 class ItemObjSuc : public ItemObj
@@ -83,8 +105,11 @@ public:
     void setInitBuildAppend();
     void initBuildEquip();
     void doBuildEquip();
-    void selectJuggleSucChild();
+    JSUListIterator<ItemObj> selectJuggleSucChild();
     void setSucMultiType(cMultiType);
+    static f32 getRotAxisRatio();
+    JSUListIterator<ItemObj> selectBuildSucChild();
+    u8 IsAvailableDivested() const { return mJuggleFirst; }
 
     virtual void reset();
     virtual void initEquip();
@@ -104,19 +129,22 @@ public:
     static f32 sJuggleAnmOverFrame;
 
     typedef void (ItemObjSuc::*EquipFunc)();
+    typedef JSUListIterator<ItemObj> (ItemObjSuc::*SelectFunc)();
 
-    EquipFunc mEquipInitFunc; // 2b0
-    EquipFunc mEquipDoFunc;   // 2bc
-    u8 _2c8[0x2dc - 0x2c8]; //
-    f32 _2dc;               //
-    f32 _2e0;               //
-    u32 _2e4;               //
-    u32 _2e8;               //
-    u8 _2ec;                //
-    f32 _2f0;               //
-    u8 _2f4;                //
-    f32 _2f8;               //
-    u8 _2fc;                //
+    EquipFunc mEquipInitFunc;  // 2b0
+    EquipFunc mEquipDoFunc;    // 2bc
+    SelectFunc mSelectSucFunc; // 2c8
+    cMultiType mSucMultiType;  // 2d4
+    int mPrevSucNum;           // 2d8
+    f32 mJuggleXLength;        // 2dc
+    f32 mJuggleGravity;        // 2e0
+    int mJuggleIndex;          // 2e4
+    int mJuggleFrameStep;      // 2e8
+    bool mJuggleFinished;      // 2ec
+    f32 mJuggleRot;            // 2f0
+    u8 mJuggleFirst;           // 2f4
+    f32 mJuggleGravityUp;      // 2f8
+    u8 mUseHandAnm;            // 2fc
 };
 
 #endif // ITEMSUCCESSION_H

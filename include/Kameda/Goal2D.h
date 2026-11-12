@@ -4,14 +4,21 @@
 #include "JSystem/JKernel/JKRHeap.h"
 
 #include "JSystem/JORReflexible.h"
+#include "JSystem/J2D/J2DAnimation.h"
+#include "JSystem/J2D/J2DGrafContext.h"
+#include "JSystem/J2D/J2DPane.h"
+#include "JSystem/J2D/J2DPicture.h"
+#include "JSystem/J2D/J2DScreen.h"
 #include "Kaneshige/HioMgr.h"
 
 
 class Goal2DParam : public JORReflexible {
 public:
-    // Inline/Unused
     Goal2DParam();
     virtual ~Goal2DParam() {}
+
+    u16 mUnk4;
+    bool mFlag;
 };
 
 class Goal2DHioNode : public HioNode {
@@ -39,10 +46,30 @@ public:
     ~Goal2D();
 
     void reset() { init(); }
-    int getAnmFrame(int status) const { return mAnmFrame[status*4]; }
+    int getAnmFrame(int status) const { return mStatus[status].mFrame; }
 private:
-    PLACEHOLDER_BYTES(0, 0xb0);
-    int mAnmFrame[4]; // b0 TODO: check size/is this part of a sub struct
-    PLACEHOLDER_BYTES(0xc0, 0xec);
+    struct Status {
+        f32 mGoalPosX;
+        f32 mGoalPosY;
+        bool mGoalStart;
+        bool mGoalDraw;
+        u8 _0a[2];
+        int mFrame;
+    };
+
+    Goal2DHioNode *mNode;             // 00
+    J2DOrthoGraph *mOrtho[4];         // 04
+    J2DScreen *mGoalScreen[4];        // 14
+    J2DAnmTransform *mGoalAnm1[4];    // 24
+    J2DAnmTevRegKey *mGoalAnm2[4];    // 34
+    J2DPicture *mGoalPane[4][2];      // 44
+    J2DScreen *mRetireScreen[4];      // 64
+    J2DAnmTransform *mRetireAnm1[4];  // 74
+    J2DAnmTevRegKey *mRetireAnm2[4];  // 84
+    J2DPicture *mRetirePane[4];       // 94
+    Status mStatus[4];                // a4
+    int mUnkE4;                       // e4
+    bool mUnkE8;                      // e8
+    bool mUnkE9;                      // e9
 }; // class Goal2D
 #endif // GOAL2D_H

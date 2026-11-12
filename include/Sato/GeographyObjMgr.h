@@ -10,6 +10,7 @@
 #include "Shiraiwa/JugemMain.h"
 
 class TShineArrowManager;
+struct GeoObjAnmData;
 
 class GeoFuncTable
 {
@@ -65,18 +66,30 @@ public:
     void checkItemBoxObjList(const CrsData &);
     void checkJugemObjList(const CrsData &);
     void checkGenObjList(const CrsData &);
+    void checkPrevDrawObjList(const CrsData &);
+    void checkBlockObjList(const CrsData &);
+    void checkSpObjList(const CrsData &);
+    void createAllItemBox();
+    ExGeographyObj *createBlockObj(u32, const CrsData::SObject *);
+    ExGeographyObj *createSpecialObj(u32, const CrsData::SObject *);
+    void initClassCreateNumFunc();
+    void checkSupervisorObjList();
 
     void setSequentialID();
     void countObjNum(const CrsData::SObject *);
 
     GeographyObj *createObj(u32, const CrsData::SObject *);
     GeographyObj *createSubObj(u32 id);
+    GeographyObj *createPrevDrawObj(u32, const CrsData::SObject *);
     GeographyObj *createPrevDrawSubObj(u32 id);
+    GeographyObj *createSubItemBoxObj(u32);
+    GeographyObj *createGenObj(u32, const CrsData::SObject *);
     GeographyObj *createGenSubObj(u32);
     GeographyObj *createAppendGenObj(u32, const CrsData::SObject *);
 
     GeographyObj *chkCreateNormalObj(const CrsData::SObject *, u32);
     GeographyObj *chkCreateItemBoxObj(const CrsData::SObject *, u32);
+    GeographyObj *chkCreatePrevDrawObj(const CrsData::SObject *, u32);
 
     void appendKindObjList(GeographyObj *);
 
@@ -198,7 +211,7 @@ public:
     u8 mEnemyMakeCheck;                       // 3e4
     bool mEnemyAvailable[8];                  // 3e5
     u8 _3ed[0xb];                             // 3ed
-    GeoObjSupervisor ***mSeqObjAnmTbl;        // 3f8 (actual struct defined in cpp)
+    GeoObjAnmData **mSeqObjAnmTbl;            // 3f8 (actual struct defined in cpp)
     TJugem **mJugem;                          // 3fc
     TShineArrowManager *mShineArrowMgr;       // 400
     u16 mNormObjNum;                          // 404

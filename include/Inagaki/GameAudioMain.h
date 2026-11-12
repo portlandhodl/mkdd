@@ -45,7 +45,8 @@ public:
     bool isActive();
     void initRaceSound();
     void frameWork();
-    void changeSection(u32);
+    bool changeSection(u32);
+    bool loadSection(const void *); // fabricated
     void checkSection();
     bool isWaveLoaded(WS_ID);
     void checkCourceOnRace();
@@ -115,6 +116,15 @@ public:
     }
 
     CustomMgr *getCustomMgr() { return mMgr; }
+    PAUSE_STATUS getPauseStatus() { return mPauseStatus; }
+
+    u32 getFrameCount() const {
+        return _80;
+    }
+
+    f32 getBgmVolume() const {
+        return mBgmVolume;
+    }
     // } FABRICATED
 
     CameraMgr *getCamera() {
@@ -133,20 +143,21 @@ public:
     };
 
 private:
-    static Main sJAudio;
     static Main *msBasic;
 
     CustomMgr *mMgr;              // 00
     CustomAudience<4> *mAudience; // 04
-    u8 _08[0xC - 0x8];            // 08
+    JAIStreamAramMgr *mStreamAramMgr; // 08
     CustomSoundTable *mTable;     // 0C
     JASAudioReseter *mReseter;    // 10
     JAUSectionHeap *mSectionHeap; // 14
     const void **mBaaList;        // 18
     u32 mOutputMode;              // 1C
-    u8 _20[0x24 - 0x20];          //
-    JAISoundHandle _24[4];        //
-    JAISoundHandle _34[4];        //
+    struct SoundHandleBlock {
+        u32 _0;
+        JAISoundHandle mHandles[4];  // 04
+        JAISoundHandle mHandles2[4]; // 14
+    } _20;                        // 20
     FxLineConfig *mConfig;        // 44
     union
     {
@@ -179,7 +190,7 @@ private:
     int _80;                      //
     JAISoundHandle _84[4];        // 84
     JAISoundHandles *mSeHandles;  // 94
-    u8 _98[4];                    // 98
+    f32 _98;                      // 98
     f32 mBgmVolume;               // 9C
     f32 mStreamVolumeFactor;      // A0
     const void *mCurrentBaa;      // A4

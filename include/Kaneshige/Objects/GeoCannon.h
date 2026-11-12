@@ -43,6 +43,9 @@ public:
     void doFuncWait();                     // 0x801c0578
 
     // Inline
+    int getSpec() const { return _18c; }
+    void getShotPosition(JGeometry::TVec3f *pos) { pos->set(mPos); }
+    void getShotDirection(JGeometry::TVec3f *dir) { dir->set(_190); }
     bool isSameID(s32 id) const { return mObjData->mParam1 == id; } // 0x801bf644
     // Inline/Unused
     // static u32 sCreateNum;

@@ -5,6 +5,7 @@
 #include <JSystem/JKernel/JKRHeap.h>
 
 #include "kartEnums.h"
+#include <JSystem/JUtility/JUTAssert.h>
 
 // TODO: rename stuff, all textures are probably const, inlines
 
@@ -40,13 +41,28 @@ public:
     ResTIMG *getNumberTexture(NumberTextureID id) { return mNumberTex[id]; }
     ResTIMG *getCupIconTexture(ERaceGpCup cup) { return mCupIconTex[cup]; }
     ResTIMG *getCupNameTexture(ERaceGpCup cup) { return mCupNameTex[cup]; }
+    ResTIMG *getBattleIconTexture(int idx) { return mBattleIconTex[idx]; }
+    ResTIMG *getPartsLocName(int idx) { return mPartsLocName[idx]; }
+#line 153
+    ResTIMG *getCharIconTexture(ECharID id) {
+        JUT_MINMAX_ASSERT(1, id, cCharIDMax);
+        return mCharIconTex[id];
+    }
+#line 153
+    ResTIMG *getCharIconTextureChecked(ECharID id) {
+        JUT_MINMAX_ASSERT(1, id, cCharIDMax);
+        return mCharIconTex[id];
+    }
+    ResTIMG *getKartIconTexture(int id) { return mKartIconTex[id]; }
+    ResTIMG *getPosImg(int idx) { return mPosImg[idx]; }
+    ResTIMG *getPartName(int idx) { return mPartName[idx]; }
 
     static Kart2DCommon *ptr() { return mspKart2DCommon; }
 private:
     static Kart2DCommon *mspKart2DCommon; // 0x80416a70
-    ResTIMG *mNumberTex[11];              // 0 to 9, also why are there 11?
+    ResTIMG *mNumberTex[10];              // 0 to 9
     ResTIMG *mFontData[26];               // chars A to Z
-    ResTIMG *mCharIconTex[cCharIDMax - 1]; 
+    ResTIMG *mCharIconTex[cCharIDMax]; 
     ResTIMG *mKartIconTex[cKartIDMax];
     ResTIMG *mPartName[4];
     ResTIMG *mPartsLocName[1];

@@ -26,6 +26,10 @@ struct J3DShapeMtx;
 
 struct J3DShapeInitData
 {
+    J3DShapeInitData();
+    void init(J3DShape *);
+    void write_InSaver(u8 **);
+
     u8 mShapeMtxType;             // _00
     u16 mMtxGroupNum;             // _02
     u16 mVtxDescListIndex;         // _04
@@ -49,6 +53,7 @@ struct J3DShape
     };
 
     J3DShape() { initialize(); }
+    ~J3DShape();
 
     static const int kVcdVatDLSize = 0xC0;
 
@@ -60,10 +65,15 @@ struct J3DShape
     void calcNBTScale(const Vec &, Mtx33 *, Mtx33 *);
     int countBumpMtxNum() const;
     void initialize();
+    void addTexMtxIndexInDL(GXAttr, u32);
+    void addTexMtxIndexInVcd(GXAttr);
     bool isSameVcdVatCmd(J3DShape *);
     void loadPreDrawSetting() const;
     void makeVcdVatCmd();
     void makeVtxArrayCmd();
+    void loadCurrentMtx() const;
+    void loadVtxArray() const;
+    void setArrayAndBindPipeline() const;
 
     void onFlag(u32 flag) { mFlags |= flag; }
     void offFlag(u32 flag) { mFlags &= ~flag; }
@@ -76,6 +86,8 @@ struct J3DShape
     void hide() { onFlag(IsHidden); }
     void setCurrentViewNoPtr(u32 *pViewNoPtr) { mCurrentViewNumber = pViewNoPtr; }
     void setScaleFlagArray(u8 *pScaleFlagArray) { mFlagList = pScaleFlagArray; }
+    void setDrawMtx(Mtx **pDrawMtx) { mTree1 = (J3DJos32Tree *)pDrawMtx; }
+    void setNrmMtx(Mtx33 **pNrmMtx) { mTree2 = (J3DJos32Tree *)pNrmMtx; }
     void setTexMtxLoadType(u32 type) { mFlags = type | (mFlags & 0xFFFF0FFF); }
     bool getNBTFlag() const { return mMode; }
     u32 getBumpMtxOffset() const { return mBumpMtxOffset; }
@@ -106,11 +118,11 @@ struct J3DShape
     Vec mMax;                      // _20
     u8 *mVcdVatCmd;                  // _2C
     GXVtxDescList *mVtxDesc;      // _30
-    u8 mMode;                      // _34
+    bool mMode;                    // _34
     J3DShapeMtx **mShapeMtx;      // _38
     J3DShapeDraw **mShapeDraw;      // _3C
     J3DCurrentMtx mCurrentMtx;      // _40
-    u8 _48;                          // _48
+    bool _48;                        // _48
     J3DVertexData *mVtxData;      // _4C
     J3DDrawMtxData *mDrawMtxData; // _50
     u8 *mFlagList;                  // _54
@@ -131,7 +143,7 @@ struct J3DShapeMtx
     virtual int getUseMtxNum() const { return 1; }                   // _10 (weak)
     virtual u16 getUseMtxIndex(u16) const { return mUseMtxIndex; } // _14 (weak)
     virtual void load() const;                                       // _18
-    virtual void calcNBTScale(const Vec &, Mtx33, f32 Mtx33);       // _1C
+    virtual void calcNBTScale(const Vec &, Mtx33 *, Mtx33 *);       // _1C
 
     void loadMtxIndx_PNGP(int, u16) const;
     void loadMtxIndx_PCPU(int, u16) const;
@@ -159,7 +171,9 @@ struct J3DShapeDraw
 
     virtual ~J3DShapeDraw();
 
+    u32 countVertex(u32);
     void draw() const;
+    void addTexMtxIndexInDL(u32, u32, u32);
 
     // _00 = VTBL
     u32 mDlSize;            // _04
@@ -199,7 +213,7 @@ struct J3DShapeMtxMulti : public J3DShapeMtx
     virtual int getUseMtxNum() const { return mUseMtxNum; }                    // _10 (weak)
     virtual u16 getUseMtxIndex(unsigned short p1) const { return _0C[p1]; } // _14 (weak)
     virtual void load() const;                                                // _18
-    virtual void calcNBTScale(const Vec &, Mtx33, Mtx33);                    // _1C
+    virtual void calcNBTScale(const Vec &, Mtx33 *, Mtx33 *);                    // _1C
 
     u16 mUseMtxNum; // _08
     u16 *_0C;        // _0C
@@ -214,7 +228,7 @@ struct J3DShapeMtxConcatView : public J3DShapeMtx
     virtual ~J3DShapeMtxConcatView() {}                                // _08 (weak)
     virtual int getType() const { return 'SMCV'; }                    // _0C (weak)
     virtual void load() const;                                        // _18
-    virtual void loadNrmMtx(int, unsigned short) const;                // _20 (weak)
+    virtual void loadNrmMtx(int, unsigned short) const { }            // _20 (weak)
     virtual void loadNrmMtx(int, unsigned short, f32 (*)[4]) const; // _24
 
     void loadMtxConcatView_PNGP(int, unsigned short) const;
@@ -240,7 +254,7 @@ struct J3DShapeMtxMultiConcatView : public J3DShapeMtxConcatView
     virtual int getUseMtxNum() const { return mUseMtxNum; }                          // _10 (weak)
     virtual u16 getUseMtxIndex(unsigned short index) const { return _0C[index]; } // _14 (weak)
     virtual void load() const;                                                      // _18
-    virtual void loadNrmMtx(int, unsigned short) const;                              // _20 (weak)
+    virtual void loadNrmMtx(int, unsigned short) const { }                          // _20 (weak)
     virtual void loadNrmMtx(int, unsigned short, f32 (*)[4]) const;                  // _24
 
     u16 mUseMtxNum; // _08

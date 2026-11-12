@@ -24,7 +24,7 @@ public:
     void DoTurtleReleaseDynamicDir(u32);
     void DoBananaReleaseDynamicDir();
     void TeamRobItm();
-    void SuspendItem();
+    bool SuspendItem();
     void CheckOtherAnime();
     void DoOtherAnime();
     void DoTandemItemAnime();
@@ -42,8 +42,12 @@ public:
     // void DoBarrelReleaseDynamicDir();
     // void DoDriverItemAnime();
     // void DoDriverItemRelease();
-//private: // MJB - looks like _0 is used in KartCtrlInfo.
-    u8 _0[0xc]; //
+    class KartBody *mBody; // 0
+    u8 _4;                 // 4
+    u16 _6;                // 6
+    u8 _8;                 // 8
+    u8 _9;                 // 9
+    u8 _a[2];              // a
 
 }; // 0xc
 

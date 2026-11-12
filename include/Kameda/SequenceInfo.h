@@ -47,7 +47,7 @@ public:
 #line 278
         JUT_MINMAX_ASSERT(0, kart, 2);        
         //JUT_MINMAX_ASSERT(0, kart, 8);
-        JUT_MINMAX_ASSERT(0, charId, cCharIDMax);
+        JUT_MINMAX_ASSERT(1, charId, cCharIDMax);
         _318[kart]._0[driverNo] = charId;
     }
 
@@ -77,9 +77,59 @@ public:
         _318[kart]._14 = val;
     }
 
+    void set_318_coop(int kart, bool coop) {
+#line 297
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        _318[kart]._C[0] = coop;
+    }
+
     void set_318_Pad(int kart, KartGamePad *pad) {
+#line 322
+        JUT_MINMAX_ASSERT(0, kart, 2);
         _318[kart]._18 = pad;
     }
+    ECharID get_318_charId0(int kart) {
+#line 273
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._0[0];
+    }
+
+    ECharID get_318_charId1(int kart) {
+#line 273
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._0[1];
+    }
+
+    EKartID get_318_kartId(int kart) {
+#line 284
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._8;
+    }
+
+    bool get_318_coop(int kart) {
+#line 293
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._C[0];
+    }
+
+    int get_318_rankPoint(int kart) {
+#line 284
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return mRankPoint[kart];
+    }
+
+    int get_318_14(int kart) {
+#line 309
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._14;
+    }
+
+    KartGamePad *get_318_Pad(int kart) {
+#line 318
+        JUT_MINMAX_ASSERT(0, kart, 2);
+        return _318[kart]._18;
+    }
+
 
     void getDemoKart(int no, ECharID &charID1, ECharID &charID2, EKartID &kartID)
     {
@@ -135,10 +185,99 @@ public:
         return mRankPoint[kart];
     }
 
+    int get_80(int kart) {
+#line 188
+        JUT_MINMAX_ASSERT(0, kart, 4);
+        return _80[kart];
+    }
+
+    int get_40(int kart, int rank) {
+#line 200
+        JUT_MINMAX_ASSERT(0, kart, 4);
+#line 201
+        JUT_MINMAX_ASSERT(0, rank, 4);
+        return _40[kart][rank];
+    }
+
+    void checkKart(int kart) {
+#line 192
+        JUT_MINMAX_ASSERT(0, kart, 4);
+    }
+
+    void checkKart2(int kart) {
+#line 205
+        JUT_MINMAX_ASSERT(0, kart, 4);
+    }
+
+    void checkRank(int rank) {
+#line 206
+        JUT_MINMAX_ASSERT(0, rank, 4);
+    }
+
+    void inc_80(int kart) {
+#line 188
+        JUT_MINMAX_ASSERT(0, kart, 4);
+        int v = _80[kart];
+        checkKart(kart);
+        int val = v + 1;
+        if (val > 99)
+            _80[kart] = 99;
+        else
+            _80[kart] = val;
+    }
+
+    void inc_40(int kart, int rank) {
+#line 200
+        JUT_MINMAX_ASSERT(0, kart, 4);
+#line 201
+        JUT_MINMAX_ASSERT(0, rank, 4);
+        int v = _40[kart][rank];
+        checkKart2(kart);
+        checkRank(rank);
+        int val = v + 1;
+        if (val > 99)
+            _40[kart][rank] = 99;
+        else
+            _40[kart][rank] = val;
+    }
+
+    int getCourse() { return mMapInfo.course; }
+    int getCup() const { return mMapInfo.cup; }
+
+    int get_298(int kart) {
+#line 226
+        return mRankPoint[kart];
+    }
+
     int get_2d8(int rank) {
 #line 240
         JUT_MINMAX_ASSERT(0, rank, 8);
         return _2d8[rank];
+    }
+
+    int get_2b8(int rank) {
+#line 235
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        return _2b8[rank];
+    }
+
+    int get_2f8(int rank) {
+#line 245
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        return _2f8[rank];
+    }
+
+    int getPrevRank(int rank) { // fabricated
+#line 245
+        JUT_MINMAX_ASSERT(0, rank, 8);
+        int kart = _2d8[rank];
+        int i;
+        for (i = 0; i < 8; i++) {
+            if (kart == _2f8[i]) {
+                break;
+            }
+        }
+        return i;
     }
 
     int get_3cc(int course) {
@@ -148,8 +287,16 @@ public:
     }
 
     friend class SceneMap;
+    friend class SceneMenu;
+    friend class Goal2D;
+    friend class Award2D;
+    friend class SceneMapSelect;
+    friend class PauseManager;
 
 private:
+    friend class SceneGhostLoadSave;
+    friend class SceneCourseSelect;
+    friend class SceneTitle;
     JMARandFast mRnd;          // 00
     int mStartNo[8];           // 004
     KartGamePad *mDecidePad;   // 024
@@ -157,7 +304,8 @@ private:
     int _2c;                   // 02C
     int _30;                   // 030
     u8 mGhostFlags;            // 034
-    u8 _35[0x3C - 0x35];       // 035
+    u8 _35[3];                 // 035
+    int mBattleType;           // 038
     int mMapIndex;             // 03C
     int _40[4][4];             // 040
     int _80[4];                // 080
@@ -170,15 +318,17 @@ private:
     int _2b8[8];               // 2B8
     int _2d8[8];               // 2D8
     int _2f8[8];               // 2F8
-    struct {
-        ECharID _0[2];     // 00
-        EKartID _8;        // 08
-        u8 _C[0x10 - 0xc]; // 0C
-        RaceTime mTime;    // 10
-        int _14;           // 14
-        KartGamePad *_18;  // 18
-        // Size: 0x1c
-    } _318[2];                 // 318
+    union {
+        struct {
+            ECharID _0[2];     // 00
+            EKartID _8;        // 08
+            bool _C[0x10 - 0xc]; // 0C
+            RaceTime mTime;    // 10
+            int _14;           // 14
+            KartGamePad *_18;  // 18
+            // Size: 0x1c
+        } _318[2];             // 318
+    };
 
 public:
     int _350;                  // 350 (number of [human] players?)
