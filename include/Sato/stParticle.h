@@ -31,7 +31,7 @@ struct stParticle
     u8 mColor0[3];                // 0x50
     u8 mColor1[3];                // 0x53
     u8 _56[6];                    // 0x56
-    JSUPtrLink mLink;             // 0x5c
+    JSULink<stParticle> mLink;    // 0x5c
 }; // Size: 0x68
 
 struct stParticleDynamics
@@ -56,7 +56,7 @@ struct stParticleDynamics
     u8 _02[2];
     int _04;                    // 0x04
     f32 _08;                    // 0x08
-    JSUPtrList mList;           // 0x0c
+    JSUList<stParticle> mList;  // 0x0c
     stEmitter *mEmitter;        // 0x18
     stParticleDynamics *mFreeList; // 0x1c
     void (stParticleDynamics::*mFunc)(); // 0x20
@@ -91,7 +91,7 @@ struct stParticleDraw
     void drawParentDirectional(JSUListIterator<stParticle> &);
     void drawParentLine(JSUListIterator<stParticle> &);
     void drawChild(JSUListIterator<stParticle> &);
-    void GXDrawBegin(u32);
+    static void GXDrawBegin(u32);
     void setPresetTevMode(cKindTevMode);
     void dsSetTevBlendMode();
     void setMtx();
@@ -99,7 +99,6 @@ struct stParticleDraw
     static Mtx cTexRotMtxFirst;
     static Mtx cTexRotMtxLast;
     static Mtx *mCamMtx;
-    static void (stParticleDraw::*sOrderFunc)();
 
     u32 _00;                        // 0x00
     u32 _04;                        // 0x04

@@ -71,8 +71,8 @@ public:
     static JPEffectMgr *mThis;
 
 private:
-    JGeometry::TVec3f *mSnowPos;                 // 0x00
-    JGeometry::TVec3f *mSnowVel;                 // 0x04
+    JGeometry::TVec3f *mSnowVel;                 // 0x00
+    JGeometry::TVec3f *mSnowPos;                 // 0x04
     u8 mSnow;                                    // 0x08
     JPAEmitterManager *mEmitterMgr;              // 0x0C
     JPAEmitterManager *mThunderMgr;              // 0x10

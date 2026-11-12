@@ -15,30 +15,6 @@ J3DAnmTextureSRTKey *J3DEfctBomb::sTexSRTKey;
 u8 J3DEfctBomb::sBrkAnmNo;
 J3DAnmTevRegKey *J3DEfctBomb::sTevRegKey[4] = { nullptr, nullptr, nullptr, nullptr };
 
-static inline J3DAnmObjMatTexSRT *getBombTexObj(AnmControlMatTexSRT *ctrl, u8 AnmNo) {
-#line 321 "AnmController.h"
-    JUT_MINMAX_ASSERT(0, AnmNo, ctrl->mMaxAnmNo);
-    return ((J3DAnmObjMatTexSRT *)(*(void **)((u8 *)ctrl + 0x18))) + AnmNo;
-}
-
-static inline void setBombTevAnm(J3DAnmObjMatTevReg *tev, J3DAnmTevRegKey *anm)
-{
-    tev->mAnmBase = anm;
-    tev->initFrameCtrl(tev->mAnmBase);
-}
-
-static inline J3DAnmObjMatTevReg *getBombTevObj(AnmControlMatTevReg *ctrl, u8 AnmNo) {
-#line 331 "AnmController.h"
-    JUT_MINMAX_ASSERT(0, AnmNo, ctrl->mMaxAnmNo);
-    return ((J3DAnmObjMatTevReg *)(*(void **)((u8 *)ctrl + 0x18))) + AnmNo;
-}
-
-static inline J3DAnmObjMatTevReg *getBombPrevTevObj(AnmControlMatTevReg *ctrl, u8 prevUseAnmNo) {
-#line 239 "AnmController.h"
-    JUT_MINMAX_ASSERT(0, prevUseAnmNo, ctrl->mMaxAnmNo);
-    return ((J3DAnmObjMatTevReg *)(*(void **)((u8 *)ctrl + 0x18))) + prevUseAnmNo;
-}
-
 J3DEfctBomb::J3DEfctBomb() {}
 
 void J3DEfctBomb::loadAnmData()
@@ -130,13 +106,6 @@ const char *J3DEfctBomb::getBrkFileName(u8 index)
     return name;
 }
 
-static inline void setBombTexAnm(J3DAnmTextureSRTKey *anm, J3DAnmObjMatTexSRT *tex)
-{
-    tex->mAnmBase = anm;
-    tex->initFrameCtrl(tex->mAnmBase);
-}
-
-
 void J3DEfctBomb::onlyinit()
 {
     mAnmCtrl.mTrans = new AnmControlTrans();
@@ -156,16 +125,10 @@ void J3DEfctBomb::onlyinit()
     info.mNumBrks = numBrks;
 
     mAnmCtrl.InitRegistrationMat(info, &mModel);
-
-    setBombTexAnm(sTexSRTKey,
-                  (getBombTexObj(mAnmCtrl.mMatData->mpCtrlSRT, 0),
-                   *(J3DAnmObjMatTexSRT **)((u8 *)mAnmCtrl.mMatData->mpCtrlSRT + 0x18)));
-    mAnmCtrl.mMatData->mpCtrlSRT->mNowAnmNo = 0;
+    mAnmCtrl.RegisterMatTexSRT(0, sTexSRTKey);
 
     for (u8 i = 0; i < numBrks; i++) {
-        J3DAnmObjMatTevReg *tev = getBombTevObj(mAnmCtrl.mMatData->mpCtrlTevReg, (u8)i);
-        setBombTevAnm(tev, sTevRegKey[i]);
-        mAnmCtrl.mMatData->mpCtrlTevReg->mNowAnmNo = i;
+        mAnmCtrl.RegisterMatTevReg(i, sTevRegKey[i]);
     }
 }
 
@@ -201,11 +164,7 @@ void J3DEfctBomb::calc()
 
 void J3DEfctBomb::update()
 {
-    AnmControlMatTevReg *ctrl = mAnmCtrl.mMatData->mpCtrlTevReg;
-    J3DAnmObjMatTevReg *prev = getBombPrevTevObj(ctrl, sBrkAnmNo);
-    J3DAnmObjMatTevReg *now = &((J3DAnmObjMatTevReg *)(*(void **)((u8 *)ctrl + 0x18)))[ctrl->mNowAnmNo];
-
-    now->changeMatAnm(prev);
+    mAnmCtrl.mMatData->mpCtrlTevReg->changeMatAnmPrev(sBrkAnmNo);
 
     mAnmCtrl.SetAnimation();
     mModel.update(0);

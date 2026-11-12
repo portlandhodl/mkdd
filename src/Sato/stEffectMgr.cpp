@@ -25,11 +25,13 @@ f32 sClipMaxLength = 5000.0f;
                                                          "range over: %d <= kart_index=%d < %d", 0, (i), 8),       \
                               OSPanic("stEffectMgr.cpp", (line), "Halt")))
 
-#define ST_EFCT_ASSERT_N(i, n, line)                                                                              \
+#define ST_EFCT_ASSERT_NAME(name, i, n, line)                                                                      \
     ((0 <= (i) && (i) < (n)) ? (void)0                                                                             \
                             : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "stEffectMgr.cpp", (line),   \
-                                                          "range over: %d <= kart_index=%d < %d", 0, (i), (n)),    \
+                                                          "range over: %d <= " name "=%d < %d", 0, (i), (n)),      \
                                OSPanic("stEffectMgr.cpp", (line), "Halt")))
+
+#define ST_EFCT_ASSERT_N(i, n, line) ST_EFCT_ASSERT_NAME("kart_index", i, n, line)
 
 __declspec(weak) stEffectMgr::stWaterEffectStatus::stWaterEffectStatus()
 {
@@ -72,9 +74,8 @@ __declspec(weak) stParticle::stParticle() : mLink(this) {}
 
 __declspec(weak) stEmitterPtcl::~stEmitterPtcl() {}
 
-__declspec(weak) stEmitterPtcl::stEmitterPtcl() : _134(this)
+__declspec(weak) stEmitterPtcl::stEmitterPtcl() : _130(nullptr), _134(this)
 {
-    _130 = 0;
     _146 = 0;
 }
 
@@ -93,14 +94,16 @@ void stEffectMgr::calc()
 {
     ObjUtility::chkAvailableEnemyByDistande((bool *)mIsAvailableDistance, sClipMaxLength);
 
-    for (int i = 0; i < RaceMgr::getManager()->getKartNumber(); i++)
+    int i;
+    int kartNum;
+    for (i = 0; i < (kartNum = RaceMgr::getManager()->getKartNumber()); i++)
         mpExhaustAccelCounter[i].calc(i);
 
     Mtx *pa = mpKartBodyMtxA;
     Mtx *pb = mpKartBodyMtxB;
     Mtx *pc = mpKartExhaustMtxL;
     Mtx *pd = mpKartExhaustMtxR;
-    for (int i = 0; i < RaceMgr::getManager()->getKartNumber(); i++) {
+    for (i = 0; i < kartNum; i++) {
         Mtx &bodyMtx = ObjUtility::getKartBodyMtx(i);
         PSMTXConcat(bodyMtx, *pa, *pc);
         PSMTXConcat(bodyMtx, *pb, *pd);
@@ -143,10 +146,10 @@ void stEffectMgr::createDriftEfct(int kartIndex, int side, stTireEffectStatus *s
 {
     if (status->mDriftCreateEmitter == nullptr) {
         int typeIdx = type - 1;
-        ST_EFCT_ASSERT_N(typeIdx, 3, 988);
-        stEmitterCallBack *cb = mpDriftCreateCb[kartIndex][side];
+        ST_EFCT_ASSERT_NAME("stageIndex", typeIdx, 3, 988);
         u32 param = mDriftParam[typeIdx];
-        status->mDriftCreateEmitter = createKartCommonEmitter(kartIndex, cb, (u16)param, *(bool *)&status->_24);
+        stEmitterCallBack *cb = mpDriftCreateCb[kartIndex][side];
+        status->mDriftCreateEmitter = createKartCommonEmitter(kartIndex, cb, param, *(bool *)&status->_24);
     }
 }
 
@@ -157,69 +160,69 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrTire(int kartInd
     int index = -1;
     u8 material = 0;
 
-    ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1215);
+    ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1215);
     if (ground->getAttrIndex() > 20)
         return nullptr;
 
     switch (ground->getAttribute()) {
     case CrsGround::Attr_1: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[0].mMaterial[side][attr];
         index = mAttrData[0].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_0: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[3].mMaterial[side][attr];
         index = mAttrData[3].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_12: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[4].mMaterial[side][attr];
         index = mAttrData[4].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_3: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[1].mMaterial[side][attr];
         index = mAttrData[1].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_11: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[2].mMaterial[side][attr];
         index = mAttrData[2].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_Water: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[5].mMaterial[side][attr];
         index = mAttrData[5].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_4: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[6].mMaterial[side][attr];
         index = mAttrData[6].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_19: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[7].mMaterial[side][attr];
         index = mAttrData[7].mTire[side][attr];
         break;
     }
     case CrsGround::Attr_Puller: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1159);
+        ST_EFCT_ASSERT_NAME("tgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1159);
         u32 attr = ground->getAttrIndex();
         material = mAttrData[8].mMaterial[side][attr];
         index = mAttrData[8].mTire[side][attr];
@@ -240,12 +243,12 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     int index = -1;
     stEmitterCallBack::stFileParamPtrList *result = nullptr;
 
-    ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1270);
+    ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1270);
     if (ground->getAttrIndex() < 20) {
         switch (ground->getAttribute()) {
     case CrsGround::Attr_1: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[0].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[0].mCenter[1][ground->getAttrIndex()]; break;
@@ -254,7 +257,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     }
     case CrsGround::Attr_0: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[3].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[3].mCenter[1][ground->getAttrIndex()]; break;
@@ -263,7 +266,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     }
     case CrsGround::Attr_12: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[4].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[4].mCenter[1][ground->getAttrIndex()]; break;
@@ -272,7 +275,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     }
     case CrsGround::Attr_11: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[2].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[2].mCenter[1][ground->getAttrIndex()]; break;
@@ -281,7 +284,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     }
     case CrsGround::Attr_Water: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[5].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[5].mCenter[1][ground->getAttrIndex()]; break;
@@ -290,7 +293,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     }
     case CrsGround::Attr_4: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[6].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[6].mCenter[1][ground->getAttrIndex()]; break;
@@ -299,7 +302,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     }
     case CrsGround::Attr_19: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[7].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[7].mCenter[1][ground->getAttrIndex()]; break;
@@ -308,7 +311,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCenter(int kartI
     }
     case CrsGround::Attr_Puller: {
         index = -1;
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1176);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1176);
         switch (side) {
         case 0: index = mAttrData[8].mCenter[0][ground->getAttrIndex()]; break;
         case 1: index = mAttrData[8].mCenter[1][ground->getAttrIndex()]; break;
@@ -329,60 +332,60 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrChar(int kartInd
 {
     stEmitterCallBack::stFileParamPtrList *result = nullptr;
 
-    ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1319);
+    ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1319);
     int index = -1;
     if (ground->getAttrIndex() < 20) {
         switch (ground->getAttribute()) {
     case CrsGround::Attr_1: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[0].mChar[attr];
         break;
     }
     case CrsGround::Attr_3: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[1].mChar[attr];
         break;
     }
     case CrsGround::Attr_0: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[3].mChar[attr];
         break;
     }
     case CrsGround::Attr_12: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[4].mChar[attr];
         break;
     }
     case CrsGround::Attr_11: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[2].mChar[attr];
         break;
     }
     case CrsGround::Attr_Water: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[5].mChar[attr];
         break;
     }
     case CrsGround::Attr_4: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[6].mChar[attr];
         break;
     }
     case CrsGround::Attr_19: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[7].mChar[attr];
         break;
     }
     case CrsGround::Attr_Puller: {
-        ST_EFCT_ASSERT_N(ground->getAttrIndex(), 20, 1196);
+        ST_EFCT_ASSERT_NAME("bgnd->getAttrIndex()", ground->getAttrIndex(), 20, 1196);
         u32 attr = ground->getAttrIndex();
         index = mAttrData[8].mChar[attr];
         break;
@@ -398,7 +401,7 @@ stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrChar(int kartInd
 
 stEmitterCallBack::stFileParamPtrList *stEffectMgr::findParamPtrCommon(int index)
 {
-    ST_EFCT_ASSERT_N(index, _138c, 1372);
+    ST_EFCT_ASSERT_NAME("efct_index", index, _138c, 1372);
     return &mpPtrList[index];
 }
 
@@ -472,21 +475,27 @@ void stEffectMgr::calcAttrRoadCharCenter(int kartIndex, stTireEffectStatus *stat
 {
     ST_EFCT_ASSERT_KART(kartIndex, 1483);
     ST_EFCT_ASSERT_NUM(side, 1, 1484);
-    if (side == 0)
-        status->mEmitter[0] = createEmitter(mpRoadCharCenterCb[kartIndex], status->mIndex[0]);
+    switch (side) {
+    case 0:
+        status->mEmitter[side] = createEmitter(mpRoadCharCenterCb[kartIndex], status->mIndex[side]);
+        break;
+    }
 }
 
 void stEffectMgr::calcAttrWeedCharCenter(int kartIndex, stTireEffectStatus *status, u8 side)
 {
     ST_EFCT_ASSERT_KART(kartIndex, 1483);
     ST_EFCT_ASSERT_NUM(side, 1, 1484);
-    if (side == 0)
-        status->mEmitter[0] = createEmitter(mpWeedCharCenterCb[kartIndex], status->mIndex[0]);
+    switch (side) {
+    case 0:
+        status->mEmitter[side] = createEmitter(mpWeedCharCenterCb[kartIndex], status->mIndex[side]);
+        break;
+    }
 }
 
 int stEffectMgr::setDriftStatus(int kartIndex, int type, stTireEffectStatus *status)
 {
-    ST_EFCT_ASSERT(kartIndex, 1517);
+    ST_EFCT_ASSERT_KART(kartIndex, 1517);
     u64 carStatus = KartCtrl::getKartCtrl()->getKartBody(kartIndex)->mCarStatus;
     status->_25 = status->_24;
     status->_24 = 0;
@@ -538,7 +547,7 @@ f32 stEffectMgr::getEfctCarSpeed(int index) const
     return mpEfctCarSpeed[index];
 }
 
-stEffectMgr::stExhaustAccelCounter *stEffectMgr::getExhaustAccelCounter(int index)
+stExhaustAccelCounter *stEffectMgr::getExhaustAccelCounter(int index)
 {
     ST_EFCT_ASSERT_N(index, RaceMgr::getManager()->getKartNumber(), 1715);
     return &mpExhaustAccelCounter[index];
@@ -565,7 +574,7 @@ stEmitter *stEffectMgr::createEmitter(stEmitterCallBack *cb, u16 type)
     stEmitterPtcl *emt = ((stEmitterPtclMgr *)this)->Create(cb, type);
     if (emt) {
         if (type < 1) {
-            ST_EFCT_ASSERT_N((int)type, 1, 1705);
+            ST_EFCT_ASSERT_NAME("kind", (int)type, 1, 1705);
             ((stEmitter &)*emt) = *mpEmitterTemplate[(int)type];
             emt->mParticle.init(*(s16 *)((u8 *)emt->_130 + 0x20));
         }

@@ -247,16 +247,10 @@ J3DEffectObj *J3DEffectMgr::setEffectSplash(CrsGround *ground, int kartNo, Mtx m
 
 J3DEffectObj *J3DEffectMgr::setEffect(int efctID, Mtx mtx, int param)
 {
-    JSULink<J3DEffectObj> *link = mFreeList[efctID].getFirst();
-    J3DEffectObj *obj = nullptr;
-    if (link != nullptr) {
-        link->getObject()->init();
-        mActiveList.append(&link->getObject()->mLink);
-        obj = link->getObject();
-        if (obj != nullptr) {
-            PSMTXCopy(mtx, obj->mMtx);
-            *(int *)((u8 *)obj + 0xd8) = param;
-        }
+    J3DEffectObj *obj = getFreeObj(efctID);
+    if (obj != nullptr) {
+        PSMTXCopy(mtx, obj->mMtx);
+        obj->mKartNo = param;
     }
     return obj;
 }
@@ -333,11 +327,8 @@ void J3DEfctKartAnmMgr::loadSimpleBrkEfctAnimation()
 
 void J3DEfctKartAnmMgr::loadSimpleCharBrkEfctFile(u32 id, u8 index)
 {
-    const char *effectName = nullptr;
-    effectName = getBrkEfctEffectName(id);
-    const char *charName = getBrkEfctCharName((u8)index);
     char buf[64];
-    snprintf(buf, 64, "/Effect/driver/%s_%s.brk", charName, effectName);
+    snprintf(buf, 64, "/Effect/driver/%s_%s.brk", getBrkEfctCharName((u8)index), getBrkEfctEffectName(id));
     void *data = ObjUtility::getPtrMainArc(buf);
     if (data != nullptr) {
         mCharBrkAnm[index][id] = data;
@@ -346,10 +337,8 @@ void J3DEfctKartAnmMgr::loadSimpleCharBrkEfctFile(u32 id, u8 index)
 
 void J3DEfctKartAnmMgr::loadSimpleKartPartsBrkEfctFile(u32 id, u8 index)
 {
-    char *effectName = (char *)getBrkEfctEffectName(id);
-    char *kartName = (char *)getBrkEfctSimpleKartName((u8)index);
     char buf[64];
-    snprintf(buf, 64, "/Effect/kart/%s_%s.brk", kartName, effectName);
+    snprintf(buf, 64, "/Effect/kart/%s_%s.brk", getBrkEfctSimpleKartName((u8)index), getBrkEfctEffectName(id));
     void *data = ObjUtility::getPtrMainArc(buf);
     if (data != nullptr) {
         mKartBrkAnm[index][id] = data;
@@ -370,11 +359,11 @@ const char *J3DEfctKartAnmMgr::getBrkEfctSimpleKartName(u8 index)
     return BrkEfctSimpleKartName[index];
 }
 
-const char *J3DEfctKartAnmMgr::getBrkEfctEffectName(u32 id)
+const char *J3DEfctKartAnmMgr::getBrkEfctEffectName(u32 efctID)
 {
 #line 602 "J3DEffectMgr.cpp"
-    JUT_MINMAX_ASSERT(0, id, 3)
-    return BrkEfctEffectName[id];
+    JUT_MINMAX_ASSERT(0, efctID, 3)
+    return BrkEfctEffectName[efctID];
 }
 
 void *J3DEfctKartAnmMgr::getSimpleCharBrkAnm(u32 id, u8 index)

@@ -28,7 +28,6 @@ public:
     static J3DMtxCalc *sBckMtxCalc[1];
     static J3DAnmTextureSRTKey *sTexSRTKey;
 
-    int mKartNo;            // d8
     AnmController mAnmCtrl; // dc
     u8 _f0;                 // f0
     u8 _f1;                 // f1

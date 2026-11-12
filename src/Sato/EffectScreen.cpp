@@ -295,15 +295,11 @@ void EffectScreenMgr::reset()
         screen->mKartNo = i;
     }
 
-    int off = 0;
-    u8 zf = off;
-    u8 za = off;
-    int k = 0;
-    for (; k < mNumScreens; k++) {
-        EffectScreen *s = (EffectScreen *)((u8 *)mScreens + off);
-        s->mFrame = zf;
-        s->mActive = za;
-        off += 0x3c;
+    EffectScreen *s;
+    for (int k = 0; k < mNumScreens; k++) {
+        s = &mScreens[k];
+        s->mFrame = 0;
+        s->mActive = false;
     }
 
     mPara = -1;

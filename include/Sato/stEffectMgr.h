@@ -2,6 +2,7 @@
 #define STEFFECTMGR_H
 
 #include "Sato/stEmitter.h"
+#include "Sato/stEfctExhaust.h"
 #include "Sato/stParticle.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "JSystem/JGeometry/Vec.h"
@@ -16,11 +17,6 @@ struct stTireEfctStatusSet;
 struct stTireEffectStatus;
 
 struct stEffectMgr {
-    struct stExhaustAccelCounter {
-        u8 _00[0x10];
-        void calc(int);
-    };
-
     struct stWaterEffectStatus {
         stWaterEffectStatus();
         u32 m00[2]; // 0x00

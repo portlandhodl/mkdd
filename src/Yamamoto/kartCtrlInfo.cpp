@@ -647,7 +647,7 @@ bool KartCtrl::CheckThunderBolt(int kartIndex) {
     return getKartBody(kartIndex)->getThunder()->mFlags & 1;
 }
 
-double KartCtrl::GetTireRadius(int kartIndex) {
+f32 KartCtrl::GetTireRadius(int kartIndex) {
     return getKartBody(kartIndex)->mKartSus[2]->mTireRadius;
 }
 

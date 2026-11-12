@@ -7,18 +7,23 @@
 #include "Sato/stParticle.h"
 #include "dolphin/gx/GXStruct.h"
 
+struct stColorRGB
+{
+    u8 &operator[](int i) { return (&r)[i]; }
+    const u8 &operator[](int i) const { return (&r)[i]; }
+
+    u8 r, g, b;
+};
+
 struct stEmitter
 {
     stEmitter(); // 0x802359b4
-    stEmitter &operator=(const stEmitter &);
 
     JGeometry::TVec3f _00; // 0x00
-    u8 _0c[0xc];
+    JGeometry::TVec3f _0c; // 0x0c
     u8 mCreateRate; // 0x18
-    u8 _19[3];
     f32 _1c;
     u8 mRateStep; // 0x20
-    u8 _21;
     s16 mLife; // 0x22
     f32 mLifeRndRate; // 0x24
     JGeometry::TVec3f mFirstVelDir; // 0x28
@@ -47,20 +52,21 @@ struct stEmitter
     f32 mAlphaLastRate; // 0x8c
     f32 mChildSize; // 0x90
     f32 mChildAlpha; // 0x94
-    u8 _98[0x10]; // 0x98
-    u8 mColor0Start[3]; // 0xa8
-    u8 mColor0End[3]; // 0xab
-    u8 mColor1Start[3]; // 0xae
-    u8 mColor1End[3]; // 0xb1
-    u8 _b4[2];
+    f32 _98; // 0x98
+    JGeometry::TVec3f _9c; // 0x9c
+    stColorRGB mColor0Start; // 0xa8
+    stColorRGB mColor0End; // 0xab
+    stColorRGB mColor1Start; // 0xae
+    stColorRGB mColor1End; // 0xb1
+    u8 _b4;
     u16 mFlags;   // 0xb6
     u8 mTevMode;  // 0xb8
     u8 mKind;     // 0xb9
     u8 mDrawType; // 0xba
     u8 _bb;       // 0xbb
-    u8 _bc[4];    // 0xbc
+    f32 _bc;      // 0xbc
     GXColor mOrderColor; // 0xc0
-    u8 _c4[4];    // 0xc4
+    f32 _c4;      // 0xc4
     f32 mSizeYFirst; // 0xc8
     f32 mSizeYLast; // 0xcc
     f32 mSizeYFirstRate; // 0xd0
@@ -117,13 +123,28 @@ struct stEmitterPtcl : public stEmitter
     ~stEmitterPtcl();
     // Inline/Unused
     void update();
-    void removeAllParticles();
+    void removeAllParticles()
+    {
+        JSUList<stParticle> *list = &mParticle.mDynamics.mList;
+        JSUListIterator<stParticle> it(list);
+        while (it != nullptr)
+            mParticle.mDynamics.Remove(*list, it);
+    }
+    bool chkCreateStep()
+    {
+        if (mFlags & 0x80) {
+            if (_b4 < _144)
+                return false;
+            _144++;
+        }
+        return true;
+    }
 
     stParticleMgr mParticle; // 0xd8
     stEmitterCallBack *_130;
-    JSUPtrLink _134;
-    u16 _144;
-    s16 _146;
+    JSULink<stEmitterPtcl> _134;
+    u8 _144;
+    u16 _146;
 }; // Size: 0x148
 
 struct stEmitterCallBack
@@ -144,8 +165,8 @@ struct stEmitterCallBack
     ~stEmitterCallBack() {}
 
     void setIpData(stFileParamPtrList *list);
-    int getTirePos(JGeometry::TVec3f *tirePos);
-    int getDriftPos(JGeometry::TVec3f *driftPos, const JGeometry::TVec3f &origin);
+    bool getTirePos(JGeometry::TVec3f *tirePos);
+    bool getDriftPos(JGeometry::TVec3f *driftPos, const JGeometry::TVec3f &origin);
     void calc_lineIp(f32, f32, f32, f32, f32, bool, f32);
     void calc_lineIpFollow(f32, f32, f32, f32, f32, bool, f32);
     void calcParam(f32, f32, f32, f32);
@@ -174,9 +195,12 @@ struct stEmitterPtclMgr
     void draw(u32);
     stEmitterPtcl *Create(stEmitterCallBack *, u16);
     void RemoveEmt(JSUList<stEmitterPtcl> &, JSUListIterator<stEmitterPtcl> &);
-    void ChkRemoveBecomeInvalidEmt(JSUList<stEmitterPtcl> &, JSUListIterator<stEmitterPtcl> &);
+    bool ChkRemoveBecomeInvalidEmt(JSUList<stEmitterPtcl> &, JSUListIterator<stEmitterPtcl> &);
     void removeAllEmt();
     void Remove(stEmitterPtcl *);
+
+    JSUList<stEmitterPtcl> mList;      // 0x00
+    JSUList<stEmitterPtcl> *mFreeList; // 0x0c
 };
 
 #endif // STEMITTER_H

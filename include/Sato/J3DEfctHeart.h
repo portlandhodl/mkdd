@@ -15,7 +15,53 @@ public:
     virtual ~JPTraceHParticleCallBack() {} // 0x80288ba4
 };
 
-class J3DEfctHeart : public J3DEffectObj
+class J3DEfctHeart;
+
+// Layout and constructor of TStateObserver<J3DEfctHeart>; field names kept for ItemHeart.cpp
+struct J3DEfctHeartStateObs
+{
+    typedef void (J3DEfctHeart::*StateFunc)();
+
+    J3DEfctHeartStateObs() : _dc(0), _de(1), _ec(0), _f0(0) {}
+
+    void createStateFunc(J3DEfctHeart *owner, const u8 &num)
+    {
+        _f0 = num;
+        mSelf = owner;
+        mInitFuncs = new StateFunc[_f0];
+        mDoFuncs = new StateFunc[_f0];
+        resetState();
+    }
+
+    void resetState()
+    {
+        _dd = 0;
+        _dc = 0;
+        _de = 1;
+        _ec = 0;
+    }
+
+    void changeState(const u8 &state)
+    {
+        _dd = _dc;
+        _dc = state;
+        _de = 1;
+        _ec = 0;
+    }
+
+    void registStateFunc(const u8 &id, const StateFunc &initFunc, const StateFunc &doFunc);
+
+    u8 _dc;                  // dc
+    u8 _dd;                  // dd
+    u8 _de;                  // de
+    J3DEfctHeart *mSelf;     // e0
+    StateFunc *mInitFuncs;   // e4
+    StateFunc *mDoFuncs;     // e8
+    u32 _ec;                 // ec
+    u8 _f0;                  // f0
+};
+
+class J3DEfctHeart : public J3DEffectObj, public J3DEfctHeartStateObs
 {
 public:
     typedef void (J3DEfctHeart::*StateFunc)();
@@ -48,17 +94,6 @@ public:
         _dc = val;
     }
 
-    int mKartNo;             // d8
-    u8 _dc;                  // dc
-    u8 _dd;                  // dd
-    u8 _de;                  // de
-    u8 _df[0xe0 - 0xdf];     //
-    J3DEfctHeart *mSelf;     // e0
-    StateFunc *mInitFuncs;   // e4
-    StateFunc *mDoFuncs;     // e8
-    u32 _ec;                 // ec
-    u8 _f0;                  // f0
-    u8 _f1[0xf4 - 0xf1];     //
     u8 _f4;                  // f4
     u8 _f5[0xf8 - 0xf5];     //
     JGeometry::TVec3f mPos;   // f8

@@ -55,29 +55,32 @@ void JPSnowEmitterCallBack::execute(JPABaseEmitter *emt)
     int kartNo = emt->mpUserWork;
     JGeometry::TVec3f camPos(*KartCtrl::getKartCtrl()->getKartCam(kartNo)->GetCameraPos());
     JGeometry::TVec3f lookPos(*KartCtrl::getKartCtrl()->getKartCam(kartNo)->GetCameraLookPos());
-    JGeometry::TVec3f dir(lookPos);
-    dir.sub(camPos);
-    stVecNormalize(&dir);
+    JGeometry::TVec3f dir;
+    dir.sub(lookPos, camPos);
+    dir.y = 0.0f;
+    stVecNormalize(dir);
     JGeometry::TPos3f mtx;
     stMakeDirectionMtx(&mtx, dir, 90);
     JPASetRMtxfromMtx(mtx, emt->mGlobalRot);
-    emt->mGlobalTrs = camPos;
+    emt->mGlobalTrs.set(camPos);
     JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(KartCtrl::getKartCtrl()->getKartCam(kartNo)->mTargetIdx, &kartPos);
     CrsArea area;
-    area.search(2, kartPos);
-    int alpha = sSnowAlphaAdd;
+    JGeometry::TVec3f searchPos(kartPos);
+    s16 alpha = sSnowAlphaAdd;
     if (RaceMgr::sRaceManager->getRacePhase() == PHASE_CRS_DEMO) {
         alpha = 255;
+        searchPos = camPos;
     }
+    area.search(2, searchPos);
     if (area.getArea() != nullptr) {
         mAlpha -= alpha;
     } else {
         mAlpha += alpha;
     }
-    if (mAlpha < 0) {
+    if (mAlpha <= 0) {
         mAlpha = 0;
-    } else if (mAlpha > 255) {
+    } else if (mAlpha >= 255) {
         mAlpha = 255;
     }
     emt->setGlobalAlpha(mAlpha);
@@ -100,8 +103,8 @@ JPEffectMgr::JPEffectMgr(JKRHeap *heap, bool p2, u8 mode)
     mPrev2DMultiEmitterMgr = nullptr;
     mThunderMgr = nullptr;
     mSnow = 0;
-    mSnowPos = nullptr;
     mSnowVel = nullptr;
+    mSnowPos = nullptr;
     if (heap == nullptr) {
         mHeap = JKRHeap::sCurrentHeap;
     } else {
@@ -164,24 +167,23 @@ void JPEffectMgr::reset()
             ptcl2d = PartilceMax;
         }
         create2DEmtMgr(res2d, emt2d, ptcl2d);
-    } else {
-        mEmitterMgr->forceDeleteAllEmitter();
-        for (u8 i = 0; i < RaceMgr::sRaceManager->getConsoleNumber(); i++) {
-            mCamEmitterMgr[i]->forceDeleteAllEmitter();
-            mPrev2DMultiEmitterMgr[i]->forceDeleteAllEmitter();
-        }
-        mEm2DMgr->forceDeleteAllEmitter();
-        mPrev2DMgr->forceDeleteAllEmitter();
-        mThunderMgr->forceDeleteAllEmitter();
-        JPEffectPerformer::reset();
-        if (mSnow) {
-            createSnowEmt();
-            resetSnowCamVel();
-            JPSnowECB.mAlpha = 255;
-        }
-        if (RaceMgr::sRaceManager->getCourse()->getCourseID() == 49) {
-            createRainbowEmt();
-        }
+    }
+    mEmitterMgr->forceDeleteAllEmitter();
+    for (u8 i = 0; i < RaceMgr::sRaceManager->getConsoleNumber(); i++) {
+        mCamEmitterMgr[i]->forceDeleteAllEmitter();
+        mPrev2DMultiEmitterMgr[i]->forceDeleteAllEmitter();
+    }
+    mEm2DMgr->forceDeleteAllEmitter();
+    mPrev2DMgr->forceDeleteAllEmitter();
+    mThunderMgr->forceDeleteAllEmitter();
+    JPEffectPerformer::reset();
+    if (mSnow) {
+        createSnowEmt();
+        resetSnowCamVel();
+        JPSnowECB.mAlpha = 255;
+    }
+    if (RaceMgr::sRaceManager->getCourse()->getCourseID() == 49) {
+        createRainbowEmt();
     }
 }
 
@@ -459,11 +461,11 @@ void JPEffectMgr::draw_forBefore2D(const u8 cameraNo)
 void JPEffectMgr::createSnowEmt()
 {
     u8 camNum = RaceMgr::sRaceManager->getConsoleNumber();
-    if (mSnowVel == nullptr) {
-        mSnowVel = new JGeometry::TVec3f[camNum];
-    }
     if (mSnowPos == nullptr) {
         mSnowPos = new JGeometry::TVec3f[camNum];
+    }
+    if (mSnowVel == nullptr) {
+        mSnowVel = new JGeometry::TVec3f[camNum];
     }
     for (u32 i = 0; (u8)i < camNum; i++) {
         JGeometry::TVec3f zero(0.0f, 0.0f, 0.0f);
@@ -472,8 +474,8 @@ void JPEffectMgr::createSnowEmt()
             emt->mpUserWork = (u8)i;
             emt->mEmitterCallback = &JPSnowECB;
         }
-        mSnowVel[(u8)i].zero();
         mSnowPos[(u8)i].zero();
+        mSnowVel[(u8)i].zero();
     }
 }
 
@@ -531,8 +533,8 @@ void JPEffectMgr::createStaffRollEfct()
 void JPEffectMgr::resetSnowCamVel()
 {
     for (u8 i = 0; i < RaceMgr::sRaceManager->getConsoleNumber(); i++) {
-        mSnowVel[i].zero();
         mSnowPos[i].zero();
+        mSnowVel[i].zero();
     }
 }
 
@@ -543,7 +545,7 @@ void JPEffectMgr::calcSnowCamVel()
         JGeometry::TVec3f camPos(*cam->GetCameraPos());
         mSnowVel[i].sub(camPos, mSnowPos[i]);
         mSnowVel[i].scale(sSnowSpdRatio);
-        mSnowPos[i].add(mSnowVel[i]);
+        mSnowPos[i] = camPos;
     }
 }
 

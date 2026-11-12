@@ -94,7 +94,7 @@ public:
     bool CheckTandemItmRollingGet(int);
     void SetObjectPos(int, JGeometry::TVec3f);
     bool CheckThunderBolt(int);
-    double GetTireRadius(int);
+    f32 GetTireRadius(int);
     bool IsBurn(int);
     bool IsWallReact(int);
     bool HaveBalloon(int);

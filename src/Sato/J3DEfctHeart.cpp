@@ -1,6 +1,5 @@
 #include "Sato/J3DEfctHeart.h"
 
-#include <JSystem/JAudio/JASFakeMatch2.h>
 #include <JSystem/JGeometry.h>
 #include <JSystem/JMath/JMath.h>
 #include <JSystem/JUtility/JUTAssert.h>
@@ -23,18 +22,10 @@ struct HeartOffset
 struct HeartOffsetParam
 {
     HeartOffset mOffset[14];
-    J3DEfctHeart::StateFunc mFunc[8];
 };
 
 static f32 sEfctScale = 1.2f;
 
-static u8 sStateFuncNum = 4;
-static u8 sStateFuncIdx[4] = { 0, 1, 2, 3 };
-static u8 sState_Disappear0 = 2;
-static u8 sState_Disappear1 = 2;
-static u8 sState_Disappear2 = 2;
-static u8 sState_ColItemDisappear = 2;
-static u8 sState_MoveToHand = 1;
 
 static HeartOffsetParam sHeartOffsetParam = {
     {
@@ -53,29 +44,11 @@ static HeartOffsetParam sHeartOffsetParam = {
         { 160.0f, -10.0f, 160.0f },
         { -10.0f, 190.0f, -10.0f },
     },
-    {
-        &J3DEfctHeart::initFunc_Rolling,
-        &J3DEfctHeart::doFunc_Rolling,
-        &J3DEfctHeart::initFunc_MoveToHand,
-        &J3DEfctHeart::doFunc_MoveToHand,
-        &J3DEfctHeart::initFunc_Disappear,
-        &J3DEfctHeart::doFunc_Disappear,
-        &J3DEfctHeart::initFunc_ColItemDisappear,
-        &J3DEfctHeart::doFunc_ColItemDisappear,
-    },
 };
 
 static JPTraceHParticleCallBack JPTraceHPCB;
 
-namespace
-{
-struct HeartObs : public StateObserverT<J3DEfctHeart>
-{
-    void MoveExec() {}
-    void InitExec() {}
-};
-HeartObs sObs;
-}
+#include <JSystem/JAudio/JASFakeMatch2.h>
 
 static const char sAssertFile[] = "StateObserver.h";
 static const char sAssertMsg[] = "range over: %d <= id=%d < %d";
@@ -86,27 +59,29 @@ static const char sAssertMsg[] = "range over: %d <= id=%d < %d";
                                                 0, (i), (max)),                                           \
                      OSPanic(sAssertFile, 109, "Halt"))
 
+inline void J3DEfctHeartStateObs::registStateFunc(const u8 &id, const StateFunc &initFunc, const StateFunc &doFunc)
+{
+    HEART_MAX_ASSERT(id, _f0);
+    mInitFuncs[id] = initFunc;
+    mDoFuncs[id] = doFunc;
+}
+
 void JPTraceHParticleCallBack::execute(JPABaseEmitter *emt, JPABaseParticle *ptcl)
 {
     J3DEfctHeart *heart = (J3DEfctHeart *)emt->mpUserWork;
     JGeometry::TVec3f vel;
     ObjUtility::getKartVel(heart->mKartNo, &vel);
-    JGeometry::TVec3f off;
-    ptcl->getOffsetPosition(off);
-    off.add(off, vel);
-    off.add(off, heart->_128);
-    ptcl->setOffsetPosition(off);
+    JGeometry::TVec3f offset;
+    JGeometry::TVec3f pos;
+    ptcl->getOffsetPosition(pos);
+    pos.add(vel);
+    offset = heart->_128;
+    ptcl->setOffsetPosition(pos);
 }
 
 void JPTraceHParticleCallBack::draw(JPABaseEmitter *, JPABaseParticle *) {}
 
-J3DEfctHeart::J3DEfctHeart()
-{
-    _dc = 0;
-    _de = 1;
-    _f0 = 0;
-    _ec = 0;
-}
+J3DEfctHeart::J3DEfctHeart() {}
 
 const char *J3DEfctHeart::getBmdFileName()
 {
@@ -115,41 +90,18 @@ const char *J3DEfctHeart::getBmdFileName()
 
 void J3DEfctHeart::onlyinit()
 {
-    _f0 = sStateFuncNum;
-    mSelf = this;
-    mInitFuncs = new StateFunc[_f0];
-    mDoFuncs = new StateFunc[_f0];
-    HeartOffsetParam *param = &sHeartOffsetParam;
-    _dd = 0;
-    _dc = 0;
-    _de = 1;
-    _ec = 0;
-
-    HEART_MAX_ASSERT(sStateFuncIdx[0], _f0);
-    mInitFuncs[sStateFuncIdx[0]] = param->mFunc[0];
-    mDoFuncs[sStateFuncIdx[0]] = param->mFunc[1];
-
-    HEART_MAX_ASSERT(sStateFuncIdx[1], _f0);
-    mInitFuncs[sStateFuncIdx[1]] = param->mFunc[1];
-    mDoFuncs[sStateFuncIdx[1]] = param->mFunc[2];
-
-    HEART_MAX_ASSERT(sStateFuncIdx[2], _f0);
-    mInitFuncs[sStateFuncIdx[2]] = param->mFunc[2];
-    mDoFuncs[sStateFuncIdx[2]] = param->mFunc[3];
-
-    HEART_MAX_ASSERT(sStateFuncIdx[3], _f0);
-    mInitFuncs[sStateFuncIdx[3]] = param->mFunc[3];
-    mDoFuncs[sStateFuncIdx[3]] = param->mFunc[4];
+    createStateFunc(this, 4);
+    registStateFunc(0, &J3DEfctHeart::initFunc_Rolling, &J3DEfctHeart::doFunc_Rolling);
+    registStateFunc(1, &J3DEfctHeart::initFunc_MoveToHand, &J3DEfctHeart::doFunc_MoveToHand);
+    registStateFunc(2, &J3DEfctHeart::initFunc_Disappear, &J3DEfctHeart::doFunc_Disappear);
+    registStateFunc(3, &J3DEfctHeart::initFunc_ColItemDisappear, &J3DEfctHeart::doFunc_ColItemDisappear);
 }
 
 void J3DEfctHeart::init()
 {
     mState = 0;
     _140 = 0;
-    _dd = 0;
-    _dc = 0;
-    _de = 1;
-    _ec = 0;
+    resetState();
     mEmitters[1] = nullptr;
     mEmitters[0] = nullptr;
     mPos.zero();
@@ -174,11 +126,13 @@ void J3DEfctHeart::calc()
 
     if (_160 != nullptr)
     {
+        JGeometry::TVec3f pos;
         JGeometry::TVec3f kartPos;
         ObjUtility::getKartPos(mKartNo, &kartPos);
-        _160->mGlobalTrs.set(kartPos);
+        pos.add(kartPos, _134);
+        _160->mGlobalTrs.set(pos);
 
-        if ((_160->mFlags & 0x10) && _160->getParticleNumber() == 0)
+        if (_160->isEnableDeleteEmitter())
         {
             JPEffectMgr::getEffectMgr()->deleteEmt(_160);
             _160 = nullptr;
@@ -186,18 +140,38 @@ void J3DEfctHeart::calc()
     }
 }
 
+static inline void makeHeartRotY(Mtx m, s16 angle)
+{
+    f32 c = JMACosShort(angle);
+    f32 s = JMASinShort(angle);
+    m[1][1] = 1.0f;
+    m[0][2] = s;
+    m[0][0] = c;
+    m[2][0] = -s;
+    m[2][2] = c;
+    m[2][1] = 0.0f;
+    m[1][2] = 0.0f;
+    m[1][0] = 0.0f;
+    m[0][1] = 0.0f;
+    m[0][3] = 0.0f;
+    m[1][3] = 0.0f;
+    m[2][3] = 0.0f;
+}
+
 void J3DEfctHeart::initFunc_Rolling()
 {
-    _140 = _f4 << 15;
+    _140 = (s16)(_f4 << 15);
+    char *base = "mk_heart";
 
     for (u8 i = 0; i < 2; i++)
     {
-        const char *name = ObjUtility::concatSimpleFileName((char *)"mk_heart", i);
+        const char *name = ObjUtility::concatSimpleFileName(base, i);
         mEmitters[i] = JPEffectMgr::getEffectMgr()->createEmt(name, mPos);
-        if (mEmitters[i] != nullptr)
+        JPABaseEmitter *emt = mEmitters[i];
+        if (emt != nullptr)
         {
-            mEmitters[i]->mpUserWork = (s32)this;
-            mEmitters[i]->mParticleCallback = &JPTraceHPCB;
+            emt->mpUserWork = (s32)this;
+            emt->mParticleCallback = &JPTraceHPCB;
         }
     }
 }
@@ -207,50 +181,32 @@ void J3DEfctHeart::doFunc_Rolling()
     _140 += 1800;
 
     Mtx &body = ObjUtility::getKartBodyMtx(mKartNo);
-    Mtx bodyCopy;
-    PSMTXCopy(body, bodyCopy);
-    bodyCopy[0][3] = 0.0f;
-    bodyCopy[1][3] = 0.0f;
-    bodyCopy[2][3] = 0.0f;
-
-    Mtx rot;
-    f32 sin = JMath::sincosTable_.mTable[((u16)_140) >> 5].first;
-    f32 cos = JMath::sincosTable_.mTable[((u16)_140) >> 5].second;
-    rot[0][0] = cos;
-    rot[0][1] = 0.0f;
-    rot[0][2] = sin;
-    rot[0][3] = 0.0f;
-    rot[1][0] = 0.0f;
-    rot[1][1] = 1.0f;
-    rot[1][2] = 0.0f;
-    rot[1][3] = 0.0f;
-    rot[2][0] = -sin;
-    rot[2][1] = 0.0f;
-    rot[2][2] = cos;
-    rot[2][3] = 0.0f;
+    JGeometry::TPos3f bodyMtx;
+    bodyMtx.set(body);
+    bodyMtx.zeroTrans();
 
     Mtx mtx;
-    PSMTXConcat(bodyCopy, rot, mtx);
+    Mtx rot;
+    makeHeartRotY(rot, _140);
+    PSMTXConcat(bodyMtx, rot, mtx);
 
     mPos.set(0.0f, 0.0f, sHeartOffsetParam.mOffset[0].x);
     PSMTXMultVec(mtx, &mPos, &mPos);
     _128 = mPos;
 
-    f32 sin2 = JMath::sincosTable_.mTable[((u16)(_140 + 1800)) >> 5].first;
-    f32 cos2 = JMath::sincosTable_.mTable[((u16)(_140 + 1800)) >> 5].second;
-    rot[0][0] = cos2;
-    rot[0][2] = sin2;
-    rot[2][0] = -sin2;
-    rot[2][2] = cos2;
-    PSMTXConcat(bodyCopy, rot, mtx);
+    makeHeartRotY(rot, _140 + 1800);
+    PSMTXConcat(bodyMtx, rot, mtx);
 
     _104.set(0.0f, 0.0f, 150.0f);
-    PSMTXMultVec(mtx, &_104, &_110);
+    PSMTXMultVec(mtx, &_110, &_110);
 
     JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mKartNo, &kartPos);
-    mPos.add(mPos, kartPos);
-    mPos.y += sHeartOffsetParam.mOffset[0].y;
+    mPos.add(kartPos);
+    JGeometry::TVec3f up;
+    up.set(body[0][2], body[1][2], body[2][2]);
+    up.scale(sHeartOffsetParam.mOffset[0].y);
+    mPos.add(up);
 
     mMtx[0][3] = mPos.x;
     mMtx[1][3] = mPos.y;
@@ -272,10 +228,7 @@ void J3DEfctHeart::doFunc_MoveToHand()
 {
     if (mItem->mState != 9)
     {
-        _dd = _dc;
-        _dc = sState_Disappear0;
-        _de = 1;
-        _ec = 0;
+        changeState(2);
         mHeartLink->mLostNum--;
         return;
     }
@@ -296,10 +249,7 @@ void J3DEfctHeart::doFunc_MoveToHand()
 
     if (_ec >= _150 && _160 == nullptr)
     {
-        _dd = _dc;
-        _dc = sState_Disappear1;
-        _de = 1;
-        _ec = 0;
+        changeState(2);
         mItem->setStateEquip(true, true);
         mHeartLink->mLostNum--;
     }
@@ -341,10 +291,7 @@ void J3DEfctHeart::doFunc_ColItemDisappear()
 
     if (_ec > 60 && _160 == nullptr)
     {
-        _dd = _dc;
-        _dc = sState_Disappear2;
-        _de = 1;
-        _ec = 0;
+        changeState(2);
         mHeartLink->mLostNum--;
     }
 }
@@ -374,7 +321,7 @@ void J3DEfctHeart::setHitStartPos(const ItemObj &item)
     mPos = item.mPos;
     JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mKartNo, &kartPos);
-    _134.mul(mPos, kartPos);
+    _134.sub(mPos, kartPos);
     _15c = 1;
     _160 = JPEffectMgr::getEffectMgr()->createEmt("mk_heartHit_a", mPos);
     if (_160 != nullptr)
@@ -397,7 +344,7 @@ void J3DEfctHeart::initItemHit(const ItemObj &item)
     mPos = item.mPos;
     JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mKartNo, &kartPos);
-    _134.mul(mPos, kartPos);
+    _134.sub(mPos, kartPos);
     _15c = 1;
     _160 = JPEffectMgr::getEffectMgr()->createEmt("mk_heartHit_a", mPos);
     if (_160 != nullptr)
@@ -423,10 +370,7 @@ void J3DEfctHeart::setMoveEfct(ItemObj *item, ItemHeart *heart)
 {
     if (item == nullptr)
     {
-        _dd = _dc;
-        _dc = sState_Disappear0;
-        _de = 1;
-        _ec = 0;
+        changeState(2);
         heart->mLostNum--;
         if (_160 != nullptr)
         {
@@ -438,10 +382,7 @@ void J3DEfctHeart::setMoveEfct(ItemObj *item, ItemHeart *heart)
     {
         mItem = item;
         mHeartLink = heart;
-        _dd = _dc;
-        _dc = sState_MoveToHand;
-        _de = 1;
-        _ec = 0;
+        changeState(1);
     }
 }
 
@@ -451,10 +392,10 @@ void J3DEfctHeart::doPosLerp(JGeometry::TVec3f *out, const JGeometry::TVec3f &ta
     JGeometry::TVec3f start;
     JGeometry::TVec3f kartPos;
     ObjUtility::getKartPos(mKartNo, &kartPos);
-    start = _134;
+    start.add(kartPos, _134);
     f32 ratio = timer / (f32)_150;
     if (ratio > 1.0f)
         ratio = 1.0f;
     JMAVECLerp(&start, &target, out, ratio);
-    out->y += _14c * timer - 0.5f * timer * timer;
+    out->y += _14c * timer + -0.5f * timer * timer;
 }

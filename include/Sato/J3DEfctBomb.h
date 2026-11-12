@@ -31,7 +31,6 @@ public:
     static J3DAnmTevRegKey *sTevRegKey[4];
     static u8 sBrkAnmNo;
 
-    int mKartNo;            // d8
     u8 _dc;                 // dc
     u8 _dd;                 // dd
     u8 _de;                 // de

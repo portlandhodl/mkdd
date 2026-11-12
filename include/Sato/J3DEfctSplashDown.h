@@ -35,7 +35,6 @@ public:
     JGeometry::TPos3f *getRotMtx() { return (JGeometry::TPos3f *)((u8 *)this + 0x94); }
     int &getLife() { return *(int *)((u8 *)this + 0x90); }
 
-    int mKartNo;               // d8
     AnmController mAnmCtrl;    // dc
     u8 _f0;                    // f0
 };

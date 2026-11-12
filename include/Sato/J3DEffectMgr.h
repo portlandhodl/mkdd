@@ -35,6 +35,7 @@ public:
     Mtx mMtx;                    // 94
     int mType;                   // c4
     JSULink<J3DEffectObj> mLink; // c8
+    int mKartNo;                 // d8
 };
 
 class J3DEffectMgr
@@ -59,6 +60,17 @@ public:
 
     static J3DEffectMgr *getJ3DEffectMgr() { return sJ3DMgr; }
     static J3DEffectMgr *sJ3DMgr;
+
+    J3DEffectObj *getFreeObj(int efctID) {
+        J3DEffectObj *obj = nullptr;
+        JSULink<J3DEffectObj> *link = mFreeList[efctID].getFirst();
+        if (link != nullptr) {
+            link->getObject()->init();
+            mActiveList.append(&link->getObject()->mLink);
+            obj = link->getObject();
+        }
+        return obj;
+    }
 
     J3DModelData *getModelData() { return mModelDataAll[3]; }
     J3DModelData *getBombModelData() { return mModelDataAll[0]; }

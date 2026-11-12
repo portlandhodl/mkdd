@@ -22,6 +22,7 @@ struct IceOffsetData {
     f32 mOffsetZ;
 };
 
+namespace {
 const char *sJPAFileName[3] = {
     "mk_freeze_d",
     "mk_freeze_b",
@@ -51,6 +52,7 @@ IceOffsetData sIceOffsetData[21] = {
     { 1.1f, 1.1f, 1.1f, -95.0f, 0.0f },
     { 1.2f, 1.2f, 1.5f, -90.0f, -20.0f },
 };
+}
 
 
 J3DEfctIceRock::J3DEfctIceRock() {}
@@ -79,11 +81,6 @@ const char *J3DEfctIceRock::getBtkFileName() {
     return "/Effect/IceRock.btk";
 }
 
-static inline void setIceRockTexAnm(J3DAnmObjMatTexSRT *tex, J3DAnmTextureSRTKey *anm) {
-    tex->mAnmBase = anm;
-    tex->initFrameCtrl(tex->mAnmBase);
-}
-
 void J3DEfctIceRock::onlyinit() {
     mAnmCtrl.mTrans = new AnmControlTrans();
     mAnmCtrl.mTrans->initAnm(1, &mModel);
@@ -99,12 +96,7 @@ void J3DEfctIceRock::onlyinit() {
     info.mNumBpks = 0;
     info.mNumBtks = 1;
     mAnmCtrl.InitRegistrationMat(info, &mModel);
-
-    // Separating getObjIce's check from the mObj reload reproduces MWCC's inlined register allocation.
-    setIceRockTexAnm((mAnmCtrl.mMatData->mpCtrlSRT->getObjIce(0),
-                      *(J3DAnmObjMatTexSRT **)((u8 *)mAnmCtrl.mMatData->mpCtrlSRT + 0x18)),
-                     sTexSRTKey);
-    mAnmCtrl.mMatData->mpCtrlSRT->mNowAnmNo = 0;
+    mAnmCtrl.RegisterMatTexSRT(0, sTexSRTKey);
 }
 
 void J3DEfctIceRock::init() {
@@ -127,8 +119,7 @@ void J3DEfctIceRock::setTrigger() {
     for (u8 i = 0; i < 3; i++) {
         JPABaseEmitter *emt = GetJPAMgr()->createEmt(sJPAFileName[i], pos);
         if (emt != nullptr && !TstEmitterModeNotAvailableFlg(mKartNo, emt)) {
-#line 170 "RaceMgr.h"
-            JUT_MINMAX_ASSERT(0, mKartNo, 8);
+            RaceMgr::getManager()->getKartInfo(mKartNo);
         }
     }
 }
