@@ -489,24 +489,7 @@ static inline void setCreateParticleByStatus(JPABaseEmitter *emt, int kartNo)
 
 void JPBonusKartEfctEmitterCallBack::execute(JPABaseEmitter *emt)
 {
-    int kartNo = getKartIndex(emt);
-    bool unavailableFlg = false;
-
-    if (emt->mResource->getDyn()->getResUserWork() & 1)
-    {
-        if (!GetStEfctMgr()->tstIsAvailableDistance(kartNo))
-        {
-            GetJPAMgr()->deleteEmt(emt);
-            unavailableFlg = true;
-        }
-    }
-
-    if (!unavailableFlg)
-    {
-        JPASetRMtxSTVecfromMtx(ObjUtility::getKartBodyMtx(kartNo), emt->mGlobalRot, &emt->mGlobalScl, &emt->mGlobalTrs);
-        emt->setGlobalParticleScale(emt->mGlobalScl);
-    }
-
+    calc_common(emt);
     setCreateParticleByStatus(emt, getKartIndex(emt));
 }
 
@@ -1468,7 +1451,7 @@ static void calcEfct_KartTagStartDash(int kartNo, const JGeometry::TVec3f &pos, 
     {
         JPABaseEmitter **ept = &JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashL[0];
         u32 baseWork = kartNo << 8;
-        for (int i = 0; i < 3; i++)
+        for (u8 i = 0; i < 3; i++)
         {
             if (ept[i] != NULL)
             {
@@ -1476,40 +1459,15 @@ static void calcEfct_KartTagStartDash(int kartNo, const JGeometry::TVec3f &pos, 
                 JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashL[i] = NULL;
             }
             JPABaseEmitter *emt = GetJPAMgr()->createEmt(names[i], pos);
-            u32 userWork = baseWork | ((u8)i << 4);
-
-            bool unavailableFlg = false;
-            if (!RCMGetManager()->isLANMode())
-            {
-                u32 resFlags = emt->mResource->getDyn()->getResUserWork();
-                if ((resFlags & 0x2) && sPlayerNum > 1)
-                    unavailableFlg = true;
-                if ((resFlags & (1 << (sPlayerNum + 3))) && !GetKartCtrl()->CheckCamera(kartNo))
-                    unavailableFlg = true;
-                if (unavailableFlg)
-                    GetJPAMgr()->deleteEmt(emt);
-            }
-            if (unavailableFlg)
+            u32 userWork = baseWork | ((u32)i << 4);
+            if (TstEmitterModeAndClipNotAvailableFlg(kartNo, emt))
                 continue;
-
-            unavailableFlg = false;
-            if (emt->mResource->getDyn()->getResUserWork() & 1)
-            {
-                if (!GetStEfctMgr()->tstIsAvailableDistance(kartNo))
-                {
-                    GetJPAMgr()->deleteEmt(emt);
-                    unavailableFlg = true;
-                }
-            }
-            if (unavailableFlg)
-                continue;
-
             if (emt != NULL)
             {
+                JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashL[i] = emt;
                 emt->mEmitterCallback = &JPKinokoDashECB2;
                 emt->setFlag(0x40);
                 emt->mpUserWork = userWork;
-                JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashL[i] = emt;
             }
         }
     }
@@ -1518,7 +1476,7 @@ static void calcEfct_KartTagStartDash(int kartNo, const JGeometry::TVec3f &pos, 
     {
         JPABaseEmitter **ept = &JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashR[0];
         u32 baseWork = kartNo << 8;
-        for (int i = 0; i < 3; i++)
+        for (u8 i = 0; i < 3; i++)
         {
             if (ept[i] != NULL)
             {
@@ -1526,40 +1484,15 @@ static void calcEfct_KartTagStartDash(int kartNo, const JGeometry::TVec3f &pos, 
                 JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashR[i] = NULL;
             }
             JPABaseEmitter *emt = GetJPAMgr()->createEmt(names[i], pos);
-            u32 userWork = (baseWork | ((u8)i << 4)) | 1;
-
-            bool unavailableFlg = false;
-            if (!RCMGetManager()->isLANMode())
-            {
-                u32 resFlags = emt->mResource->getDyn()->getResUserWork();
-                if ((resFlags & 0x2) && sPlayerNum > 1)
-                    unavailableFlg = true;
-                if ((resFlags & (1 << (sPlayerNum + 3))) && !GetKartCtrl()->CheckCamera(kartNo))
-                    unavailableFlg = true;
-                if (unavailableFlg)
-                    GetJPAMgr()->deleteEmt(emt);
-            }
-            if (unavailableFlg)
+            u32 userWork = (baseWork | ((u32)i << 4)) | 1;
+            if (TstEmitterModeAndClipNotAvailableFlg(kartNo, emt))
                 continue;
-
-            unavailableFlg = false;
-            if (emt->mResource->getDyn()->getResUserWork() & 1)
-            {
-                if (!GetStEfctMgr()->tstIsAvailableDistance(kartNo))
-                {
-                    GetJPAMgr()->deleteEmt(emt);
-                    unavailableFlg = true;
-                }
-            }
-            if (unavailableFlg)
-                continue;
-
             if (emt != NULL)
             {
+                JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashR[i] = emt;
                 emt->mEmitterCallback = &JPKinokoDashECB2;
                 emt->setFlag(0x40);
                 emt->mpUserWork = userWork;
-                JPEffectPerformer::getKartEfctEmts(kartNo)->kinokoDashR[i] = emt;
             }
         }
     }
@@ -1619,18 +1552,19 @@ static void calcEfct_KartWet(int kartNo, const JGeometry::TVec3f &pos, u8 flag)
 {
     if (JPEffectPerformer::getKartEfctEmts(kartNo)->wet != NULL)
         return;
+
+    const char *prefix = "mk_mizupota";
+    char sizeChar[3] = {'S', 'M', 'L'};
+    char colChar[3] = {'a', 'b', 'c'};
+    u8 weight = KartInfo::getKartWeight(RCMGetManager()->getKartInfo(kartNo)->getKartID());
     EKartID kartID = RCMGetManager()->getKartInfo(kartNo)->getKartID();
-    u8 weight = KartInfo::getKartWeight(kartID);
-    EKartID id2 = RCMGetManager()->getKartInfo(kartNo)->getKartID();
-    weight = KartInfo::getKartWeight(id2);
-    if (id2 == BOO_PIPES || id2 == PIRANHA_PIPES)
+    if (kartID == BOO_PIPES || kartID == PIRANHA_PIPES)
         weight = 1;
 
-    int col = 0;
+    u8 col = 0;
     if (flag == 1)
     {
-        ECourseID courseID = RCMGetManager()->getCourse()->getCourseID();
-        switch (courseID)
+        switch (RCMGetManager()->getCourse()->getCourseID())
         {
         case WALUIGI_STADIUM: col = 1; break;
         case BOWSER_CASTLE:   col = 2; break;
@@ -1638,12 +1572,12 @@ static void calcEfct_KartWet(int kartNo, const JGeometry::TVec3f &pos, u8 flag)
     }
 
     char name[64];
-    snprintf(name, 64, "%s%c_%c", "mk_mizupota", "SML"[weight], "abc"[col]);
+    snprintf(name, 64, "%s%c_%c", prefix, sizeChar[weight], colChar[col]);
 
     JPABaseEmitter *emt = GetJPAMgr()->createEmt(name, pos);
     if (emt != NULL && !TstEmitterModeNotAvailableFlg(kartNo, emt))
     {
-        emt->mEmitterCallback = NULL;
+        emt->mEmitterCallback = &JPKartWetECB;
         emt->mpUserWork = kartNo;
         JPEffectPerformer::getKartEfctEmts(kartNo)->wet = emt;
     }
@@ -1662,6 +1596,8 @@ static void calcEfct_KartWet(int kartNo, const JGeometry::TVec3f &pos, u8 flag)
     f32 height = ground->getHeight();
     JGeometry::TVec3f p(pos);
     p.y = height;
+    normal.scale(5.0f);
+    p.add(normal);
     mtx[0][3] = p.x;
     mtx[1][3] = p.y;
     mtx[2][3] = p.z;
@@ -1690,15 +1626,12 @@ static void calcEfct_KartFireSmoke(int kartNo, const JGeometry::TVec3f &pos, u8 
     }
 }
 
-static void calcEfct_BonusKartEfct(int kartNo, const JGeometry::TVec3f &pos, u8 flag)
+static void calcEfct_BonusKartEfct(int kartNo, const JGeometry::TVec3f &pos, u8)
 {
-    const char *name = flag ? "mk_extra_kira_demo" : "mk_extra_kira";
+    const char *name = RCMGetManager()->isAwardDemoMode() ? "mk_extra_kira_demo" : "mk_extra_kira";
 
     JPABaseEmitter *emt = GetJPAMgr()->createEmt(name, pos);
-    if (TstEmitterModeNotAvailableFlg(kartNo, emt))
-        return;
-
-    if (emt != NULL)
+    if (emt != NULL && !TstEmitterModeNotAvailableFlg(kartNo, emt))
     {
         emt->mEmitterCallback = &JPBonusKartECB;
         emt->mpUserWork = kartNo;
@@ -1762,31 +1695,34 @@ static void calcEfct_StartFootSmoke(int kartNo, const JGeometry::TVec3f &pos, u8
 
     KartLoader *loader = RCMGetManager()->getKartLoader(kartNo);
     DriverModel *model = loader->getExModelDriver(driver);
-    u16 jointNo = model->getModelData()->getJointName()->getIndex("skl_root");
+    int jointNo = model->getModelData()->getJointName()->getIndex("skl_root");
     const Mtx &jointMtx = model->getModel()->mMtxBuffer->getAnmMtx(jointNo);
 
     JGeometry::TVec3f p(jointMtx[0][3], jointMtx[1][3], jointMtx[2][3]);
     CrsGround ground(RCMGetCourse());
     ground.search(p);
-    p.y = ground.getHeight();
+    JGeometry::TVec3f efctPos(p);
+    efctPos.y = ground.getHeight();
 
     emt->mpUserWork = kartNo;
     emt->mEmitterCallback = &JPStartSmokeECB;
 
-    f32 scale = sCharStartSmokeOffsetData[charID][0];
-    f32 zOff = sCharStartSmokeOffsetData[charID][1];
-    f32 yOff = 0.0f;
+    const f32 *ofs = sCharStartSmokeOffsetData[charID];
+    f32 scale = ofs[0];
+    f32 zOff = 0.0f;
     if (charID == 5 || charID == 6)
-        yOff = -30.0f;
+        zOff = -30.0f;
 
-    JGeometry::TVec3f ydir, zdir;
+    JGeometry::TVec3f zdir, ydir;
     ObjUtility::getKartYdir(kartNo, &ydir);
     ObjUtility::getKartZdir(kartNo, &zdir);
 
-    p.scaleAdd(zOff, zdir);
-    p.scaleAdd(yOff, ydir);
+    ydir.scale(ofs[1]);
+    zdir.scale(zOff);
+    efctPos.add(ydir);
+    efctPos.add(zdir);
 
-    emt->setGlobalTranslation(p);
+    emt->setGlobalTranslation(efctPos);
     emt->setGlobalRMatrix(ObjUtility::getKartBodyMtx(kartNo));
     emt->setScale(scale);
 }

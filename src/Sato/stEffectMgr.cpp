@@ -307,31 +307,27 @@ void stEffectMgr::reset()
 void stEffectMgr::calc()
 {
     ObjUtility::chkAvailableEnemyByDistande((bool *)mIsAvailableDistance, sClipMaxLength);
-
+    Mtx *pd, *pc, *pb, *pa;
     int i;
     int kartNum;
+
     for (i = 0; i < (kartNum = RaceMgr::getManager()->getKartNumber()); i++)
         mpExhaustAccelCounter[i].calc(i);
 
-    Mtx *pd = mpKartExhaustMtxR;
-    Mtx *pc = mpKartExhaustMtxL;
-    Mtx *pb = mpKartBodyMtxB;
-    Mtx *pa = mpKartBodyMtxA;
-    for (i = 0; i < kartNum; i++) {
+    pa = mpKartBodyMtxA;
+    pb = mpKartBodyMtxB;
+    pc = mpKartExhaustMtxL;
+    pd = mpKartExhaustMtxR;
+    for (i = 0; i < kartNum; i++, pa++, pb++, pc++, pd++) {
         Mtx &bodyMtx = ObjUtility::getKartBodyMtx(i);
         PSMTXConcat(bodyMtx, *pa, *pc);
         PSMTXConcat(bodyMtx, *pb, *pd);
-        pa++;
-        pb++;
-        pc++;
-        pd++;
     }
 
     calcGndAttrEffect();
     mEmtMgr2.calc();
     mEmtMgr0.calc();
 }
-
 void stEffectMgr::calcGndAttrEffect()
 {
     int i = 0;

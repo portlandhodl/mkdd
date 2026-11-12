@@ -606,8 +606,8 @@ void TRotation3<T>::setRotate(const TVec3f &axis, f32 angle)
 {
     TVec3f vec;
     vec.normalize(axis);
-    f32 s = sin(angle);
-    f32 c = cos(angle);
+    f32 s = sinf(angle);
+    f32 c = cosf(angle);
     f32 negc = 1.0f - c;
     f32 x = vec.x;
     f32 y = vec.y;

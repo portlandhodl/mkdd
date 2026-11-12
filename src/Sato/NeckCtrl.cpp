@@ -350,7 +350,7 @@ void NeckCtrl::doFunc_Search()
     }
     for (int i = 0; i < RaceMgr::sRaceManager->getKartNumber(); i++)
     {
-        u32 bit = 1 << i;
+        int bit = 1 << i;
         if (m104 & bit)
         {
             int v = mPtr108[i] + 1;
@@ -364,7 +364,7 @@ void NeckCtrl::doFunc_Search()
     {
         mFC = searchRivalKart();
         int fc = mFC;
-        if (fc >= 0 && !(m104 & (1 << fc)))
+        if (fc >= 0 && !(*(volatile u32 *)&m104 & (1 << fc)))
         {
             m104 = m104 | (1 << fc);
             mPtr108[fc] = 0;
@@ -1218,12 +1218,14 @@ void KinopicoHairCtrl::reset()
 
 void KinopicoHairCtrl::update_hair1(float (*mtx1)[4], float (*mtx2)[4], DriverModel* driver)
 {
+    f32 xOfs = sKColFaceOffsetXdir;
+    f32 yOfs = sKColFaceOffsetYdir;
     JGeometry::TVec3f xdir(mtx1[0][0], mtx1[1][0], mtx1[2][0]);
     JGeometry::TVec3f ydir(-mtx1[0][1], -mtx1[1][1], -mtx1[2][1]);
     mHeadPos.set(mtx1[0][3], mtx1[1][3], mtx1[2][3]);
-    xdir.scale(sKColFaceOffsetXdir);
+    xdir.scale(xOfs);
     mHeadPos.add(xdir);
-    ydir.scale(sKColFaceOffsetYdir);
+    ydir.scale(yOfs);
     mHeadPos.add(ydir);
     JGeometry::TVec3f pos(mtx2[0][3], mtx2[1][3], mtx2[2][3]);
     if (m44)
