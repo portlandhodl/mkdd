@@ -123,7 +123,7 @@ void DriverModel::SetDriverOffsetPosition_Change(DriverData *data)
             default:
                 switch (mKartLoader->mKartInfo->getKartWeight()) {
                 case 0:
-                    y = DriverData::msDriverData[mDataID].data[0];
+                    y = DriverData::msDriverData[mDataID].getData(0);
                     z = DriverData::msDriverData[mDataID].data[1];
                     break;
                 case 1:
@@ -189,7 +189,26 @@ void DriverModel::SetDriverOffsetPosition_Change(DriverData *data)
         break;
     }
 
-    SetDriverOffsetPosition_Func1(&vec);
+    switch (mKartLoader->mKartInfo->getKartID()) {
+    case 5:
+    case 9:
+    case 13:
+    case 15:
+        vec.y += 50.0f;
+        break;
+    case 20:
+        vec.z -= 25.0f;
+        break;
+    case 16:
+    case 17:
+        vec.y += 25.0f;
+        vec.z -= 10.0f;
+        break;
+    case 3:
+    case 11:
+        vec.y += 25.0f;
+        break;
+    }
 
     PSMTXMultVec(mtx, &vec, &out);
     mtx[0][3] = out.x;
@@ -364,7 +383,7 @@ void DriverModel::SetDriverOffsetPosition()
         default:
             switch (mKartLoader->mKartInfo->getKartWeight()) {
             case 0:
-                f31 = DriverData::msDriverData[mDataID].data[0];
+                f31 = DriverData::msDriverData[mDataID].getData(0);
                 f30 = DriverData::msDriverData[mDataID].data[1];
                 break;
             case 1:
@@ -508,7 +527,26 @@ void DriverModel::SetDriverOffsetPosition()
     vec.y = f31;
     vec.z = f30;
 
-    SetDriverOffsetPosition_Func1(&vec);
+    switch (mKartLoader->mKartInfo->getKartID()) {
+    case 5:
+    case 9:
+    case 13:
+    case 15:
+        vec.y += 50.0f;
+        break;
+    case 20:
+        vec.z -= 25.0f;
+        break;
+    case 16:
+    case 17:
+        vec.y += 25.0f;
+        vec.z -= 10.0f;
+        break;
+    case 3:
+    case 11:
+        vec.y += 25.0f;
+        break;
+    }
 
     PSMTXMultVec(mtx, &vec, &out);
     mtx[0][3] = out.x;
