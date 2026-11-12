@@ -3278,7 +3278,7 @@ LDoListen_15b4:
 LDoListen_15b8:
     stw     r0,228(r30)
 LDoListen_15bc:
-    li      r4,TCPInfoQueue@sda21
+    li      r4, TCPInfoQueue
 LDoListen_15c0:
     lwzu    r3,4(r4)
 LDoListen_15c4:
@@ -3286,7 +3286,7 @@ LDoListen_15c4:
 LDoListen_15c8:
     bne LDoListen_15d4
 LDoListen_15cc:
-    stw r30, TCPInfoQueue@sda21(r0)
+    stw     r30, TCPInfoQueue(r0)
 LDoListen_15d0:
     b LDoListen_15d8
 LDoListen_15d4:
