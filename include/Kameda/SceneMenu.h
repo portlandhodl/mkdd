@@ -42,7 +42,7 @@ public:
 
     struct CharInfo // fabricated
     {
-        int mCharId; // 00
+        ECharID mCharId; // 00
         int mWeight; // 04
         int mKartId; // 08
     };

@@ -992,9 +992,8 @@ void SceneMenu::reset()
     }
 
     int k = -2;
-    f32 scale = 2.0f * n;
-    f32 dx = (mCharBasePos[1].x - mCharBasePos[0].x) / scale;
-    f32 dy = (mCharBasePos[1].y - mCharBasePos[0].y) / scale;
+    f32 dx = (mCharBasePos[1].x - mCharBasePos[0].x) / (2.0f * n);
+    f32 dy = (mCharBasePos[1].y - mCharBasePos[0].y) / (2.0f * n);
 
     for (int i = 0; i < 10; i++)
     {
@@ -1015,13 +1014,12 @@ void SceneMenu::reset()
 
     for (int i = 0; i < 20; i++)
     {
-        mChara[i].mCharId = mCharIndex[i];
-        mChara[i].mWeight = KartInfo::getDriverWeight((ECharID)mChara[i].mCharId);
-        mChara[i].mKartId = KartInfo::getDefaultKartID((ECharID)mChara[i].mCharId);
+        mChara[i].mCharId = (ECharID)mCharIndex[i];
+        mChara[i].mWeight = KartInfo::getDriverWeight(mChara[i].mCharId);
+        mChara[i].mKartId = KartInfo::getDefaultKartID(mChara[i].mCharId);
         if (!SystemRecord::tstSecretKart((EKartID)mChara[i].mKartId, gSystemRecord.mSecretKart))
         {
-            int charId = mChara[i].mCharId;
-            switch (charId)
+            switch (mChara[i].mCharId)
             {
             case 14:
                 mChara[i].mKartId = 5;
@@ -1033,7 +1031,7 @@ void SceneMenu::reset()
                 mChara[i].mKartId = 0;
                 break;
             default:
-                mChara[i].mKartId = KartInfo::getPartnerKartID((ECharID)charId);
+                mChara[i].mKartId = KartInfo::getPartnerKartID(mChara[i].mCharId);
                 break;
             }
         }
@@ -5965,9 +5963,8 @@ void SceneMenu::selectA(int no)
     }
     case 1:
     {
-        PlayerData &pd = mPlayerData[padNo];
-        int charF = pd.mCharF;
-        int charB = pd.mCharB;
+        int charF = mPlayerData[padNo].mCharF;
+        int charB = mPlayerData[padNo].mCharB;
         if (charF >= 0 && charF < 20)
         {
             GameAudio::Main::getAudio()->startSystemSe(mCharGoVoice[charF]);
@@ -5976,6 +5973,7 @@ void SceneMenu::selectA(int no)
         {
             GameAudio::Main::getAudio()->startSystemSe(mCharGoVoice[charB]);
         }
+        PlayerData &pd = mPlayerData[padNo];
         pd.mState = 2;
         break;
     }
