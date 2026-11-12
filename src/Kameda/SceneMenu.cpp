@@ -992,8 +992,10 @@ void SceneMenu::reset()
     }
 
     int k = -2;
-    f32 dx = (mCharBasePos[1].x - mCharBasePos[0].x) / (2.0f * n);
-    f32 dy = (mCharBasePos[1].y - mCharBasePos[0].y) / (2.0f * n);
+    f32 dx = mCharBasePos[1].x - mCharBasePos[0].x;
+    f32 dy = mCharBasePos[1].y - mCharBasePos[0].y;
+    dx /= 2.0f * n;
+    dy /= 2.0f * n;
 
     for (int i = 0; i < 10; i++)
     {
@@ -4032,8 +4034,9 @@ void SceneMenu::mode()
                         case 1:
                             for (i = 0; i < 4; i++)
                             {
+                                int *row = gSequenceInfo._40[i];
                                 for (int j = 0; j < 4; j++)
-                                    gSequenceInfo._40[i][j] = 0;
+                                    row[j] = 0;
                             }
                             break;
                         case 3:
@@ -5699,7 +5702,7 @@ void SceneMenu::character()
             }
         }
 
-        if (!pressed && mRouletteTimer < 30)
+        if (pressed || mRouletteTimer < 30)
         {
             rndRoulette();
         }
@@ -5714,7 +5717,6 @@ void SceneMenu::character()
     {
         for (int i = 0; i <= mInfo.playerNum; i++)
         {
-            KartGamePad **pads = &gpaGamePad[0];
             if (mInfo.mode == 14)
                 break;
 
@@ -5725,9 +5727,9 @@ void SceneMenu::character()
                     done++;
             }
             if (mInfo.entryNum + 1 == done)
-                continue;
+                break;
 
-            KartGamePad *pad = pads[i];
+            KartGamePad *pad = gpaGamePad[i];
             u32 trigger = pad->getTrigger();
 
             if (trigger & JUTGamePad::A)
@@ -5740,7 +5742,7 @@ void SceneMenu::character()
             }
             else
             {
-                u32 repeat = pad->getRepeat();
+                int repeat = pad->getRepeat();
                 if (repeat & JUTGamePad::MAINSTICK_UP)
                     selectUp(i);
                 else if (repeat & JUTGamePad::MAINSTICK_DOWN)
@@ -6581,7 +6583,7 @@ void SceneMenu::characterAnm()
         int cursor = mPlayerData[i].mCursor;
         if (cursor >= 0 && cursor < 20)
         {
-            int col = cursor % 2;
+            col = cursor % 2;
             int row = cursor / 2;
             charPlayer[cursor] = i;
             mCharCCBpk[row][col + 4].mPane->show();
@@ -7350,13 +7352,13 @@ void SceneMenu::getCharSel(int &charF, int &charB)
         }
 
         int pairSel = gSequenceInfo.getRandom() % num + 1;
-        int n = 0;
+        cnt = 0;
         for (int no = 0; no < 10; no++)
         {
             if ((mCharSelFlag[no * 2] != 0 && mCharSelFlag[no * 2 + 1] == 0) || (mCharSelFlag[no * 2] == 0 && mCharSelFlag[no * 2 + 1] != 0))
             {
-                n++;
-                if (n == pairSel)
+                cnt++;
+                if (cnt == pairSel)
                 {
                     if (mCharSelFlag[no * 2] != 0)
                     {
