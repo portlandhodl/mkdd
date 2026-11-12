@@ -442,7 +442,7 @@ void TMapObjWanwan::fallDown(s32 nextState, bool p2) {
 void TMapObjWanwan::turnTo() {
     f32 targetAngle = mAttackAngle;
 
-    f32 limit = targetAngle - normalizeRelativeAngle(mRotate, targetAngle - F_PI, targetAngle + F_PI);
+    f32 limit = targetAngle - JGeometry::TUtilf::wrap(mRotate, targetAngle - F_PI, targetAngle + F_PI);
 
     f32 rotate = _22c;
     if (StateObserver::getState() == 1) {

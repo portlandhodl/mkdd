@@ -16,19 +16,6 @@
 
 class TMapObjWanwan;
 
-inline f32 normalizeRelativeAngle(f32 angle, f32 min, f32 max) {
-    if (min >= max) {
-        return min;
-    }
-    for (; angle < min; angle += max - min) {
-    }
-
-    for (; angle >= max; angle -= max - min) {
-    }
-
-    return angle;
-}
-
 class TMapObjWanwanPile : public GeographyObj {
 public:
     TMapObjWanwanPile();

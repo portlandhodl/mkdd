@@ -117,6 +117,14 @@ public:
 
     CustomMgr *getCustomMgr() { return mMgr; }
     PAUSE_STATUS getPauseStatus() { return mPauseStatus; }
+
+    u32 getFrameCount() const {
+        return _80;
+    }
+
+    f32 getBgmVolume() const {
+        return mBgmVolume;
+    }
     // } FABRICATED
 
     CameraMgr *getCamera() {

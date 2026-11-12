@@ -88,6 +88,20 @@ namespace JGeometry {
             }
             return cur;
         }
+
+        // fabricated - taken from SMS decomp.
+        // NOTE: both `while` loops are reversed for MKDD, compared to SMS.
+        static inline T wrap(T t, T l, T r) {
+            if (l >= r)
+                return l;
+    
+            while (t < l)
+                t += r - l;
+            while (t >= r)
+                t -= r - l;
+    
+            return t;
+        }
     };
 
     typedef TUtil<f32> TUtilf;

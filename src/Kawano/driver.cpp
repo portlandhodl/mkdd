@@ -1732,7 +1732,7 @@ int DriverModel::updateCheckRenew_Sound()
         void *sound = mAnimBufMgr->GetSoundPtr(DriverLoader::mscAnm2SoundList[anmID]);
         GameAudio::CharacterSoundMgr *mgr = mCharSoundMgr;
         mgr->mAnimator->startAnimation((const JAUSoundAnimation *)sound, false, 0.0f, 0.0f);
-        *((u8 *)mgr->mStarter + 4) = mgr->getKartSound()->mKartCount;
+        *((u8 *)mgr->mStarter + 4) = mgr->getKartSound()->mPlayerIndex;
     }
     m_d0 = 0;
     return 1;

@@ -1,82 +1,211 @@
-#include "Inagaki/GameAudioAnimator.h"
+#include "Inagaki/GameSoundMgr.h"
+
+#include "Inagaki/GameAudioAudience.h"
 #include "Inagaki/GameAudioCamera.h"
 #include "Inagaki/GameAudioCommon.h"
 #include "Inagaki/GameAudioMain.h"
-#include "Inagaki/GameSoundMgr.h"
 #include "Inagaki/GameSoundTable.h"
+
+#include "JSystem/JAudio/Interface/JAIAudible.h"
 #include "JSystem/JAudio/Interface/JAISound.h"
-#include "JSystem/JAudio/Interface/JAISoundHandles.h"
 #include "JSystem/JAudio/JAUSoundObject.h"
-#include "JSystem/JAudio/System/JASTrack.h"
+#include "JSystem/JAudio/System/JASGadget.h"
 #include "JSystem/JGeometry/Vec.h"
 #include "JSystem/JUtility/JUTAssert.h"
+
+#include "Kaneshige/Course/CrsArea.h"
+#include "Kaneshige/Course/CrsGround.h"
 #include "kartEnums.h"
-#include "types.h"
 
-namespace GameAudio {
+namespace GameAudio
+{
 
-JAISoundID BoundSe[0x31] = {
-    0x10046, 0x10045, 0x10049, 0x10048, 0x10045, 0x10045, 0x10045, 0x10045,
-    0x10045, 0x10045, 0x10045, 0x1004a, 0x10047, 0x10045, 0x10045, 0x1004a,
-    0x10045, 0x10045, 0x10045, 0x10045, 0x10045, 0x10045, 0x10045, 0x10045,
+const s16 SignalUpPitchWidth[3] = {0x0064, 0x0082, 0x0078};
+const s16 SignalUpPitchBase[3] = {0x0032, 0x0046, 0x0050};
+const s16 SignalUpIntervalWidth[3] = {0x0046, 0x001E, 0x000A};
+const s16 SignalUpIntervalBase[3] = {0x0014, 0x000A, 0x0005};
+const s16 SignalDownIntervalWidth[3] = {0x0050, 0x0032, 0x0014};
+const s16 SignalDownIntervalBase[3] = {0x0014, 0x000A, 0x0005};
+
+static const u8 cKartRankClassTable0[7] = {0, 0, 1, 1, 1, 2, 2};
+static const u8 cKartRankClassTable1[7] = {0, 0, 1, 1, 2, 2, 2};
+
+u32 BoundSe[25];
+u32 WheelSpinSe[25];
+u32 SpinSe[25];
+u32 SpinTurnSe[25];
+
+namespace
+{
+struct InitBoundSe
+{
+    InitBoundSe()
+    {
+        BoundSe[0] = 0x10046;
+        BoundSe[1] = 0x10045;
+        BoundSe[2] = 0x10049;
+        BoundSe[3] = 0x10048;
+        BoundSe[4] = 0x10045;
+        BoundSe[5] = 0x10045;
+        BoundSe[6] = 0x10045;
+        BoundSe[7] = 0x10045;
+        BoundSe[8] = 0x10045;
+        BoundSe[9] = 0x10045;
+        BoundSe[10] = 0x10045;
+        BoundSe[11] = 0x1004a;
+        BoundSe[12] = 0x10047;
+        BoundSe[13] = 0x10045;
+        BoundSe[14] = 0x10045;
+        BoundSe[15] = 0x1004a;
+        BoundSe[16] = 0x10045;
+        BoundSe[17] = 0x10045;
+        BoundSe[18] = 0x10045;
+        BoundSe[19] = 0x10045;
+        BoundSe[20] = 0x10045;
+        BoundSe[21] = 0x10045;
+        BoundSe[22] = 0x10045;
+        BoundSe[23] = 0x10045;
+    }
+};
+struct InitWheelSpinSe
+{
+    InitWheelSpinSe()
+    {
+        WheelSpinSe[0] = 0x1006f;
+        WheelSpinSe[1] = 0x1006e;
+        WheelSpinSe[2] = 0x1006e;
+        WheelSpinSe[3] = 0x10072;
+        WheelSpinSe[4] = 0x10071;
+        WheelSpinSe[5] = 0x1006e;
+        WheelSpinSe[6] = 0x1006e;
+        WheelSpinSe[7] = 0x1006e;
+        WheelSpinSe[8] = 0x1006e;
+        WheelSpinSe[9] = 0x1006e;
+        WheelSpinSe[10] = 0x1006e;
+        WheelSpinSe[11] = 0x10074;
+        WheelSpinSe[12] = 0x1006e;
+        WheelSpinSe[13] = 0x1006e;
+        WheelSpinSe[14] = 0x1006e;
+        WheelSpinSe[15] = 0x10074;
+        WheelSpinSe[16] = 0x1006e;
+        WheelSpinSe[17] = 0x10075;
+        WheelSpinSe[18] = 0x1006e;
+        WheelSpinSe[19] = 0x1006e;
+        WheelSpinSe[20] = 0x10070;
+        WheelSpinSe[21] = 0x10070;
+        WheelSpinSe[22] = 0x10073;
+        WheelSpinSe[23] = 0x10076;
+        WheelSpinSe[24] = 0x1006e;
+    }
+};
+struct InitSpinSe
+{
+    InitSpinSe()
+    {
+        SpinSe[0] = 0x1009e;
+        SpinSe[1] = 0x1009d;
+        SpinSe[2] = 0x100a6;
+        SpinSe[3] = 0x100a1;
+        SpinSe[4] = 0x100a0;
+        SpinSe[5] = 0x100b0;
+        SpinSe[6] = 0x100af;
+        SpinSe[7] = 0x100af;
+        SpinSe[8] = 0x100af;
+        SpinSe[9] = 0x100af;
+        SpinSe[10] = 0x100a7;
+        SpinSe[11] = 0x100a9;
+        SpinSe[12] = 0x100ad;
+        SpinSe[13] = 0x100ab;
+        SpinSe[14] = 0x100aa;
+        SpinSe[15] = 0x100a3;
+        SpinSe[16] = 0x100ac;
+        SpinSe[17] = 0x100a4;
+        SpinSe[18] = 0x1009e;
+        SpinSe[19] = 0x100a8;
+        SpinSe[20] = 0x1009f;
+        SpinSe[21] = 0x1009f;
+        SpinSe[22] = 0x100a2;
+        SpinSe[23] = 0x100a5;
+        SpinSe[24] = 0x1009d;
+    }
+};
+struct InitSpinTurnSe
+{
+    InitSpinTurnSe()
+    {
+        SpinTurnSe[0] = 0x100b6;
+        SpinTurnSe[1] = 0x100b5;
+        SpinTurnSe[2] = 0x100be;
+        SpinTurnSe[3] = 0x100b9;
+        SpinTurnSe[4] = 0x100b8;
+        SpinTurnSe[5] = 0x100c8;
+        SpinTurnSe[6] = 0x100c7;
+        SpinTurnSe[7] = 0x100c7;
+        SpinTurnSe[8] = 0x100c7;
+        SpinTurnSe[9] = 0x100c7;
+        SpinTurnSe[10] = 0x100bf;
+        SpinTurnSe[11] = 0x100c1;
+        SpinTurnSe[12] = 0x100c5;
+        SpinTurnSe[13] = 0x100c3;
+        SpinTurnSe[14] = 0x100c2;
+        SpinTurnSe[15] = 0x100bb;
+        SpinTurnSe[16] = 0x100c4;
+        SpinTurnSe[17] = 0x100bc;
+        SpinTurnSe[18] = 0x100b6;
+        SpinTurnSe[19] = 0x100c0;
+        SpinTurnSe[20] = 0x100b7;
+        SpinTurnSe[21] = 0x100b7;
+        SpinTurnSe[22] = 0x100ba;
+        SpinTurnSe[23] = 0x100bd;
+        SpinTurnSe[24] = 0x100b5;
+    }
 };
 
-JAISoundID WheelSpinSe[0x19] = {
-    0x1006f, 0x1006e, 0x1006e, 0x10072, 0x10071, 0x1006e, 0x1006e, 0x1006e,
-    0x1006e, 0x1006e, 0x1006e, 0x10074, 0x1006e, 0x1006e, 0x1006e, 0x10074,
-    0x1006e, 0x10075, 0x1006e, 0x1006e, 0x10070, 0x10070, 0x10073, 0x10076,
-    0x1006e,
-};
-
-JAISoundID SpinSe[0x19] = {
-    0x1009e, 0x1009d, 0x100a6, 0x100a1, 0x100a0, 0x100b0, 0x100af, 0x100af,
-    0x100af, 0x100af, 0x100a7, 0x100a9, 0x100ad, 0x100ab, 0x100aa, 0x100a3,
-    0x100ac, 0x100a4, 0x1009e, 0x100a8, 0x1009f, 0x1009f, 0x100a2, 0x100a5,
-    0x1009d,
-};
-
-JAISoundID SpinTurnSe[0x19] = {
-    0x100b6, 0x100b5, 0x100be, 0x100b9, 0x100b8, 0x100c8, 0x100c7, 0x100c7,
-    0x100c7, 0x100c7, 0x100bf, 0x100c1, 0x100c5, 0x100c3, 0x100c2, 0x100bb,
-    0x100c4, 0x100bc, 0x100b6, 0x100c0, 0x100b7, 0x100b7, 0x100ba, 0x100bd,
-    0x100b5,
-};
+InitBoundSe sInitBoundSe;
+InitWheelSpinSe sInitWheelSpinSe;
+InitSpinSe sInitSpinSe;
+InitSpinTurnSe sInitSpinTurnSe;
+}  // namespace
 
 f32 GA_ENEMY_VOLUME_DOWN_VALUE = 0.85f;
+}  // namespace GameAudio
+
+#include "JSystem/JAudio/JASFakeMatch14.h"
+
+namespace GameAudio
+{
 
 const f32 EngineKeisuuRaceUp[] = {
-    0.006f, 0.006f, 0.005f, 0.003f,
-    0.015f, 0.015f, 0.013f, 0.011f,
+    0.006f,
+    0.006f,
+    0.005f,
+    0.003f,
+    0.015f,
+    0.015f,
+    0.013f,
+    0.011f,
     0.02f,
 };
 
 const f32 EngineKeisuuRaceDown[] = {
-    0.005f, 0.003f, 0.005f, 0.002f,
-    0.012f, 0.012f, 0.012f, 0.009f,
+    0.005f,
+    0.003f,
+    0.005f,
+    0.002f,
+    0.012f,
+    0.012f,
+    0.012f,
+    0.009f,
     0.019f,
 };
 
-static const f32 DashEngineAdjustInitialValue[] = {
-    0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f,
-};
+const f32 DashEngineAdjustInitialValue[] = {0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f};
 
-static const f32 DashEngineIncPerFrame[] = {
-    0.025f, 0.025f, 0.025f, 0.095f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f,
-};
+const f32 DashEngineIncPerFrame[] =
+    {0.025f, 0.025f, 0.025f, 0.095f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f};
 
-static const f32 DashEngineDecPerFrame[] = {
-    0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f,
-};
-
-static const s16 SignalUpPitchWidth[] = { 0x64, 0x82, 0x78 };
-static const s16 SignalUpPitchBase[] = { 0x32, 0x46, 0x50 };
-static const s16 SignalUpIntervalWidth[] = { 0x46, 0x1e, 0xa };
-static const s16 SignalUpIntervalBase[] = { 0x14, 0xa, 0x5 };
-static const s16 SignalDownIntervalWidth[] = { 0x50, 0x32, 0x14 };
-static const s16 SignalDownIntervalBase[] = { 0x14, 0xa, 0x5 };
-
-static const u8 cKartRankClassTable0[7] = { 0, 0, 1, 1, 1, 2, 2 };
-static const u8 cKartRankClassTable1[7] = { 0, 0, 1, 1, 2, 2, 2 };
+const f32 DashEngineDecPerFrame[] =
+    {0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f};
 
 u8 KartSoundMgr::smKartCount;
 u8 KartSoundMgr::smEntryKartCount;
@@ -84,73 +213,95 @@ u8 KartSoundMgr::smGoalKartCount;
 
 u8 KartSoundMgr::smKartRankClassMem[7] = {};
 
-KartSoundMgr::KartSoundMgr(Vec *pos, JKRHeap *heap, u8 p3, u8 p4) : SoundMgr(pos, heap, 12) {
-    _114 = 1.0f;
-    _110 = 1.0f;
-    _11c = 0;
-    _124 = 1.0f;
-    _120 = 1.0f;
-    _12c = 0;
+KartSoundMgr::KartSoundMgr(Vec *pos, JKRHeap *heap, u8 kartNo, u8 kartType)
+    : SoundMgr(pos, heap, 12)
+{
+    mSignalPitch = 1.f;
+    mSignalTargetPitch = 1.f;
+    mSignalPitchCounter = 0;
+    mCameraVolume = 1.f;
+    mGoalVolume = 1.f;
+    mGoalVolumeCounter = 0;
     _C = 0xff;
-    _61 = p3;
 
-    if (p4 == 0) {
-        mKartCount = smKartCount++;
+    mKartIndex = kartNo;
+
+    if (kartType == 0)
+    {
+        mPlayerIndex = smKartCount++;
     }
-    else {
-        mKartCount = 4;
+    else
+    {
+        mPlayerIndex = 4;
     }
 
-    if (p4 != 2) {
+    if (kartType != 2)
+    {
         smEntryKartCount++;
     }
 
-    _66 = p4;
-    mArea = new CrsArea();
+    mKartType = kartType;
+    mCourseArea = new CrsArea();
+    u8 index = 0;
 
-    u8 i = 0;
-    u8 klass;
-    if (_66 == 0) {
-        _64 = 3;
+    if (mKartType == 0)
+    {
+        mRankClass = 3;
     }
-    else {
-        klass = (u8)(Random::getSignalEngineRandomU32() % 7);
-        while (smKartRankClassMem[klass] == 1 && i < 7) {
-            klass++;
-            i++;
-            if (klass == 7) {
-                klass = 0;
+    else
+    {
+        u32 randomValue = GameAudio::Random::getSignalEngineRandomU32();
+        u8 rankClassIndex = randomValue % 7;
+
+        while (smKartRankClassMem[rankClassIndex] == 1 && index < 7)
+        {
+            index++;
+
+            if (++rankClassIndex == 7)
+            {
+                rankClassIndex = 0;
             }
         }
-        smKartRankClassMem[klass] = 1;
 
-        if (Parameters::getPlayerMode() != 1) {
-            _64 = cKartRankClassTable0[klass];
+        smKartRankClassMem[rankClassIndex] = 1;
+        u8 playerMode = Parameters::getPlayerMode();
+        if (playerMode != 1)
+        {
+            mRankClass = cKartRankClassTable0[rankClassIndex];
         }
-        else {
-            _64 = cKartRankClassTable1[klass];
+        else
+        {
+            mRankClass = cKartRankClassTable1[rankClassIndex];
         }
     }
 
     init();
-    _7c = 0;
 
-    CameraMgr *camera = Main::getAudio()->getCamera();
-    u32 sceneMax = camera->getSceneMax();
-    if (sceneMax > 1 && sceneMax > mKartCount) {
-        _7c = (1 << mKartCount) ^ 0xf;
+    mSceneMask = 0;
+
+    const u32 sceneMax = Main::getAudio()->getCamera()->getSceneMax();
+
+    if (sceneMax > 1 && sceneMax > mPlayerIndex)
+    {
+        mSceneMask = (1 << mPlayerIndex) ^ 0xf;
     }
 }
 
-KartSoundMgr::~KartSoundMgr() {
+KartSoundMgr::~KartSoundMgr()
+{
     setChibiFlag(false, false);
-
-    for (u8 i = 0; i < 7; i++) {
-        smKartRankClassMem[i] = 0;
+    for (u8 index = 0; index < 7; index++)
+    {
+        smKartRankClassMem[index] = 0;
     }
 
-    if (_66 == 0 && (int)mKartCount < 4) {
-        CustomAudience<4>::smCameraVolume[(int)mKartCount] = 1.0f;
+    if (mKartType == 0)
+    {
+        const s32 kartCount = mPlayerIndex;
+        if (kartCount < 4)
+        {
+            CustomAudience<4>::smCameraVolume[kartCount] = 1.f;
+        }
     }
 
     smKartCount = 0;
@@ -158,141 +309,141 @@ KartSoundMgr::~KartSoundMgr() {
     smGoalKartCount = 0;
 }
 
-void KartSoundMgr::startSoundHandleNumber(u8 handleNum, u32 id, u32 fadeFrames) {
-    if (mKillSw != 0 || _66 == 2) {
+void KartSoundMgr::startSoundHandleNumber(u8 handleIndex, u32 soundID, u32 fadeCount)
+{
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    JAISoundStarter *starter = JAISoundStarter::getInstance();
-    JAISoundHandles *handles = this;
-    JAISoundHandle *handle = &(*handles)[handleNum];
-    starter->startSound(id, handle, nullptr);
+    JAISoundStarter *soundStarter = JASGlobalInstance<JAISoundStarter>::getInstance();
 
-    if (*handle) {
-        if (!(*handle)->getAudible()) {
-            u32 mask = 0;
-            CameraMgr *camera = Main::getAudio()->getCamera();
-            u32 sceneMax = camera->getSceneMax();
-            if (sceneMax > 1 && sceneMax > mKartCount) {
-                mask = (1 << mKartCount) ^ 0xf;
-            }
-            (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-        }
+    JAISoundHandle &handle = (*this)[handleIndex];
 
-        JAISound *sound = handle->operator->();
-        sound->fader_.mIntensity = 0.0f;
-        if (fadeFrames != 0) {
-            sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fadeFrames);
-        }
-        else {
-            sound->fader_.forceIn();
-        }
+    soundStarter->startSound(soundID, &handle, NULL);
 
-        setEcho(handle, _6c);
+    JAISound *sound;
+
+    if (!handle.isSoundAttached())
+    {
+        return;
     }
+
+    if (handle->audible_ == NULL)
+    {
+        Main *main = Main::getAudio();
+        u32 scene = 0;
+        CameraMgr *camera = main->getCamera();
+        u32 sceneMax = camera->getSceneMax();
+
+        if (sceneMax > 1 && sceneMax > mPlayerIndex)
+        {
+            scene = (1 << mPlayerIndex) ^ 0xf;
+        }
+
+        sound = handle.operator->();
+
+        JGeometry::TVec3f vec(*mSoundPos);
+        sound->newAudible(vec, &_18, scene, NULL);
+    }
+    sound = handle.operator->();
+
+    sound->fader_.fadeInFromOut2(fadeCount);
+
+    setEcho(&handle, mEchoMix);
 }
 
-void KartSoundMgr::dispose() {
+void KartSoundMgr::dispose()
+{
     JAUSoundObject::dispose();
+
     clearInvincibleBgm(3);
 }
 
-void KartSoundMgr::startSoundEngine(u8 handleNo, u32 id) {
-    JAISoundStarter *starter = JAISoundStarter::getInstance();
-    JAISoundHandles *handles = this;
-    JAISoundHandle *handle = &(*handles)[handleNo];
-    id += (_66 != 0) ? 0x14 : 0;
-    starter->startSound(id, handle, nullptr);
+void KartSoundMgr::startSoundEngine(u8, u32) {}  // UNUSED
 
-    if (*handle) {
-        if (!(*handle)->getAudible()) {
-            u32 mask = _7c;
-            (*handle)->newAudible(JGeometry::TVec3f(*mSoundPos), &_18, mask, nullptr);
-            u32 fade = _80;
-            if (fade != 0) {
-                JAISound *sound = handle->operator->();
-                sound->fader_.mIntensity = 0.0f;
-                if (fade != 0) {
-                    sound->fader_.mTransition.set(1.0f, sound->fader_.mIntensity, fade);
-                }
-                else {
-                    sound->fader_.forceIn();
-                }
-                _80 = 0;
-            }
-        }
+void KartSoundMgr::init()
+{
+    const u8 cWheelCount = 4;
+    mInvincibleBgmBits = 0;
+    mChibiFlag = 0;
+    mPrevRpm = 0.f;
+    mPrevConductStatus = 0;
+    mEchoFixed = 0;
+    mEchoMix = 0.f;
+    mPrevEchoMix = 0.f;
+    mEngineFadeCount = 0;
+    mSpeed = 0.f;
+    mRpm = 0.f;
+    mAccelFlag = 0;
+    mConductStatus = 0;
+    mAccelTimer = 0;
+    mDecelTimer = 0;
+    mEngineLevel = 0;
+    mOutOfCourseLevel = 0;
+    mEngineRevCount = 0;
+    mPrevSpeed = 0.f;
+    mCrushWait = 0;
+    mCrushDegree = 0.f;
 
-        setEcho(handle, _6c);
-    }
-}
-
-void KartSoundMgr::init() {
-    _60 = 0;
-    _5d = 0;
-    _68 = 0.0f;
-    _63 = 0;
-    _5c = 0;
-    _6c = 0.0f;
-    _70 = 0.0f;
-    _80 = 0;
-    _84 = 0.0f;
-    _88 = 0.0f;
-    _8c = 0;
-    _8d = 0;
-    _8e = 0;
-    _90 = 0;
-    _92 = 0;
-    _94 = 0;
-    _96 = 0;
-    _98 = 0.0f;
-    _9c = 0;
-    _a0 = 0.0f;
-
-    for (u8 i = 0; i < 4; i++) {
-        _a4[i] = 0.0f;
-        _b4[i] = 0.0f;
-        _c4[i] = 0.0f;
-        _e4[i] = 0;
-        mWaterDepth[i] = 0.0f;
-        _e8[i] = 0;
+    for (u8 index = 0; index < cWheelCount; index++)
+    {
+        mSlipPans[index] = 0.f;
+        mSlipVolumes[index] = 0.f;
+        mSlipPitches[index] = 0.f;
+        mSlipFlags[index] = 0;
+        mWaterDepths[index] = 0.f;
+        mGroundAttrs[index] = 0;
     }
 
-    _ec = 0.0f;
-    _f0 = 0.0f;
-    _f4 = 0;
-    _f8 = 0;
-    _100 = 0;
-    _101 = 0;
-    _102 = 0;
-    _103 = 0;
-    _104 = 0;
-    _105 = 1;
-    _fc = 0.0f;
-    _5f = 0;
-    _114 = 0.0f;
-    _110 = 0.0f;
-    _11c = 0;
-    _124 = 1.0f;
-    _120 = 1.0f;
-    _12c = 0;
-    _78 = 0;
-    _5e = 0;
-    _74 = 0;
-    _65 = 0xff;
+    _ec = 0.f;
+    mEngineAdjust = 0.f;
+    mAdjustSoundID = 0;
+    mAdjustCounter = 0;
+    mLowSpeedCount = 0;
+    mSlipSeCount = 0;
+    mSlipSeInterval = 0;
+    mSlipSeAlternator = 0;
+    mSlipSeIndex = 0;
+    mGroundSeIndex = 1;
+    mKarabukashiCount = 0.f;
+    mSignalRevUp = 0;
+    mSignalPitch = 0.f;
+    mSignalTargetPitch = 0.f;
+    mSignalPitchCounter = 0;
+    mCameraVolume = 1.f;
+    mGoalVolume = 1.f;
+    mGoalVolumeCounter = 0.f;
+    mAfterGoalCounter = 0;
+    mGoalFlag = 0;
+    mLastCrushFrame = 0;
+    mRank = 0xff;
 
-    if (_66 == 0) {
-        f32 v = _124;
-        if ((int)mKartCount < 4) {
-            CustomAudience<4>::smCameraVolume[(int)mKartCount] = v;
+    if (mKartType == 0)
+    {
+        const s32 kartCount = mPlayerIndex;
+        const f32 volume = mCameraVolume;
+        if (kartCount < 4)
+        {
+            CustomAudience<4>::smCameraVolume[kartCount] = volume;
         }
     }
 
-    CustomSoundTable *soundTable = Main::getAudio()->getSoundTable();
-    for (int i = 0; i < _10; i++) {
-        JAISoundHandles *handles = this;
-        if ((*handles)[i] && (soundTable->getSwBit((*handles)[i]->getID()) & 0x800000)) {
-            (*handles)[i]->stop();
+    Main *main = Main::getAudio();
+    CustomSoundTable *soundTable = main->getSoundTable();
+    for (s32 index = 0; index < _10; index++)
+    {
+        if (!(*this)[index].isSoundAttached())
+        {
+            continue;
         }
+        JAISound *sound = (*this)[index].operator->();
+        const u32 swBit = soundTable->getSwBit(sound->getID().mId.mFullId);
+        if (!(swBit & 0x00800000))
+        {
+            continue;
+        }
+        (*this)[index]->stop();
     }
 
     setChibiFlag(false, false);
@@ -300,1670 +451,2215 @@ void KartSoundMgr::init() {
     smGoalKartCount = 0;
 }
 
+void KartSoundMgr::changeAttribute(u8) {}  // UNUSED
+
 void KartSoundMgr::changeDriver(bool) {}
 
-void KartSoundMgr::frameWork(u8 rank) {
-    if (_66 == 0) {
-        mArea->search(6, *mSoundPos);
-        if (mArea->isInside()) {
-            switch (Parameters::getRaceCourse()) {
-            case WALUIGI_STADIUM:
-                if ((u8)(rank) <= 3 && !(*this)[7]) {
-                    startSoundHandleNumber(7, 0x40024, 0);
+void KartSoundMgr::checkCourseSound(u8) {}  // UNUSED
+
+void KartSoundMgr::frameWork(u8 rank)
+{
+    const u8 cHandleCourse = 7;
+    if (mKartType == 0)
+    {
+        mCourseArea->search(6, *mSoundPos);
+        Course::Area *area = mCourseArea->getArea();
+        if (area != NULL)
+        {
+            ECourseID courseID = Parameters::getRaceCourse();
+            switch (courseID)
+            {
+            case 0x2a:
+                if (rank <= 3)
+                {
+                    JAISoundHandle &handle = (*this)[cHandleCourse];
+                    if (!handle.isSoundAttached())
+                    {
+                        startSoundHandleNumber(cHandleCourse, 0x40024, 0);
+                    }
                 }
                 break;
-            case MUSHROOM_CITY:
-                _5c = 1;
-                _6c = 0.5f;
+
+            case 0x29:
+                mEchoFixed = 1;
+                mEchoMix = 0.5f;
                 break;
             }
         }
-        else {
-            switch (Parameters::getRaceCourse()) {
-            case MUSHROOM_CITY:
-                _5c = 0;
+        else
+        {
+            ECourseID courseID = Parameters::getRaceCourse();
+            switch (courseID)
+            {
+            case 0x29:
+                mEchoFixed = 0;
                 break;
             }
         }
     }
-
     checkEcho();
 
-    if (mKillSw != 0 || _66 == 2) {
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
     crushRenzokuTaisaku();
     slipParamSet();
-    if (_63 != 3) {
-        _65 = rank;
+    if (mPrevConductStatus != 3)
+    {
+        mRank = rank;
     }
     checkAfterGoalVolume();
 }
 
-void KartSoundMgr::checkAfterGoalVolume() {
-    if (_66 != 0) {
+void KartSoundMgr::checkAfterGoalVolume()
+{
+    const u8 cHandleEngine = 3;
+    if (mKartType != 0)
+    {
         return;
     }
-    if (_5e != 1) {
+
+    if (mGoalFlag != 1)
+    {
         return;
     }
-    if (_78 == 0) {
-        JAISoundHandles *handles = this;
-        JAISoundHandle *handle = &(*handles)[3];
-        if (*handle) {
-            (*handle)->stop();
+
+    if (mAfterGoalCounter == 0)
+    {
+        JAISoundHandle &handle = (*this)[cHandleEngine];
+        if (handle.isSoundAttached())
+        {
+            handle->stop();
         }
-        if (Main::getAudio()->getCamera()->getSceneMax() == 2 && (u8)Parameters::getRaceMode() == TIME_ATTACK) {
-            _7c = 12;
-            _80 = 120;
+
+        Main *main = Main::getAudio();
+        CameraMgr *camera = main->getCamera();
+
+        if (camera->getSceneMax() == 2)
+        {
+            const u8 mode = Parameters::getRaceMode();
+            if (mode == 1)
+            {
+                mSceneMask = 0xc;
+                mEngineFadeCount = 0x78;
+            }
         }
     }
-    else if (_78 == 60) {
-        f32 target = 0.35f;
-        if (_12c == 0 && _124 == target) {
-        }
-        else if (_12c != 0 && _120 == target) {
-        }
-        else {
-            _120 = target;
-            _128 = (_124 - _120) / 61.0f;
-            _12c = 61;
+    else if (mAfterGoalCounter == 0x3c)
+    {
+        const f32 goalVolumeOn = 0.35f;
+        // Forced to use those fabricated "equal" methods for the registers to be loaded
+        // in the right order.
+        if (mGoalVolumeCounter != 0 || !isCameraVolumeEqual(goalVolumeOn))
+        {
+            if (mGoalVolumeCounter == 0 || !isGoalVolumeEqual(goalVolumeOn))
+            {
+                mGoalVolume = goalVolumeOn;
+                mDeltaVolume = (mCameraVolume - mGoalVolume) / 61.f;
+                mGoalVolumeCounter = 0x3d;
+            }
         }
     }
-    else if (_78 == 360) {
-        f32 target = 0.0f;
-        if (_12c == 0 && _124 == target) {
+    else if (mAfterGoalCounter == 0x168)
+    {
+        const f32 goalVolumeOff = 0.0f;
+        if (mGoalVolumeCounter != 0 || !isCameraVolumeEqual(goalVolumeOff))
+        {
+            if (mGoalVolumeCounter == 0 || !isGoalVolumeEqual(goalVolumeOff))
+            {
+                mGoalVolume = goalVolumeOff;
+                mDeltaVolume = (mCameraVolume - mGoalVolume) / 301.f;
+                mGoalVolumeCounter = 0x12d;
+            }
         }
-        else if (_12c != 0 && _120 == target) {
+    }
+    mAfterGoalCounter++;
+
+    u8 camera;
+    if (mGoalVolumeCounter == 0)
+    {
+        camera = 0;
+    }
+    else
+    {
+        if (--mGoalVolumeCounter)
+        {
+            camera = 1;
+            mCameraVolume -= mDeltaVolume;
         }
-        else {
-            _120 = target;
-            _128 = (_124 - _120) / 301.0f;
-            _12c = 301;
+        else
+        {
+            camera = 1;
+            mCameraVolume = mGoalVolume;
         }
     }
 
-    _78++;
-
-    u8 changed;
-    if (_12c == 0) {
-        changed = 0;
-    }
-    else if (--_12c != 0) {
-        _124 = _124 - _128;
-        changed = 1;
-    }
-    else {
-        _124 = _120;
-        changed = 1;
+    if (camera == 0)
+    {
+        return;
     }
 
-    if (changed) {
-        f32 v = _124;
-        if ((int)mKartCount < 4) {
-            CustomAudience<4>::smCameraVolume[(int)mKartCount] = v;
-        }
+    const s32 playerNo = mPlayerIndex;
+    const f32 cameraVolume = mCameraVolume;
+
+    if (playerNo >= 4)
+    {
+        return;
     }
+
+    CustomAudience<4>::smCameraVolume[playerNo] = cameraVolume;
 }
 
-void KartSoundMgr::setWaterDepth(u8 idx, f32 depth) { mWaterDepth[idx] = depth; }
+void KartSoundMgr::setHandleVolume(JAISoundHandle &, f32) {}  // UNUSED
 
-void KartSoundMgr::setSlip(u8 wheelIdx, u8 p2, u8 p3, f32 depth) {
+void KartSoundMgr::setWaterDepth(f32) {}  // UNUSED
+
+void KartSoundMgr::setWaterDepth(u8 wheel, f32 depth)
+{
+    mWaterDepths[wheel] = depth;
+}
+
+void KartSoundMgr::setSlip(u8 wheel, u8 attribute, u8 material, f32 slipDegree)
+{
+    const u8 cNoGroundSe = 0xff;
 #line 907
-    JUT_ASSERT_MSG(wheelIdx < 4, "KartSoundMgr::setSlip wheel ERROR!!!\n");
+    JUT_ASSERT_MSG(wheel < 4, "KartSoundMgr::setSlip wheel ERROR!!!\n");
 
-    _e8[wheelIdx] = p2;
-
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 != 0) {
+    mGroundAttrs[wheel] = attribute;
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    f32 f30 = 0.0f;
-    f32 f31 = 1.0f;
-    f32 f29;
+    if (mKartType != 0)
+    {
+        return;
+    }
 
-    u8 sel;
-    switch (p2) {
+    f32 volume = 0.f;
+    f32 pitch = 1.f;
+    f32 slipBias;
+
+    u8 seIndex;
+    switch (attribute)
+    {
     case 0x11:
-        if (!(mWaterDepth[wheelIdx] <= 0.0f)) {
-            goto water_slide;
+    {
+        if (mWaterDepths[wheel] <= 0.f)
+        {
+            switch (material)
+            {
+            case 0xa:
+                slipBias = 0.1f;
+                seIndex = 0x14;
+                break;
+            case 0x1c:
+                slipBias = 0.1f;
+                seIndex = 0x15;
+                break;
+            default:
+                slipBias = 0.f;
+                seIndex = cNoGroundSe;
+            }
         }
-        switch (p3) {
-        case 0xa:
-            f29 = 0.1f;
-            sel = 0x14;
-            break;
-        case 0x1c:
-            f29 = 0.1f;
-            sel = 0x15;
-            break;
-        default:
-            f29 = 0.0f;
-            sel = 0xff;
-            break;
+        else
+        {
+            slipBias = 0.f;
+            seIndex = 0xa;
         }
-        break;
-    water_slide:
-        f29 = f30;
-        sel = 0xa;
-        break;
+    }
+    break;
     default:
-        switch (p3) {
+    {
+        switch (material)
+        {
         case 1:
-            if (p2 == 1) {
-                f29 = 0.1f;
+            if (attribute == 1)
+            {
+                slipBias = 0.1f;
             }
-            else {
-                f29 = -0.1f;
+            else
+            {
+                slipBias = -0.1f;
             }
-            sel = 0;
+            seIndex = 0;
             break;
         case 0:
-            f29 = 0.1f;
-            if ((u8)Parameters::getCharacterType(_61) == 1) {
-                sel = 9;
+            slipBias = 0.1f;
+            const u8 type = Parameters::getCharacterType(mKartIndex);
+            if (type == 1)
+            {
+                seIndex = 9;
             }
-            else {
-                sel = 1;
+            else
+            {
+                seIndex = 1;
             }
             break;
         case 7:
-            if (p2 == 1) {
-                f29 = -0.06f;
+            if (attribute == 1)
+            {
+                slipBias = -0.06f;
             }
-            else {
-                f29 = -0.1f;
+            else
+            {
+                slipBias = -0.1f;
             }
-            sel = 2;
+            seIndex = 2;
             break;
         case 6:
-            if (p2 == 1) {
-                f29 = 0.0f;
+            if (attribute == 1)
+            {
+                slipBias = 0.f;
             }
-            else {
-                f29 = -0.1f;
+            else
+            {
+                slipBias = -0.1f;
             }
-            sel = 3;
+            seIndex = 3;
             break;
         case 2:
-            f29 = 0.1f;
-            sel = 4;
+            slipBias = 0.1f;
+            seIndex = 4;
             break;
         case 8:
-            f29 = 0.1f;
-            sel = 0x13;
+            slipBias = 0.1f;
+            seIndex = 0x13;
             break;
         case 3:
-            f29 = -0.1f;
-            sel = 5;
+            slipBias = -0.1f;
+            seIndex = 5;
             break;
         case 5:
-            f29 = -0.1f;
-            sel = 6;
+            slipBias = -0.1f;
+            seIndex = 6;
             break;
-        case 0xe:
-            f29 = 0.1f;
-            sel = 0xd;
+        case 14:
+            slipBias = 0.1f;
+            seIndex = 0xd;
             break;
-        case 0x14:
-            f29 = 0.1f;
-            sel = 0xf;
+        case 20:
+            slipBias = 0.1f;
+            seIndex = 0xf;
             break;
-        case 0x16:
-            f29 = -0.06f;
-            sel = 0xc;
+        case 22:
+            slipBias = -0.06f;
+            seIndex = 0xc;
             break;
-        case 0xd:
-            f29 = -0.06f;
-            sel = 0xe;
+        case 13:
+            slipBias = -0.06f;
+            seIndex = 0xe;
             break;
-        case 0xa:
-            f29 = 0.1f;
-            sel = 0x14;
+        case 10:
+            slipBias = 0.1f;
+            seIndex = 0x14;
             break;
-        case 0x1c:
-            f29 = 0.1f;
-            sel = 0x15;
+        case 28:
+            slipBias = 0.1f;
+            seIndex = 0x15;
             break;
-        case 0xc:
-            f29 = 0.1f;
-            sel = 0xb;
+        case 12:
+            slipBias = 0.1f;
+            seIndex = 0xb;
             break;
-        case 0x15:
-            f29 = 0.1f;
-            sel = 0x10;
+        case 21:
+            slipBias = 0.1f;
+            seIndex = 0x10;
             break;
-        case 0xb:
-            f29 = 0.1f;
-            sel = 0x11;
+        case 11:
+            slipBias = 0.1f;
+            seIndex = 0x11;
             break;
-        case 0x17:
-            f29 = 0.1f;
-            sel = 0x16;
+        case 23:
+            slipBias = 0.1f;
+            seIndex = 0x16;
             break;
-        case 0x18:
-            f29 = 0.1f;
-            sel = 0x17;
+        case 24:
+            slipBias = 0.1f;
+            seIndex = 0x17;
             break;
         default:
-            f29 = 0.0f;
-            sel = 0xff;
+            slipBias = 0.f;
+            seIndex = cNoGroundSe;
             break;
         }
-        break;
+    }
     }
 
-    _105 = sel;
+    mGroundSeIndex = seIndex;
 
-    if (sel == 0xff) {
-        return;
-    }
-    if (_8d == 0) {
-        return;
-    }
-    if (_84 < 5.0f) {
-        return;
-    }
-
-    switch (p2) {
-    case 0:
-    case 1:
-    case 0xc:
-        switch (p3) {
-        default:
+    if (seIndex != cNoGroundSe && mConductStatus != 0)
+    {
+        if (mSpeed < 5.f)
+        {
+            return;
+        }
+        f32 waterDepth;
+        f32 speedRatio;
+        f32 shallowRatio;
+        u32 frontSlipSe;
+        const f32 pitchCoefficient = 0.0026666666f;
+        switch (attribute)
+        {
         case 0:
         case 1:
-        case 4:
-        case 6:
-        case 7:
-        case 8:
-        case 9:
-        case 0xf:
-        case 0x10:
-        case 0x11:
-        case 0x12:
-        case 0x13:
-        case 0x15:
-        case 0x17:
-        case 0x18:
-        case 0x19:
-        case 0x1a:
-        case 0x1b:
-            f31 = 0.7f + _84 * 0.0026666666f;
-            /* fallthrough */
-        case 0xb:
-        case 0xc:
-        case 0x14:
-        case 0x1c:
-            f30 = 0.2f + (depth - f29);
-            break;
-        case 3:
-            f31 = 0.7f + _84 * 0.0026666666f;
-            /* fallthrough */
-        case 2:
-        case 5:
-        case 0xa:
-        case 0xd:
-        case 0xe:
-        case 0x16: {
-            f32 val = _84 / 70.0f;
-            if (val > 1.0f) {
-                val = 1.0f;
-            }
-            f30 = val * (0.4f + (depth - f29));
-            break;
-        }
-        }
-        break;
-    case 0x11:
-        switch (sel) {
-        case 0x14:
-        case 0x15:
-            f31 = 0.7f + _84 * 0.0026666666f;
-            f30 = 0.2f + (depth - f29);
-            break;
-        case 0xa: {
-            f32 bound = mWaterDepth[wheelIdx];
-            if (bound > 40.0f) {
-                bound = 40.0f;
-            }
-            f32 frac = (40.0f - bound) / 40.0f;
-            if (_84 < 10.0f) {
-                f30 = 0.0f;
-            } else {
-                f32 val = _84 / 70.0f;
-                if (val > 1.0f) {
-                    val = 1.0f;
+        case 0x0c:
+            switch (material)
+            {
+            default:
+                pitch = (pitchCoefficient * mSpeed) + 0.7f;
+            case 11:
+            case 12:
+            case 20:
+            case 28:
+                volume = 0.2f + (slipDegree - slipBias);
+                break;
+            case 3:
+                pitch = (pitchCoefficient * mSpeed) + 0.7f;
+            case 2:
+            case 5:
+            case 10:
+            case 13:
+            case 14:
+            case 22:
+                speedRatio = mSpeed / 70.f;
+                if (speedRatio > 1.f)
+                {
+                    speedRatio = 1.f;
                 }
-                f30 = 1.2f * val + 0.2f;
-                f31 = frac * (0.53f * val) + 0.79f;
+                volume = speedRatio * (slipDegree - slipBias + 0.4f);
+                break;
+            }
+            break;
+
+            break;
+        case 0x11:
+            switch (seIndex)
+            {
+            case 0x14:
+            case 0x15:
+                pitch = (mSpeed * pitchCoefficient) + 0.7f;
+                volume = (slipDegree - slipBias) + 0.2f;
+                break;
+            case 0xa:
+                waterDepth = mWaterDepths[wheel];
+                if (waterDepth > 40.f)
+                {
+                    waterDepth = 40.f;
+                }
+
+                shallowRatio = (40.f - waterDepth) / 40.f;
+                if (mSpeed < 10.f)
+                {
+                    volume = 0.f;
+                }
+                else
+                {
+                    speedRatio = mSpeed / 70.f;
+                    if (speedRatio > 1.f)
+                    {
+                        speedRatio = 1.f;
+                    }
+                    volume = (1.2f * speedRatio) + 0.2f;
+                    pitch = (shallowRatio * (0.53f * speedRatio)) + 0.79f;
+                }
+                break;
+            }
+            break;
+
+        default:
+            speedRatio = mSpeed / 70.f;
+            if (speedRatio > 1.f)
+            {
+                speedRatio = 1.f;
+            }
+            volume = speedRatio * (slipDegree - slipBias + 0.4f);
+            break;
+        }
+        if (volume <= 0.1f)
+        {
+            return;
+        }
+        if (volume > 1.5f)
+        {
+            volume = 1.5f;
+        }
+        mSlipFlags[wheel] = 1;
+
+        mSlipVolumes[wheel] = volume;
+
+        if (wheel & 1)
+        {
+            mSlipPans[wheel] = 0.47f;
+        }
+        else
+        {
+            mSlipPans[wheel] = 0.53f;
+        }
+        mSlipPitches[wheel] = pitch;
+
+        switch (wheel)
+        {
+        case 0:
+            mSlipSeIndex = seIndex;
+            break;
+        case 1:
+        case 2:
+        case 3:
+            frontSlipSe = mSlipSeIndex;
+            if (frontSlipSe != 6 && frontSlipSe != 5 && frontSlipSe != 10)
+            {
+                mSlipSeIndex = seIndex;
             }
             break;
         }
-        }
-        break;
-    default: {
-        f32 val = _84 / 70.0f;
-        if (val > 1.0f) {
-            val = 1.0f;
-        }
-        f30 = val * (0.4f + (depth - f29));
-        break;
-    }
-    }
-
-    if (f30 <= 0.1f) {
-        return;
-    }
-
-    if (f30 > 1.5f) {
-        f30 = 1.5f;
-    }
-
-    _e4[wheelIdx] = 1;
-    _b4[wheelIdx] = f30;
-
-    if (wheelIdx & 1) {
-        _a4[wheelIdx] = 0.47f;
-    } else {
-        _a4[wheelIdx] = 0.53f;
-    }
-
-    _c4[wheelIdx] = f31;
-
-    switch (wheelIdx) {
-    case 0:
-        _104 = sel;
-        break;
-    case 1:
-    case 2:
-    case 3:
-        if (_104 != 6 && _104 != 5 && _104 != 0xa) {
-            _104 = sel;
-        }
-        break;
-    default:
-        break;
     }
 }
-void KartSoundMgr::setConductStatus(f32 p1, f32 p2, bool p3, bool p4, bool p5, u8 currentLap, CrsArea *area) {
-    if (area != nullptr) {
-        if (_5c == 0) {
-            f32 rate = area->getRate();
-            f32 zero = 0.0f;
-            if (rate != zero) {
-                _6c = 0.8f * area->getEchoRate();
-                if (_6c > 0.8f) {
-                    _6c = 0.8f;
-                }
+
+void KartSoundMgr::setConductStatus(f32 rpm,
+                                    f32 speed,
+                                    bool accelBtn,
+                                    bool brakeBtn,
+                                    bool isBrake,
+                                    u8 conductStatus,
+                                    CrsArea *area)
+{
+    const u8 cHandleCourse = 7;
+    if (area != NULL && mEchoFixed == 0)
+    {
+        f32 rate = area->getRate();
+        f32 zeroValue = 0.f;
+        if (rate != zeroValue)
+        {
+            mEchoMix = 0.8f * area->getEchoRate();
+            if (mEchoMix > 0.8f)
+            {
+                mEchoMix = 0.8f;
             }
-            else {
-                _6c = zero;
-            }
+        }
+        else
+        {
+            mEchoMix = zeroValue;
         }
     }
 
-    if (mKillSw != 0 || _66 == 2) {
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    _88 = p1;
-    _84 = p2;
-    if (p5 != 0) {
-        if (p2 < 1.0f) {
-            p5 = false;
+    mRpm = rpm;
+    mSpeed = speed;
+
+    if (isBrake)
+    {
+        if (speed < 1.0f)
+        {
+            isBrake = 0;
         }
     }
-    if (p5 != 0) {
-        _8c = p4;
-    }
-    else {
-        _8c = p3;
-    }
-    _8d = currentLap;
 
-    if ((u8)Parameters::getCharacterType(_61) != 9) {
-        switch (_8d) {
+    if (isBrake)
+    {
+        mAccelFlag = brakeBtn;
+    }
+    else
+    {
+        mAccelFlag = accelBtn;
+    }
+    mConductStatus = conductStatus;
+
+    u8 characterType = Parameters::getCharacterType(mKartIndex);
+
+    if (characterType != 9)
+    {
+        switch (mConductStatus)
+        {
         case 0:
             setConductSignal();
             setWaterCutoffPort(0);
             break;
         case 2:
-            setConductOutOfCourse(currentLap);
+            setConductOutOfCourse(conductStatus);
             setWaterCutoffPort(0);
-            if (_66 == 0) {
-                if (_63 != currentLap) {
-                    if (Parameters::getRaceCourse() == 0x2f) {
-                        startSoundHandleNumber(7, 0x40074, 0);
-                    }
-                }
+            if (mKartType != 0)
+            {
+                break;
             }
+            if (mPrevConductStatus == conductStatus)
+            {
+                break;
+            }
+            if (Parameters::getRaceCourse() != 0x2f)
+            {
+                break;
+            }
+            startSoundHandleNumber(cHandleCourse, 0x40074, 0);
             break;
         case 4:
-            setConductTrouble(p1, currentLap);
+            setConductTrouble(rpm, conductStatus);
             setWaterCutoffPort(0);
-            if (_66 == 0) {
-                if (_63 != currentLap) {
-                    if (Parameters::getRaceCourse() == 0x2a) {
-                        startSoundHandleNumber(7, 0x40057, 0);
-                    }
-                    else if (Parameters::getRaceCourse() == 0x2f) {
-                        startSoundHandleNumber(7, 0x40074, 0);
-                    }
-                }
+
+            if (mKartType != 0)
+            {
+                break;
             }
+            if (mPrevConductStatus == conductStatus)
+            {
+                break;
+            }
+
+            if (Parameters::getRaceCourse() == 0x2a)
+            {
+                startSoundHandleNumber(cHandleCourse, 0x40057, 0);
+                break;
+            }
+            if (Parameters::getRaceCourse() != 0x2f)
+            {
+                break;
+            }
+            startSoundHandleNumber(cHandleCourse, 0x40074, 0);
             break;
         case 3:
             countGoalKart();
-            _8c = 1;
-            setConductAfterGoal(p5);
-            _5e = 1;
+            mAccelFlag = 1;
+            setConductAfterGoal(isBrake);
+            mGoalFlag = 1;
             break;
         case 1:
-            setConductRace(p5);
+            setConductRace(isBrake);
             break;
         case 5:
-            if (_66 == 0) {
-                if (_63 != currentLap) {
-                    if (Parameters::getRaceCourse() == 0x2f) {
-                        startSoundHandleNumber(7, 0x40074, 0);
-                    }
-                }
+            if (mKartType == 0 && mPrevConductStatus != conductStatus &&
+                Parameters::getRaceCourse() == 0x2f)
+            {
+                startSoundHandleNumber(cHandleCourse, 0x40074, 0);
             }
             setConductPressed();
             break;
         case 6:
+        default:
             break;
         }
     }
-    else {
-        switch (_8d) {
+    else
+    {
+        switch (mConductStatus)
+        {
         case 0:
         case 2:
         case 4:
-            if (_63 != currentLap) {
-                _8e = 0;
-                _92 = 0;
+            if (mPrevConductStatus != conductStatus)
+            {
+                mAccelTimer = 0;
+                mEngineLevel = 0;
             }
             setConductLocomotiveAccel();
-            if (_66 == 0) {
-                if (_63 != currentLap) {
-                    if (Parameters::getRaceCourse() == 0x2a) {
-                        startSoundHandleNumber(7, 0x40057, 0);
-                    }
-                    else if (Parameters::getRaceCourse() == 0x2f) {
-                        startSoundHandleNumber(7, 0x40074, 0);
-                    }
-                }
+            if (mKartType != 0)
+            {
+                break;
+            }
+            if (mPrevConductStatus == conductStatus)
+            {
+                break;
+            }
+            if (Parameters::getRaceCourse() == 0x2a)
+            {
+                startSoundHandleNumber(cHandleCourse, 0x40057, 0);
+                break;
+            }
+            if (Parameters::getRaceCourse() == 0x2f)
+            {
+                startSoundHandleNumber(cHandleCourse, 0x40074, 0);
             }
             break;
+
         case 3:
             countGoalKart();
-            _8c = 1;
-            _5e = 1;
+            mAccelFlag = 1;
+            mGoalFlag = 1;
+
         case 1:
-            if (_63 != currentLap) {
-                _8e = 0;
-                _92 = 0;
+            if (mPrevConductStatus != conductStatus)
+            {
+                mAccelTimer = 0;
+                mEngineLevel = 0;
             }
-            setConductLocomotiveSpeed(p5);
+
+            setConductLocomotiveSpeed(isBrake);
             break;
         case 5:
-            if (_66 == 0) {
-                if (_63 != currentLap) {
-                    if (Parameters::getRaceCourse() == 0x2f) {
-                        startSoundHandleNumber(7, 0x40074, 0);
-                    }
+            if (mKartType == 0 && mPrevConductStatus != conductStatus)
+            {
+                if (Parameters::getRaceCourse() == 0x2f)
+                {
+                    startSoundHandleNumber(cHandleCourse, 0x40074, 0);
                 }
             }
+
             setConductPressed();
             break;
         case 6:
+        default:
             break;
         }
     }
 
-    _68 = p1;
-    _63 = currentLap;
-    _98 = _84;
+    mPrevRpm = rpm;
+    mPrevConductStatus = conductStatus;
+    mPrevSpeed = mSpeed;
 }
 
-void KartSoundMgr::setWaterCutoffPort(u16 port) {
-    JAISoundHandles *handles = this;
-    JAISoundHandle *handle = &(*handles)[3];
-    if (*handle) {
-        (*handle)->getTrack()->writePort(10, port);
+void KartSoundMgr::setWaterCutoffPort(u16 port)
+{
+    const u8 cHandleEngine = 3;
+    JAISoundHandle &handle = (*this)[cHandleEngine];
+    if (handle.isSoundAttached())
+    {
+        handle->getTrack()->writePort(0xa, port);
     }
 }
 
-void KartSoundMgr::countGoalKart() {
-    if (_5e == 0 && _63 != _8d) {
-        smGoalKartCount++;
+void KartSoundMgr::getEngineIDOffsetAtt() {}  // UNUSED
+
+void KartSoundMgr::countGoalKart()
+{
+    if (mGoalFlag != 0)
+    {
+        return;
     }
+
+    if (mPrevConductStatus == mConductStatus)
+    {
+        return;
+    }
+    smGoalKartCount++;
 }
 
-void KartSoundMgr::setConductLocomotiveAccel() {
-    u8 flag = 0;
-    f32 vol;
+// FABRICATED {
+void KartSoundMgr::startSoundFromID(u32 id)
+{
+    const u8 cHandleEngine = 3;
+    u32 scene;
+    JAISound *sound;
 
-    if (_8c != 0) {
-        if (_8e == 0) {
-            if (_92 == 0) {
-                _92 = 9;
+    JAISoundStarter *soundStarter = JASGlobalInstance<JAISoundStarter>::getInstance();
+
+    JAISoundHandle &handle = (*this)[cHandleEngine];
+
+    id += (mKartType != 0 ? 0x14 : 0);
+
+    soundStarter->startSound(id, &handle, NULL);
+
+    if (handle.isSoundAttached())
+    {
+        JAIAudible *audible = handle->getAudible();
+        if (audible == 0)
+        {
+            scene = mSceneMask;
+
+            sound = handle.operator->();
+            JGeometry::TVec3f vec(*mSoundPos);
+
+            sound->newAudible(vec, &_18, scene, NULL);
+            if (mEngineFadeCount != 0)
+            {
+
+                handle->fader_.fadeInFromOut2(mEngineFadeCount);
+                mEngineFadeCount = 0;
             }
-            else if (_92 > 4) {
-                _92--;
+        }
+        setEcho(&handle, mEchoMix);
+    }
+}
+// } FABRICATED
+
+void KartSoundMgr::setConductLocomotiveAccel()
+{
+    const u8 cHandleEngine = 3;
+    f32 pitch;
+    f32 volume;
+
+    bool changed = false;
+
+    if (mAccelFlag != 0)
+    {
+        if (mAccelTimer == 0)
+        {
+            if (mEngineLevel == 0)
+            {
+                mEngineLevel = 9;
             }
-            _8e = _92;
-            flag = 1;
-            vol = 0.6f;
+            else if (mEngineLevel > 4)
+            {
+                mEngineLevel--;
+            }
+            changed = true;
+            volume = 0.6f;
+            mAccelTimer = mEngineLevel;
         }
     }
-    else if (_8e == 0) {
-        if (_92 == 0) {
-            _92 = 9;
+    else if (mAccelTimer == 0)
+    {
+        if (mEngineLevel == 0)
+        {
+            mEngineLevel = 9;
         }
-
-        if (_92 < 9) {
-            _92++;
-            _8e = _92;
+        if (mEngineLevel < 9)
+        {
+            mEngineLevel++;
+            mAccelTimer = mEngineLevel;
         }
-        else {
-            _8e = _92;
+        else
+        {
+            mAccelTimer = mEngineLevel;
         }
-        flag = 1;
-        vol = 0.4f;
+        changed = true;
+        volume = 0.4f;
     }
 
-    if (flag != 0) {
-        JAISoundHandles *handles = this;
-        startSoundEngine(3, (_96++ & 1) ? 17 : 18);
+    if (changed)
+    {
+        const u32 soundID = ((mEngineRevCount++ & 1) ? 0x11 : 0x12);
 
-        JAISoundHandle *handle2 = &(*handles)[3];
-        if (*handle2) {
-            (*handle2)->getAuxiliary().moveVolume(vol, 0);
-            f32 pitch = 0.6f + 0.4f * (f32)(9 - _92) / 5.0f;
-            (*handle2)->getAuxiliary().movePitch(pitch, 0);
+        startSoundFromID(soundID);
+        JAISoundHandle &handle = (*this)[cHandleEngine];
+        if (!handle.isSoundAttached())
+        {
+            return;
         }
+        handle->getAuxiliary().moveVolume(volume, 0);
+        pitch = 0.6f + ((0.4f * (9 - mEngineLevel)) / 5.f);
+        handle->getAuxiliary().movePitch(pitch, 0);
     }
-    else {
-        if (_8e != 0) {
-            _8e--;
+    else
+    {
+        if (mAccelTimer != 0)
+        {
+            mAccelTimer--;
         }
     }
 }
 
-void KartSoundMgr::setConductLocomotiveSpeed(bool) {
-    f32 engineRot = _84;
-    if (_8e == 0) {
-        if (engineRot < 1.0f) {
-            engineRot = 1.0f;
+void KartSoundMgr::setConductLocomotiveSpeed(bool)
+{
+    const u8 cHandleEngine = 3;
+    f32 speed;
+    u32 soundID;
+
+    speed = mSpeed;
+    if (mAccelTimer == 0)
+    {
+        if (speed < 1.f)
+        {
+            speed = 1.f;
         }
-        if (engineRot > 130.0f) {
-            engineRot = 130.0f;
+        if (speed > 130.f)
+        {
+            speed = 130.f;
         }
+        mAccelTimer = (u16)(3.f + ((130.f - speed) / 20.f));
 
-        _8e = (s16)((130.0f - engineRot) / 20.0f + 3.0f);
+        soundID = 0x12 + -(mEngineRevCount++ & 1);
 
-        u32 id = -(_96++ & 1) + 18;
+        startSoundFromID(soundID);
 
-        JAISoundHandles *handles = this;
-        startSoundEngine(3, id);
-
-        JAISoundHandle *handle2 = &(*handles)[3];
-        if (*handle2) {
-            (*handle2)->getAuxiliary().moveVolume(0.7f * (engineRot / 130.0f) + 0.5f, 0);
-
-            f32 f30 = 1.0f;
-            if (engineRot < 100.0f) {
-                f30 = engineRot / 100.0f;
-            }
-            if (_5d != 0) {
-                f30 *= Parameters::getChibiPitch(id);
-            }
-
-            (*handle2)->getAuxiliary().movePitch(0.4f * f30 + 0.6f, 0);
+        JAISoundHandle &handle = (*this)[cHandleEngine];
+        if (!handle.isSoundAttached())
+        {
+            return;
         }
+        JAISound *sound = handle.operator->();
+        sound->getAuxiliary().moveVolume((0.7f * (speed / 130.f)) + 0.5f, 0);
+        f32 pitch = 1.f;
+        if (speed < 100.f)
+        {
+            pitch = speed / 100.f;
+        }
+        if (mChibiFlag != 0)
+        {
+            const f32 chibiPitch = Parameters::getChibiPitch(soundID);
+            pitch *= chibiPitch;
+        }
+        handle->getAuxiliary().movePitch((0.4f * pitch) + 0.6f, 0);
     }
-    else {
-        _8e--;
+    else
+    {
+        mAccelTimer--;
     }
 }
 
-void KartSoundMgr::setConductPressed() {
-    JAISoundHandles *handles = this;
-    startSoundEngine(3, 0x13);
+void KartSoundMgr::setConductPressed()
+{
+    const u8 cHandleEngine = 3;
+    startSoundFromID(0x13);
 
-    f32 vol = _84;
-    if (vol > 100.0f) {
-        vol = 100.0f;
+    f32 pitch = mSpeed;
+    if (pitch > 100.f)
+    {
+        pitch = 100.f;
     }
-    vol = 1.0f + vol / 100.0f;
 
-    JAISoundHandle *handle2 = &(*handles)[3];
-    if (*handle2) {
-        (*handle2)->getAuxiliary().movePitch(vol, 0);
+    pitch = 1.f + (pitch / 100.f);
+
+    JAISoundHandle &handle = (*this)[cHandleEngine];
+    if (!handle.isSoundAttached())
+    {
+        return;
     }
+
+    handle->getAuxiliary().movePitch(pitch, 0);
 }
 
-void KartSoundMgr::setConductSignal() {
-    static const f32 EngineKarabukashiLength[] = {
-        90.0f, 40.0f, 90.0f, 30.0f, 40.0f, 35.0f, 30.0f, 95.0f, 90.0f,
-    };
-    static const f32 EnginePitchKeisuuSignal[] = {
-        0.02f, 0.05f, 0.02f, 0.09f, 0.05f, 0.06f, 0.06f, 0.02f, 0.05f,
-    };
-    static const f32 EnginePitchDownSignal[] = {
-        0.9f, 0.9f, 0.6f, 0.9f, 0.9f, 0.7f, 0.7f, 0.6f, 0.8f,
-    };
+}  // namespace GameAudio
 
-    if (_63 != _8d) {
-        _fc = 0.0f;
+static const f32 EngineKarabukashiLength[] = {90.f, 40.f, 90.f, 30.f, 40.f, 35.f, 30.f, 95.f, 90.f};
+
+static const f32 EnginePitchKeisuuSignal[] =
+    {0.02f, 0.05f, 0.02f, 0.09f, 0.05f, 0.06f, 0.06f, 0.02f, 0.05f};
+
+static const f32 EnginePitchDownSignal[] = {0.9f, 0.9f, 0.6f, 0.9f, 0.9f, 0.7f, 0.7f, 0.6f, 0.8f};
+
+static const f32 EnginePitchKeisuuOutOfCourse[] =
+    {0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f};
+
+static const f32 EnginePitchKeisuuTrouble[] =
+    {0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f};
+
+static const f32 EngineAddKeisuuRaceUp[] =
+    {0.0006f, 0.0006f, 0.0006f, 0.0005f, 0.0012f, 0.0012f, 0.0012f, 0.0012f, 0.0012f};
+
+static const f32 UpEngineLoopStart[] =
+    {100639.f, 133568.f, 121677.f, 89762.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+
+static const f32 UpEngineLoopEnd[] =
+    {113023.f, 167266.f, 138431.f, 100738.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+
+static const f32 EngineAddKeisuuRaceDown[] =
+    {0.00015f, 0.00015f, 0.00015f, 0.00015f, 0.0006f, 0.0006f, 0.0006f, 0.0006f, 0.0006f};
+
+static const f32 DownEngineLoopStart[] =
+    {42032.f, 57452.f, 54457.f, 33775.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+
+static const f32 DownEngineLoopEnd[] =
+    {93600.f, 104350.f, 79743.f, 63943.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+
+namespace GameAudio
+{
+
+void KartSoundMgr::setConductSignal()
+{
+    const u8 cHandleEngine = 3;
+    if (mPrevConductStatus != mConductStatus)
+    {
+        mKarabukashiCount = 0.f;
     }
 
     f32 pitch;
     f32 volume;
-    if (_66 == 0 || (u8)Parameters::getNetworkCubes() != 1) {
-        if (_8c == 1) {
+    if (mKartType == 0 || Parameters::getNetworkCubes() != 1)
+    {
+        if (mAccelFlag == 1)
+        {
             volume = 1.4f;
-            if (_fc < EngineKarabukashiLength[(u8)Parameters::getEngineType(_61)]) {
-                _fc = _fc + 1.0f;
+            f32 length = EngineKarabukashiLength[(u8)Parameters::getEngineType(mKartIndex)];
+            if (mKarabukashiCount < length)
+            {
+                mKarabukashiCount = mKarabukashiCount + 1.f;
             }
-            pitch = _fc * EnginePitchKeisuuSignal[(u8)Parameters::getEngineType(_61)] + 0.7f;
-        }
-        else {
-            volume = 0.7f;
-            if (_fc > 0.0f) {
-                _fc = _fc - EnginePitchDownSignal[(u8)Parameters::getEngineType(_61)];
-            }
-            else {
-                _fc = 0.0f;
-            }
-            pitch = _fc * EnginePitchKeisuuSignal[(u8)Parameters::getEngineType(_61)] + 0.7f;
-        }
 
-        if (_fc < 20.0f) {
-            volume = volume + -0.015000001f * _fc + 0.3f;
+            f32 signal = EnginePitchKeisuuSignal[(u8)Parameters::getEngineType(mKartIndex)];
+            pitch = (mKarabukashiCount * signal) + 0.7f;
+        }
+        else
+        {
+            volume = 0.7f;
+            if (mKarabukashiCount > 0.f)
+            {
+                f32 signal = EnginePitchDownSignal[(u8)Parameters::getEngineType(mKartIndex)];
+                mKarabukashiCount -= signal;
+            }
+            else
+            {
+                mKarabukashiCount = 0.f;
+            }
+            f32 signal = EnginePitchKeisuuSignal[(u8)Parameters::getEngineType(mKartIndex)];
+            pitch = (mKarabukashiCount * signal) + 0.7f;
+        }
+        if (mKarabukashiCount < 20.f)
+        {
+            volume = ((-0.015000001f * mKarabukashiCount) + volume) + 0.3f;
         }
     }
-    else {
-        if (_11c == 0) {
-            _5f ^= 1;
-            if (_5f != 0) {
-                u32 interval = SignalUpIntervalBase[_64] + Random::getSignalEngineRandomU32() % SignalUpIntervalWidth[_64];
-                f32 newPitch = (f32)(SignalUpPitchBase[_64] + Random::getSignalEngineRandomU32() % SignalUpPitchWidth[_64]) / 100.0f;
-                if (_11c == 0 && _114 == newPitch) {
-                    goto signal_noop;
+    else
+    {
+        if (mSignalPitchCounter == 0)
+        {
+            mSignalRevUp ^= 1;
+            if (mSignalRevUp != 0)
+            {
+                u32 interval =
+                    SignalUpIntervalBase[mRankClass] +
+                    (Random::getSignalEngineRandomU32() % SignalUpIntervalWidth[mRankClass]);
+                u32 pitchInt = SignalUpPitchBase[mRankClass] + (Random::getSignalEngineRandomU32() %
+                                                                SignalUpPitchWidth[mRankClass]);
+                f32 currentPitch = f32(pitchInt) / 100.f;
+                if ((mSignalPitchCounter != 0 || mSignalPitch != currentPitch) &&
+                    (mSignalPitchCounter == 0 || mSignalTargetPitch != currentPitch))
+                {
+                    mSignalTargetPitch = currentPitch;
+                    if (interval == 0)
+                    {
+                        mSignalPitch = currentPitch;
+                    }
+                    else
+                    {
+                        mSignalPitchStep =
+                            (mSignalPitch - mSignalTargetPitch) / (f32)(interval + 1);
+                        mSignalPitchCounter = interval + 1;
+                    }
                 }
-                if (_11c != 0 && _110 == newPitch) {
-                    goto signal_noop;
-                }
-                _110 = newPitch;
-                if (interval == 0) {
-                    _114 = newPitch;
-                    goto signal_noop;
-                }
-                interval++;
-                _118 = (_114 - _110) / (f32)interval;
-                _11c = interval;
-            signal_noop:;
             }
-            else {
-                u32 interval = SignalDownIntervalBase[_64] + Random::getSignalEngineRandomU32() % SignalDownIntervalWidth[_64];
-                f32 target = 0.7f;
-                if (_11c == 0 && _114 == target) {
-                    goto signal_noop2;
+            else
+            {
+                u32 interval =
+                    SignalDownIntervalBase[mRankClass] +
+                    (Random::getSignalEngineRandomU32() % SignalDownIntervalWidth[mRankClass]);
+                f32 volumeC = 0.7f;
+                if ((mSignalPitchCounter != 0 || mSignalPitch != volumeC) &&
+                    (mSignalPitchCounter == 0 || mSignalTargetPitch != volumeC))
+                {
+                    mSignalTargetPitch = 0.7f;
+                    if (interval == 0)
+                    {
+                        mSignalPitch = 0.7f;
+                    }
+                    else
+                    {
+                        u32 ticks = interval + 1;
+                        mSignalPitchStep = (mSignalPitch - mSignalTargetPitch) / (f32)ticks;
+                        mSignalPitchCounter = ticks;
+                    }
                 }
-                if (_11c != 0 && _110 == target) {
-                    goto signal_noop2;
-                }
-                _110 = target;
-                if (interval == 0) {
-                    _114 = target;
-                    goto signal_noop2;
-                }
-                interval++;
-                _118 = (_114 - _110) / (f32)interval;
-                _11c = interval;
-            signal_noop2:;
             }
         }
 
-        if (_11c != 0) {
-            if (--_11c != 0) {
-                _114 = _114 - _118;
+        if (mSignalPitchCounter != 0)
+        {
+            if (--mSignalPitchCounter != 0)
+            {
+                mSignalPitch -= mSignalPitchStep;
             }
-            else {
-                _114 = _110;
+            else
+            {
+                mSignalPitch = mSignalTargetPitch;
             }
         }
-
-        if (_5f != 0) {
+        if (mSignalRevUp != 0)
+        {
             volume = 1.4f;
         }
-        else {
+        else
+        {
             volume = 0.7f;
         }
+
+        pitch = mSignalPitch;
         volume = volume * GA_ENEMY_VOLUME_DOWN_VALUE;
-        pitch = _114;
     }
 
-    JAISoundHandles *handles = this;
-    startSoundEngine(3, (u8)Parameters::getEngineType(_61) + 8);
+    u8 engineType = Parameters::getEngineType(mKartIndex);
+    startSoundFromID(engineType + 8);
 
-    JAISoundHandle *handle2 = &(*handles)[3];
-    if (*handle2) {
-        (*handle2)->getAuxiliary().moveVolume(volume, 0);
-        (*handle2)->getAuxiliary().movePitch(pitch, 0);
-    }
-}
-
-void KartSoundMgr::setConductOutOfCourse(u8 lap) {
-    static const f32 EnginePitchKeisuuOutOfCourse[] = {
-        0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f, 0.01f,
-    };
-
-    if (_63 != lap) {
-        _94 = 0;
-    }
-
-    f32 vol;
-    if (_8c == 1) {
-        if (_94 < 100) {
-            _94++;
-            _94++;
-        }
-        vol = 1.2f;
-    }
-    else {
-        if (_94 != 0) {
-            _94--;
-        }
-        vol = 0.55f;
-    }
-
-    f32 pitch = _94 * EnginePitchKeisuuOutOfCourse[(u8)Parameters::getEngineType(_61)] + 0.6f;
-    if (_66 != 0) {
-        vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
-    }
-
-    JAISoundHandles *handles = this;
-    startSoundEngine(3, (u8)Parameters::getEngineType(_61) + 8);
-
-    JAISoundHandle *handle2 = &(*handles)[3];
-    if (*handle2) {
-        if (_5d != 0) {
-            pitch *= Parameters::getChibiPitch((*handle2)->getID());
-            vol *= 0.65f;
-        }
-        (*handle2)->getAuxiliary().moveVolume(vol, 0);
-        (*handle2)->getAuxiliary().movePitch(pitch, 0);
+    JAISoundHandle &handle = (*this)[cHandleEngine];
+    if (handle.isSoundAttached())
+    {
+        handle->getAuxiliary().moveVolume(volume, 0);
+        handle->getAuxiliary().movePitch(pitch, 0);
     }
 }
 
-void KartSoundMgr::setConductTrouble(f32 distance, u8 lap) {
-    static const f32 EnginePitchKeisuuTrouble[] = {
-        0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f, 0.025f,
-    };
+void KartSoundMgr::setConductOutOfCourse(u8 conductStatus)
+{
+    const f32 cEnemyVolumeScale = 0.65f;
+    const u8 cHandleEngine = 3;
+    f32 volume;
 
-    if (_63 != lap) {
-        _92 = (s16)(38.0f * distance);
+    if (mPrevConductStatus != conductStatus)
+    {
+        mOutOfCourseLevel = 0;
     }
-
-    f32 vol;
-    if (_8c == 1) {
-        if (_92 < 38) {
-            _92++;
-            _92++;
+    if (mAccelFlag == 1)
+    {
+        if (mOutOfCourseLevel < 0x64)
+        {
+            mOutOfCourseLevel++;
+            mOutOfCourseLevel++;
         }
-        vol = 1.2f;
+        volume = 1.2f;
     }
-    else {
-        if (_92 != 0) {
-            _92--;
+    else
+    {
+        if (mOutOfCourseLevel != 0)
+        {
+            mOutOfCourseLevel--;
         }
-        vol = 0.55f;
+        volume = 0.55f;
     }
 
-    f32 pitch = (f32)_92 * EnginePitchKeisuuTrouble[(u8)Parameters::getEngineType(_61)] + 0.5f;
-    if (_66 != 0) {
-        vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
+    f32 pitch = (EnginePitchKeisuuOutOfCourse[(u8)Parameters::getEngineType(mKartIndex)] *
+                 mOutOfCourseLevel) +
+                0.6f;
+
+    if (mKartType != 0)
+    {
+        volume *= GA_ENEMY_VOLUME_DOWN_VALUE;
     }
 
-    JAISoundHandles *handles = this;
-    startSoundEngine(3, (u8)Parameters::getEngineType(_61) + 8);
+    const u8 engineType = Parameters::getEngineType(mKartIndex);
+    startSoundFromID(engineType + 8);
 
-    JAISoundHandle *handle2 = &(*handles)[3];
-    if (*handle2) {
-        if (_5d != 0) {
-            pitch *= Parameters::getChibiPitch((*handle2)->getID());
-            vol *= 0.65f;
-        }
-        (*handle2)->getAuxiliary().moveVolume(vol, 0);
-        (*handle2)->getAuxiliary().movePitch(pitch, 0);
+    JAISoundHandle &handle = (*this)[cHandleEngine];
+    if (!handle.isSoundAttached())
+    {
+        return;
     }
+
+    if (mChibiFlag != 0)
+    {
+        const f32 chibiPitch = Parameters::getChibiPitch(handle->getID());
+        pitch *= chibiPitch;
+        volume *= cEnemyVolumeScale;
+    }
+    handle->getAuxiliary().moveVolume(volume, 0);
+    handle->getAuxiliary().movePitch(pitch, 0);
 }
 
-void KartSoundMgr::setConductRace(bool flag) {
-    static const f32 EngineAddKeisuuRaceUp[] = {
-        0.0006000000f, 0.0006000000f, 0.0006000000f, 0.0005000000f,
-        0.0012000000f, 0.0012000000f, 0.0012000000f, 0.0012000000f,
-        0.0012000000f,
-    };
-    static const f32 UpEngineLoopStart[9] = {
-        100639.0f, 133568.0f, 121677.0f, 89762.0f,
-    };
-    static const f32 UpEngineLoopEnd[9] = {
-        113023.0f, 167266.0f, 138431.0f, 100738.0f,
-    };
-    static const f32 EngineAddKeisuuRaceDown[] = {
-        0.00015f, 0.00015f, 0.00015f, 0.00015f,
-        0.0006f, 0.0006f, 0.0006f, 0.0006f, 0.0006f,
-    };
-    static const f32 DownEngineLoopStart[9] = {
-        42032.0f, 57452.0f, 54457.0f, 33775.0f,
-    };
-    static const f32 DownEngineLoopEnd[9] = {
-        93600.0f, 104350.0f, 79743.0f, 63943.0f,
-    };
+void KartSoundMgr::setConductTrouble(f32 rpm, u8 conductStatus)
+{
+    const f32 cEnemyVolumeScale = 0.65f;
+    const u8 cHandleEngine = 3;
+    f32 volume;
 
-    f32 pitch;
-    f32 vol;
-    u16 loopCount = 0;
-    int engineType = Parameters::getEngineType(_61);
+    if (mPrevConductStatus != conductStatus)
+    {
+        mEngineLevel = (u16)(38.f * rpm);
+    }
+    if (mAccelFlag == 1)
+    {
+        if (mEngineLevel < 0x26)
+        {
+            mEngineLevel++;
+            mEngineLevel++;
+        }
+        volume = 1.2f;
+    }
+    else
+    {
+        if (mEngineLevel != 0)
+        {
+            mEngineLevel--;
+        }
+        volume = 0.55f;
+    }
 
-    if (_e8[0] == 0x11 || _e8[1] == 0x11 || _e8[2] == 0x11 || _e8[3] == 0x11) {
-        f32 wDepth = 215.0f;
-        for (u8 i = 0; i < 4; i++) {
-            if (wDepth > mWaterDepth[i]) {
-                wDepth = mWaterDepth[i];
+    f32 pitch =
+        (EnginePitchKeisuuTrouble[(u8)Parameters::getEngineType(mKartIndex)] * mEngineLevel) + 0.5f;
+
+    if (mKartType != 0)
+    {
+        volume *= GA_ENEMY_VOLUME_DOWN_VALUE;
+    }
+
+    const u8 engineType = Parameters::getEngineType(mKartIndex);
+    startSoundFromID(engineType + 8);
+
+    JAISoundHandle &handle = (*this)[cHandleEngine];
+    if (!handle.isSoundAttached())
+    {
+        return;
+    }
+
+    if (mChibiFlag != 0)
+    {
+        const f32 chibiPitch = Parameters::getChibiPitch(handle->getID());
+        pitch *= chibiPitch;
+        volume *= cEnemyVolumeScale;
+    }
+    handle->getAuxiliary().moveVolume(volume, 0);
+    handle->getAuxiliary().movePitch(pitch, 0);
+}
+
+void KartSoundMgr::setConductRace(bool isBrake)
+{
+    const f32 cEnemyVolumeScale = 0.65f;
+    const u8 cHandleEngine = 3;
+    const u8 cWheelCount = 4;
+    const u16 cEngineTimerMax = 0x270f;
+    f32 depth;
+    f32 skipSample;
+    f32 minWaterDepth;
+    u16 waterPort = 0;
+    u32 soundOffset;
+    const u32 engineType = Parameters::getEngineType((u8)mKartIndex);
+
+    if (mGroundAttrs[0] == 0x11 || mGroundAttrs[1] == 0x11 || mGroundAttrs[2] == 0x11 ||
+        mGroundAttrs[3] == 0x11)
+    {
+        minWaterDepth = 215.f;
+        for (u8 index = 0; index < cWheelCount; index++)
+        {
+            depth = mWaterDepths[index];
+            if (minWaterDepth > depth)
+            {
+                minWaterDepth = depth;
             }
         }
-        if (wDepth < 15.0f) {
-            wDepth = 0.0f;
+        f32 waterRatio;
+        if (minWaterDepth < 15.f)
+        {
+            waterRatio = 0.f;
         }
-        else {
-            if (wDepth > 215.0f) {
-                wDepth = 215.0f;
+        else
+        {
+            if (minWaterDepth > 215.f)
+            {
+                minWaterDepth = 215.f;
             }
-            wDepth = (wDepth - 15.0f) / 200.0f;
+            waterRatio = (minWaterDepth - 15.f) / 200.f;
         }
-
-        if (wDepth == 0.0f) {
-            loopCount = 0;
-        } else {
-            loopCount = 127.0f - 126.0f * wDepth;
+        if (waterRatio == 0.f)
+        {
+            waterPort = 0;
+        }
+        else
+        {
+            waterPort = 127.f - ((126.f * waterRatio));
         }
     }
 
-    if (1.0f + _84 > _98) {
-        if (_84 < 1.0f) {
-            _100++;
-            if (_100 == 20) {
-                _8c = 0;
-                _100 = 0;
+    if ((1.f + mSpeed) > mPrevSpeed)
+    {
+        if (mSpeed < 1.f)
+        {
+            mLowSpeedCount += 1;
+            if (mLowSpeedCount == 0x14)
+            {
+                mAccelFlag = 0;
+                mLowSpeedCount = 0;
             }
         }
-        if (_84 > 50.0f) {
-            if (_96 < 0x320) {
-                _96++;
+        if (mSpeed > 50.f)
+        {
+            if (mEngineRevCount < 0x320)
+            {
+                mEngineRevCount++;
             }
         }
-    } else {
-        if (_84 < 10.0f) {
-            _8c = 0;
+    }
+    else
+    {
+        if (mSpeed < 10.f)
+        {
+            mAccelFlag = 0;
         }
-        if (_96 >= 40) {
-            _96 -= 40;
+        if (mEngineRevCount >= 0x28)
+        {
+            mEngineRevCount -= 0x28;
         }
     }
 
-    if (_8c == 1) {
-        if (_fc > 0.0f) {
-            _fc = _fc - 1.0f;
-        }
-        _90 = 0;
-        if (_8e < 9999) {
-            _8e++;
+    if (mAccelFlag == 1)
+    {
+        if (mKarabukashiCount > 0.f)
+        {
+            mKarabukashiCount = mKarabukashiCount - 1.f;
         }
 
-        f32 releaseDensity = -0.0016666667f * _84 + 0.3f;
-        if (_a0 != 0.0f) {
-            s16 dec = 80.0f * _a0;
-            if (_96 > -200) {
-                _96 -= dec;
+        mDecelTimer = 0;
+        if (mAccelTimer < cEngineTimerMax)
+        {
+            mAccelTimer++;
+        }
+        f32 volume;
+        f32 pitch;
+        const f32 temp_pitch = ((-0.0016666667f * mSpeed) + 0.3f);
+
+        if (mCrushDegree != 0.f)
+        {
+            const s16 revDrop = (80.f * mCrushDegree);
+            if (mEngineRevCount > -0xC8)
+            {
+                mEngineRevCount -= revDrop;
             }
         }
         adjustEngine();
-        if (_f0 > 0.0f) {
-            _fc = 0.0f;
+        if (mEngineAdjust > 0.f)
+        {
+            mKarabukashiCount = 0.f;
+        }
+        u8 index = engineType;
+        pitch = 0.02f * mKarabukashiCount +
+                (mEngineAdjust +
+                 (temp_pitch + (0.5f + (mEngineRevCount * (EngineAddKeisuuRaceUp[index]) +
+                                        ((mRpm * EngineKeisuuRaceUp[index]) +
+                                         (mSpeed * EngineKeisuuRaceUp[index]))))));
+        volume = 1.4f;
+
+        if (mSpeed < 40.f)
+        {
+            volume = 0.3f + (-0.0075000003f * mSpeed + 1.4f);
         }
 
-        pitch = 0.02f * _fc + (_f0 + (releaseDensity + (0.5f + ((f32)_96 * EngineAddKeisuuRaceUp[(u8)engineType] + (_88 * EngineKeisuuRaceUp[(u8)engineType] + _84 * EngineKeisuuRaceUp[(u8)engineType])))));
-
-        vol = 1.4f;
-        if (_84 < 40.0f) {
-            vol = -0.0075000003f * _84 + vol;
-            vol = 0.3f + vol;
+        if ((u8)engineType < 4 && !isBrake)
+        {
+            soundOffset = 0;
+        }
+        else
+        {
+            soundOffset = 8;
         }
 
-        u32 num;
-        if ((u8)engineType < 4 && flag == 0) {
-            num = 0;
+        if (mKartType != 0)
+        {
+            volume *= GA_ENEMY_VOLUME_DOWN_VALUE;
         }
-        else {
-            num = 8;
+        if (waterPort != 0)
+        {
+            volume *= 0.5f + ((0.5f * waterPort) / 127.f);
         }
-        if (_66 != 0) {
-            vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
-        }
-        if (loopCount != 0) {
-            vol *= (0.5f + 0.5f * loopCount / 127.0f);
-        }
-        u32 id = num + (u8)engineType;
+        startSoundFromID(soundOffset + (u8)engineType);
 
-        JAISoundHandles *handles = this;
-        startSoundEngine(3, id);
-
-        JAISoundHandle *handle2 = &(*handles)[3];
-        if (*handle2) {
-            if (_5d != 0) {
-                pitch *= Parameters::getChibiPitch((*handle2)->getID());
-                vol *= 0.65f;
+        JAISoundHandle &handle = (*this)[cHandleEngine];
+        if (handle.isSoundAttached())
+        {
+            if (mChibiFlag != 0)
+            {
+                pitch *= Parameters::getChibiPitch(handle->getID());
+                volume *= cEnemyVolumeScale;
             }
-            (*handle2)->getAuxiliary().moveVolume(vol, 0);
-            (*handle2)->getAuxiliary().movePitch(pitch, 0);
-            (*handle2)->getTrack()->writePort(10, loopCount);
+            handle->getAuxiliary().moveVolume(volume, 0);
+            handle->getAuxiliary().movePitch(pitch, 0);
+            handle->getTrack()->writePort(0xA, waterPort);
         }
 
-        if ((u8)engineType < 4) {
-            f32 loopPointF = (u32)(_84 * (UpEngineLoopStart[(u8)engineType] / 150.0f) - 10000.0f);
-            if (loopPointF < 0.0f) {
-                loopPointF = 0.0f;
+        if ((u8)engineType < 4)
+        {
+            skipSample = (f32)(u32)(mSpeed * (UpEngineLoopStart[(u8)engineType] / 150.f) - 10000.f);
+            if (skipSample < 0.f)
+            {
+                skipSample = 0.f;
             }
-            if (loopPointF > UpEngineLoopEnd[(u8)engineType]) {
-                loopPointF = UpEngineLoopEnd[(u8)engineType];
+            if (skipSample > UpEngineLoopEnd[(u8)engineType])
+            {
+                skipSample = UpEngineLoopEnd[(u8)engineType];
             }
-            u32 skip = loopPointF;
-            JAISoundHandle *handle3 = &(*handles)[3];
-            if (*handle3) {
-                (*handle3)->getTrack()->mSkipSample = skip;
+
+            // conversion happens before operator[] in the target
+            u32 skip = (u32)skipSample;
+            JAISoundHandle &handle = (*this)[cHandleEngine];
+            if (handle.isSoundAttached())
+            {
+                handle->getTrack()->setSkipSample(skip);
             }
         }
     }
-    else {
-        _96 = 0;
-        _8e = 0;
-        if (_90 < 9999) {
-            _90++;
+    else
+    {
+        f32 volume;
+        f32 pitch;
+        mEngineRevCount = 0;
+        mAccelTimer = 0;
+        if (mDecelTimer < cEngineTimerMax)
+        {
+            mDecelTimer++;
         }
         adjustEngine();
 
-        pitch = _f0 + (0.7f + ((f32)_96 * EngineAddKeisuuRaceDown[(u8)engineType] + (_88 * EngineKeisuuRaceDown[(u8)engineType] + _84 * EngineKeisuuRaceDown[(u8)engineType])));
+        u8 index = engineType;
+        pitch = mEngineAdjust + (0.7f + (mEngineRevCount * (EngineAddKeisuuRaceDown[index]) +
+                                         ((mRpm * EngineKeisuuRaceDown[index]) +
+                                          (mSpeed * EngineKeisuuRaceDown[index]))));
 
-        if ((u8)engineType < 4) {
-            vol = 1.1f;
+        if ((u8)engineType < 4)
+        {
+            volume = 1.1f;
         }
-        else {
-            vol = 0.8f;
+        else
+        {
+            volume = 0.8f;
         }
-        if (_84 < 40.0f) {
-            vol = 0.4f + (-0.01f * _84 + vol);
+        if (mSpeed < 40.f)
+        {
+            volume = 0.4f + ((-0.01f * mSpeed) + volume);
         }
 
-        u32 num;
-        if ((u8)engineType < 4 && flag == 0) {
-            num = 4;
+        if ((u8)engineType < 4 && !isBrake)
+        {
+            soundOffset = 4;
         }
-        else {
-            num = 8;
+        else
+        {
+            soundOffset = 8;
         }
-        if (_66 != 0) {
-            vol *= GA_ENEMY_VOLUME_DOWN_VALUE;
-        }
-        u32 id = num + (u8)engineType;
 
-        JAISoundHandles *handles = this;
-        startSoundEngine(3, id);
+        if (mKartType != 0)
+        {
+            volume *= GA_ENEMY_VOLUME_DOWN_VALUE;
+        }
+        startSoundFromID(soundOffset + (u8)engineType);
 
-        JAISoundHandle *handle2 = &(*handles)[3];
-        if (*handle2) {
-            if (_5d != 0) {
-                pitch *= Parameters::getChibiPitch((*handle2)->getID());
-                vol *= 0.65f;
+        JAISoundHandle &handle = (*this)[cHandleEngine];
+        if (handle.isSoundAttached())
+        {
+            if (mChibiFlag != 0)
+            {
+                pitch *= Parameters::getChibiPitch(handle->getID());
+                volume *= cEnemyVolumeScale;
             }
-            (*handle2)->getAuxiliary().moveVolume(vol, 0);
-            (*handle2)->getAuxiliary().movePitch(pitch, 0);
-            (*handle2)->getTrack()->writePort(10, loopCount);
+            handle->getAuxiliary().moveVolume(volume, 0);
+            handle->getAuxiliary().movePitch(pitch, 0);
+            handle->getTrack()->writePort(0xA, waterPort);
         }
 
-        if ((u8)engineType < 4) {
-            f32 loopPointF = (u32)(_84 * -(DownEngineLoopStart[(u8)engineType] / 150.0f) + DownEngineLoopStart[(u8)engineType] - 5000.0f);
-            if (loopPointF < 0.0f) {
-                loopPointF = 0.0f;
+        if ((u8)engineType < 4)
+        {
+            const f32 loopStart = DownEngineLoopStart[(u8)engineType];
+
+            skipSample = (f32)(u32)(mSpeed * -(loopStart / 150.f) + loopStart - 5000.f);
+            if (skipSample < 0.f)
+            {
+                skipSample = 0.f;
             }
-            if (loopPointF > DownEngineLoopEnd[(u8)engineType]) {
-                loopPointF = DownEngineLoopEnd[(u8)engineType];
+            if (skipSample > DownEngineLoopEnd[(u8)engineType])
+            {
+                skipSample = DownEngineLoopEnd[(u8)engineType];
             }
-            u32 skip = loopPointF;
-            JAISoundHandle *handle3 = &(*handles)[3];
-            if (*handle3) {
-                (*handle3)->getTrack()->mSkipSample = skip;
+
+            u32 skip = skipSample;
+            JAISoundHandle &handle = (*this)[cHandleEngine];
+            if (handle.isSoundAttached())
+            {
+                handle->getTrack()->setSkipSample(skip);
             }
         }
     }
 }
 
-void KartSoundMgr::setConductAfterGoal(bool flag) { setConductRace(flag); }
+void KartSoundMgr::setConductAfterGoal(bool isBrake)
+{
+    setConductRace(isBrake);
+}
 
-void KartSoundMgr::setCrushSe(CrsGround::EMat mat, f32 val) {
-    switch (mat) {
-    case (CrsGround::EMat)5:
-    case (CrsGround::EMat)0x11:
-        setCrushSe(0x1001d, val);
-        break;
-    case (CrsGround::EMat)8:
-        setCrushSe(0x10015, val);
-        break;
-    case (CrsGround::EMat)7:
-    case (CrsGround::EMat)0xf:
-        setCrushSe(0x10021, val);
-        break;
-    case (CrsGround::EMat)0x10:
-        setCrushSe(0x10023, val);
-        break;
-    case (CrsGround::EMat)0x12:
-        setCrushSe(0x10053, val);
-        break;
-    case (CrsGround::EMat)0x13:
-        setCrushSe(0x10056, val);
-        break;
-    case (CrsGround::EMat)9:
-        setCrushSe(0x10019, val);
-        break;
-    case (CrsGround::EMat)0x19:
-        setCrushSe(0x10067, val);
-        break;
-    case (CrsGround::EMat)0x1b:
-        setCrushSe(0x1007d, val);
-        break;
-    case (CrsGround::EMat)0xff:
+void KartSoundMgr::setCrushSe(CrsGround::EMat mat, f32 degree)
+{
+    switch (mat)
+    {
+    case CrsGround::Mat_5:
+    case CrsGround::Mat_17:
+        setCrushSe(0x1001DU, degree);
+        return;
+    case CrsGround::Mat_8:
+        setCrushSe(0x10015U, degree);
+        return;
+    case CrsGround::Mat_7:
+    case CrsGround::Mat_15:
+        setCrushSe(0x10021U, degree);
+        return;
+    case CrsGround::Mat_16:
+        setCrushSe(0x10023U, degree);
+        return;
+    case CrsGround::Mat_18:
+        setCrushSe(0x10053U, degree);
+        return;
+    case CrsGround::Mat_19:
+        setCrushSe(0x10056U, degree);
+        return;
+    case CrsGround::Mat_9:
+        setCrushSe(0x10019U, degree);
+        return;
+    case CrsGround::Mat_25:
+        setCrushSe(0x10067U, degree);
+        return;
+    case CrsGround::Mat_27:
+        setCrushSe(0x1007DU, degree);
+        return;
+    case CrsGround::Mat_255:
         break;
     default:
-        setCrushSe(0x10015, val);
-        break;
+        setCrushSe(0x10015U, degree);
+        return;
     }
 }
 
-void KartSoundMgr::setCrushSe(u32 id, f32 crushPower) {
-    id = Common::changeRandomId(id, 0);
-    u32 rnd = Random::getRandomU32();
+void KartSoundMgr::setCrushSe(u32 soundID, f32 degree)
+{
+    const u32 cCrushSeIntervalFrames = 60;
+    const u8 cHandleCrush = 0;
+    soundID = Common::changeRandomId(soundID, 0);
+    const u32 randomId2 = Random::getRandomU32();
 
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 != 0) {
-        return;
-    }
-
-    u32 frame = *(u32 *)((u8 *)Main::getAudio() + 0x80);
-    if (frame - _74 < 60) {
-        return;
-    }
-    _74 = frame;
-
-    if (_9c != 0) {
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    startSoundHandleNumber(0, id, 0);
-
-    JAISoundHandles *handles = this;
-    JAISoundHandle *handle = &(*handles)[0];
-    crushPower = 0.6f + crushPower;
-    if (*handle) {
-        f32 vol = 0.8f * crushPower;
-        (*handle)->getAuxiliary().moveVolume(vol, 0);
-        _a0 = crushPower;
+    if (mKartType != 0)
+    {
+        return;
     }
 
-    _9c = (u8)(rnd & 7) + 4;
+    const Main *main = Main::getAudio();
+
+    if (main->getFrameCount() - mLastCrushFrame < cCrushSeIntervalFrames)
+    {
+        return;
+    }
+
+    mLastCrushFrame = main->getFrameCount();
+
+    if (mCrushWait != 0)
+    {
+        return;
+    }
+
+    startSoundHandleNumber(cHandleCrush, soundID, 0);
+
+    JAISoundHandle &handle = (*this)[cHandleCrush];
+    f32 volume;
+    const f32 f30 = degree + 0.6f;
+    if (handle.isSoundAttached())
+    {
+        volume = 0.8f * f30;
+        handle->getAuxiliary().moveVolume(volume, 0);
+        mCrushDegree = f30;
+    }
+
+    const u8 crushRand = (randomId2 & 0x7);
+
+    mCrushWait = crushRand + 4;
 }
 
-void KartSoundMgr::setBrakeSe(u32 id) {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 != 0) {
+void KartSoundMgr::setBrakeSe(u32 soundID)
+{
+    const u8 cHandleBrake = 6;
+    f32 volume;
+    f32 pitch;
+
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    startSoundHandleNumber(6, id, 0);
+    if (mKartType != 0)
+    {
+        return;
+    }
 
-    JAISoundHandles *handles = this;
-    JAISoundHandle *handle = &(*handles)[6];
-    if (*handle) {
-        f32 volume = 0.008f * _84 + 0.25f;
-        f32 pitch = 0.003f * _84 + 0.6f;
-        if (_5d != 0) {
-            pitch = pitch * Parameters::getChibiPitch(id);
+    startSoundHandleNumber(cHandleBrake, soundID, 0);
+    JAISoundHandle &handle = (*this)[cHandleBrake];
+    if (handle.isSoundAttached())
+    {
+        volume = (0.008f * mSpeed) + 0.25f;
+        pitch = (0.003f * mSpeed) + 0.6f;
+        if (mChibiFlag != 0)
+        {
+            pitch = pitch * Parameters::getChibiPitch(soundID);
         }
-        (*handle)->getAuxiliary().moveVolume(0.8f * volume, 0);
-        (*handle)->getAuxiliary().movePitch(pitch, 0);
+        handle->getAuxiliary().moveVolume(0.8f * volume, 0);
+        handle->getAuxiliary().movePitch(pitch, 0);
     }
-    setChibiPitch(handle);
+    setChibiPitch(&handle);
 }
 
-void KartSoundMgr::setDashSe(u32 id) {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 == 1 && (u8)Parameters::getRaceMode() != GRAND_PRIX) {
-        return;
-    }
-
-    setSe(id);
-
-    _f0 = DashEngineAdjustInitialValue[(u8)Parameters::getEngineType(_61)];
-    _f4 = 0x10014;
-    _f8 = 100;
-}
-
-void KartSoundMgr::setMiniturboSe(u32 id) {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 != 0) {
+void KartSoundMgr::setDashSe(u32 soundID)
+{
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    setSe(id);
-
-    _f0 = DashEngineAdjustInitialValue[(u8)Parameters::getEngineType(_61)];
-    _f4 = 0x10044;
-    _f8 = 40;
-}
-
-void KartSoundMgr::setJumpUpSe(u32 id) {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (Parameters::getRaceCourse() != PEACH_BEACH) {
-        return;
-    }
-    setSe(id);
-}
-
-void KartSoundMgr::setBoundSe(f32 bound) {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 == 1 && (u8)Parameters::getRaceMode() != GRAND_PRIX) {
-        return;
-    }
-    if (_105 >= 0x19) {
-        return;
-    }
-
-    startSoundHandleNumber(4, BoundSe[_105], 0);
-
-    JAISoundHandles *handles = this;
-    JAISoundHandle *handle = &(*handles)[4];
-    if (*handle) {
-        (*handle)->getAuxiliary().movePitch(0.5f * bound + 0.5f, 0);
-        if (*handle) {
-            (*handle)->getAuxiliary().moveVolume(bound * _124, 0);
+    if (mKartType == 1)
+    {
+        if ((u8)Parameters::getRaceMode() != 2)
+        {
+            return;
         }
     }
 
-    setChibiPitch(handle);
+    this->setSe(soundID);
+
+    const u8 engineType = Parameters::getEngineType(mKartIndex);
+    const f32 adjustInitialValue = DashEngineAdjustInitialValue[engineType];
+
+    mEngineAdjust = adjustInitialValue;
+    mAdjustSoundID = 0x10014;
+    mAdjustCounter = 0x64;
 }
 
-void KartSoundMgr::setWheelSpinSe() {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 != 0) {
+void KartSoundMgr::setMiniturboSe(u32 soundID)
+{
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    if ((u8)Parameters::getCharacterType(_61) == 1) {
-        startSoundHandleNumber(4, 0x10077, 0);
-    }
-    else if (_105 < 0x19) {
-        startSoundHandleNumber(4, WheelSpinSe[_105], 0);
+    if (mKartType != 0)
+    {
+        return;
     }
 
-    setChibiPitch(&(*this)[4]);
+    this->setSe(soundID);
+
+    const u8 engineType = Parameters::getEngineType(mKartIndex);
+
+    const f32 adjustInitialValue = DashEngineAdjustInitialValue[engineType];
+
+    mEngineAdjust = adjustInitialValue;
+    mAdjustSoundID = 0x10044;
+    mAdjustCounter = 0x28;
 }
 
-void KartSoundMgr::setSpinSe() {
-    if (mKillSw != 0 || _66 == 2) {
+void KartSoundMgr::setJumpUpSe(u32 soundID)
+{
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    if ((u8)Parameters::getCharacterType(_61) == 1) {
-        startSoundHandleNumber(1, 0x100AE, 0);
-    }
-    else if (_105 < 0x19) {
-        startSoundHandleNumber(1, SpinSe[_105], 0);
+    if (Parameters::getRaceCourse() != 0x22)
+    {
+        return;
     }
 
-    setChibiPitch(&(*this)[1]);
+    this->setSe(soundID);
 }
 
-void KartSoundMgr::setSpinTurnSe() {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 != 0) {
+void KartSoundMgr::setBoundSe(f32 degree)
+{
+    const u8 cGroundSeCount = 25;
+    const u8 cHandleBound = 4;
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    if ((u8)Parameters::getCharacterType(_61) == 1) {
-        startSoundHandleNumber(1, 0x100C6, 0);
-    }
-    else if (_105 < 0x19) {
-        startSoundHandleNumber(1, SpinTurnSe[_105], 0);
+    if (mKartType == 1 && (u8)Parameters::getRaceMode() != 2)
+    {
+        return;
     }
 
-    setChibiPitch(&(*this)[1]);
+    if (mGroundSeIndex >= cGroundSeCount)
+    {
+        return;
+    }
+
+    startSoundHandleNumber(cHandleBound, BoundSe[mGroundSeIndex], 0);
+
+    JAISoundHandle &handle = (*this)[cHandleBound];
+
+    if (handle.isSoundAttached())
+    {
+        handle->getAuxiliary().movePitch((0.5f * degree) + 0.5f, 0);
+        if (handle.isSoundAttached())
+        {
+            handle->getAuxiliary().moveVolume(degree * mCameraVolume, 0);
+        }
+    }
+    setChibiPitch(&handle);
 }
 
-void KartSoundMgr::setSe(u32 id) {
-    if (mKillSw != 0 || _66 == 2) {
+void KartSoundMgr::setWheelSpinSe()
+{
+    const u8 cGroundSeCount = 25;
+    const u8 cHandleBound = 4;
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    CustomSoundTable *soundTable = Main::getAudio()->getSoundTable();
-    if (_8d == 3 && soundTable->getSwBit(id) & 0x8000000) {
-        return;
-    }
-    if (_66 != 0 && soundTable->getSwBit(id) & 0x80000000) {
-        return;
-    }
-    if (id == 0x10041 && *(f32 *)((u8 *)Main::getAudio() + 0x9c) == 0.0f) {
+    if (mKartType != 0)
+    {
         return;
     }
 
-    u32 mask = 0;
+    const u8 characterType = Parameters::getCharacterType(mKartIndex);
+
+    if (characterType == 1)
+    {
+        startSoundHandleNumber(cHandleBound, 0x10077, 0);
+    }
+    else
+    {
+        if (mGroundSeIndex < cGroundSeCount)
+        {
+            startSoundHandleNumber(cHandleBound, WheelSpinSe[mGroundSeIndex], 0);
+        }
+    }
+
+    JAISoundHandle &handle = (*this)[cHandleBound];
+    setChibiPitch(&handle);
+}
+
+void KartSoundMgr::setSpinSe()
+{
+    const u8 cGroundSeCount = 25;
+    const u8 cHandleSpin = 1;
+    if (mKillSw || mKartType == 2)
+    {
+        return;
+    }
+
+    const u8 characterType = Parameters::getCharacterType(mKartIndex);
+
+    if (characterType == 1)
+    {
+        startSoundHandleNumber(cHandleSpin, 0x100ae, 0);
+    }
+    else
+    {
+        if (mGroundSeIndex < cGroundSeCount)
+        {
+            startSoundHandleNumber(cHandleSpin, SpinSe[mGroundSeIndex], 0);
+        }
+    }
+
+    JAISoundHandle &handle = (*this)[cHandleSpin];
+    setChibiPitch(&handle);
+}
+
+void KartSoundMgr::setSpinTurnSe()
+{
+    const u8 cGroundSeCount = 25;
+    const u8 cHandleSpin = 1;
+    if (mKillSw || mKartType == 2)
+    {
+        return;
+    }
+
+    if (mKartType != 0)
+    {
+        return;
+    }
+
+    const u8 characterType = Parameters::getCharacterType(mKartIndex);
+
+    if (characterType == 1)
+    {
+        startSoundHandleNumber(cHandleSpin, 0x100c6, 0);
+    }
+    else
+    {
+        if (mGroundSeIndex < cGroundSeCount)
+        {
+            startSoundHandleNumber(cHandleSpin, SpinTurnSe[mGroundSeIndex], 0);
+        }
+    }
+
+    JAISoundHandle &handle = (*this)[cHandleSpin];
+    setChibiPitch(&handle);
+}
+
+void KartSoundMgr::setSe(u32 soundID)
+{
+    if (mKillSw || mKartType == 2)
+    {
+        return;
+    }
+
+    Main *const main = Main::getAudio();
+    u32 swBit;
+    CustomSoundTable *const soundTable = main->getSoundTable();
+    if (mConductStatus == 3)
+    {
+        swBit = soundTable->getSwBit(soundID);
+        if (swBit & 0x8000000)
+        {
+            return;
+        }
+    }
+
+    if (mKartType != 0)
+    {
+        swBit = soundTable->getSwBit(soundID);
+        if (swBit & 0x80000000)
+        {
+            return;
+        }
+    }
+
+    if (soundID - 0x10000 == 0x41)
+    {
+        if (0.f == Main::getAudio()->getBgmVolume())
+        {
+            return;
+        }
+    }
+    u32 scene = 0;
     CameraMgr *camera = Main::getAudio()->getCamera();
-    u32 sceneMax = camera->getSceneMax();
-    if (sceneMax > 1 && sceneMax > mKartCount) {
-        mask = (1 << mKartCount) ^ 0xf;
+
+    if (camera->getSceneMax() > 1 && camera->getSceneMax() > mPlayerIndex)
+    {
+        scene = (1 << mPlayerIndex) ^ 0xf;
     }
 
-    JAISoundHandle *handle = startSoundCustom(id, mask);
+    JAISoundHandle *soundCustomHandle = startSoundCustom(soundID, scene);
 
-    if (_66 != 0 && handle && *handle && *handle) {
-        (*handle)->getAuxiliary().moveVolume(0.8f * _124, 0);
+    // Double check needed for isSoundAttached..
+    if (mKartType != 0 && soundCustomHandle != NULL && soundCustomHandle->isSoundAttached() &&
+        soundCustomHandle->isSoundAttached())
+    {
+        (*soundCustomHandle)->getAuxiliary().moveVolume(0.8f * mCameraVolume, 0);
     }
 
-    if (id != 0x10038 && id != 0x10039) {
-        setChibiPitch(handle);
+    if (soundID - 0x10000 != 0x38 && soundID - 0x10000 != 0x39)
+    {
+        setChibiPitch(soundCustomHandle);
     }
-    setEcho(handle, _6c);
+
+    setEcho(soundCustomHandle, mEchoMix);
 }
 
-void KartSoundMgr::setChibiPitch(JAISoundHandle *handle) {
-    if (_5d == 0) {
-        return;
-    }
-    if (handle && *handle) {
-        handle->operator->()->getAuxiliary().movePitch(Parameters::getChibiPitch(handle->operator->()->getID()), 0);
-    }
-}
-
-void KartSoundMgr::adjustEngine() {
-    int engineType = Parameters::getEngineType(_61);
-
-    if (_f8 == 0) {
+void KartSoundMgr::setChibiPitch(JAISoundHandle *handle)
+{
+    if (mChibiFlag == 0)
+    {
         return;
     }
 
-    switch (_f4) {
-    case 0x10014:
-        if (_f8 > 120) {
-            _f0 = _f0 + DashEngineIncPerFrame[(u8)engineType];
-            _f8--;
-        }
-        else if (_f8 > 110) {
-            _f8--;
-        }
-        else if (_f8 == 0 || _f0 < 0.0f) {
-            _f8 = 0;
-            _f0 = 0.0f;
-            _f4 = 0;
-        }
-        else {
-            _f0 = _f0 - DashEngineDecPerFrame[(u8)engineType];
-            _f8--;
-        }
-        break;
-    case 0x10044:
-        if (_f8 > 48) {
-            _f0 = _f0 + 0.05f;
-            _f8--;
-        }
-        else if (_f8 > 44) {
-            _f8--;
-        }
-        else if (_f8 == 0 || _f0 < 0.0f) {
-            _f8 = 0;
-            _f0 = 0.0f;
-            _f4 = 0;
-        }
-        else {
-            _f0 = _f0 - 0.02f;
-            _f8--;
-        }
-        break;
-    }
-}
-
-void KartSoundMgr::crushRenzokuTaisaku() {
-    if (_9c != 0) {
-        _9c--;
-        if (_9c == 0) {
-            _a0 = 0.0f;
-        }
-    }
-}
-
-void KartSoundMgr::slipParamSet() {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-    if (_66 != 0) {
+    if (handle == NULL)
+    {
         return;
     }
 
-    u8 mode = Parameters::getPlayerMode();
-
-    if (_e4[0] == 1 || _e4[1] == 1 || _e4[2] == 1 || _e4[3] == 1) {
-        f32 speed = (150.0f < _84) ? 150.0f : _84;
-
-        switch (_104) {
-        case 6:
-            _101++;
-            _102 = 30.0f + speed * -25.0f / 150.0f;
-            if (_101 > _102) {
-                _101 = 0;
-                if (_103 == 0) {
-                    startSoundHandleNumber(2, 0x10007, 0);
-                    _103 = 1;
-                } else {
-                    startSoundHandleNumber(2, 0x10008, 0);
-                    _103 = 0;
-                }
-            }
-            break;
-        case 0xd:
-            _101++;
-            _102 = 30.0f + speed * -25.0f / 150.0f;
-            if (_101 > _102) {
-                startSoundHandleNumber(2, 0x1005c, 0);
-            }
-            break;
-        case 5:
-            _101++;
-            _102 = 15.0f + speed * -13.0f / 150.0f;
-            if (_101 > _102) {
-                _101 = 0;
-                if (_103 == 0) {
-                    startSoundHandleNumber(2, 0x10005, 0);
-                    _103 = 1;
-                } else {
-                    startSoundHandleNumber(2, 0x10006, 0);
-                    _103 = 0;
-                }
-            }
-            break;
-        case 0xa:
-            startSoundHandleNumber(2, 0x10036, 0);
-            break;
-        case 0xb:
-            startSoundHandleNumber(2, 0x1004e, 0);
-            break;
-        case 0xc:
-            startSoundHandleNumber(2, 0x10059, 0);
-            break;
-        case 0xe:
-            startSoundHandleNumber(2, 0x1004f, 0);
-            break;
-        case 0xf:
-            startSoundHandleNumber(2, 0x10057, 0);
-            break;
-        case 0x10:
-            startSoundHandleNumber(2, 0x10058, 0);
-            break;
-        case 0x11:
-            startSoundHandleNumber(2, 0x1004d, 0);
-            break;
-        case 0x13:
-            startSoundHandleNumber(2, 0x1003b, 0);
-            break;
-        case 0x14:
-            startSoundHandleNumber(2, 0x1003a, 0);
-            break;
-        case 0x15:
-            startSoundHandleNumber(2, 0x10082, 0);
-            break;
-        case 0x16:
-            startSoundHandleNumber(2, 0x1005f, 0);
-            break;
-        case 0x17:
-            startSoundHandleNumber(2, 0x10069, 0);
-            break;
-        default:
-            if (_104 <= 9) {
-                startSoundHandleNumber(2, _104 + 0x10000, 0);
-            }
-            break;
-        }
-
-        _104 = 0xff;
-
-        f32 panSum = 0.0f;
-        f32 volumeSum = 0.0f;
-        f32 pitchSum = 0.0f;
-        u8 changeCnt = 0;
-        for (u8 i = 0; i < 4; i++) {
-            if (_e4[i] == 1) {
-                changeCnt++;
-                if (mode == 0) {
-                    panSum += _a4[i];
-                }
-                volumeSum += _b4[i];
-                pitchSum += _c4[i];
-                _e4[i] = 0;
-            }
-        }
-
-        f32 pan;
-        if (mode == 0) {
-            panSum /= changeCnt;
-            pan = Common::panDeform(panSum, 3.0f);
-        } else {
-            pan = Common::setMultiPlayModePan(mKartCount);
-        }
-
-        volumeSum /= changeCnt;
-        pitchSum /= changeCnt;
-
-        JAISoundHandles *handles = this;
-        JAISoundHandle *handle = &(*handles)[2];
-        if (*handle) {
-            if (Parameters::getMirrorSwitch()) {
-                pan = 1.0f - pan;
-            }
-            (*handle)->getAuxiliary().movePan(pan, 3);
-            if (*handle) {
-                (*handle)->getAuxiliary().moveVolume(volumeSum * _124, 0);
-            }
-            if (_5d != 0) {
-                pitchSum *= Parameters::getChibiPitch((*handle)->getID());
-            }
-            (*handle)->getAuxiliary().movePitch(pitchSum, 0);
-        }
+    if (handle->isSoundAttached())
+    {
+        (*handle)->getAuxiliary().movePitch(Parameters::getChibiPitch((*handle)->getID()), 0);
     }
 }
 
-void KartSoundMgr::checkEcho() {
-    if (_70 == _6c) {
-        return;
-    }
+void KartSoundMgr::adjustEngine()
+{
+    const u32 engineType = Parameters::getEngineType((u8)mKartIndex);
+    if (mAdjustCounter != 0)
+    {
+        switch (mAdjustSoundID)
+        {
+        case 0x10014:
+            if (mAdjustCounter > 0x78)
+            {
+                mEngineAdjust += DashEngineIncPerFrame[(u8)engineType];
+                mAdjustCounter--;
+                return;
+            }
+            if (mAdjustCounter > 0x6e)
+            {
+                mAdjustCounter--;
+                return;
+            }
+            if (mAdjustCounter == 0 || mEngineAdjust < 0.0f)
+            {
+                mAdjustCounter = 0;
+                mEngineAdjust = 0.f;
+                mAdjustSoundID = 0;
+                return;
+            }
+            mEngineAdjust -= DashEngineDecPerFrame[(u8)engineType];
+            mAdjustCounter -= 1;
+            return;
 
-    JAISoundHandles *handles = this;
-    for (int i = 0; i < _10; i++) {
-        if ((*handles)[i]) {
-            (*handles)[i]->getAuxiliary().moveFxMix(_6c, 0);
-        }
-    }
-    _70 = _6c;
-}
-
-void KartSoundMgr::setInvincibleBgm(u8 flag) {
-    if (mKillSw != 0 || _66 == 2) {
-        return;
-    }
-
-    if (_66 != 0) {
-        if (*(f32 *)((u8 *)Main::getAudio() + 0x9c) == 0.0f) {
+        case 0x10044:
+            if (mAdjustCounter > 0x30)
+            {
+                mEngineAdjust = 0.05f + mEngineAdjust;
+                mAdjustCounter--;
+                return;
+            }
+            if (mAdjustCounter > 0x2c)
+            {
+                mAdjustCounter--;
+                return;
+            }
+            if (mAdjustCounter == 0 || mEngineAdjust < 0.0f)
+            {
+                mAdjustCounter = 0;
+                mEngineAdjust = 0.f;
+                mAdjustSoundID = 0;
+                return;
+            }
+            mEngineAdjust -= 0.02f;
+            mAdjustCounter -= 1;
             return;
         }
-        switch (flag) {
-        case 1:
-            _60 |= 1;
-            startSoundHandleNumber(5, 0x1003f, 0);
-            break;
-        case 2:
-            startSoundHandleNumber(5, 0x10040, 0);
-            _60 |= 2;
-            break;
-        default:
-#line 2907
-            JUT_WARNING_F2("%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
-            break;
-        }
     }
-    else {
-        switch (flag) {
-        case 1:
-            Main::getAudio()->setInvincibleBgm(_61, flag);
-            _60 |= 1;
-            break;
-        case 2:
-            Main::getAudio()->setInvincibleBgm(_61, flag);
-            _60 |= 2;
-            break;
-        default:
-#line 2923
-            JUT_WARNING_F2("%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
-            break;
+}
+
+void KartSoundMgr::crushRenzokuTaisaku()
+{
+    if (mCrushWait != 0)
+    {
+        mCrushWait--;
+        if (mCrushWait == 0)
+        {
+            mCrushDegree = 0.f;
         }
     }
 }
 
-void KartSoundMgr::clearInvincibleBgm(u8 flag) {
-    if (mKillSw != 0 || _66 == 2) {
+void KartSoundMgr::slipParamSet()
+{
+    const u8 cNoGroundSe = 0xff;
+    const f32 cMaxSlipSpeed = 150.f;
+    const u8 cWheelCount = 4;
+    const u8 cHandleSlip = 2;
+    if (mKillSw || mKartType == 2)
+    {
         return;
     }
 
-    if (_66 != 0) {
-        if (*(f32 *)((u8 *)Main::getAudio() + 0x9c) == 0.0f) {
+    if (mKartType != 0)
+    {
+        return;
+    }
+
+    const u8 playerMode = Parameters::getPlayerMode();
+
+    if (mSlipFlags[0] != 1 && mSlipFlags[1] != 1 && mSlipFlags[2] != 1 && mSlipFlags[3] != 1)
+    {
+        return;
+    }
+
+    f32 clampedSpeed = MIN(cMaxSlipSpeed, mSpeed);
+    switch (mSlipSeIndex)
+    {
+    case 6:
+        mSlipSeCount += 1;
+        mSlipSeInterval = 30.f + ((-25.f * clampedSpeed) / cMaxSlipSpeed);
+        if (mSlipSeCount > mSlipSeInterval)
+        {
+            mSlipSeCount = 0;
+            if (mSlipSeAlternator == 0)
+            {
+                startSoundHandleNumber(cHandleSlip, 0x10007, 0);
+                mSlipSeAlternator = 1;
+            }
+            else
+            {
+                startSoundHandleNumber(cHandleSlip, 0x10008, 0);
+                mSlipSeAlternator = 0;
+            }
+        }
+        break;
+    case 13:
+        mSlipSeCount += 1;
+        mSlipSeInterval = 30.f + ((-25.f * clampedSpeed) / cMaxSlipSpeed);
+        if (mSlipSeCount > mSlipSeInterval)
+        {
+            startSoundHandleNumber(cHandleSlip, 0x1005c, 0);
+        }
+        break;
+    case 5:
+        mSlipSeCount += 1;
+        mSlipSeInterval = 15.f + ((-13.f * clampedSpeed) / cMaxSlipSpeed);
+        if (mSlipSeCount > mSlipSeInterval)
+        {
+            mSlipSeCount = 0;
+            if (mSlipSeAlternator == 0)
+            {
+                startSoundHandleNumber(cHandleSlip, 0x10005, 0);
+                mSlipSeAlternator = 1;
+            }
+            else
+            {
+                startSoundHandleNumber(cHandleSlip, 0x10006, 0);
+                mSlipSeAlternator = 0;
+            }
+        }
+        break;
+    case 10:
+        startSoundHandleNumber(cHandleSlip, 0x10036, 0);
+        break;
+    case 11:
+        startSoundHandleNumber(cHandleSlip, 0x1004e, 0);
+        break;
+    case 12:
+        startSoundHandleNumber(cHandleSlip, 0x10059, 0);
+        break;
+    case 14:
+        startSoundHandleNumber(cHandleSlip, 0x1004f, 0);
+        break;
+    case 15:
+        startSoundHandleNumber(cHandleSlip, 0x10057, 0);
+        break;
+    case 16:
+        startSoundHandleNumber(cHandleSlip, 0x10058, 0);
+        break;
+    case 17:
+        startSoundHandleNumber(cHandleSlip, 0x1004D, 0);
+        break;
+    case 19:
+        startSoundHandleNumber(cHandleSlip, 0x1003B, 0);
+        break;
+    case 20:
+        startSoundHandleNumber(cHandleSlip, 0x1003A, 0);
+        break;
+    case 21:
+        startSoundHandleNumber(cHandleSlip, 0x10082, 0);
+        break;
+    case 22:
+        startSoundHandleNumber(cHandleSlip, 0x1005f, 0);
+        break;
+    case 23:
+        startSoundHandleNumber(cHandleSlip, 0x10069, 0);
+        break;
+    case 7:
+    case 8:
+    case 9:
+    case 18:
+    default:
+        if (mSlipSeIndex <= 9)
+        {
+            startSoundHandleNumber(cHandleSlip, 0x10000 + mSlipSeIndex, 0);
+        }
+        break;
+    }
+    f32 pan;
+    f32 volume;
+    f32 pitch;
+    f32 panSum = 0.f;
+
+    volume = 0.f;
+    pitch = 0.f;
+    mSlipSeIndex = cNoGroundSe;
+    u8 count = 0;
+    for (u8 index = 0; index < cWheelCount; index++)
+    {
+        if (mSlipFlags[index] == 1)
+        {
+            count++;
+
+            if (playerMode == 0)
+            {
+                panSum += mSlipPans[index];
+            }
+
+            volume += mSlipVolumes[index];
+            pitch += mSlipPitches[index];
+            mSlipFlags[index] = 0;
+        }
+    }
+
+    if (playerMode == 0)
+    {
+        panSum = panSum / count;
+        pan = Common::panDeform(panSum, 3.f);
+    }
+    else
+    {
+        pan = Common::setMultiPlayModePan(mPlayerIndex);
+    }
+
+    volume = volume / count;
+    pitch = pitch / count;
+
+    JAISoundHandle &handle = (*this)[cHandleSlip];
+    if (!handle.isSoundAttached())
+    {
+        return;
+    }
+    if (Parameters::getMirrorSwitch())
+    {
+        pan = 1.f - pan;
+    }
+
+    handle->getAuxiliary().movePan(pan, 3);
+
+    if (handle.isSoundAttached())
+    {
+        handle->getAuxiliary().moveVolume(volume * mCameraVolume, 0);
+    }
+
+    if (mChibiFlag != 0)
+    {
+        pitch *= Parameters::getChibiPitch(handle->getID());
+    }
+    handle->getAuxiliary().movePitch(pitch, 0);
+}
+
+void KartSoundMgr::checkEcho()
+{
+    if (mPrevEchoMix == mEchoMix)
+    {
+        return;
+    }
+
+    for (s32 i = 0; i < _10; i++)
+    {
+        if ((*this)[i].isSoundAttached())
+        {
+            (*this)[i]->getAuxiliary().moveFxMix(mEchoMix, 0);
+        }
+    }
+
+    mPrevEchoMix = mEchoMix;
+}
+
+void KartSoundMgr::setInvincibleBgm(u8 bit)
+{
+    const u8 cHandleInvincible = 5;
+    if (mKillSw || mKartType == 2)
+    {
+        return;
+    }
+
+    if (mKartType != 0)
+    {
+        if (Main::getAudio()->getBgmVolume() == 0.f)
+        {
             return;
         }
-        switch (flag) {
+        switch (bit)
+        {
         case 1:
-            _60 ^= 1;
+            mInvincibleBgmBits |= 1;
+            startSoundHandleNumber(cHandleInvincible, 0x1003F, 0);
+            return;
+        case 2:
+            startSoundHandleNumber(cHandleInvincible, 0x10040, 0);
+            mInvincibleBgmBits |= 2;
+            return;
+        default:
+#line 0xb5b
+            JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+            return;
+        }
+    }
+    else
+    {
+        switch (bit)
+        {
+        case 1:
+            Main::getAudio()->setInvincibleBgm(mKartIndex, bit);
+            mInvincibleBgmBits |= 1;
+            return;
+        case 2:
+            Main::getAudio()->setInvincibleBgm(mKartIndex, bit);
+            mInvincibleBgmBits |= 2;
+            return;
+        default:
+#line 0xb6b
+            JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+            return;
+        }
+    }
+}
+
+void KartSoundMgr::clearInvincibleBgm(u8 bit)
+{
+    const u8 cHandleInvincible = 5;
+    if (mKillSw || mKartType == 2)
+    {
+        return;
+    }
+
+    if (mKartType != 0)
+    {
+        if (Main::getAudio()->getBgmVolume() == 0.f)
+        {
+            return;
+        }
+        switch (bit)
+        {
+        case 1:
+            mInvincibleBgmBits ^= 1;
             break;
         case 2:
-            _60 ^= 2;
+            mInvincibleBgmBits ^= 2;
             break;
         case 3:
-            _60 = 0;
+            mInvincibleBgmBits = 0;
             break;
         default:
-#line 2951
-            JUT_WARNING_F2("%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+#line 0xb87
+            JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
             break;
         }
-
-        JAISoundHandles *handles = this;
-        if (_60 == 0) {
-            JAISoundHandle *handle = &(*handles)[5];
-            if (*handle) {
-                (*handle)->stop();
+        if (mInvincibleBgmBits == 0)
+        {
+            JAISoundHandle &handle = (*this)[cHandleInvincible];
+            if (handle.isSoundAttached())
+            {
+                handle->stop();
             }
         }
-        else {
-            switch (_60) {
+        else
+        {
+            switch (mInvincibleBgmBits)
+            {
             case 1:
-                startSoundHandleNumber(5, 0x1003f, 0);
+                startSoundHandleNumber(cHandleInvincible, 0x1003F, 0);
                 break;
             case 2:
-                startSoundHandleNumber(5, 0x10040, 0);
+                startSoundHandleNumber(cHandleInvincible, 0x10040, 0);
                 break;
+                ;
             }
         }
     }
-    else {
-        switch (flag) {
+    else
+    {
+        switch (bit)
+        {
         case 1:
-            Main::getAudio()->clearInvincibleBgm(_61, flag);
-            _60 ^= 1;
-            break;
+            Main::getAudio()->clearInvincibleBgm(mKartIndex, bit);
+            mInvincibleBgmBits ^= 1;
+            return;
         case 2:
-            Main::getAudio()->clearInvincibleBgm(_61, flag);
-            _60 ^= 2;
-            break;
+            Main::getAudio()->clearInvincibleBgm(mKartIndex, bit);
+            mInvincibleBgmBits ^= 2;
+            return;
         case 3:
-            _60 = 0;
-            break;
+            mInvincibleBgmBits = 0;
+            return;
         default:
-#line 2984
-            JUT_WARNING_F2("%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
-            break;
+#line 0xba8
+            JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+            return;
         }
     }
 }
 
-void KartSoundMgr::setChibiFlag(bool chibi, bool flag2) {
-    Parameters::setChibiFlag(_61, chibi);
-    if (chibi) {
-        if (_5d != chibi && flag2) {
+void KartSoundMgr::setChibiFlag(bool chibi, bool playSe)
+{
+    Parameters::setChibiFlag(mKartIndex, chibi);
+
+    if (chibi)
+    {
+        if (mChibiFlag != chibi && playSe)
+        {
             setSe(0x10038);
         }
-        Main::getAudio()->setThunderMode(_61);
+        GameAudioMain::getAudio()->setThunderMode(mKartIndex);
     }
-    else {
-        if (_5d != chibi && flag2) {
+    else
+    {
+        if (mChibiFlag != chibi && playSe)
+        {
             setSe(0x10039);
         }
-        Main::getAudio()->clearThunderMode(_61);
+        GameAudioMain::getAudio()->clearThunderMode(mKartIndex);
 
-        JAISoundHandles *handles = this;
-        for (int i = 0; i < _10; i++) {
-            if ((*handles)[i]) {
-                (*handles)[i]->getAuxiliary().movePitch(1.0f, 0);
+        for (s32 index = 0; index < _10; index++)
+        {
+            if ((*this)[index].isSoundAttached())
+            {
+                (*this)[index]->getAuxiliary().movePitch(1.f, 0);
             }
         }
     }
-    _5d = chibi;
+    mChibiFlag = chibi;
 }
 
-}
-
-#ifdef MATCHING
-#include "JSystem/JAudio/JASFakeMatch.h"
-
-typedef JAUDopplerAudible<4> TDopplerAudible4Kart;
-JASMemPool<TDopplerAudible4Kart> JASPoolAllocObject<TDopplerAudible4Kart>::memPool_;
-JASMemPool<JAISeq> JASPoolAllocObject<JAISeq>::memPool_;
-JASMemPool<JAISe> JASPoolAllocObject<JAISe>::memPool_;
-#endif
+}  // namespace GameAudio
