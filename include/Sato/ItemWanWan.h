@@ -68,6 +68,10 @@ public:
     void getCenterNodePos(JGeometry::TVec3f *);
     void getLastNodePos(JGeometry::TVec3f *);
 
+    // Inline
+    const JGeometry::TVec3f &getDifVel() const { return _338; }
+    void getPullVec(JGeometry::TVec3f *pullVec) { *pullVec = _2b4; }
+
     StringObj *mStringObj;                   // 2b0
     JGeometry::TVec3f _2b4;                  // 2b4
     u8 _2c0;                                 // 2c0

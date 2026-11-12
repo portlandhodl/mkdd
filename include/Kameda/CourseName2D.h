@@ -12,6 +12,13 @@ public:
 
     void *getCourseNameTexture(ECourseID courseId);  // 0x80190bb0
 
+    static CourseName2D *create(JKRArchive *archive, JKRHeap *heap)
+    {
+        if (mCourseName2D == nullptr)
+            mCourseName2D = new (heap, 0) CourseName2D(archive);
+        return mCourseName2D;
+    }
+
     static CourseName2D *ptr() { return mCourseName2D; }
 
 private:

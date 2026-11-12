@@ -11,13 +11,33 @@ class Cup2D;
 class SceneFactory
 {
 public:
+    enum SceneArc
+    {
+        ARC_TITLE,
+        ARC_MENU,
+        ARC_OPTION,
+        ARC_COURSE_SELECT,
+        ARC_MAP_SELECT,
+        ARC_RECORD,
+        ARC_GHOST_DATA,
+        ARC_LAN_ENTRY,
+        ARC_TITLE_LINE,
+        ARC_BACK,
+        ARC_COURSE_NAME,
+        ARC_BATTLE_NAME,
+        ARC_CUP,
+        ARC_SELECT_ANM,
+        ARC_SECRET,
+        ARC_MAX
+    };
+
     SceneFactory();                                  // 0x801509c4
     ~SceneFactory();                                 // 0x801509f4
     void loadData(Scene::SceneType, JKRHeap *);      // 0x80150a7c
     Scene *createScene(Scene::SceneType, JKRHeap *); // 0x801510f0
     
     // Inline/Unused
-    // void mountSceneArc(SceneArc, JKRHeap *);
+    void mountSceneArc(SceneArc, JKRHeap *);
 
     // Inline
     static SceneFactory *create()

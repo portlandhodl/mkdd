@@ -2,6 +2,7 @@
 #include "Inagaki/GameAudioCamera.h"
 #include "Inagaki/GameSoundMgr.h"
 #include "JSystem/JGeometry/Vec.h"
+#include "JSystem/JAudio/Interface/JAISe.h"
 
 
 namespace GameAudio {
@@ -49,52 +50,72 @@ void GameAudio::ShoreSoundMgr::frameWork() {
     _5c = 1;
 }
 
+static inline bool isNearXY(const JGeometry::TVec3f &a, const JGeometry::TVec3f &b, f32 eps) {
+    bool equal = false;
+    if (JGeometry::TUtilf::epsilonEquals(a.x, b.x, eps) && JGeometry::TUtilf::epsilonEquals(a.y, b.y, eps)) {
+        equal = true;
+    }
+    return equal;
+}
+
+static inline bool isNear(const JGeometry::TVec3f &a, const JGeometry::TVec3f &b) {
+    f32 eps = JGeometry::TUtilf::epsilon();
+    bool equal = false;
+    if (isNearXY(a, b, eps) && JGeometry::TUtilf::epsilonEquals(a.z, b.z, eps)) {
+        equal = true;
+    }
+    return equal;
+}
+
 void GameAudio::ShoreSoundMgr::setTide(u8 tide, JGeometry::TVec3f *p1, JGeometry::TVec3f *p2) {
 #line 108
     JUT_ASSERT_MSG(tide < 4, "ShoreSoundMgr::setSe camnum over");
     if (mKillSw)
         return;
 
+    PosMove *move;
+    JGeometry::TVec3f *pos;
     for (u8 i = 0; i < 2; i++) {
-        PosMove *move = (i == 0) ? &_68[tide] : &_6c[tide];
-        JGeometry::TVec3f *pos = (i == 0) ? p1 : p2;
+        if (i == 0) {
+            move = &_68[tide];
+            pos = p1;
+        }
+        else {
+            move = &_6c[tide];
+            pos = p2;
+        }
 
-        if (!pos) {
+        if (pos == nullptr) {
             move->_0 = 0;
         }
-        else if (!move->_0) {
-            move->_4.set(*pos);
+        else if (move->_0 == 0) {
+            move->_4 = *pos;
             move->_0 = 1;
             move->_28 = 0;
         }
-        else {
-            f32 eps = JGeometry::TUtilf::epsilon();
-            if (-eps <= move->_4.x - pos->x && move->_4.x - pos->x <= eps
-             && -eps <= move->_4.y - pos->y && move->_4.y - pos->y <= eps
-             && -eps <= move->_4.z - pos->z && move->_4.z - pos->z <= eps) {
+        else if (!isNear(move->_4, *pos)) {
+            move->_10 = (*pos - move->_4) * (1.0f / 30.0f);
+            move->_1c = *pos;
+            if (_5d == 1) {
+                move->_28 = 180;
             }
             else {
-                move->_10.set(*pos);
-                move->_1c.set(*pos);
-                move->_28 = (_5d == 1) ? 180 : 30;
+                move->_28 = 30;
             }
         }
 
         if (move->_28) {
             move->_28--;
-            if (!move->_28) {
-                move->_4.set(move->_1c);
+            if (move->_28 == 0) {
+                move->_4 = move->_1c;
             }
             else {
-                move->_4.x += (move->_10.x - move->_4.x) / 30.0f;
-                move->_4.y += (move->_10.y - move->_4.y) / 30.0f;
-                move->_4.z += (move->_10.z - move->_4.z) / 30.0f;
+                move->_4 += move->_10;
             }
         }
     }
 
-    u32 num = Main::getAudio()->getCamera()->getSceneMax();
-    if (tide >= num)
+    if (tide >= Main::getAudio()->getCamera()->getSceneMax())
         return;
 
     PosMove *a = &_68[tide];
@@ -102,53 +123,48 @@ void GameAudio::ShoreSoundMgr::setTide(u8 tide, JGeometry::TVec3f *p1, JGeometry
     if (!a->_0 && !b->_0)
         return;
 
-    JGeometry::TVec3f &playPos = getPlayPos(tide);
     if (!a->_0) {
-        playPos.set(b->_4);
+        _64[tide] = b->_4;
     }
     else if (!b->_0) {
-        playPos.set(a->_4);
+        _64[tide] = a->_4;
     }
-    else {
-        f32 dx = b->_4.x - a->_4.x;
-        f32 dy = b->_4.y - a->_4.y;
-        f32 dz = b->_4.z - a->_4.z;
-        f32 lenSq = dx * dx + dy * dy + dz * dz;
-        f32 ratio = 0.0f;
-        if (lenSq != 0.0f) {
-            ratio = ((playPos.x - a->_4.x) * dx + (playPos.y - a->_4.y) * dy
-                   + (playPos.z - a->_4.z) * dz) / lenSq;
-        }
-
+    else if (!isNear(a->_4, b->_4)) {
+        CameraInfo *camInfo = Main::getAudio()->getCamera()->getCameraInfo(tide);
+        Vec ab = a->_4 - b->_4;
+        Vec ac = a->_4 - camInfo->_0;
+        f32 dx = a->_4.x - b->_4.x;
+        f32 dy = a->_4.y - b->_4.y;
+        f32 dz = a->_4.z - b->_4.z;
+        f32 ratio = (ab.x * ac.x + ab.y * ac.y + ab.z * ac.z) / (dx * dx + dy * dy + dz * dz);
         if (ratio <= 0.0f) {
-            playPos.set(a->_4);
+            _64[tide] = a->_4;
         }
         else if (ratio >= 1.0f) {
-            playPos.set(b->_4);
+            _64[tide] = b->_4;
         }
         else {
-            playPos.x = a->_4.x + dx * ratio;
-            playPos.y = a->_4.y + dy * ratio;
-            playPos.z = a->_4.z + dz * ratio;
+            Vec newPos = a->_4 + (b->_4 - a->_4) * ratio;
+            _64[tide] = (JGeometry::TVec3f &)newPos;
         }
     }
-
-    u32 seID = 0x40024 - _5d;
-    JAISoundHandle &handle = (*this)[tide];
-    JAISoundStarter::getInstance()->startSound(seID, &handle, nullptr);
-
-    if (!handle) {
-        handle.getSound();
+    else {
+        _64[tide] = a->_4;
     }
+
+    u32 seID = _5d ? 0x40022 : 0x40023;
+    JAISoundHandle &handle = (*this)[tide];
+    JAISoundStarter *starter = JAISoundStarter::getInstance();
+    if (seID == 0)
+        return;
+
+    starter->startSound(seID, &handle, nullptr);
     if (handle->getAudible() != nullptr)
         return;
 
     u32 mask = (1 << tide) ^ 0xf;
-    JAISound *sound = handle.getSound();
-    *(u32 *)((u8 *)sound + 0x1c) = 0;
-
-    JGeometry::TVec3f tmp = playPos;
-    handle->newAudible(tmp, &playPos, mask, smAudience);
+    handle.getSound()->asSe()->audience_ = nullptr;
+    handle->newAudible(JGeometry::TVec3f(_64[tide]), &_64[tide], mask, smAudience);
 }
 
 

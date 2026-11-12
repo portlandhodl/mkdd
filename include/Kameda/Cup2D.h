@@ -13,6 +13,13 @@ public:
 
     void *getCupTexture(ERaceGpCup cup, int rank);  // 0x80198014
 
+    static Cup2D *create(JKRArchive *archive, JKRHeap *heap)
+    {
+        if (mCup2D == nullptr)
+            mCup2D = new (heap, 0) Cup2D(archive);
+        return mCup2D;
+    }
+
     static Cup2D *ptr() { return mCup2D; }
 
 private:

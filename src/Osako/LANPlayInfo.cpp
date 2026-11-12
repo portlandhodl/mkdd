@@ -207,8 +207,8 @@ void LANPlayInfo::shuffleKart(int count)
         mPlayers[i].mBack = back;
         mask |= 1 << back;
 
-        u32 frontWeight = (u8)KartInfo::getDriverWeight(caCharID[mPlayers[i].mFront]);
-        u32 backWeight = (u8)KartInfo::getDriverWeight(caCharID[mPlayers[i].mBack]);
+        u8 frontWeight = KartInfo::getDriverWeight(caCharID[mPlayers[i].mFront]);
+        u8 backWeight = KartInfo::getDriverWeight(caCharID[mPlayers[i].mBack]);
         if (frontWeight >= backWeight)
         {
             mPlayers[i].mKart = getRideKart(mPlayers[i].mFront);
@@ -323,22 +323,20 @@ void LANPlayInfo::shuffleKart(int count)
 
 u8 LANPlayInfo::getMaskedRandom(int max, u32 mask)
 {
-    JUT_ASSERT((mask & ((1 << max) - 1)) == ((1 << max) - 1));
-    f32 rnd = mRandom.get_ufloat_1();
-    int n = (int)((f32)(u32)max * rnd + 1.0f);
+#line 324
+    JUT_ASSERT(!(((mask) & (( 1 << max ) - 1) ) == (( 1 << max ) - 1)));
+    int n = max * mRandom.get_ufloat_1() + 1.0f;
     u8 idx = 0;
-    for (int i = n; i > 0; i--)
+    for (int i = 0; i < n; i++)
     {
-        idx++;
-        if (idx >= max)
+        do
         {
-            idx = 0;
-        }
-        if (mask & (1 << idx))
-        {
-            i++;
-            continue;
-        }
+            idx++;
+            if (idx >= max)
+            {
+                idx = 0;
+            }
+        } while (mask & (1 << idx));
     }
     return idx;
 }

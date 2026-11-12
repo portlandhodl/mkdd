@@ -666,7 +666,7 @@ void KartGame::DoWanWan() {
     ItemWanWanObj *wanwan = (ItemWanWanObj *)ItemObjMgr::getItemWanWanObj(item);
     KartGamePad *cont = GetKartCtrl()->GetDriveCont(num);
     body->getStrat()->DashClear();
-    pull = wanwan->_2b4;
+    wanwan->getPullVec(&pull);
     f32 pullLen = pull.length();
     if (pullLen <= 0.0f)
         return;
@@ -715,10 +715,9 @@ void KartGame::DoWanWan() {
         pull.y = body->_308.y * work;
         pull.z = body->_308.z * work;
         body->DoForce(&nodePos, &pull);
-        f32 back = -(0.1f * work);
-        pull.x = body->_2fc.x * back;
-        pull.y = body->_2fc.y * back;
-        pull.z = body->_2fc.z * back;
+        pull.x = body->_2fc.x * -(0.1f * work);
+        pull.y = body->_2fc.y * -(0.1f * work);
+        pull.z = body->_2fc.z * -(0.1f * work);
         body->DoForce(&nodePos, &pull);
     } else {
         work = pullLen * -body->_3a4;
@@ -731,9 +730,9 @@ void KartGame::DoWanWan() {
     PSMTXMultVec(body->_110, &bodyPos, &nodePos);
     work = -(10.0f * cont->getMainStickX());
     JGeometry::TVec3f difVel;
-    difVel.x = wanwan->_338.x;
-    difVel.y = wanwan->_338.y;
-    difVel.z = wanwan->_338.z;
+    difVel.x = wanwan->getDifVel().x;
+    difVel.y = wanwan->getDifVel().y;
+    difVel.z = wanwan->getDifVel().z;
     GetKartCtrl()->DevMatrixByVector2(&dir, &difVel, body->_110);
     work = 80.0f * -dir.x + work;
     if (work > 30.0f)

@@ -417,7 +417,6 @@ void TTestString::drawNode(f32 length, JGeometry::TVec3f &p1, JGeometry::TVec3f 
 {
     Mtx transMtx;
     Mtx texMtx;
-    JGeometry::TVec3f ofs[3];
     JGeometry::TVec3f side;
     JGeometry::TVec3f dir;
     JGeometry::TVec3f up;
@@ -447,16 +446,20 @@ void TTestString::drawNode(f32 length, JGeometry::TVec3f &p1, JGeometry::TVec3f 
     PSMTXScale(texMtx, length / 50.0f, 1.0f, 0.0f);
     GXLoadTexMtxImm(texMtx, 30, GX_MTX2x4);
 
-    ofs[0] = up * 0.33f * sWidth;
-    ofs[1] = (side * -0.5f - up * 0.167f) * sWidth;
-    ofs[2] = (side * 0.5f - up * 0.167f) * sWidth;
+    JGeometry::TVec3f ofs[3];
+    ofs[0].set(up * 0.33f * sWidth);
+    ofs[1].set((side * -0.5f - up * 0.167f) * sWidth);
+    ofs[2].set((side * 0.5f - up * 0.167f) * sWidth);
+    JGeometry::TVec3f center;
+    center.set(dir);
+    center.scale(0.5f * length);
 
     drawCrevicePyramid(p1, ofs[1], ofs[2]);
     drawPrism(p1, p2, ofs[0], ofs[1], ofs[2]);
 
-    mPoints[0] = p2 + ofs[0];
-    mPoints[1] = p2 + ofs[1];
-    mPoints[2] = p2 + ofs[2];
+    mPoints[0].set(p2 + ofs[0]);
+    mPoints[1].set(p2 + ofs[1]);
+    mPoints[2].set(p2 + ofs[2]);
 }
 
 void TTestString::drawCrevicePyramid(JGeometry::TVec3f &p1, JGeometry::TVec3f &p2, JGeometry::TVec3f &p3)
