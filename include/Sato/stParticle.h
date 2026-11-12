@@ -81,6 +81,7 @@ struct stParticleDraw
     void setLine();
     void setChild();
     void draw();
+    void calcLifeColor(JSUListIterator<stParticle> &);
     void drawParticles();
     void drawEachParticle(JSUListIterator<stParticle> &);
     void drawOrder();

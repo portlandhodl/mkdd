@@ -24,6 +24,8 @@ public:
     enum ScreenKind {
         Kind_0,
         Kind_1,
+        Kind_2,
+        Kind_3,
     };
     EffectScreen(); // 0x8026c694
     void setFunction(const ScreenKind &);
@@ -38,7 +40,7 @@ public:
     int doThunder(); // 0x8026c740
     int doBombExplosion(); // 0x8026c834
     int doExplosion(); // 0x8026c940
-    void calc();
+    int calc();
     void draw();
     // Inline/Unused
     //void setFunction(const ScreenKind &);
@@ -96,6 +98,8 @@ public:
     bool IsContinue(EffectScreen::ScreenKind); // 0x8026d368
     void initDraw();
     void drawScreens(u32);
+
+    void setKind(const EffectScreen::ScreenKind &kind) { mKind = kind; }
 
     static void createMgr() { ThisMgr = new EffectScreenMgr(); }
     static EffectScreenMgr * getThis() { return ThisMgr; }

@@ -43,7 +43,7 @@ struct stEfctWaterSprayCenter : stEfctWaterBase
 
 struct stEfctWaterBubble : stEfctWaterBase
 {
-    stEfctWaterBubble(bool);
+    stEfctWaterBubble(bool = false);
     virtual void init() {}
     virtual void calc();
     virtual int getGeneratePos(JGeometry::TVec3f *, Mtx);

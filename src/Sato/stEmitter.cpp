@@ -20,11 +20,114 @@ void stEmitterCallBack::setIpData(stFileParamPtrList *list)
 bool stEmitterCallBack::getTirePos(JGeometry::TVec3f *tirePos)
 {
     bool ret = false;
+    short kart = kartNum;
     if (_22 == 2)
-        ret = KartCtrl::getKartCtrl()->GetLeftTirePos(kartNum, tirePos);
+        ret = KartCtrl::getKartCtrl()->GetLeftTirePos(kart, tirePos);
     else if (_22 == 3)
-        ret = KartCtrl::getKartCtrl()->GetRightTirePos(kartNum, tirePos);
+        ret = KartCtrl::getKartCtrl()->GetRightTirePos(kart, tirePos);
     return ret;
+}
+
+bool stEmitterCallBack::getDriftPos(JGeometry::TVec3f *driftPos, const JGeometry::TVec3f &offset)
+{
+    bool ret = getTirePos(driftPos);
+    JGeometry::TVec3f ydir;
+    JGeometry::TVec3f zdir;
+    ObjUtility::getKartZdir(kartNum, &zdir);
+    ObjUtility::getKartYdir(kartNum, &ydir);
+    JGeometry::TVec3f ofs(offset);
+    ofs.scale(GetKartCtrl()->getKartBody(kartNum)->getThunder()->getScale());
+    ydir.scale(ofs.y);
+    zdir.scale(ofs.z);
+    driftPos->add(ydir);
+    driftPos->add(zdir);
+    return ret;
+}
+
+static inline void stSetEmtPos(stEmitter *e, JGeometry::TVec3f p) { e->_0c = p; }
+static inline void stSetEmtDir(stEmitter *e, JGeometry::TVec3f p) { e->mFirstVelDir = p; }
+static inline void stSetEmtVel(stEmitter *e, JGeometry::TVec3f p) { e->_00 = p; }
+
+void stEmitterCallBack::calc_lineIp(f32 val, f32 ratio, f32 max, f32 min, f32 dif, bool noDir, f32 rate)
+{
+    stEmitterPtcl *emt = _04;
+    JGeometry::TVec3f vel;
+    ObjUtility::getKartEfctVel(kartNum, &vel);
+    if (val < min && rate < 1.0f) {
+        emt->mFlags |= 0x400;
+        vel = emt->_00;
+        if (vel.y > 0.0f)
+            vel.y = 0.0f;
+        vel.scale(rate);
+    } else {
+        JGeometry::TVec3f pos;
+        JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
+        Mtx &mtx = ObjUtility::getKartBodyMtx(kartNum);
+        if ((u8)getGeneratePos(&pos, mtx)) {
+            stSetEmtPos(emt, pos);
+            vel.scale(ratio);
+            if (!noDir) {
+                up.x = mtx[0][1];
+                up.y = mtx[1][1];
+                up.z = mtx[2][1];
+                stSetEmtDir(emt, up);
+            }
+            calcParam(val, max, min, dif);
+            emt->mFlags &= ~0x400;
+        } else {
+            emt->mFlags |= 0x400;
+            if (rate >= 1.0f) {
+                stSetEmtPos(emt, pos);
+                if (rate >= 2.0f)
+                    vel.scale(1.0f);
+                else
+                    vel.scale(ratio);
+                if (!noDir) {
+                    up.x = mtx[0][1];
+                up.y = mtx[1][1];
+                up.z = mtx[2][1];
+                    stSetEmtDir(emt, up);
+                }
+                calcParam(val, max, min, dif);
+            } else {
+                vel = emt->_00;
+                if (vel.y > 0.0f)
+                    vel.y = 0.0f;
+                vel.scale(rate);
+            }
+        }
+    }
+    stSetEmtVel(emt, vel);
+}
+
+void stEmitterCallBack::calc_lineIpFollow(f32 val, f32 ratio, f32 max, f32 min, f32 dif, bool noDir, f32 rate)
+{
+    JGeometry::TVec3f pos;
+    JGeometry::TVec3f vel;
+    JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
+    stEmitterPtcl *emt = _04;
+    Mtx &mtx = ObjUtility::getKartBodyMtx(kartNum);
+    ObjUtility::getKartEfctVel(kartNum, &vel);
+    int gen = getGeneratePos(&pos, mtx);
+    vel.scale(ratio);
+    if (!noDir) {
+        up.x = mtx[0][1];
+        up.y = mtx[1][1];
+        up.z = mtx[2][1];
+        stSetEmtDir(emt, up);
+    }
+    calcParam(val, max, min, dif);
+    stSetEmtPos(emt, pos);
+    if ((u8)gen && val > min) {
+        emt->mFlags &= ~0x400;
+    } else {
+        emt->mFlags |= 0x400;
+        vel = emt->_00;
+        if (vel.y > 0.0f)
+            vel.y = 0.0f;
+        vel.scale(rate);
+    }
+    stSetEmtVel(emt, vel);
 }
 
 void stEmitterCallBack::strategy(f32 ratio, f32 max, f32 min, f32 dif, bool b, f32 val)
@@ -223,6 +326,15 @@ stEmitter::stEmitter()
     _9c.zero();
 }
 
+void stEmitterPtcl::removeAllParticles()
+{
+    stParticleMgr *mgr = &mParticle;
+    JSUListIterator<stParticle> it(mgr->mDynamics.mList.getFirst());
+    JSUList<stParticle> &list = mgr->mDynamics.mList;
+    while (it != nullptr)
+        mgr->mDynamics.Remove(list, it);
+}
+
 void stEmitterPtclMgr::calc()
 {
     JSUListIterator<stEmitterPtcl> it(mList.getFirst());
@@ -298,24 +410,18 @@ stEmitterPtcl *stEmitterPtclMgr::Create(stEmitterCallBack *cb, u16 type)
 void stEmitterPtclMgr::RemoveEmt(JSUList<stEmitterPtcl> &list, JSUListIterator<stEmitterPtcl> &it)
 {
     it->_130 = nullptr;
-    JSUList<stParticle> &plist = it->mParticle.mDynamics.mList;
-    stEmitterPtcl *emt = it.getObject();
-    JSUListIterator<stParticle> pit(plist.getFirst());
-    while (pit != nullptr)
-        emt->mParticle.mDynamics.Remove(plist, pit);
-    JSULink<stEmitterPtcl> *link = it.mLink;
-    JSULink<stEmitterPtcl> *next = link;
-    if (link)
-        next = link->getNext();
-    mFreeList->append((JSULink<stEmitterPtcl> *)&link->getObject()->_134);
+    it->removeAllParticles();
+    JSULink<stEmitterPtcl> *next = it.mLink;
+    if (it != nullptr)
+        next = it.mLink->getNext();
+    mFreeList->append((JSULink<stEmitterPtcl> *)&it->_134);
     it = next;
 }
 
 bool stEmitterPtclMgr::ChkRemoveBecomeInvalidEmt(JSUList<stEmitterPtcl> &list, JSUListIterator<stEmitterPtcl> &it)
 {
     bool ret = false;
-    stEmitterPtcl *emt = it.getObject();
-    if ((emt->mFlags & 0x200) && emt->mParticle.mDynamics.mList.getNumLinks() == 0) {
+    if ((it->mFlags & 0x200) && it->mParticle.mDynamics.mList.getNumLinks() == 0) {
         RemoveEmt(list, it);
         ret = true;
     }

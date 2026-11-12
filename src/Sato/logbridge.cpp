@@ -148,21 +148,18 @@ void StringBridge::reset() {
 }
 
 void StringBridge::init() {
+    JGeometry::TVec3f dirs[4];
     JGeometry::TVec3f pos;
+    JGeometry::TVec3f corner1;
+    JGeometry::TVec3f corner2;
+    JGeometry::TVec3f corner3;
     JGeometry::TVec3f xdir;
-    JGeometry::TVec3f ydir;
     JGeometry::TVec3f zdir;
-    JGeometry::TVec3f v14;
-    JGeometry::TVec3f v20;
-    JGeometry::TVec3f v2c;
-    JGeometry::TVec3f v38;
-    JGeometry::TVec3f v44;
-    JGeometry::TVec3f v50;
-    JGeometry::TVec3f v5c;
-    JGeometry::TVec3f v68;
-    JGeometry::TVec3f v74;
-    JGeometry::TVec3f v80;
-    JGeometry::TVec3f up(0.0f, 1.0f, 0.0f);
+    JGeometry::TVec3f ydir;
+    JGeometry::TVec3f halfX;
+    JGeometry::TVec3f halfZ;
+    JGeometry::TVec3f scale;
+    JGeometry::TVec3f up;
 
     _278 = 0;
     _27a = 0;
@@ -170,70 +167,81 @@ void StringBridge::init() {
     pos = mPos;
     getAssignedModelXYZdir(&xdir, &ydir, &zdir);
 
-    v14 = ydir;
-    v14.scale(100.0f * mScale.x);
-    v20 = zdir;
-    v20.scale(100.0f * mScale.z);
-    PSVECAdd(&pos, &v14, &v14);
-    PSVECAdd(&v14, &v20, &v14);
-    v44 = xdir;
-    v44.scale(100.0f * mScale.z);
-    v50 = xdir;
-    v50.scale(-100.0f * mScale.x);
-    v2c = v44;
-    v2c.scale(-1.0f);
+    scale = mScale;
+    scale.scale(100.0f);
+    xdir.scale(-scale.x);
+    zdir.scale(-scale.z);
 
-    mBridgeNodeMgr[0].setPosition(v14, v50, _280);
-    mBridgeNodeMgr[1].setPosition(v68, v5c, _280);
+    halfX = xdir;
+    halfX.scale(0.5f);
+    halfZ = zdir;
+    halfZ.scale(0.5f);
+    pos.sub(halfX);
+    pos.sub(halfZ);
+
+    corner1 = pos;
+    corner1.add(zdir);
+    corner2 = pos;
+    corner2.add(xdir);
+    corner3 = corner2;
+    corner3.add(zdir);
+
+    mBridgeNodeMgr[0].setPosition(pos, corner1, _280);
+    mBridgeNodeMgr[1].setPosition(corner2, corner3, _280);
 
     mBridgeNodeMgr[0]._1c = mBridgeNodeMgr[0]._18 * _2e4;
     mBridgeNodeMgr[1]._1c = mBridgeNodeMgr[1]._18 * _2e4;
 
-    _1e8[0] = v80;
-    _1e8[1] = v74;
-    _1e8[2] = v5c;
-    _1e8[3] = v68;
+    _1e8[0] = pos;
+    _1e8[1] = corner1;
+    _1e8[2] = corner3;
+    _1e8[3] = corner2;
+
+    dirs[0] = zdir;
+    dirs[1] = xdir;
+    dirs[2] = zdir;
+    dirs[2].scale(-1.0f);
+    dirs[3] = xdir;
+    dirs[3].scale(-1.0f);
 
     _264 = 0.0f;
-    for (u32 i = 0; i < 4; i++) {
+    for (u8 i = 0; i < 4; i++) {
         if (_264 < _1e8[i].y) {
             _264 = _1e8[i].y;
         }
     }
 
-    _2c4.normalize(v50);
-
-    for (u32 i = 0; i < 4; i++) {
-        PSVECCrossProduct(&up, &_1b8[i], &_1b8[i]);
-        if (0.0f < PSVECMag(&_1b8[i])) {
-            PSVECNormalize(&_1b8[i], &_1b8[i]);
+    up.set(0.0f, 1.0f, 0.0f);
+    JGeometry::TVec3f *normal = _1b8;
+    JGeometry::TVec3f *dir = dirs;
+    for (u8 i = 0; i < 4; i++, normal++, dir++) {
+        PSVECCrossProduct(&up, dir, normal);
+        if (0.0f < PSVECMag(normal)) {
+            PSVECNormalize(normal, normal);
         }
-        stMakePlaneParam(_218[i], _1b8[i], _1e8[i]);
+        stMakePlaneParam(_218[i], *normal, _1e8[i]);
     }
 
-    _1b4 = PSVECMag(&v50);
+    _1b4 = PSVECMag(&xdir);
     _1b0 = 0.5f * _1b4;
+    _2c4.normalize(xdir);
+    _258 = scale.y;
 
     if (_284 != 0) {
-        _288 = _280 / _284 - 1;
-
-        for (u32 i = 0; i < _2f8[2]; i++) {
-            mBridgeNodeMgr[i]._14 |= 1 << (i + 1);
-            mBridgeNodeMgr[i]._14 |= 1 << (i + 1);
-        }
+        _288 = (_280 - 2) / _284 - 1;
+    } else {
+        _288 = 0;
     }
 
     _2d0 = mBridgeNodeMgr[0]._18 * _30c;
 
-    BridgeNode *nodes0 = mBridgeNodeMgr[0].mNodes;
-    for (JSUPtrLink *link = mBridgeNodeMgr[0].getFirstLink(); link != mBridgeNodeMgr[0].mTail; link = link->getNext()) {
-        BridgeNode *nodeA = (BridgeNode *)link->mData;
-        BridgeNode *nodeB = (BridgeNode *)mBridgeNodeMgr[0].getNthLink(0)->mData;
-        nodeA->mVel.zero();
-        PSVECAdd(&nodeB->mPos, &nodeA->mVel, &nodeA->mPos);
-        nodeA->_18 = nodeA->mPos;
-        nodes0++;
+    for (u32 i = 0; i < _288; i++) {
+        mBridgeNodeMgr[0]._14 |= 1 << i;
+        mBridgeNodeMgr[1]._14 |= 1 << i;
     }
+
+    mBridgeNodeMgr[0].calcNodePos();
+    mBridgeNodeMgr[1].calcNodePos();
 }
 
 
@@ -411,84 +419,89 @@ void StringBridge::lockDisplayList() {
 
 void StringBridge::calc() {
     u32 last = _280 - 1;
-    u8 i;
-    for (u32 j = 2; j < mBridgeNodeMgr[0].mLinkCount - 2; j++) {
+    u32 j;
+
+    u32 n = mBridgeNodeMgr[0].getNumLinks() - 2;
+    for (j = 2; j < n; j++) {
         JSUPtrLink *link0 = mBridgeNodeMgr[0].getNthLink(j);
         JSUPtrLink *link1 = mBridgeNodeMgr[1].getNthLink(j);
         calcparallel((BridgeNode *)link0->getObjectPtr(), (BridgeNode *)link1->getObjectPtr());
     }
 
-    for (i = 0; i < 2; i++) {
-        BridgeNodeManager *mgr = &mBridgeNodeMgr[i];
-        for (u32 j = 2; j < mgr->mLinkCount - 2; j++) {
-            JSUPtrLink *link = mgr->getNthLink(j);
-            PSVECScale(&((BridgeNode *)link->getObjectPtr())->mVel, &((BridgeNode *)link->getObjectPtr())->mVel, _2d4);
-            ((BridgeNode *)link->getObjectPtr())->mVel.y += _2e8;
+    for (u8 i = 0; i < 2; i++) {
+        f32 fric = _2d4;
+        f32 gravity = _2e8;
+        n = mBridgeNodeMgr[i].getNumLinks() - 2;
+        for (j = 2; j < n; j++) {
+            JSUPtrLink *link = mBridgeNodeMgr[i].getNthLink(j);
+            PSVECScale(&((BridgeNode *)link->getObjectPtr())->mVel, &((BridgeNode *)link->getObjectPtr())->mVel, fric);
+            ((BridgeNode *)link->getObjectPtr())->mVel.y += gravity;
         }
     }
 
     if (_284 != 0) {
-        for (i = 0; i < 2; i++) {
-            BridgeNodeManager *mgr = &mBridgeNodeMgr[i];
+        for (u8 i = 0; i < 2; i++) {
             u8 step = _284;
+            f32 hung = _2ec;
             u32 bit = 0;
-            for (u32 j = step; j < last - step; j += step, bit++) {
-                if (mgr->_14 & (1 << bit)) {
-                    ((BridgeNode *)mgr->getNthLink(j)->getObjectPtr())->mVel.y += _2ec;
+            for (j = step; j < last - step; j += step, bit++) {
+                if (mBridgeNodeMgr[i]._14 & (1 << bit)) {
+                    ((BridgeNode *)mBridgeNodeMgr[i].getNthLink(j)->getObjectPtr())->mVel.y += hung;
                 }
             }
         }
     }
 
-    for (i = 0; i < 2; i++) {
-        BridgeNodeManager *mgr = &mBridgeNodeMgr[i];
-        mgr->_1c = mgr->_18 * _2e4;
-        u32 j;
-        for (j = 2; j <= mgr->mLinkCount - 3; j++) {
-            JSUPtrLink *link = mgr->getNthLink(j);
-            JSUPtrLink *prev = mgr->getNthLink(j - 1);
+    for (u8 i = 0; i < 2; i++) {
+        mBridgeNodeMgr[i]._1c = mBridgeNodeMgr[i]._18 * _2e4;
+        n = mBridgeNodeMgr[i].getNumLinks() - 3;
+        f32 adj = _2d8;
+        for (j = 2; j <= n; j++) {
+            JSUPtrLink *link = mBridgeNodeMgr[i].getNthLink(j);
+            JSUPtrLink *prev = mBridgeNodeMgr[i].getNthLink(j - 1);
             BridgeNode *node = (BridgeNode *)link->getObjectPtr();
             JGeometry::TVec3f diff;
             PSVECSubtract(&((BridgeNode *)prev->getObjectPtr())->mPos, &node->mPos, &diff);
             f32 len = PSVECMag(&diff);
-            if (len > mgr->_1c) {
+            if (len > mBridgeNodeMgr[i]._1c) {
                 JGeometry::TVec3f dir;
                 PSVECNormalize(&diff, &dir);
                 JGeometry::TVec3f vel(dir);
-                PSVECScale(&vel, &vel, _2d8 * (len - mgr->_1c));
+                PSVECScale(&vel, &vel, adj * (len - mBridgeNodeMgr[i]._1c));
                 PSVECAdd(&vel, &node->mVel, &node->mVel);
             }
         }
-        for (j = mgr->mLinkCount - 3; j >= 2; j--) {
-            JSUPtrLink *link = mgr->getNthLink(j);
-            JSUPtrLink *next = mgr->getNthLink(j + 1);
+        for (; n >= 2; n--) {
+            JSUPtrLink *link = mBridgeNodeMgr[i].getNthLink(n);
+            JSUPtrLink *next = mBridgeNodeMgr[i].getNthLink(n + 1);
             BridgeNode *node = (BridgeNode *)link->getObjectPtr();
             JGeometry::TVec3f diff;
             PSVECSubtract(&((BridgeNode *)next->getObjectPtr())->mPos, &node->mPos, &diff);
             f32 len = PSVECMag(&diff);
-            if (len > mgr->_1c) {
+            if (len > mBridgeNodeMgr[i]._1c) {
                 JGeometry::TVec3f dir;
                 PSVECNormalize(&diff, &dir);
                 JGeometry::TVec3f vel(dir);
-                PSVECScale(&vel, &vel, _2d8 * (len - mgr->_1c));
+                PSVECScale(&vel, &vel, adj * (len - mBridgeNodeMgr[i]._1c));
                 PSVECAdd(&vel, &node->mVel, &node->mVel);
             }
         }
     }
 
     JGeometry::TVec3f diff;
-    for (i = 0; i < 2; i++) {
-        BridgeNodeManager *mgr = &mBridgeNodeMgr[i];
-        for (u32 j = 2; j < mgr->mLinkCount - 2; j++) {
-            BridgeNode *node = (BridgeNode *)mgr->getNthLink(j)->getObjectPtr();
+    for (u8 i = 0; i < 2; i++) {
+        n = mBridgeNodeMgr[i].getNumLinks() - 2;
+        for (j = 2; j < n; j++) {
+            BridgeNode *node = (BridgeNode *)mBridgeNodeMgr[i].getNthLink(j)->getObjectPtr();
             PSVECAdd(&node->mPos, &node->mVel, &node->mPos);
         }
-        for (JSUPtrLink *link = mgr->getFirstLink()->getNext(); link != mgr->getLastLink(); link = link->getNext()) {
+        f32 maxLen = _2d0;
+        for (JSUPtrLink *link = mBridgeNodeMgr[i].getFirstLink()->getNext(); link != mBridgeNodeMgr[i].getLastLink(); link = link->getNext()) {
             BridgeNode *node = (BridgeNode *)link->getObjectPtr();
             diff.sub(node->mPos, node->_18);
-            if (PSVECMag(&diff) > _2d0) {
+            if (PSVECMag(&diff) > maxLen) {
                 diff.normalize();
-                diff.scale(_2d0);
+                diff.scale(maxLen);
                 node->mPos.add(node->_18, diff);
             }
         }
@@ -496,22 +509,8 @@ void StringBridge::calc() {
 
     addVelNode();
 
-    JSUPtrLink *link = mBridgeNodeMgr[0].getFirstLink();
-    JGeometry::TVec3f *pos = mBridgeNodeMgr[0].mNodePos;
-    for (JSUPtrLink *next = link->getNext(); next != nullptr; next = next->getNext()) {
-        pos->add(((BridgeNode *)link->getObjectPtr())->mPos, ((BridgeNode *)next->getObjectPtr())->mPos);
-        pos->scale(0.5f);
-        pos++;
-        link = link->getNext();
-    }
-    link = mBridgeNodeMgr[1].getFirstLink();
-    pos = mBridgeNodeMgr[1].mNodePos;
-    for (JSUPtrLink *next = link->getNext(); next != nullptr; next = next->getNext()) {
-        pos->add(((BridgeNode *)link->getObjectPtr())->mPos, ((BridgeNode *)next->getObjectPtr())->mPos);
-        pos->scale(0.5f);
-        pos++;
-        link = link->getNext();
-    }
+    mBridgeNodeMgr[0].calcNodePos();
+    mBridgeNodeMgr[1].calcNodePos();
 }
 
 void StringBridge::update() {
@@ -674,26 +673,22 @@ void StringBridge::simpleDrawString(u32 p2) {
 }
 
 void StringBridge::updateString() {
-    ExModel *modelA;
-    ExModel *modelB;
-    u32 num;
-    modelA = _290;
-    modelB = _294;
-    num = _280;
-    for (u32 i = 0; i < num - 2; i++, modelA++, modelB++) {
+    ExModel *modelA = _290;
+    ExModel *modelB = _294;
+    u32 num = _280 - 1;
+    for (u32 i = 0; i < num - 1; i++, modelA++, modelB++) {
         modelA->update(0);
         modelB->update(0);
     }
 
-    if (_284 == 0) {
-        return;
-    }
-
-    ExModel *modelC = _298;
-    ExModel *modelD = _29c;
-    for (u32 i = _284; i < _280 - _284 - 1; i += _284, modelC++, modelD++) {
-        modelC->update(0);
-        modelD->update(0);
+    if (_284 != 0) {
+        u32 j = _284;
+        modelA = _298;
+        modelB = _29c;
+        for (; j < _280 - _284 - 1; j += _284, modelA++, modelB++) {
+            modelA->update(0);
+            modelB->update(0);
+        }
     }
 }
 

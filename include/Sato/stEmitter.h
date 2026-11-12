@@ -123,13 +123,7 @@ struct stEmitterPtcl : public stEmitter
     ~stEmitterPtcl();
     // Inline/Unused
     void update();
-    void removeAllParticles()
-    {
-        JSUList<stParticle> *list = &mParticle.mDynamics.mList;
-        JSUListIterator<stParticle> it(list);
-        while (it != nullptr)
-            mParticle.mDynamics.Remove(*list, it);
-    }
+    void removeAllParticles();
     bool chkCreateStep()
     {
         if (mFlags & 0x80) {

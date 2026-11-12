@@ -10,36 +10,67 @@
 #include "types.h"
 
 struct CrsGround;
-struct stEmitterCallBack;
-struct stGndAttrDataIndex;
-struct stGndAttrParam;
-struct stTireEfctStatusSet;
-struct stTireEffectStatus;
+class JUTTexture;
+struct stEfctWaterTrack;
+struct stEfctWaterSpray;
+struct stEfctWaterSprayCenter;
+struct stEfctWaterBubble;
+struct stEfctCrsWaterSpray;
+struct stEfctCrsWaterBubble;
+
+struct stEmitterPtclMgrEx : stEmitterPtclMgr {
+    stEmitterPtclMgrEx()
+    {
+        mFreeList = nullptr;
+        mList.initiate();
+    }
+};
 
 struct stEffectMgr {
     struct stWaterEffectStatus {
         stWaterEffectStatus();
-        u32 m00[2]; // 0x00
-        u32 m08[2]; // 0x08
-        u32 m10[2]; // 0x10
-        u8 _18[0x20];
-    };
+        void init()
+        {
+            for (u8 i = 0; i < 2; i++) {
+                mTrack[i] = nullptr;
+                mBubble[i] = nullptr;
+                mSpray[i] = nullptr;
+            }
+        }
+        stEmitter *mSpray[2];  // 0x00
+        stEmitter *mBubble[2]; // 0x08
+        stEmitter *mTrack[2];  // 0x10
+    }; // Size: 0x18
 
     struct stTireEffectStatus {
         stTireEffectStatus();
-        stEmitter *mEmitter[2]; // 0x00
-        u32 _08;
-        u32 _0c;
-        stEmitter *mDriftCreateEmitter; // 0x10
-        u32 _14;
-        stEmitter *mDriftEmitter;       // 0x18
-        u32 _1c;
-        u32 _20;
+        void init()
+        {
+            mAttr = 0xff;
+            _25 = 0;
+            _24 = 0;
+            mAttrIdx = 0;
+            for (u8 i = 0; i < 3; i++)
+                mDriftEmitters[i] = nullptr;
+            for (u8 i = 0; i < 2; i++) {
+                mEmitter[i] = nullptr;
+                mIndex[i] = 0xffff;
+                mMaterial[i] = 0;
+            }
+            mSideGEmitter = nullptr;
+            mSpinTurnEmitter = nullptr;
+        }
+        stEmitter *mEmitter[2];        // 0x00
+        stEmitter *mSideGEmitter;      // 0x08
+        stEmitter *mSpinTurnEmitter;   // 0x0c
+        stEmitter *mDriftEmitters[3];  // 0x10
+        int mAttr;                     // 0x1c
+        u32 mAttrIdx;                  // 0x20
         u8 _24;
         u8 _25;
         u16 mIndex[2];   // 0x26
         u8 mMaterial[2]; // 0x2a
-    };
+    }; // Size: 0x2c
 
     struct stTireEfctStatusSet {
         stTireEfctStatusSet();
@@ -47,21 +78,34 @@ struct stEffectMgr {
     };
 
     struct stGndAttrParam {
-        u8 _00[2];
-        u8 mKind; // 0x02
-        u8 _03[0xa8];
-        u8 _ab;
-    };
+        u8 mAttr;      // 0x00
+        u8 mAttrIdx;   // 0x01
+        u8 mKind;      // 0x02
+        char mEmitterName[6][0x18]; // 0x03
+        char mBtiName[0x18];        // 0x93
+        u8 mMaterial;  // 0xab
+        u8 mClip0;     // 0xac
+        u8 mClip1;     // 0xad
+    }; // Size: 0xae
 
     struct stGndAttrDataIndex {
-        u32 _000[20];
-        u32 _050[20];
-        u32 _0a0[20];
-        u32 _0f0[20];
-        u32 _140[20];
-        u8 _190[20];
-        u8 _1a4[20];
-    };
+        void init()
+        {
+            for (u8 i = 0; i < 20; i++) {
+                mChar[i] = -1;
+                mCenter[1][i] = -1;
+                mCenter[0][i] = -1;
+                mTire[1][i] = -1;
+                mTire[0][i] = -1;
+                mMaterial[1][i] = 0xff;
+                mMaterial[0][i] = 0xff;
+            }
+        }
+        int mTire[2][20];    // 0x000
+        int mCenter[2][20];  // 0x0a0
+        int mChar[20];       // 0x140
+        u8 mMaterial[2][20]; // 0x190
+    }; // Size: 0x1b8
 
     struct stClipParam {
         stClipParam();
@@ -69,11 +113,11 @@ struct stEffectMgr {
         u8 _01;
     };
 
-    struct stAttrData {
-        int mTire[2][20];
-        int mCenter[2][20];
-        int mChar[20];
-        u8 mMaterial[2][20];
+    enum cKindTexture {
+        cKindTexture_Tool01,
+        cKindTexture_Tool02,
+        cKindTexture_Tool03,
+        cKindTexture_Max
     };
 
     stEffectMgr();                                                                // 0x802360d4
@@ -94,12 +138,13 @@ struct stEffectMgr {
     void calcDriftEfct(int, int, stTireEffectStatus *, bool);                     // 0x8023864c
     void createDriftEfct(int, int, stTireEffectStatus *, int);                    // 0x80238788
     void calcGndCharEffect(int, bool);                                            // 0x80238864
-    void calcWaterAttrEffect(int);                                                // 0x80238b00
+    bool calcWaterAttrEffect(int);                                                // 0x80238b00
     stEmitterCallBack::stFileParamPtrList *findParamPtrTire(int, CrsGround *, stTireEffectStatus *, u8);   // 0x80238ebc
     stEmitterCallBack::stFileParamPtrList *findParamPtrCenter(int, CrsGround *, stTireEffectStatus *, u8); // 0x802394bc
     stEmitterCallBack::stFileParamPtrList *findParamPtrChar(int, CrsGround *, stTireEffectStatus *, u8);   // 0x80239ad8
     stEmitterCallBack::stFileParamPtrList *findParamPtrCommon(int);                                        // 0x80239fc4
     stEmitterCallBack::stFileParamPtrList *chkAvailablePtrList(int, int);                                  // 0x8023a060
+    stEmitterCallBack *getCallBackPtr(u8, int, int);                              // UNUSED
     void calcAttrRoad(int, int, stTireEffectStatus *, u8);                        // 0x8023a1d8
     void calcAttrRoadCenter(int, stTireEffectStatus *, u8);                       // 0x8023a49c
     void calcAttrRoadCharCenter(int, stTireEffectStatus *, u8);                   // 0x8023a5e0
@@ -109,7 +154,8 @@ struct stEffectMgr {
     void update();                                                                // 0x8023a930
     void viewCalc(u32);                                                           // 0x8023a934
     void setCurrentViewNo(u32);                                                   // 0x8023a938
-    stWaterEffectStatus *getWaterTrack(int);                                      // 0x8023a93c
+    JUTTexture *getTexture(cKindTexture) const;                                   // UNUSED
+    stEfctWaterTrack *getWaterTrack(int);                                         // 0x8023a93c
     Mtx *getKartExhaustMtxL(int);                                                 // 0x8023a9d4
     Mtx *getKartExhaustMtxR(int);                                                 // 0x8023aa6c
     f32 getEfctCarSpeed(int) const;                                               // 0x8023ab04
@@ -128,30 +174,51 @@ struct stEffectMgr {
     void setIndexToList_StdGnd(u8, const stGndAttrParam &, stGndAttrDataIndex &); // 0x8023bccc
     void *getEmitterPtr(char *);                                                  // 0x8023bd74
     void *getBtiPtr(char *);                                                      // 0x8023bdc0
+    char *getBtiName(cKindTexture);                                               // UNUSED
     char *getSnpName(u32);                                                        // 0x8023be0c
 
     static void createMgr() { mMgr = new stEffectMgr(); }
     static stEffectMgr *getMgr() { return mMgr; }
     static stEffectMgr *mMgr; // 0x80416b40
 
-    u8 _00[0xf0];
+    stEmitterPtclMgrEx mEmtMgr0;                 // 0x000
+    stEmitterPtclMgrEx mFreeEmt0;                // 0x010
+    stParticleDynamics mDynamics0;               // 0x020
+    stParticle *mParticles0;                     // 0x04c
+    stEmitterPtclMgrEx mEmtMgr1;                 // 0x050
+    stEmitterPtclMgrEx mFreeEmt1;                // 0x060
+    stParticleDynamics mDynamics1;               // 0x070
+    stParticle *mParticles1;                     // 0x09c
+    stEmitterPtclMgrEx mEmtMgr2;                 // 0x0a0
+    stEmitterPtclMgrEx mFreeEmt2;                // 0x0b0
+    stParticleDynamics mDynamics2;               // 0x0c0
+    stParticle *mParticles2;                     // 0x0ec
     stExhaustAccelCounter *mpExhaustAccelCounter; // 0xf0
     stEmitter **mpEmitterTemplate;                // 0xf4
     stClipParam *mpClipParam;                     // 0xf8
-    u8 _fc[0x10];                                 // 0xfc
-    u8 **mpExhaustStopL;                          // 0x10c
-    u8 **mpExhaustStopR;                          // 0x110
-    u8 _114[0x58];                                // 0x114
+    JUTTexture *mpTexture[3];                     // 0xfc
+    u32 *mpTexList;                               // 0x108
+    stEfctExhaust **mpExhaustL;                   // 0x10c
+    stEfctExhaust **mpExhaustR;                   // 0x110
+    stEfctKinokoDashBase *mpKinokoDash[2][3];     // 0x114
+    stEmitterCallBack *mpRoadCb[8][2];            // 0x12c
     stEmitterCallBack *mpDriftCreateCb[8][2];     // 0x16c
-    u8 _1ac[0x40];                                // 0x1ac
+    stEmitterCallBack *mpDriftChipCb[8][2];       // 0x1ac
     stEmitterCallBack *mpDriftCb[8][2];           // 0x1ec
-    u8 _22c[0xc0];                                // 0x22c
+    stEmitterCallBack *mpTireSpinCb[8][2];        // 0x22c
+    stEmitterCallBack *mpSpinTurnCb[8][2];        // 0x26c
+    stEmitterCallBack *mpWeedCb[8][2];            // 0x2ac
     stEmitterCallBack *mpRoadCenterCb[2][8];      // 0x2ec
     stEmitterCallBack *mpRoadCharCenterCb[8];     // 0x32c
     stEmitterCallBack *mpWeedCharCenterCb[8];     // 0x34c
-    u8 _36c[0x10];                                // 0x36c
-    stWaterEffectStatus *mpWaterEffectStatus;     // 0x37c
-    u8 _380[0x38];                                // 0x380
+    stEfctWaterSpray *mpWaterSpray[2];            // 0x36c
+    stEfctWaterBubble *mpWaterBubble[2];          // 0x374
+    stEfctWaterTrack *mpWaterTrack;               // 0x37c
+    stEfctWaterSprayCenter *mpWaterSprayCenter;   // 0x380
+    stEfctCrsWaterSpray *mpCrsWaterSpray[2];      // 0x384
+    stEfctCrsWaterBubble *mpCrsWaterBubble[2];    // 0x38c
+    int mDriftCnt[8];                             // 0x394
+    u32 _3b4;                                     // 0x3b4
     u32 _3b8;                                     // 0x3b8
     u32 mDriftParam[3];                           // 0x3bc
     u32 _3c8;                                     // 0x3c8
@@ -166,10 +233,13 @@ struct stEffectMgr {
     u8 _3e0;
     u8 _3e1;
     u8 _3e2;
-    u8 _3e3;                                     // 0x3cc
-    stAttrData mAttrData[9];                      // 0x3e4
+    u8 _3e3;
+    stGndAttrDataIndex mAttrData[9];              // 0x3e4
     stEmitterCallBack::stFileParamPtrList *mpPtrList; // 0x135c
-    u8 _1360[0x10];                               // 0x1360
+    stTireEfctStatusSet *mpTireStatusSet;         // 0x1360
+    stTireEffectStatus *mpCenterStatus;           // 0x1364
+    stTireEffectStatus *mpCharStatus;             // 0x1368
+    stWaterEffectStatus *mpWaterStatus;           // 0x136c
     Mtx *mpKartBodyMtxA;                          // 0x1370
     Mtx *mpKartBodyMtxB;                          // 0x1374
     Mtx *mpKartExhaustMtxL;                       // 0x1378

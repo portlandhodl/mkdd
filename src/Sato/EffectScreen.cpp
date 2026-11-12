@@ -6,6 +6,8 @@
 #include "Yamamoto/kartCtrl.h"
 #include "Yamamoto/kartCamera.h"
 
+static const f32 sDummy[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
 namespace {
 
 typedef int (EffectScreen::*ESFunc)();
@@ -17,25 +19,21 @@ static u8 sThunderWhiteAlpha = 0xd2;
 static u8 sThunderAlpha = 0x96;
 static u8 sBombExWhiteFrame = 3;
 static u8 sBombExWhiteAlpha = 0xd2;
+static f32 sBombExplosionLength = 3000.0f;
 static u8 sFlashWhiteFrame = 7;
 static u8 sDemoScreenAlpha = 0xbe;
 static u8 sDemoScreenAddFrame = 10;
 
-static f32 sBombExplosionLength = 3000.0f;
 static BombParam sRaceBombParam[2] = {
-    { 0xff, 0xff, 0x19, 0x00, 0x19, 0x00 },
-    { 0x96, 0xd2, 0x4b, 0xff, 0x96, 0x78 },
+    { 0x00, 0x19, 0xff, 0xff, 0xd2, 0x96 },
+    { 0x00, 0x19, 0x78, 0x96, 0xff, 0x4b },
 };
 static BombParam sMiniBombParam[4] = {
-    { 0x64, 0xff, 0x14, 0x28, 0x14, 0x96 },
-    { 0x28, 0x14, 0x64, 0x64, 0x96, 0xff },
-    { 0xff, 0x64, 0x14, 0x28, 0x14, 0x96 },
-    { 0x96, 0x64, 0xff, 0xff, 0xff, 0xff },
+    { 0x28, 0x14, 0xff, 0x64, 0x64, 0x96 },
+    { 0x28, 0x14, 0x64, 0x64, 0xff, 0x96 },
+    { 0x28, 0x14, 0x64, 0xff, 0x64, 0x96 },
+    { 0x28, 0x14, 0xff, 0xff, 0x64, 0x96 },
 };
-
-static int sThunderKind = 1;
-static int sBombKind = 2;
-static int sDemoKind = 3;
 
 ESFunc sFuncList[4] = {
     &EffectScreen::doExplosion,
@@ -44,18 +42,21 @@ ESFunc sFuncList[4] = {
     &EffectScreen::doDemo,
 };
 
-#define ES_VIEW_ASSERT(viewNo, max)                                                                        \
-    ((viewNo) < (max)                                                                                      \
-         ? (void)0                                                                                         \
-         : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "RaceMgr.h", 195,                       \
-                                       "range over: %d <= viewNo=%d < %d", 0, (viewNo), (max)),            \
-            OSHalt("Halt")))
-
 } // namespace
 
 EffectScreen::EffectScreen()
     : mFrame(0), mActive(0), mParam(nullptr)
 {
+}
+
+static inline bool isDrawConsole(RaceMgr *rm, u32 viewNo)
+{
+    viewNo < rm->getConsoleNumber()
+        ? (void)0
+        : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "RaceMgr.h", 195, "range over: %d <= viewNo=%d < %d", 0,
+                                      viewNo, rm->getConsoleNumber()),
+           OSPanic("RaceMgr.h", 195, "Halt"));
+    return rm->mConsole[viewNo].isDraw();
 }
 
 void EffectScreen::setFunction(const ScreenKind &kind)
@@ -65,7 +66,7 @@ void EffectScreen::setFunction(const ScreenKind &kind)
 
 bool EffectScreen::checkCamDrawing() const
 {
-    return mActive != 0;
+    return isDrawConsole(RaceMgr::getManager(), mKartNo);
 }
 
 bool EffectScreen::checkFrame()
@@ -80,36 +81,40 @@ bool EffectScreen::checkFrame()
 
 void EffectScreen::initThunder()
 {
-    mFrame = 0;
-    mActive = 1;
-    mFunc = sFuncList[1];
-    mEndFrame = sThunderWhiteFrame + sThunderWaitFrame + sThunderDownFrame;
-    mBlendMode = 1;
-    mBlendSrc = 4;
-    mBlendDst = 5;
-    mBlendOp = 0;
-    mR = 0xff;
-    mG = 0xff;
-    mB = 0xff;
-    mAlpha = sThunderWhiteAlpha;
-    mRate = 1.0f;
+    if (checkCamDrawing()) {
+        mFrame = 0;
+        mActive = 1;
+        setFunction(Kind_1);
+        mEndFrame = sThunderWhiteFrame + sThunderWaitFrame + sThunderDownFrame;
+        mBlendMode = 1;
+        mBlendSrc = 4;
+        mBlendDst = 5;
+        mBlendOp = 0;
+        mR = 0xff;
+        mG = 0xff;
+        mB = 0xff;
+        mAlpha = sThunderWhiteAlpha;
+        mRate = 1.0f;
+    }
 }
 
 void EffectScreen::initDemo()
 {
-    mFrame = 0;
-    mActive = 1;
-    mFunc = sFuncList[3];
-    mBlendMode = 1;
-    mBlendSrc = 4;
-    mBlendDst = 5;
-    mBlendOp = 0;
-    mR = 0;
-    mG = 0;
-    mB = 0;
-    mAlpha = 0;
-    mEndFrame = sDemoScreenAddFrame;
-    mRate = 0.0f;
+    if (checkCamDrawing()) {
+        mFrame = 0;
+        mActive = 1;
+        setFunction(Kind_3);
+        mBlendMode = 1;
+        mBlendSrc = 4;
+        mBlendDst = 5;
+        mBlendOp = 0;
+        mR = 0;
+        mG = 0;
+        mB = 0;
+        mAlpha = 0;
+        mEndFrame = sDemoScreenAddFrame;
+        mRate = 0.0f;
+    }
 }
 
 int EffectScreen::doDemo()
@@ -125,9 +130,17 @@ int EffectScreen::doDemo()
     return true;
 }
 
-void EffectScreen::setBombColorIndex(u8 index)
+void EffectScreen::setBombColorIndex(u8 color)
 {
-    mParam = &sRaceBombParam[index];
+    if (RaceMgr::getManager()->getRaceMode() == BOMB_BATTLE) {
+#line 226
+        JUT_MINMAX_ASSERT(0, color, 5);
+        mParam = &sMiniBombParam[color];
+    } else {
+#line 231
+        JUT_MINMAX_ASSERT(0, color, 2);
+        mParam = &sRaceBombParam[color];
+    }
 }
 
 int EffectScreen::doThunder()
@@ -156,22 +169,24 @@ int EffectScreen::doThunder()
     return ret;
 }
 
-void EffectScreen::initBombExplosion(f32 length, u8 index)
+void EffectScreen::initBombExplosion(f32 length, u8 color)
 {
-    setBombColorIndex(index);
-    mFrame = 0;
-    mActive = 1;
-    mFunc = sFuncList[2];
-    mEndFrame = sBombExWhiteFrame + mParam->mWhiteFrame + mParam->mDownFrame;
-    mBlendMode = 1;
-    mBlendSrc = 4;
-    mBlendDst = 5;
-    mBlendOp = 0;
-    mR = 0xff;
-    mG = 0xff;
-    mB = 0xff;
-    mAlpha = sBombExWhiteAlpha;
-    mRate = 1.0f - length / sBombExplosionLength;
+    setBombColorIndex(color);
+    if (checkCamDrawing()) {
+        mFrame = 0;
+        mActive = 1;
+        setFunction(Kind_2);
+        mEndFrame = sBombExWhiteFrame + mParam->mWhiteFrame + mParam->mDownFrame;
+        mBlendMode = 1;
+        mBlendSrc = 4;
+        mBlendDst = 5;
+        mBlendOp = 0;
+        mR = 0xff;
+        mG = 0xff;
+        mB = 0xff;
+        mAlpha = sBombExWhiteAlpha;
+        mRate = 1.0f;
+    }
 }
 
 int EffectScreen::doBombExplosion()
@@ -200,21 +215,24 @@ int EffectScreen::doBombExplosion()
     return ret;
 }
 
-void EffectScreen::initExplosion(f32 rate)
+void EffectScreen::initExplosion(f32 length)
 {
-    mFrame = 0;
-    mActive = 1;
-    mFunc = sFuncList[0];
-    mEndFrame = sFlashWhiteFrame;
-    mBlendMode = 1;
-    mBlendSrc = 4;
-    mBlendDst = 5;
-    mBlendOp = 0;
-    mR = 0xff;
-    mG = 0xff;
-    mB = 0xff;
-    mAlpha = 0xff;
-    mRate = rate;
+    if (checkCamDrawing()) {
+        mFrame = 0;
+        mActive = 1;
+        setFunction(Kind_0);
+        mEndFrame = sFlashWhiteFrame;
+        mBlendMode = 1;
+        mBlendSrc = 4;
+        mBlendDst = 5;
+        mBlendOp = 0;
+        static f32 maxLength = 20000.0f;
+        mRate = 1.0f - length / maxLength;
+        mRate = (mRate < 0.0f) ? 0.0f : mRate;
+        if (mRate < 0.005f) {
+            mActive = 0;
+        }
+    }
 }
 
 int EffectScreen::doExplosion()
@@ -235,11 +253,13 @@ int EffectScreen::doExplosion()
     return ret;
 }
 
-void EffectScreen::calc()
+int EffectScreen::calc()
 {
+    int ret = 0;
     if (mActive) {
-        (this->*mFunc)();
+        ret = (this->*mFunc)();
     }
+    return ret;
 }
 
 void EffectScreen::draw()
@@ -310,12 +330,7 @@ void EffectScreenMgr::calc()
 {
     u32 total = 0;
     for (int i = 0; i < mNumScreens; i++) {
-        int ret = 0;
-        EffectScreen *screen = &mScreens[i];
-        if (screen->mActive) {
-            ret = (screen->*(screen->mFunc))();
-        }
-        total += ret;
+        total += mScreens[i].calc();
     }
 
     if ((u8)total == 0) {
@@ -326,79 +341,35 @@ void EffectScreenMgr::calc()
 
 void EffectScreenMgr::flashThunder(int para)
 {
-    mKind = sThunderKind;
+    setKind(EffectScreen::Kind_1);
     mPara = para;
-
-    int off = 0;
-    for (int k = 0; k < mNumScreens; k++) {
-        EffectScreen *screen = (EffectScreen *)((u8 *)mScreens + off);
-        u32 viewNo = screen->mKartNo;
-
-        if (!(viewNo < (u32)RaceMgr::getManager()->mRaceInfo->mConsoleNum)) {
-            JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "RaceMgr.h", 195,
-                                       "range over: %d <= viewNo=%d < %d", 0, viewNo,
-                                       RaceMgr::getManager()->mRaceInfo->mConsoleNum);
-            OSHalt("Halt");
-        }
-
-        if (RaceMgr::getManager()->mConsole[viewNo].isDraw()) {
-            screen->mFrame = 0;
-            screen->mActive = 1;
-            screen->mFunc = sFuncList[1];
-            screen->mEndFrame = sThunderWhiteFrame + sThunderWaitFrame + sThunderDownFrame;
-            screen->mBlendMode = 1;
-            screen->mBlendSrc = 4;
-            screen->mBlendDst = 5;
-            screen->mBlendOp = 0;
-            screen->mR = 0xff;
-            screen->mG = 0xff;
-            screen->mB = 0xff;
-            screen->mAlpha = sThunderWhiteAlpha;
-            screen->mRate = 1.0f;
-        }
-        off += 0x3c;
+    for (int i = 0; i < mNumScreens; i++) {
+        mScreens[i].initThunder();
     }
 }
 
 void EffectScreenMgr::flashBombExplosion(u8 color, const JGeometry::TVec3f &pos)
 {
-    mKind = sBombKind;
-    (void)color;
-    (void)pos;
+    setKind(EffectScreen::Kind_2);
+
+    for (u8 i = 0; i < mNumScreens; i++) {
+        EffectScreen *screen = &mScreens[i];
+        JGeometry::TVec3f dir;
+        dir.sub(*GetKartCtrl()->getKartCam(screen->mKartNo)->GetCameraPos(), pos);
+        f32 length = dir.length();
+        if (length < sBombExplosionLength) {
+            screen->initBombExplosion(length, color);
+        } else if (RaceMgr::getManager()->getRaceMode() != BOMB_BATTLE) {
+            screen->initExplosion(length);
+        }
+    }
 }
 
 void EffectScreenMgr::startDemoScreen()
 {
-    mKind = sDemoKind;
-
-    int off = 0;
-    for (int k = 0; k < mNumScreens; k++) {
-        EffectScreen *screen = (EffectScreen *)((u8 *)mScreens + off);
-        u32 viewNo = screen->mKartNo;
-
-        if (!(viewNo < (u32)RaceMgr::getManager()->mRaceInfo->mConsoleNum)) {
-            JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "RaceMgr.h", 195,
-                                       "range over: %d <= viewNo=%d < %d", 0, viewNo,
-                                       RaceMgr::getManager()->mRaceInfo->mConsoleNum);
-            OSHalt("Halt");
-        }
-
-        if (RaceMgr::getManager()->mConsole[viewNo].isDraw()) {
-            screen->mFrame = 0;
-            screen->mActive = 1;
-            screen->mFunc = sFuncList[3];
-            screen->mBlendMode = 1;
-            screen->mBlendSrc = 4;
-            screen->mBlendDst = 5;
-            screen->mBlendOp = 0;
-            screen->mR = 0;
-            screen->mG = 0;
-            screen->mB = 0;
-            screen->mAlpha = 0;
-            screen->mEndFrame = sDemoScreenAddFrame;
-            screen->mRate = 0.0f;
-        }
-        off += 0x3c;
+    setKind(EffectScreen::Kind_3);
+    for (int i = 0; i < mNumScreens; i++) {
+        mScreens[i].initDemo();
     }
 }
 
@@ -409,25 +380,6 @@ bool EffectScreenMgr::IsContinue(EffectScreen::ScreenKind kind)
 
 void EffectScreenMgr::initDraw()
 {
-    GetKartCtrl()->SetGrafPort();
-}
-
-void EffectScreenMgr::drawScreens(u32 viewNo)
-{
-    if (mScreens[viewNo].mActive) {
-        mScreens[viewNo].draw();
-    }
-}
-
-void EffectScreenMgr::draw_middle(u32 viewNo)
-{
-    if (mKind != 1) {
-        return;
-    }
-    if (!mScreens[viewNo].mActive) {
-        return;
-    }
-
     GetKartCtrl()->SetGrafPort();
     GXLoadPosMtxImm(mMtx, 0);
     GXSetCurrentMtx(0);
@@ -442,20 +394,22 @@ void EffectScreenMgr::draw_middle(u32 viewNo)
     GXClearVtxDesc();
     GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
     GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
+}
 
-    EffectScreen *screen = &mScreens[viewNo];
-    if (!screen->mActive) {
+void EffectScreenMgr::drawScreens(u32 viewNo)
+{
+    if (mScreens[viewNo].mActive) {
+        initDraw();
+        mScreens[viewNo].draw();
+    }
+}
+
+void EffectScreenMgr::draw_middle(u32 viewNo)
+{
+    if (mKind != 1) {
         return;
     }
-
-    GXSetChanMatColor(GX_COLOR0A0, *(GXColor *)&screen->mR);
-    GXSetBlendMode((GXBlendMode)screen->mBlendMode, (GXBlendFactor)screen->mBlendSrc,
-                   (GXBlendFactor)screen->mBlendDst, (GXLogicOp)screen->mBlendOp);
-    GXBegin(GX_QUADS, GX_VTXFMT0, 4);
-    GXPosition3s16(screen->mX, screen->mY, 0);
-    GXPosition3s16(screen->mW, screen->mY, 0);
-    GXPosition3s16(screen->mW, screen->mH, 0);
-    GXPosition3s16(screen->mX, screen->mH, 0);
+    drawScreens(viewNo);
 }
 
 void EffectScreenMgr::draw(u32 viewNo)
@@ -469,38 +423,7 @@ void EffectScreenMgr::draw(u32 viewNo)
     if (RaceMgr::getManager()->mRaceDirector->isRaceEnd()) {
         return;
     }
-    if (!mScreens[viewNo].mActive) {
-        return;
-    }
-
-    GetKartCtrl()->SetGrafPort();
-    GXLoadPosMtxImm(mMtx, 0);
-    GXSetCurrentMtx(0);
-    GXSetProjection(mProj, GX_ORTHOGRAPHIC);
-    GXSetNumChans(1);
-    GXSetNumTevStages(1);
-    GXSetZMode(GX_TRUE, GX_LESS, GX_FALSE);
-    GXSetChanCtrl(GX_COLOR0A0, GX_FALSE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
-    GXSetNumTexGens(0);
-    GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
-    GXSetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
-    GXClearVtxDesc();
-    GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
-    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-
-    EffectScreen *screen = &mScreens[viewNo];
-    if (!screen->mActive) {
-        return;
-    }
-
-    GXSetChanMatColor(GX_COLOR0A0, *(GXColor *)&screen->mR);
-    GXSetBlendMode((GXBlendMode)screen->mBlendMode, (GXBlendFactor)screen->mBlendSrc,
-                   (GXBlendFactor)screen->mBlendDst, (GXLogicOp)screen->mBlendOp);
-    GXBegin(GX_QUADS, GX_VTXFMT0, 4);
-    GXPosition3s16(screen->mX, screen->mY, 0);
-    GXPosition3s16(screen->mW, screen->mY, 0);
-    GXPosition3s16(screen->mW, screen->mH, 0);
-    GXPosition3s16(screen->mX, screen->mH, 0);
+    drawScreens(viewNo);
 }
 
 void EffectScreenMgr::draw_demoScreen(u32 viewNo)
@@ -508,36 +431,7 @@ void EffectScreenMgr::draw_demoScreen(u32 viewNo)
     if (mKind != 3) {
         return;
     }
-    if (!mScreens[viewNo].mActive) {
-        return;
-    }
-
-    GetKartCtrl()->SetGrafPort();
-    GXLoadPosMtxImm(mMtx, 0);
-    GXSetCurrentMtx(0);
-    GXSetProjection(mProj, GX_ORTHOGRAPHIC);
-    GXSetNumChans(1);
-    GXSetNumTevStages(1);
-    GXSetZMode(GX_TRUE, GX_LESS, GX_FALSE);
-    GXSetChanCtrl(GX_COLOR0A0, GX_FALSE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
-    GXSetNumTexGens(0);
-    GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
-    GXSetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
-    GXClearVtxDesc();
-    GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
-    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-
-    EffectScreen *screen = &mScreens[viewNo];
-    if (!screen->mActive) {
-        return;
-    }
-
-    GXSetChanMatColor(GX_COLOR0A0, *(GXColor *)&screen->mR);
-    GXSetBlendMode((GXBlendMode)screen->mBlendMode, (GXBlendFactor)screen->mBlendSrc,
-                   (GXBlendFactor)screen->mBlendDst, (GXLogicOp)screen->mBlendOp);
-    GXBegin(GX_QUADS, GX_VTXFMT0, 4);
-    GXPosition3s16(screen->mX, screen->mY, 0);
-    GXPosition3s16(screen->mW, screen->mY, 0);
-    GXPosition3s16(screen->mW, screen->mH, 0);
-    GXPosition3s16(screen->mX, screen->mH, 0);
+    drawScreens(viewNo);
 }
+
+#include "JSystem/JAudio/JASFakeMatch2.h"

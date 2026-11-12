@@ -220,7 +220,9 @@ public:
     }
     KartCam *getCamera(int cameraNo) const
     {
+#line 262
         JUT_MINMAX_ASSERT(0, cameraNo, 4);
+#line 224
         return KartCtrl::getKartCtrl()->getKartCam(cameraNo);
     }
     KartChecker *getKartChecker(int index) const
