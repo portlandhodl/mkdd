@@ -1,3 +1,4 @@
+#define J3DTEVS_DEFINE_DEFAULTS
 #include <dolphin/gd.h>
 #include <dolphin/gx.h>
 

@@ -423,7 +423,12 @@ struct J3DIndTevStageInfo {
     u8 _0B;        // _0B, padding?
 };
 
+// Declared non-const outside J3DTevs.cpp so that MWCC does not hoist its loads above stores in J3DIndTevStage().
+#ifndef J3DTEVS_DEFINE_DEFAULTS
+extern J3DIndTevStageInfo j3dDefaultIndTevStageInfo;
+#else
 extern const J3DIndTevStageInfo j3dDefaultIndTevStageInfo;
+#endif
 
 struct J3DIndTevStage {
     J3DIndTevStage()
@@ -523,7 +528,11 @@ struct J3DTevSwapModeTableInfo {
     u8 mA; // _03
 };
 
+#ifndef J3DTEVS_DEFINE_DEFAULTS
+extern J3DTevSwapModeInfo j3dDefaultTevSwapMode;
+#else
 extern const J3DTevSwapModeInfo j3dDefaultTevSwapMode;
+#endif
 extern const J3DTevSwapModeTableInfo j3dDefaultTevSwapModeTable;
 extern const u8 j3dDefaultTevSwapTableID;
 

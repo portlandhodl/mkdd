@@ -294,8 +294,8 @@ void J3DShape::drawFast() const {
     }
 
     if (sEnvelopeFlag != 0 && !_48) {
-        J3DFifoLoadCPCmd(0x30, mCurrentMtx.mMtxIdxRegA);
-        J3DFifoLoadCPCmd(0x40, mCurrentMtx.mMtxIdxRegB);
+        J3DFifoLoadCPCmd(0x30, *(volatile u32*)&mCurrentMtx.mMtxIdxRegA);
+        J3DFifoLoadCPCmd(0x40, *(volatile u32*)&mCurrentMtx.mMtxIdxRegB);
         J3DFifoLoadXFCmdHdr(0x1018, 2);
         GXWGFifo.u32 = *(volatile u32*)&mCurrentMtx.mMtxIdxRegA;
         GXWGFifo.u32 = *(volatile u32*)&mCurrentMtx.mMtxIdxRegB;
@@ -306,7 +306,8 @@ void J3DShape::drawFast() const {
         if (J3DShapeMtx::sLODFlag)
             J3DShapeMtx::resetMtxLoadCache();
 
-        for (u16 n = mMtxGroupNum, i = 0; i < n; i++) {
+        u32 n = mMtxGroupNum;
+        for (u16 i = 0; i < n; i++) {
             if (mShapeMtx[i] != NULL)
                 mShapeMtx[i]->load();
             if (mShapeDraw[i] != NULL)
@@ -315,7 +316,8 @@ void J3DShape::drawFast() const {
     } else {
         J3DFifoLoadPosMtxImm(*j3dSys.mShapePacket->getBaseMtxPtr(), GX_PNMTX0);
         J3DFifoLoadNrmMtxImm(*j3dSys.mShapePacket->getBaseMtxPtr(), GX_PNMTX0);
-        for (u16 n = mMtxGroupNum, i = 0; i < n; i++)
+        u32 n = mMtxGroupNum;
+        for (u16 i = 0; i < n; i++)
             if (mShapeDraw[i] != NULL)
                 mShapeDraw[i]->draw();
     }
@@ -333,14 +335,15 @@ void J3DShape::simpleDraw() const {
         GXCallDisplayList(mVcdVatCmd, kVcdVatDLSize);
         sOldVcdVatCmd = mVcdVatCmd;
     }
-    J3DFifoLoadCPCmd(0x30, mCurrentMtx.mMtxIdxRegA);
+    J3DFifoLoadCPCmd(0x30, *(volatile u32*)&mCurrentMtx.mMtxIdxRegA);
     J3DFifoLoadCPCmd(0x40, mCurrentMtx.mMtxIdxRegB);
     J3DFifoLoadXFCmdHdr(0x1018, 2);
     GXWGFifo.u32 = *(volatile u32*)&mCurrentMtx.mMtxIdxRegA;
     GXWGFifo.u32 = *(volatile u32*)&mCurrentMtx.mMtxIdxRegB;
     J3DShapeMtx::sCurrentPipeline = (mFlags & 0x1C) >> 2;
     loadVtxArray();
-    for (u32 n = getMtxGroupNum(), i = 0; i < n; i++) {
+    u32 n = getMtxGroupNum();
+    for (u16 i = 0; i < n; i++) {
         if (mShapeDraw[i] != NULL) {
             mShapeDraw[i]->draw();
         }
@@ -354,17 +357,16 @@ void J3DShape::simpleDrawCache() const {
     }
 
     if (sEnvelopeFlag && !_48) {
-        register u32 a = mCurrentMtx.mMtxIdxRegA;
-        register u32 b = mCurrentMtx.mMtxIdxRegB;
-        J3DFifoLoadCPCmd(0x30, a);
-        J3DFifoLoadCPCmd(0x40, b);
+        J3DFifoLoadCPCmd(0x30, *(volatile u32*)&mCurrentMtx.mMtxIdxRegA);
+        J3DFifoLoadCPCmd(0x40, *(volatile u32*)&mCurrentMtx.mMtxIdxRegB);
         J3DFifoLoadXFCmdHdr(0x1018, 2);
         GXWGFifo.u32 = *(volatile u32*)&mCurrentMtx.mMtxIdxRegA;
         GXWGFifo.u32 = *(volatile u32*)&mCurrentMtx.mMtxIdxRegB;
     }
 
     loadVtxArray();
-    for (u32 n = getMtxGroupNum(), i = 0; i < n; i++)
+    u32 n = getMtxGroupNum();
+    for (u16 i = 0; i < n; i++)
         if (mShapeDraw[i] != NULL)
             mShapeDraw[i]->draw();
 }

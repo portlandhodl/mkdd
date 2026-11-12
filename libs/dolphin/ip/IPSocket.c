@@ -306,74 +306,75 @@ char* SOInetNtoP(s32 af, const u8* addr, char* buf, u32 len)
 static SOsock* GetNode(s32 s, void** socket)
 {
     SOsock* node;
-    SOsock* next;
-    SOsock* prev;
-    SOsock* list;
-    SOsock* tail;
-    SOsock* cur;
-    SOTcpSocket* so;
-    SOsock* ret;
+    TCPSocket* so;
+    TCPSocket* next;
+    SOLingerQueue queue;
     void* p;
     BOOL enabled;
+    TCPSocket* cur;
 
-    tail = NULL;
-    list = NULL;
+    queue.head = queue.tail = NULL;
 
     enabled = OSDisableInterrupts();
-    node = (SOsock*)LingerQueue.head;
-    next = node != NULL ? (SOsock*)node->recvMutex.link.next : NULL;
-    while (node != NULL) {
-        so = (SOTcpSocket*)node;
-        if (so->handle != NULL && so->handle->ref != 0) {
-            goto next;
-        }
-        prev = (SOsock*)node->recvMutex.link.prev;
-        {
-            SOsock* after = next;
-            if (after != NULL) {
-                after->recvMutex.link.prev = (OSMutex*)prev;
-            } else {
-                LingerQueue.tail = prev;
+    so = (TCPSocket*)LingerQueue.head;
+    next = !so ? NULL : so->unk18;
+    while (so != NULL) {
+        if (((SOTcpSocket*)so)->handle == NULL || ((SOTcpSocket*)so)->handle->ref == 0) {
+            {
+                TCPSocket* n = so->unk18;
+                TCPSocket* p = so->unk1C;
+
+                if (n == NULL) {
+                    LingerQueue.tail = p;
+                } else {
+                    n->unk1C = p;
+                }
+                if (p == NULL) {
+                    LingerQueue.head = n;
+                } else {
+                    p->unk18 = n;
+                }
+            }
+            {
+                TCPSocket* t = (TCPSocket*)queue.tail;
+
+                if (t == NULL) {
+                    queue.head = so;
+                } else {
+                    t->unk18 = so;
+                }
+                so->unk1C = t;
+                queue.tail = so;
+                so->unk18 = NULL;
             }
         }
-        if (prev == NULL) {
-            LingerQueue.head = next;
-        } else {
-            prev->recvMutex.link.next = (OSMutex*)next;
-        }
-        if (tail == NULL) {
-            list = node;
-        } else {
-            tail->recvMutex.link.next = (OSMutex*)node;
-        }
-        node->recvMutex.link.prev = (OSMutex*)tail;
-        tail = node;
-        node->recvMutex.link.next = NULL;
-    next:
-        node = next;
-        next = next != NULL ? (SOsock*)next->recvMutex.link.next : NULL;
+        so = next;
+        next = !so ? NULL : so->unk18;
     }
     OSRestoreInterrupts(enabled);
 
-    while (list != NULL) {
-        cur = list;
-        next = (SOsock*)cur->recvMutex.link.next;
-        so = (SOTcpSocket*)cur;
-        SOFree(2, (void*)so->tcp.unk1F8, so->tcp.unk1FC);
-        SOFree(1, (void*)so->tcp.unk174, so->tcp.unk178);
-        SOFree(0, so, 0x330);
-        list = next;
+    while (queue.head != NULL) {
+        {
+            TCPSocket* n = ((TCPSocket*)queue.head)->unk18;
+            if (n != NULL) {
+                n->unk1C = NULL;
+            }
+            cur = (TCPSocket*)queue.head;
+            queue.head = n;
+        }
+        SOFree(2, (void*)cur->unk1F8, cur->unk1FC);
+        SOFree(1, (void*)cur->unk174, cur->unk178);
+        SOFree(0, cur, sizeof(SOTcpSocket));
     }
 
-    ret = NULL;
+    node = NULL;
     enabled = OSDisableInterrupts();
     if (0 <= s && s < 256) {
         node = &SocketTable[s];
         if (node->ref <= 0 || node->socket == NULL) {
-            ret = NULL;
+            node = NULL;
         } else {
             node->ref++;
-            ret = node;
             if (socket != NULL) {
                 p = node->socket;
                 *socket = p;
@@ -381,7 +382,7 @@ static SOsock* GetNode(s32 s, void** socket)
         }
     }
     OSRestoreInterrupts(enabled);
-    return ret;
+    return node;
 }
 
 
@@ -777,6 +778,17 @@ s32 SOCleanup(void)
     return 0;
 }
 
+static inline s32 GetRwin(void)
+{
+    s32 mtu;
+
+    if (Rwin != 0) {
+        return Rwin;
+    }
+    IPGetMtu(0, &mtu);
+    return (mtu - 40) << 1;
+}
+
 s32 SOSocket(s32 domain, s32 type, s32 flags)
 {
     SOsock* node;
@@ -785,7 +797,6 @@ s32 SOSocket(s32 domain, s32 type, s32 flags)
     u8* buf1;
     u8* buf2;
     s32 rwin;
-    s32 mtu;
     s32 result;
     s32 index;
     BOOL enabled;
@@ -819,10 +830,7 @@ s32 SOSocket(s32 domain, s32 type, s32 flags)
         return SO_ENOBUFS;
     }
 
-rwin = Rwin; if (rwin == 0) {
-        IPGetMtu(0, &mtu);
-        rwin = (mtu - 40) << 1;
-    }
+    rwin = GetRwin();
 
     switch (type) {
     case SO_STREAM:
@@ -852,26 +860,14 @@ rwin = Rwin; if (rwin == 0) {
     if (result < 0) {
         switch (type) {
         case SO_STREAM:
-            if (tcp != NULL) {
-                SOFree(0, tcp, sizeof(SOTcpSocket));
-            }
-            if (buf1 != NULL) {
-                SOFree(1, buf1, rwin);
-            }
-            if (buf2 != NULL) {
-                SOFree(2, buf2, rwin);
-            }
+            SOFree(0, tcp, sizeof(SOTcpSocket));
+            SOFree(1, buf1, rwin);
+            SOFree(2, buf2, rwin);
             break;
         case SO_DGRAM:
-            if (udp != NULL) {
-                SOFree(3, udp, sizeof(SOUdpSocket));
-            }
-            if (buf1 != NULL) {
-                SOFree(4, buf1, 1458);
-            }
-            if (buf2 != NULL) {
-                SOFree(5, buf2, 4096);
-            }
+            SOFree(3, udp, sizeof(SOUdpSocket));
+            SOFree(4, buf1, 1458);
+            SOFree(5, buf2, 4096);
             break;
         }
         PutNode(node);
@@ -1196,39 +1192,33 @@ fail:
     return NULL;
 }
 
-s32 SOListen(s32 s, s32 arg)
+s32 SOListen(s32 s, s32 backlog)
 {
     SOsock* node;
+    void* info;
     TCPSocket* so;
     s32 result;
-    s32 backlog;
 
     if (State != 1) {
         return SO_ENOTINIT;
     }
-    backlog = arg;
     if (backlog < 1) {
         backlog = 1;
     }
 
-    node = GetNode(s, (void**)&so);
-    if (node == NULL || so == NULL) {
+    node = GetNode(s, &info);
+    if (node == NULL || info == NULL) {
         return SO_EBADF;
     }
 
-    switch (so->unk00[0]) {
+    switch (*(u8*)info) {
     case IP_PROTO_UDP:
         result = SO_EBADR;
         break;
     case IP_PROTO_TCP:
+        so = (TCPSocket*)info;
         result = TCPListen(so, NULL, 0, 0, 0);
         switch (result) {
-        case -7:
-            result = -42;
-            break;
-        case -5:
-            result = SO_EINVAL;
-            break;
         case 0:
             while (backlog-- > 0) {
                 if (AddBackLog(so) == NULL) {
@@ -1236,14 +1226,18 @@ s32 SOListen(s32 s, s32 arg)
                 }
             }
             break;
+        case -7:
+            result = -42;
+            break;
+        case -5:
         default:
             result = SO_EINVAL;
             break;
         }
         break;
     default:
-        PutNode(node);
-        return SO_EBADF;
+        result = SO_EBADF;
+        break;
     }
 
     PutNode(node);
@@ -1920,17 +1914,18 @@ void __IPWakeupPollingThreads(void)
     OSWakeupThread(&PollingQueue);
 }
 
-s32 SOPoll(SOPollFd* fds, s32 nfds, s64 timeout)
+s32 SOPoll(SOPollFd* fds, u32 nfds, s64 timeout)
 {
+    s32 unused0;
     OSAlarm alarm;
     SOsock* node;
     TCPSocket* so;
     s32 result;
-    s32 count;
     s32 fd;
-    s32 i;
+    u32 i;
     s16 events;
     BOOL enabled;
+    s32 unused1;
 
     if (State != 1) {
         return SO_ENOTINIT;
@@ -1946,10 +1941,10 @@ s32 SOPoll(SOPollFd* fds, s32 nfds, s64 timeout)
         node = NULL;
         if (0 <= fd && fd < 256) {
             node = &SocketTable[fd];
-            if (node->ref > 0 && node->socket != NULL) {
-                node->ref++;
-            } else {
+            if (node->ref <= 0 || node->socket == NULL) {
                 node = NULL;
+            } else {
+                node->ref++;
             }
         }
         if (node != NULL) {
@@ -1959,22 +1954,21 @@ s32 SOPoll(SOPollFd* fds, s32 nfds, s64 timeout)
     }
     OSRestoreInterrupts(enabled);
 
-    if (timeout != 0) {
+    if (timeout > 0) {
         OSCreateAlarm(&alarm);
         OSSetAlarm(&alarm, timeout, PollTimeout);
     }
 
     enabled = OSDisableInterrupts();
     result = 0;
-    for (;;) {
+    while (State == 1) {
         for (i = 0; i < nfds; i++) {
             fds[i].revents = 0;
             fd = fds[i].fd;
             node = NULL;
             if (0 <= fd && fd < 256) {
                 node = &SocketTable[fd];
-                if (node->ref > 0 && node->socket != NULL) {
-                } else {
+                if (node->ref <= 0 || node->socket == NULL) {
                     node = NULL;
                 }
             }
@@ -2003,47 +1997,32 @@ s32 SOPoll(SOPollFd* fds, s32 nfds, s64 timeout)
         if (result > 0) {
             break;
         }
-        if (timeout != 0) {
-            if (timeout > 0) {
-                OSSleepThread(&PollingQueue);
-            } else if (alarm.fire != 0) {
-                OSSleepThread(&PollingQueue);
-            } else {
-                break;
-            }
-        } else {
+        if (timeout == 0) {
             break;
         }
-        if (State != 1) {
+        if (timeout > 0 && alarm.handler == NULL) {
             break;
         }
+        OSSleepThread(&PollingQueue);
     }
     OSRestoreInterrupts(enabled);
 
-    if (timeout != 0) {
+    if (timeout > 0) {
         OSCancelAlarm(&alarm);
     }
 
-    count = 0;
     for (i = 0; i < nfds; i++) {
         fd = fds[i].fd;
-        node = NULL;
         if (0 <= fd && fd < 256) {
             node = &SocketTable[fd];
             if (node->ref > 0 && node->socket != NULL) {
-            } else {
-                node = NULL;
+                enabled = OSDisableInterrupts();
+                so = node->socket;
+                ((s16*)((u8*)so + 4))[0]--;
+                OSRestoreInterrupts(enabled);
+                PutNode(node);
             }
         }
-        if (node == NULL) {
-            continue;
-        }
-        enabled = OSDisableInterrupts();
-        so = node->socket;
-        ((s16*)((u8*)so + 4))[0]--;
-        OSRestoreInterrupts(enabled);
-        PutNode(node);
-        count++;
     }
     return result;
 }

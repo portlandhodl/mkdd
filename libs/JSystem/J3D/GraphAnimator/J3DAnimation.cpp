@@ -613,7 +613,7 @@ f32 J3DAnmClusterFull::getWeight(u16 index) const
     if (getFrame() < 0.0f)
         return _0C[mTables[index]._00[1]];
     else if (frame >= maxFrame)
-        return _0C[mTables[index]._00[1] + maxFrame - 1];
+        return _0C[mTables[index]._00[1] + (maxFrame - 1)];
     else
         return _0C[mTables[index]._00[1] + frame];
 }
@@ -967,9 +967,9 @@ void J3DAnmTexPattern::getTexNo(u16 index, u16* texNo) const
     if (getFrame() < 0.0f)
         *texNo = _0C[mAnmTable[index].mData[0][1]];
     else if (getFrame() >= maxFrame)
-        *texNo = _0C[mAnmTable[index].mData[0][1] + maxFrame - 1];
+        *texNo = _0C[mAnmTable[index].mData[0][1] + (maxFrame - 1)];
     else
-        *texNo = _0C[mAnmTable[index].mData[0][1] + (int)getFrame()];
+        *texNo = _0C[(int)mCurrentFrame + mAnmTable[index].mData[0][1]];
 }
 
 void J3DAnmTexPattern::searchUpdateMaterialID(J3DModelData* modelData)

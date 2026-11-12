@@ -74,7 +74,7 @@ s32 PPPLayerFinished(PPPPPP* ppp);
 void PPPInitializeRestartCount(PPPPPP* ppp);
 void PPPSetState(PPPPPP* ppp, s32 state);
 s32 PPPGetState(PPPPPP* ppp);
-void PPPIn(PPPPPP* ifp, u8* data, s32 len);
+void PPPIn(PPPPPP* ifp, u8* data, s32 len, s32 flag);
 s32 PPPOpen(PPPPPP* ppp);
 s32 PPPUp(PPPPPP* ppp);
 void PPPDown(PPPPPP* ppp);

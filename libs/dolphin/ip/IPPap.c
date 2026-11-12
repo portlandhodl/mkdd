@@ -242,7 +242,7 @@ s32 PAPTimeout(PPPPPP* ppp)
     return !error;
 }
 
-void PAPIn(PPPPPP* ppp, u8* data, s32 len)
+void PAPIn(PPPPPP* ppp, u8* data, s32 len, s32 flag)
 {
     PPPHeader* hdr = (PPPHeader*)data;
 

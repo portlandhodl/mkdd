@@ -121,6 +121,60 @@ extern u8* IFRingPut(u8* base, s32 size, u8* head, s32 used, s32 len);
 static u16 Port = 1024;
 UDPInfoQueueT UDPInfoQueue;
 
+static void PeekInput(UDPInfo* info, s32 offset, void* buf, s32 len)
+{
+    IPVec vec[2];
+    u8* head;
+    s32 n;
+    s32 i;
+    u8* dst;
+
+    head = info->ringHead + offset;
+    if (info->ringHead + info->ringSize <= head) {
+        head -= info->ringSize;
+    }
+    n = IFRingGet(info->ringBase, info->ringSize, head, info->ringUsed - offset, vec, len);
+    dst = (u8*)buf;
+    for (i = 0; i < n; i++) {
+        memmove(dst, vec[i].data, vec[i].len);
+        dst += vec[i].len;
+    }
+}
+
+static void DiscardInput(UDPInfo* info, IPHeader* ip)
+{
+    info->ringHead = IFRingPut(info->ringBase, info->ringSize, info->ringHead, info->ringUsed, ip->len + 4);
+    info->ringUsed -= ip->len + 4;
+}
+
+static IPHeader* SaveInput(UDPInfo* info, IPHeader* ip, u32 flag)
+{
+    if ((u32)(info->ringSize - info->ringUsed) < ip->len + 4) {
+        return NULL;
+    }
+    info->ringHead = IFRingIn(info->ringBase, info->ringSize, info->ringHead, info->ringUsed, ip, ip->len);
+    info->ringUsed += ip->len;
+    info->ringHead = IFRingIn(info->ringBase, info->ringSize, info->ringHead, info->ringUsed, &flag, 4);
+    info->ringUsed += 4;
+    return ip;
+}
+
+static void CopySockets(UDPAddr* local, UDPAddr* remote, IPHeader* ip, UDPHeader* udp)
+{
+    if (local) {
+        local->len = 8;
+        local->family = 2;
+        memmove(local->addr, ip->dst, 4);
+        local->port = udp->dst;
+    }
+    if (remote) {
+        remote->len = 8;
+        remote->family = 2;
+        memmove(remote->addr, ip->src, 4);
+        remote->port = udp->src;
+    }
+}
+
 static void NullCallback(UDPInfo* info, s32 result)
 {
 }
@@ -520,36 +574,26 @@ s32 UDPSend(UDPInfo* info, const void* data, s32 len, UDPAddr* addr)
     return result;
 }
 
-static inline void Peek(UDPInfo* info, s32 offset, void* buf, s32 len)
-{
-    IPVec vec[2];
-    u8* head;
-    s32 n;
-    s32 i;
-    IPVec* v;
-    u8* dst;
 
-    head = info->ringHead + offset;
-    if (info->ringHead + info->ringSize <= head) {
-        head -= info->ringSize;
+static inline s32 Min(s32 a, s32 b)
+{
+    if (a < b) {
+        return a;
     }
-    n = IFRingGet(info->ringBase, info->ringSize, head, info->ringUsed - offset, vec, len);
-    dst = (u8*)buf;
-    for (i = 0, v = &vec[i]; i < n; i++, v++) {
-        memmove(dst, v->data, v->len);
-        dst += v->len;
-    }
+    return b;
 }
+
 
 s32 UDPReceiveExAsync(UDPInfo* info, void* buf, s32 len, UDPAddr* local, UDPAddr* remote, u32 flags,
                       UDPCallback callback, s32* result)
 {
+    IPHeader ip;
     BOOL enabled;
     s32 rc;
-    s32 n;
-    s32 hlen;
     UDPHeader udp;
-    IPHeader ip;
+    s32 n;
+    UDPCallback cb;
+    s32 hlen;
 
     rc = 0;
     enabled = OSDisableInterrupts();
@@ -570,53 +614,39 @@ s32 UDPReceiveExAsync(UDPInfo* info, void* buf, s32 len, UDPAddr* local, UDPAddr
         return rc;
     }
 
-    callback = callback ? callback : NullCallback;
+    cb = callback ? callback : NullCallback;
     if (info->ringUsed > 0) {
-        n = (info->ringUsed < 20) ? info->ringUsed : 20;
-        if (n > 0) {
-            Peek(info, 0, &ip, n);
+        n = 20;
+        if (n > info->ringUsed) {
+            n = info->ringUsed;
         }
-        hlen = IP_HLEN(&ip);
+        if (n > 0) {
+            PeekInput(info, 0, &ip, n);
+        }
         n = 8;
-        if (info->ringUsed < hlen + 8) {
-            n = info->ringUsed - hlen;
+        if (info->ringUsed < IP_HLEN(&ip) + 8) {
+            n = info->ringUsed - IP_HLEN(&ip);
         }
         if (n > 0) {
-            Peek(info, hlen, &udp, n);
+            PeekInput(info, IP_HLEN(&ip), &udp, n);
         }
-        rc = udp.len - 8;
-        if (rc >= len) {
-            rc = len;
-        }
-        hlen += 8;
-        if (info->ringUsed < hlen + rc) {
-            rc = info->ringUsed - hlen;
+        rc = Min(udp.len - 8, len);
+        if (info->ringUsed < IP_HLEN(&ip) + 8 + rc) {
+            rc = info->ringUsed - (IP_HLEN(&ip) + 8);
         }
         if (rc <= 0) {
             rc = 0;
         } else {
-            Peek(info, hlen, buf, rc);
+            PeekInput(info, IP_HLEN(&ip) + 8, buf, rc);
         }
-        if (local) {
-            local->len = 8;
-            local->family = 2;
-            memmove(local->addr, ip.dst, 4);
-            local->port = udp.dst;
-        }
-        if (remote) {
-            remote->len = 8;
-            remote->family = 2;
-            memmove(remote->addr, ip.src, 4);
-            remote->port = udp.src;
-        }
+        CopySockets(local, remote, &ip, &udp);
         if (!(flags & 2)) {
-            info->ringHead = IFRingPut(info->ringBase, info->ringSize, info->ringHead, info->ringUsed, ip.len + 4);
-            info->ringUsed -= ip.len + 4;
+            DiscardInput(info, &ip);
         }
         if (result) {
             *result = udp.len - 8;
         }
-        callback(info, udp.len - 8);
+        cb(info, udp.len - 8);
     } else if (flags & 4) {
         rc = -9;
         if (result) {
@@ -628,7 +658,7 @@ s32 UDPReceiveExAsync(UDPInfo* info, void* buf, s32 len, UDPAddr* local, UDPAddr
         } else {
             info->flag &= ~0x400;
         }
-        info->recvCallback = callback;
+        info->recvCallback = cb;
         info->recvResult = result;
         if (result) {
             *result = -1;
@@ -805,27 +835,7 @@ s32 __UDPPoll(UDPInfo* info)
     return events;
 }
 
-static inline IPHeader* Enqueue(UDPInfo* info, IPHeader* ip, u32 flag)
-{
-    if ((u32)(info->ringSize - info->ringUsed) < ip->len + 4) {
-        return NULL;
-    }
-    info->ringHead = IFRingIn(info->ringBase, info->ringSize, info->ringHead, info->ringUsed, ip, ip->len);
-    info->ringUsed += ip->len;
-    info->ringHead = IFRingIn(info->ringBase, info->ringSize, info->ringHead, info->ringUsed, &flag, 4);
-    info->ringUsed += 4;
-    return ip;
-}
 
-static inline void SetAddr(UDPAddr* sa, u8* addr, u16* port)
-{
-    if (sa) {
-        sa->len = 8;
-        sa->family = 2;
-        memmove(sa->addr, addr, 4);
-        sa->port = *port;
-    }
-}
 
 void UDPIn(IPInterface* interface, IPHeader* ip, u32 flag)
 {
@@ -860,7 +870,7 @@ void UDPIn(IPInterface* interface, IPHeader* ip, u32 flag)
     }
     callback = info->recvCallback;
     if (callback == NULL || (info->flag & 0x400)) {
-        ip = Enqueue(info, ip, flag);
+        ip = SaveInput(info, ip, flag);
         if (ip == NULL) {
             interface->unk88++;
             return;
@@ -876,8 +886,7 @@ void UDPIn(IPInterface* interface, IPHeader* ip, u32 flag)
     memmove(info->recvBuf, udp + 1, n);
     local = info->local_;
     remote = info->remote_;
-    SetAddr(local, ip->dst, &udp->dst);
-    SetAddr(remote, ip->src, &udp->src);
+    CopySockets(local, remote, ip, udp);
     if (info->recvResult) {
         *info->recvResult = udp->len - 8;
         info->recvResult = NULL;

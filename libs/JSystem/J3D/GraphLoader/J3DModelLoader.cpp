@@ -671,7 +671,7 @@ void J3DModelLoader::readPatchedMaterial(const J3DMaterialBlock* block, u32 flag
     mMaterialTable->mUniqueMaterials = nullptr;
 
     for (u16 i = 0; i < mMaterialTable->mMaterialNum; i++) {
-        u16 idx                                  = (u16)i;
+        int idx                                  = i;
         mMaterialTable->mMaterials[i]            = factory.create(nullptr, J3DMaterialFactory::PATCHED, idx, flags);
         mMaterialTable->mMaterials[i]->mMaterialID = ((u32)mMaterialTable->mMaterials >> 4) + factory._08[idx];
     }

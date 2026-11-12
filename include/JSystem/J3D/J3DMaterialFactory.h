@@ -57,7 +57,6 @@ struct J3DPatchingInfo {
 };
 
 
-extern const J3DTevSwapModeInfo j3dDefaultTevSwapMode;
 
 
 struct J3DTexCoord2Info {

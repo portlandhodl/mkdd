@@ -530,6 +530,7 @@ void SSDPStop(void)
     s32 j;
     BOOL enabled;
     u32 host;
+    u32 unused;
     OSTime t1;
     SSDPEntry* entry;
     SSDPInfo* info;

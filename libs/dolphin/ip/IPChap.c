@@ -198,7 +198,7 @@ s32 CHAPTimeout(PPPPPP* ppp)
     return !error;
 }
 
-void CHAPIn(PPPPPP* ppp, PPPHeader* hdr, s32 len)
+void CHAPIn(PPPPPP* ppp, PPPHeader* hdr, s32 len, s32 flag)
 {
     MD5Context context;
     u8 size;

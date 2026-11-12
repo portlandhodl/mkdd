@@ -297,7 +297,10 @@ int J3DMaterialTable::entryTexMtxAnimator(J3DAnmTextureSRTKey* anm)
 					u16 index;
 					u16 flag;
 					J3DAnmTextureSRTKey* anm;
-				} texMtxAnm = { no, 1, anm };
+				} texMtxAnm;
+				texMtxAnm.index = no;
+				texMtxAnm.flag  = 1;
+				texMtxAnm.anm   = anm;
 				materialAnm->setTexMtxAnm(texMtxID, (J3DTexMtxAnm*)&texMtxAnm);
 			}
 		}

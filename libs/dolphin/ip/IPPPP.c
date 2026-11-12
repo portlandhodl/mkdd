@@ -5,16 +5,16 @@
 extern void PPPInitLCP(PPPPPP* lcp, void* ifp);
 extern void PPPInitIPCP(PPPPPP* ipcp, void* ifp);
 extern void IPSetConfigError(void* unused, s32 error);
-extern s32 IPIn(void* ifp, void* data, s32 len);
+extern s32 IPIn(void* ifp, void* data, s32 len, s32 flag);
 static s32 LCPOut(PPPPPP* ppp, u8 code, u8 id, s32 len, void* data);
-static void LCPIn(PPPPPP* ppp, u8* data, s32 len);
-extern s32 PAPIn(PPPPPP* ppp, u8* data, s32 len);
+static void LCPIn(PPPPPP* ppp, u8* data, s32 len, s32 flag);
+extern void PAPIn(PPPPPP* ppp, u8* data, s32 len, s32 flag);
 extern s32 PAPOpen(PPPPPP* ppp);
 extern s32 PAPUp(PPPPPP* ppp);
 extern void PAPDown(PPPPPP* ppp);
 extern void PAPClose(PPPPPP* ppp);
 extern s32 PAPTimeout(PPPPPP* ppp);
-extern s32 CHAPIn(PPPPPP* ppp, u8* data, s32 len);
+extern void CHAPIn(PPPPPP* ppp, u8* data, s32 len, s32 flag);
 extern s32 CHAPOpen(PPPPPP* ppp);
 extern s32 CHAPUp(PPPPPP* ppp);
 extern void CHAPDown(PPPPPP* ppp);
@@ -235,10 +235,11 @@ inline s32 TLFInline(PPPPPP* ppp)
 
 static s32 LCPOut(PPPPPP* ppp, u8 code, u8 id, s32 len, void* data)
 {
-    BOOL enabled;
     PPPInterface* ifp;
+    BOOL enabled;
     PPPPacket* pkt;
     u8* p;
+    PPPHeader* hdr;
 
     enabled = OSDisableInterrupts();
     ifp = ppp->ifp;
@@ -253,10 +254,11 @@ static s32 LCPOut(PPPPPP* ppp, u8 code, u8 id, s32 len, void* data)
     if (pkt) {
         p = pkt->buf;
         *(u16*)p = ppp->protocol;
-        p[2] = code;
-        p[3] = id;
-        *(u16*)(p + 4) = len + 4;
-        memmove(p + 2 + 4, data, len);
+        hdr = (PPPHeader*)(p + 2);
+        hdr->code = code;
+        hdr->id = id;
+        hdr->len = len + 4;
+        memmove(hdr->data, data, len);
         pkt->count = 1;
         pkt->data = p;
         pkt->len = len + 6;
@@ -272,6 +274,8 @@ static s32 LCPOut(PPPPPP* ppp, u8 code, u8 id, s32 len, void* data)
 
 static void ReceiveConfigureRequest(PPPPPP* ppp, PPPHeader* hdr)
 {
+    s32 result;
+
     switch (ppp->receiveConfigureRequest(ppp, (u8*)hdr)) {
     case 0:
         switch (ppp->state) {
@@ -559,6 +563,8 @@ static void ReceiveUnknownCode(PPPPPP* ppp, PPPHeader* hdr)
 
 static void ReceiveCodeReject(PPPPPP* ppp, PPPHeader* hdr)
 {
+    u8* rejected;
+
     switch (ppp->state) {
     case 2:
         PPP_TLF(ppp);
@@ -596,6 +602,8 @@ static void ReceiveCodeReject(PPPPPP* ppp, PPPHeader* hdr)
 
 static void ReceiveProtocolReject(PPPPPP* ppp, PPPHeader* hdr)
 {
+    u16 protocol;
+
     switch (ppp->state) {
     case 2:
         TLFInline(ppp);
@@ -631,7 +639,7 @@ static void ReceiveProtocolReject(PPPPPP* ppp, PPPHeader* hdr)
     }
 }
 
-static void LCPIn(PPPPPP* ppp, u8* data, s32 len)
+static void LCPIn(PPPPPP* ppp, u8* data, s32 len, s32 flag)
 {
     PPPHeader* hdr = (PPPHeader*)data;
 
@@ -684,49 +692,50 @@ static void LCPIn(PPPPPP* ppp, u8* data, s32 len)
     }
 }
 
-void PPPIn(PPPPPP* ifp, u8* data, s32 len)
+void PPPIn(PPPPPP* ifp, u8* data, s32 len, s32 flag)
 {
     u16 protocol;
-    u8* p = data;
     PPPPPP* head;
     PPPPPP* ppp;
     PPPPPP* next;
 
-    if (len < 2)
-        return;
-    protocol = *(u16*)p;
-    if (protocol == IP_PROTO_UDP + 16) {
-        if (ifp->tail->state == 9)
-            IPIn(ifp, p + 2, len - 2);
+    if (len < 2) {
         return;
     }
-    ppp = ifp->head;
-    head = ppp;
-    next = !ppp ? NULL : ppp->next;
-    while (ppp) {
-        if (ppp->protocol == protocol)
+    protocol = *(u16*)data;
+    if (protocol == 0x21) {
+        if (ifp->tail->state == 9) {
+            IPIn(ifp, data + 2, len - 2, flag);
+        }
+        return;
+    }
+    head = ifp->head;
+    for (ppp = head, next = !ppp ? NULL : ppp->next; ppp; ppp = next, next = !ppp ? NULL : ppp->next) {
+        if (protocol == ppp->protocol) {
             break;
-        ppp = next;
-        next = !ppp ? NULL : ppp->next;
+        }
     }
     if (!ppp) {
         if (head->state == 9) {
-            u8 id = ++head->codeRejectCount;
-
-            LCPOut(head, 8, id, *(u16*)(p + 4), p + 2);
+            ++head->codeRejectCount;
+            LCPOut(head, 8, head->codeRejectCount, *(u16*)(data + 4), data + 2);
         }
         return;
     }
     switch (protocol) {
     case 0xC021:
+        LCPIn(ppp, data + 2, len - 2, flag);
+        break;
     case 0x8021:
-        LCPIn(ppp, data + 2, len - 2);
+        LCPIn(ppp, data + 2, len - 2, flag);
         break;
     case 0xC023:
-        PAPIn(ppp, p + 2, len - 2);
+        PAPIn(ppp, data + 2, len - 2, flag);
         break;
     case 0xC223:
-        CHAPIn(ppp, p + 2, len - 2);
+        CHAPIn(ppp, data + 2, len - 2, flag);
+        break;
+    case 0xC022:
         break;
     }
 }
