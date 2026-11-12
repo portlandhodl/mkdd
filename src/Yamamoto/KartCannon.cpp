@@ -571,8 +571,11 @@ void KartCannon::DoAfterCannonCrl() {
     body->mWg.z = 0;
     body->mWg.y = 0;
 
-    if ((int)mState == 2) {
-    } else if ((int)mState >= 2 && (int)mState < 4) {
+    switch (mState) {
+    case 0:
+    case 1:
+        break;
+    case 3: {
         f32 stick = GetKartCtrl()->GetCoDriveCont(body->mMynum)->getMainStickY() - 0.1f;
 
         if (body->_464 < -0.174444f && stick > 0) {
@@ -582,5 +585,9 @@ void KartCannon::DoAfterCannonCrl() {
             stick = 0;
         }
         body->mWg.x = 0.0348888f * stick;
+        break;
+    }
+    case 2:
+        return;
     }
 }

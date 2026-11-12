@@ -122,7 +122,11 @@ void TMapObjAwardItemBox::reset() {
 
     JGeometry::TVec3f dir;
     mRotMtx.getXDir(dir);
-    dir.normalize();
+    f32 sq = dir.squared();
+    if (!(sq <= JGeometry::TUtilf::epsilon())) {
+        f32 inv = JGeometry::TUtilf::inv_sqrt(sq);
+        dir.scale(inv);
+    }
     mCup->mDirVec.scale((f32)mObjData->mParam2 / (f32)TMapObjAwardCup::sJumpFrame, dir);
     mCup->setOrgMtx(mRotMtx);
 }
