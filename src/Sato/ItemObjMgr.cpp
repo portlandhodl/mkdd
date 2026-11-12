@@ -1531,7 +1531,7 @@ u8 ItemObjMgr::getNowTandemDriverNum(int kart_index)
 
 bool ItemObjMgr::IsSpecialCharacter(s32 charID) { return charID == 0x13 || charID == 0x14; }
 
-bool ItemObjMgr::IsAbleToCreateItem(int itemIdx) { // UNUSED, fabricated, size mismatch
+u8 ItemObjMgr::IsAbleToCreateItem(int itemIdx) { // UNUSED, fabricated, size mismatch
     bool ret = false;
 
     if (itemIdx == 10 && isThunderDisabled()) {
@@ -1801,11 +1801,11 @@ void ItemObjMgr::drawSimpleModel(u32 viewNo, ItemObjMgr::eDrawSimplModelItemType
         JSUList<ItemObj> *list = &_3e8[sSimpleDrawItemKind[i]];
         if (list->getFirst() == nullptr)
             continue;
-        ItemObj *first = list->getFirst()->getObject();
-        if (first->mModel.getModelData() == nullptr)
+        ExModel *model = &list->getFirst()->getObject()->mModel;
+        if (model->getModelData() == nullptr)
             continue;
 
-        drawer.drawInit(&first->mModel);
+        drawer.drawInit(model);
         while (drawer.loadPreDrawSetting())
         {
             for (JSUListIterator<ItemObj> it(list->getFirst()); it.isAvailable(); ++it)
@@ -2181,8 +2181,9 @@ void ItemShuffleMgr::setAllDynamicRate()
 void ItemShuffleMgr::setDynamicRate(ItemShuffleMgr::KartSlotData *slotData, bool isGrandPrix)
 {
     for (int i = 0; i < slotData->totalSlots; i++) {
+        int itemIdx = sSlotItemIndex[i];
         bool ableToCreate = false;
-        if (GetItemObjMgr()->IsAbleToCreateItem(sSlotItemIndex[i]))
+        if (GetItemObjMgr()->IsAbleToCreateItem(itemIdx))
             ableToCreate = true;
         
         for (int j = 0; j < slotData->kartCount; j++) {

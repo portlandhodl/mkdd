@@ -108,9 +108,8 @@ const char *J3DEfctBomb::getBrkFileName(u8 index)
 
 void J3DEfctBomb::onlyinit()
 {
-    mAnmCtrl.mTrans = new AnmControlTrans();
-    mAnmCtrl.mTrans->initAnm(1, &mModel);
-    mAnmCtrl.mTrans->registration(0, sBckAnmTrans[0], sBckMtxCalc[0]);
+    mAnmCtrl.InitRegistration(1, &mModel);
+    mAnmCtrl.RegisterTrans(0, sBckAnmTrans[0], sBckMtxCalc[0]);
 
     MatAnmInfo info;
     info.mNumBtks = 0;

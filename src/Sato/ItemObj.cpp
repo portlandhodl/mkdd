@@ -2053,7 +2053,7 @@ void ItemObj::initThrowVel(f32 dirScale, f32 upScale, f32 power)
     }
 }
 
-void ItemObj::setInitThrowDir(JGeometry::TVec3f *dir, f32 pow, bool useUpForce)
+void ItemObj::setInitThrowDir(JGeometry::TVec3f *dir, const f32 pow, bool useUpForce)
 {
     ObjUtility::getKartZdir(mOwnerNum, dir);
     JGeometry::TVec3f ydir;
@@ -2061,8 +2061,7 @@ void ItemObj::setInitThrowDir(JGeometry::TVec3f *dir, f32 pow, bool useUpForce)
 
     if (!useUpForce || dir->y <= 0.0f)
     {
-        f32 p = pow;
-        ydir.scale(p);
+        ydir.scale(pow);
         *dir += ydir;
         stVecNormalize(*dir);
     }
@@ -2110,7 +2109,7 @@ static inline void addDirNormalize(JGeometry::TVec3f *dir, JGeometry::TVec3f &ve
     stVecNormalize(*dir);
 }
 
-void ItemObj::calcGndNormal(JGeometry::TVec3f *dir, CrsGround &gnd, f32 threshold, f32 pow)
+void ItemObj::calcGndNormal(JGeometry::TVec3f *dir, CrsGround &gnd, f32 threshold, const f32 pow)
 {
     JGeometry::TVec3f gndNormal;
     gnd.getNormal(&gndNormal);

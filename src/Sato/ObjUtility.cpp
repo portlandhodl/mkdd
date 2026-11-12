@@ -660,7 +660,7 @@ void BombEffectObj::init(const JGeometry::TPos3f &pos, u8 color, f32 scale)
     startEfct(tmp, color);
 }
 
-void BombEffectObj::setInitialize(JGeometry::TPos3f &mtx, const JGeometry::TPos3f &pos, u8 color, f32 scale)
+void BombEffectObj::setInitialize(JGeometry::TPos3f &mtx, const JGeometry::TPos3f &pos, u8 color, const f32 scale)
 {
     reset();
     JGeometry::TVec3f trans;

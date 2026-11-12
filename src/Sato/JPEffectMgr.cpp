@@ -25,6 +25,8 @@
 #include "Yamamoto/kartCamera.h"
 #include "Yamamoto/kartCtrl.h"
 
+JPEffectMgr *JPEffectMgr::mThis;
+
 namespace
 {
     u16 PartilceMax = 1024;
@@ -89,8 +91,6 @@ void JPSnowEmitterCallBack::execute(JPABaseEmitter *emt)
 void JPSnowEmitterCallBack::draw(JPABaseEmitter *)
 {
 }
-
-JPEffectMgr *JPEffectMgr::mThis;
 
 JPEffectMgr::JPEffectMgr(JKRHeap *heap, bool p2, u8 mode)
 {
@@ -522,12 +522,7 @@ void JPEffectMgr::createCupStartDemoEmt()
 void JPEffectMgr::createStaffRollEfct()
 {
     JGeometry::TVec3f zero(0.0f, 0.0f, 0.0f);
-    for (u8 i = 0; i < 8; i++) {
-        mEmitterMgr->createSimpleEmitter(zero, cb(i), nullptr, nullptr);
-        mEmitterMgr->createSimpleEmitter(zero, cb(i), nullptr, nullptr);
-    }
-    mEmitterMgr->calc();
-    getSnowEmtSpdRatio();
+    mEmitterMgr->createSimpleEmitter(zero, JGadget::getHashCode("mk_endTest"), nullptr, nullptr);
 }
 
 void JPEffectMgr::resetSnowCamVel()

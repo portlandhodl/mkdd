@@ -696,8 +696,10 @@ void ItemBomb::moveNormal(CrsGround &ground)
             } else {
                 mPos.y = height;
                 mVel.y = 0.0f;
-                mVel.x = ground.getNormalVec().x;
-                mVel.z = ground.getNormalVec().z;
+                JGeometry::TVec3f vel;
+                ground.getVelocity(&vel);
+                mVel.x = vel.x;
+                mVel.z = vel.z;
                 if (!mIsOnGnd && !mFoundKart) {
                     mColorAnm.mAnmBase = sColorAnm[1];
                     mColorAnm.initFrameCtrl(mColorAnm.mAnmBase);
@@ -710,8 +712,10 @@ void ItemBomb::moveNormal(CrsGround &ground)
         } else {
             mPos.y = height;
             mVel.y = 0.0f;
-            mVel.x = ground.getNormalVec().x;
-            mVel.z = ground.getNormalVec().z;
+            JGeometry::TVec3f vel;
+            ground.getVelocity(&vel);
+            mVel.x = vel.x;
+            mVel.z = vel.z;
             mIsOnGnd = 1;
         }
     }

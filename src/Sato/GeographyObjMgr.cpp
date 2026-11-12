@@ -1290,9 +1290,9 @@ void GeographyObjManager::setSequentialID()
         genEntry->sequentialID = seq;
     }
 
-    num = GeoFuncTableMax + GeoPrevDrawFuncTableMax + GenGeoFuncTableMax;
-    mKindObjTbl = new GeographyObj *[num];
-    for (u16 i = 0; i < num; i++)
+    u16 num2 = GeoFuncTableMax + GeoPrevDrawFuncTableMax + GenGeoFuncTableMax;
+    mKindObjTbl = new GeographyObj *[num2];
+    for (u16 i = 0; i < num2; i++)
     {
         mKindObjTbl[i] = nullptr;
     }
@@ -1311,77 +1311,48 @@ void GeographyObjManager::setSequentialID()
         specialEntry->sequentialID = seq;
     }
 
-    mGeoObjNum = num + BlockGeoFuncTableMax + SpecialGeoFuncTableMax;
+    mGeoObjNum = num2 + BlockGeoFuncTableMax + SpecialGeoFuncTableMax;
 }
 
 void GeographyObjManager::countObjNum(const CrsData::SObject *obj)
 {
+    u32 kind = obj->objID;
     GeoFuncTable::GeoFuncTblEntry *entry = GeoFuncTable::GeoFuncTbl;
-    int kind = obj->objID;
-    u16 i = 0;
-    while (i < GeoFuncTableMax)
-    {
-        if (entry->kind == kind)
-        {
+    for (u16 i = 0; i < GeoFuncTableMax; i++, entry++) {
+        if (entry->kind == kind) {
             if (kind == 1)
                 mItemBoxObjNum++;
             mNormObjNum++;
             return;
         }
-        i++;
-        entry++;
     }
-
-    entry = GeoFuncTable::GeoPrevDrawFuncTbl;
-    i = 0;
-    while (i < GeoPrevDrawFuncTableMax)
-    {
-        if (entry->kind == kind)
-        {
+    GeoFuncTable::GeoFuncTblEntry *prevEntry = GeoFuncTable::GeoPrevDrawFuncTbl;
+    for (u16 i = 0; i < GeoPrevDrawFuncTableMax; i++, prevEntry++) {
+        if (prevEntry->kind == kind) {
             mPrevDrawGeoObjNum++;
             return;
         }
-        i++;
-        entry++;
     }
-
-    entry = GeoFuncTable::GenGeoFuncTbl;
-    i = 0;
-    while (i < GenGeoFuncTableMax)
-    {
-        if (entry->kind == kind)
-        {
+    GeoFuncTable::GeoFuncTblEntry *genEntry = GeoFuncTable::GenGeoFuncTbl;
+    for (u16 i = 0; i < GenGeoFuncTableMax; i++, genEntry++) {
+        if (genEntry->kind == kind) {
             mGenGeoObjNum++;
             return;
         }
-        i++;
-        entry++;
     }
-
-    GeoFuncTable::GeoExFuncTblEntry *exEntry = GeoFuncTable::BlockGeoFuncTbl;
-    i = 0;
-    while (i < BlockGeoFuncTableMax)
-    {
-        if (exEntry->kind == kind)
-        {
+    GeoFuncTable::GeoExFuncTblEntry *blockEntry = GeoFuncTable::BlockGeoFuncTbl;
+    for (u16 i = 0; i < BlockGeoFuncTableMax; i++, blockEntry++) {
+        if (blockEntry->kind == kind) {
             mBlockGeoObjNum++;
             return;
         }
-        i++;
-        exEntry++;
     }
-
-    exEntry = GeoFuncTable::SpecialGeoFuncTbl;
-    i = 0;
-    while (i < SpecialGeoFuncTableMax)
-    {
-        if (exEntry->kind == kind)
-        {
+    GeoFuncTable::GeoExFuncTblEntry *specialEntry = GeoFuncTable::SpecialGeoFuncTbl;
+    for (u16 i = 0; i < SpecialGeoFuncTableMax; i++, specialEntry++) {
+        if (specialEntry->kind == kind) {
             mSpecialGeoObjNum++;
             return;
         }
-        i++;
-        exEntry++;
     }
 }
 

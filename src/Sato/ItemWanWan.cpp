@@ -68,6 +68,7 @@ namespace
 JGeometry::TVec3f ItemWanWanObj::sHandOffsetPos(155.0f, 150.0f, -330.0f);
 J3DAnmTransform *ItemWanWanObj::mAnmTrans[2] = {nullptr, nullptr};
 J3DMtxCalc *ItemWanWanObj::mAnmCalc[2] = {nullptr, nullptr};
+int ItemWanWanObj::sChainJointNo;
 J3DDeformData *ItemWanWanObj::mAnmDeform;
 J3DAnmCluster *ItemWanWanObj::mAnmCluster;
 

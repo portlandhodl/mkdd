@@ -43,35 +43,12 @@ static inline f32 getCharHeadY(int kartNum, u8 driver, f32 margin)
     return (*mtx)[1][3] + sCharHeadOffsetY[charID] - margin;
 }
 
-inline bool stEfctWaterBase::getCenterGeneratePos(JGeometry::TVec3f *pos, Mtx m, f32 margin)
+f32 stEfctWaterBase::getWaterHeight(int kartNum)
 {
-    s16 num = kartNum;
-    bool ret = false;
-    pos->set(m[0][3], m[1][3], m[2][3]);
-    CrsGround *ground = GetKartCtrl()->GetBodyGround(num);
-    f32 waterHeight = GetKartCtrl()->GetBodyGround(num)->getWaterHeight();
-    f32 headY = getCharHeadY(num, ItemObjMgr::getNowTandemDriverNum(num), margin);
-    if (waterHeight > pos->y + sTstKartDownY && waterHeight < headY) {
-        ret = true;
-        pos->y = waterHeight;
-    }
-    return ret;
+    return GetKartCtrl()->GetBodyGround(kartNum)->getWaterHeight();
 }
 
-inline void stEfctWaterBase::setWaterVelDir()
-{
-    JGeometry::TVec3f dir;
-    ObjUtility::getKartZdir(kartNum, &dir);
-    dir.y = 0.0f;
-    dir.negate();
-    stVecNormalize(dir);
-    dir.y = 1.0f;
-    stVecNormalize(dir);
-    JGeometry::TVec3f velDir(dir);
-    _04->mFirstVelDir = velDir;
-}
-
-inline bool stEfctWaterBase::getTireGeneratePos(JGeometry::TVec3f *pos, f32 ratio, f32 offsetY)
+bool stEfctWaterBase::getTireGeneratePos(JGeometry::TVec3f *pos, f32 ratio, f32 offsetY)
 {
     bool ret = false;
     int num = kartNum;
@@ -88,9 +65,32 @@ inline bool stEfctWaterBase::getTireGeneratePos(JGeometry::TVec3f *pos, f32 rati
     return ret;
 }
 
-f32 stEfctWaterBase::getWaterHeight(int kartNum)
+bool stEfctWaterBase::getCenterGeneratePos(JGeometry::TVec3f *pos, Mtx m, f32 margin)
 {
-    return GetKartCtrl()->GetBodyGround(kartNum)->getWaterHeight();
+    s16 num = kartNum;
+    bool ret = false;
+    pos->set(m[0][3], m[1][3], m[2][3]);
+    CrsGround *ground = GetKartCtrl()->GetBodyGround(num);
+    f32 waterHeight = GetKartCtrl()->GetBodyGround(num)->getWaterHeight();
+    f32 headY = getCharHeadY(num, ItemObjMgr::getNowTandemDriverNum(num), margin);
+    if (waterHeight > pos->y + sTstKartDownY && waterHeight < headY) {
+        ret = true;
+        pos->y = waterHeight;
+    }
+    return ret;
+}
+
+void stEfctWaterBase::setWaterVelDir()
+{
+    JGeometry::TVec3f dir;
+    ObjUtility::getKartZdir(kartNum, &dir);
+    dir.y = 0.0f;
+    dir.negate();
+    stVecNormalize(dir);
+    dir.y = 1.0f;
+    stVecNormalize(dir);
+    JGeometry::TVec3f velDir(dir);
+    _04->mFirstVelDir = velDir;
 }
 
 stEfctWaterTrack::stEfctWaterTrack()

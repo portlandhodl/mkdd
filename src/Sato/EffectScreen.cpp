@@ -278,6 +278,8 @@ void EffectScreen::draw()
     GXPosition3s16(mX, mH, 0);
 }
 
+EffectScreenMgr *EffectScreenMgr::ThisMgr;
+
 EffectScreenMgr::EffectScreenMgr()
     : mLeft(0.0f), mTop(0.0f), mRight(640.0f), mBottom(480.0f), mTex(320, 240, GX_TF_I8)
 {

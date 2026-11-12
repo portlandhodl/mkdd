@@ -315,7 +315,7 @@ public:
     void loadModelData(ItemObj *);
     void loadShadowModelData();
     void changeItemHoldCharacter();
-    bool IsAbleToCreateItem(int);
+    u8 IsAbleToCreateItem(int);
     int getNowStockingKindNum(int, u32);
     void cancelRollingSlot(int);
     bool IsAvailableRollingSlotDriver(int, u8);

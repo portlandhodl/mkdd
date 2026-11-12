@@ -21,26 +21,6 @@ J3DEffectMgr *J3DEffectMgr::sJ3DMgr;
 J3DEfctKartAnmMgr *J3DEfctKartAnmMgr::sJ3DKartAnmMgr;
 
 namespace {
-template <class T>
-J3DEffectObj *J3DEffectObj::New()
-{
-    return new T();
-}
-
-template <class T>
-const char *J3DEffectObj::GetBmdName()
-{
-    return T::getBmdFileName();
-}
-
-template <class T>
-void J3DEffectObj::LoadAnm()
-{
-    T::loadAnmData();
-}
-}
-
-namespace {
 
 typedef const char *(*GetBmdNameFn)();
 typedef J3DEffectObj *(*NewFn)();
@@ -54,8 +34,8 @@ struct EfctFunc
     int mCount;
 };
 
-extern u32 sBombEfctNumAtNormal;
-extern u32 sBombEfctNumAtMiniGameBomb;
+u32 sBombEfctNumAtNormal = 5;
+u32 sBombEfctNumAtMiniGameBomb = 60;
 
 EfctFunc EfctFuncTbl[5] = {
     { &J3DEffectObj::GetBmdName<J3DEfctBomb>, &J3DEffectObj::New<J3DEfctBomb>, &J3DEffectObj::LoadAnm<J3DEfctBomb>, sBombEfctNumAtNormal },
@@ -74,14 +54,9 @@ const char *BrkEfctEffectName[3] = { "star", "dark", "frez" };
 #include "JSystem/JAudio/JASFakeMatch.h"
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
-PermissionCounter::PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
+inline PermissionCounter::PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
 
-PermissionCounter::~PermissionCounter() {}
-
-template <>
-void J3DEffectObj::LoadAnm<J3DEfctHeart>()
-{
-}
+inline PermissionCounter::~PermissionCounter() {}
 
 int GetJ3DEfctNumAtMiniGameBomb()
 {

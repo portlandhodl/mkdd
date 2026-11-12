@@ -14,13 +14,13 @@ public:
     J3DEffectObj() : mLink(this) {}
 
     template <class T>
-    static J3DEffectObj *New();
+    static J3DEffectObj *New() { return new T(); }
 
     template <class T>
-    static const char *GetBmdName();
+    static const char *GetBmdName() { return T::getBmdFileName(); }
 
     template <class T>
-    static void LoadAnm();
+    static void LoadAnm() { T::loadAnmData(); }
 
     virtual ~J3DEffectObj() {}                  // 08, weak
     virtual void onlyinit() = 0;                // 0c

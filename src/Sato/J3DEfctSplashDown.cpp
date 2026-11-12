@@ -11,15 +11,15 @@
 #include "Sato/ObjUtility.h"
 #include "Sato/stMath.h"
 
-J3DAnmTransform *J3DEfctSplashDown::sBckAnmTrans[1] = { nullptr };
-J3DMtxCalc *J3DEfctSplashDown::sBckMtxCalc[1] = { nullptr };
-J3DAnmTextureSRTKey *J3DEfctSplashDown::sTexSRTKey = nullptr;
-J3DAnmTevRegKey *J3DEfctSplashDown::sTevRegKey = nullptr;
+J3DAnmTransform *J3DEfctSplashDown::sBckAnmTrans[1];
+J3DMtxCalc *J3DEfctSplashDown::sBckMtxCalc[1];
+J3DAnmTextureSRTKey *J3DEfctSplashDown::sTexSRTKey;
+J3DAnmTevRegKey *J3DEfctSplashDown::sTevRegKey;
 
-J3DAnmTransform *J3DEfctMudSplashDown::sBckAnmTrans[1] = { nullptr };
-J3DMtxCalc *J3DEfctMudSplashDown::sBckMtxCalc[1] = { nullptr };
-J3DAnmTextureSRTKey *J3DEfctMudSplashDown::sTexSRTKey = nullptr;
-J3DAnmTevRegKey *J3DEfctMudSplashDown::sTevRegKey = nullptr;
+J3DAnmTransform *J3DEfctMudSplashDown::sBckAnmTrans[1];
+J3DMtxCalc *J3DEfctMudSplashDown::sBckMtxCalc[1];
+J3DAnmTextureSRTKey *J3DEfctMudSplashDown::sTexSRTKey;
+J3DAnmTevRegKey *J3DEfctMudSplashDown::sTevRegKey;
 
 J3DEfctSplashDown::J3DEfctSplashDown() {}
 

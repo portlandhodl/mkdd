@@ -547,14 +547,13 @@ void ItemBuild::setVel(f32 scale)
     }
 }
 
-void ItemBuild::setPos(JGeometry::TVec3f *pos, f32 scale)
+void ItemBuild::setPos(JGeometry::TVec3f *pos, const f32 scale)
 {
-    f32 s = scale;
     JGeometry::TVec3f inc(_18);
-    inc.scale(s);
+    inc.scale(scale);
     mOffset.add(inc);
     mOffset.y = 0.0f;
-    setHeight(s);
+    setHeight(scale);
 
     mObj->mPos.add(*pos, mOffset);
 }

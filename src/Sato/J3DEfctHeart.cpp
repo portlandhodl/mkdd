@@ -50,14 +50,11 @@ static JPTraceHParticleCallBack JPTraceHPCB;
 
 #include <JSystem/JAudio/JASFakeMatch2.h>
 
-static const char sAssertFile[] = "StateObserver.h";
-static const char sAssertMsg[] = "range over: %d <= id=%d < %d";
-
-#define HEART_MAX_ASSERT(i, max)                                                                          \
-    ((i) < (max)) ? (void)0                                                                               \
-                  : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), sAssertFile, 109, sAssertMsg, \
-                                                0, (i), (max)),                                           \
-                     OSPanic(sAssertFile, 109, "Halt"))
+#define HEART_MAX_ASSERT(i, max)                                                                        \
+    ((i) < (max)) ? (void)0                                                                             \
+                  : (JUTAssertion::showAssert_f(JUTAssertion::getSDevice(), "StateObserver.h", 109,     \
+                                                "range over: %d <= id=%d < %d", 0, (i), (max)),         \
+                     OSPanic("StateObserver.h", 109, "Halt"))
 
 inline void J3DEfctHeartStateObs::registStateFunc(const u8 &id, const StateFunc &initFunc, const StateFunc &doFunc)
 {
