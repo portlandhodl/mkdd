@@ -275,9 +275,10 @@ TFlareLine::~TFlareLine()
 
 void TFlareLine::setTexture(ResTIMG **timg, int num)
 {
+    TFlareInfo *info = sFlareInfo;
     for (int i = 0; i < 21; i++) {
-        if (mFlares[i] != nullptr && sFlareInfo[i].type < num)
-            mFlares[i]->mTexture->storeTIMG(timg[sFlareInfo[i].type], (u8)0);
+        if (mFlares[i] != nullptr && info[i].type < num)
+            mFlares[i]->mTexture->storeTIMG(timg[info[i].type], (u8)0);
     }
 }
 
@@ -383,10 +384,10 @@ void TFlareLine::calc(const JGeometry::TVec3f &pos)
     JGeometry::TVec2f center;
     JGeometry::TVec2f dir;
     center.x = (mScrnBounds.i.x - mScrnBounds.f.x) * 0.5f + mScrnBounds.f.x;
-    dir.x = center.x - scrnPos.x;
     center.y = (mScrnBounds.i.y - mScrnBounds.f.y) * 0.5f + mScrnBounds.f.y;
-    f32 height = mScrnBounds.f.y - mScrnBounds.i.y;
+    dir.x = center.x - scrnPos.x;
     dir.y = center.y - scrnPos.y;
+    f32 height = mScrnBounds.f.y - mScrnBounds.i.y;
     f32 radius = sOutRadius * (height / System::get2DVpH());
 
     if (0.0f != radius) {
@@ -436,8 +437,9 @@ bool TFlareLine::isInside(const JGeometry::TVec2f &pos)
 
 void TFlareLine::setPosition(const JGeometry::TVec2f &pos, const JGeometry::TVec2f &)
 {
-    JGeometry::TVec2f dir(mCenterX, mCenterY);
-    dir -= pos;
+    JGeometry::TVec2f dir;
+    dir.x = mCenterX - pos.x;
+    dir.y = mCenterY - pos.y;
     if (0.0f == dir.y)
         return;
 

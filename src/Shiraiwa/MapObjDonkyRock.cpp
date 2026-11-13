@@ -322,13 +322,12 @@ void TMapObjDonkyRock::doFunc_Break() {
 }
 
 void TMapObjDonkyRock::doKartColCallBack(int kartNo) {
-    u64 status = GetKartCtrl()->GetKartStatus(kartNo);
     bool change = false;
 
-    if (status & 0x0000000100040004ULL) {
+    if (GetKartCtrl()->getKartBody(kartNo)->mCarStatus & 0x0000000100040004ULL) {
         _58 = 11;
         change = 1;
-    } else if (status & 0x0000000000004000ULL) {
+    } else if (GetKartCtrl()->getKartBody(kartNo)->mCarStatus & 0x0000000000004000ULL) {
         _58 = 11;
         if (RaceMgr::sRaceManager->getRaceMode() != TIME_ATTACK) {
             change = 1;
