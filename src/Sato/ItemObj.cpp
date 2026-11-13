@@ -2275,27 +2275,7 @@ void ItemObj::setHandOffsetData()
     ItemHandOffsetData data = GetItemObjMgr()->getHandOffsetData(this);
     setHandOffsetPos(&data);
 
-    f32 cz = JMASCos(data._c[2]);
-    f32 sz = JMASSin(data._c[2]);
-    f32 cy = JMASCos(data._c[1]);
-    f32 cx = JMASCos(data._c[0]);
-    f32 sy = JMASSin(data._c[1]);
-    f32 sx = JMASSin(data._c[0]);
-
-    f32 cxsz = cx * sz;
-    f32 cxcz = cx * cz;
-    _210[0][0] = cy * cz;
-    _210[1][0] = cy * sz;
-    _210[2][0] = -sy;
-    f32 sxsy = sx * sy;
-    f32 sxsz = sx * sz;
-    _210[0][1] = sxsy * cz - cxsz;
-    _210[1][1] = sxsy * sz + cxcz;
-    _210[2][1] = sx * cy;
-    f32 sxcz = sx * cz;
-    _210[0][2] = cxcz * sy + sxsz;
-    _210[1][2] = cxsz * sy - sxcz;
-    _210[2][2] = cx * cy;
+    stMakeRotMtx(_210, data._c[0], data._c[1], data._c[2]);
 }
 
 void ItemObj::setHandOffsetPos(ItemHandOffsetData *data)

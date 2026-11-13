@@ -54,6 +54,30 @@ f32 stGetCollideDepthFromT(const JGeometry::TVec3f &, const JGeometry::TVec3f &,
 void stMTXRotDeg(Mtx, char, f32);
 void stMTXRotRad(Mtx, char, f32);
 
+inline void stMakeRotMtx(Mtx m, s16 x, s16 y, s16 z)
+{
+    f32 cz = JMASCos(z);
+    f32 sy = JMASSin(y);
+    f32 sz = JMASSin(z);
+    f32 cx = JMASCos(x);
+    f32 cy = JMASCos(y);
+    f32 sx = JMASSin(x);
+    f32 cxcz = cx * cz;
+    f32 cxsz = cx * sz;
+    m[0][0] = cy * cz;
+    m[1][0] = cy * sz;
+    m[2][0] = -sy;
+    f32 sxsy = sx * sy;
+    f32 sxsz = sx * sz;
+    m[0][1] = sxsy * cz - cxsz;
+    m[1][1] = sxsy * sz + cxcz;
+    m[2][1] = sx * cy;
+    f32 sxcz = sx * cz;
+    m[0][2] = cxcz * sy + sxsz;
+    m[1][2] = cxsz * sy - sxcz;
+    m[2][2] = cx * cy;
+}
+
 struct stRandom : public JMath::TRandom_fast_
 {
     stRandom() : JMath::TRandom_fast_(0) {
