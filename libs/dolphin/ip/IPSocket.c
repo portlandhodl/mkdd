@@ -535,8 +535,9 @@ s32 SOStartup(SOConfig* config)
         return SO_EINVAL;
     }
 
-    if (config->mtu > 0) {
-        mtu = ((config->mtu > 1500 ? 1500 : config->mtu) < 68) ? 68 : (config->mtu > 1500 ? 1500 : config->mtu);
+    if (0 < config->mtu) {
+        size = config->mtu;
+        mtu = ((size > 1500 ? 1500 : size) < 68) ? 68 : (size > 1500 ? 1500 : size);
     } else {
         mtu = 1500;
     }
@@ -569,13 +570,13 @@ s32 SOStartup(SOConfig* config)
         size = config->timeWaitBufSize;
         if (size != 0) {
             TimeWaitBufSize = size;
-            TimeWaitBuf = SOAlloc(6, size);
+            TimeWaitBuf = SOAlloc(6, TimeWaitBufSize);
             TCPSetTimeWaitBuffer(TimeWaitBuf, TimeWaitBufSize);
         }
         size = config->reassemblyBufSize;
         if (size != 0) {
             ReassemblyBufferSize = size;
-            ReassemblyBuffer = SOAlloc(7, size);
+            ReassemblyBuffer = SOAlloc(7, ReassemblyBufferSize);
             IPSetReassemblyBuffer(ReassemblyBuffer, ReassemblyBufferSize, mtu);
         }
         IPClearConfigError(0);
@@ -667,8 +668,9 @@ s32 SOCleanup(void)
 
     for (info = TCPInfoQueue.head, next = info == NULL ? NULL : (TCPSocket*)info->unk18; info != NULL;
          info = next, next = info == NULL ? NULL : (TCPSocket*)info->unk18) {
-        if (info->closeCallback == (void (*)(TCPSocket*, s32))LingerCallback) {
-            TCPCancel(info);
+        TCPSocket* p = info;
+        if (p->closeCallback == (void (*)(TCPSocket*, s32))LingerCallback) {
+            TCPCancel(p);
         }
     }
 
@@ -874,7 +876,7 @@ static s32 __SOClose(s32 s)
     SOTcpSocket* tail;
     s32 linger;
     BOOL enabled;
-    u32 optval[2];
+    s32 optval[2];
     s32 optlen;
 
     node = GetNode(s, (void**)&so);
@@ -896,7 +898,8 @@ static s32 __SOClose(s32 s)
         tail = NULL;
         enabled = OSDisableInterrupts();
 
-        while ((next = tcp->head) != NULL) {
+        while (tcp->head != NULL) {
+            next = tcp->head;
             {
                 SOTcpSocket* after = next->next;
                 if (after == NULL) {
@@ -918,7 +921,8 @@ static s32 __SOClose(s32 s)
             next->next = NULL;
         }
 
-        while ((next = tcp->pendingTail) != NULL) {
+        while (tcp->pendingTail != NULL) {
+            next = tcp->pendingTail;
             {
                 SOTcpSocket* after = next->next;
                 if (after == NULL) {
@@ -1059,10 +1063,10 @@ static void AcceptCallback(TCPSocket* so, s32 result)
         prev->next = next;
     }
 
-    TCPCancel(&sock->tcp);
-    TCPOpen(&sock->tcp, (u8*)sock->tcp.unk174, sock->tcp.unk178,
+    TCPCancel(so);
+    TCPOpen(so, (u8*)sock->tcp.unk174, sock->tcp.unk178,
             (u8*)sock->tcp.unk1F8, sock->tcp.unk1FC);
-    TCPSetTimeout(&sock->tcp, R2);
+    TCPSetTimeout(so, R2);
     sock->listener = &listener->tcp;
     prev = listener->tail;
     if (prev == NULL) {
@@ -1073,7 +1077,7 @@ static void AcceptCallback(TCPSocket* so, s32 result)
     sock->prev = prev;
     sock->next = NULL;
     listener->tail = sock;
-    TCPAcceptAsync(&sock->tcp, &listener->tcp, AcceptCallback, 0);
+    TCPAcceptAsync(so, &listener->tcp, AcceptCallback, 0);
 }
 
 static SOTcpSocket* AddBackLog(TCPSocket* so)
@@ -1696,7 +1700,7 @@ static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
         }
         }
         }
-        result = UDPSetSockOpt(udp, level, opt, val, len);
+        result = UDPSetSockOpt((SOUdpSocket*)so, level, opt, val, len);
         goto done;
         }
     case IP_PROTO_TCP:
@@ -1769,20 +1773,15 @@ static s32 __SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, u32 len)
 done:
     PutNode(node);
     switch (result) {
-    case -7:
-        result = SO_EPROTOTYPE;
-        break;
-    case -14:
-        result = SO_EBADMSG;
-        break;
     case 0:
-        result = 0;
-        break;
+        return 0;
+    case -14:
+        return SO_EBADMSG;
+    case -7:
+        return SO_EPROTOTYPE;
     default:
-        result = SO_EINVAL;
-        break;
+        return SO_EINVAL;
     }
-    return result;
 }
 
 s32 SOSetSockOpt(s32 s, s32 level, s32 opt, void* val, s32 len)

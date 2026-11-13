@@ -192,13 +192,12 @@ u16 UDPCheckSum(IPVec* vec, s32 n)
     s32 len;
 
     ip = (IPHeader*)vec->data;
-    sum = ((u16*)ip->src)[0];
-    sum += ((u16*)ip->src)[1];
+    p = (u16*)((u8*)ip + IP_HLEN(ip));
+    sum = ((u16*)ip->src)[0] + ((u16*)ip->src)[1];
     sum += ((u16*)ip->dst)[0];
     sum += ((u16*)ip->dst)[1];
     sum += IP_PROTO_UDP;
     sum += ip->len - IP_HLEN(ip);
-    p = (u16*)((u8*)ip + IP_HLEN(ip));
     len = vec->len - IP_HLEN(ip);
     for (;;) {
         while (len > 1) {
@@ -407,7 +406,6 @@ s32 UDPSendAsync(UDPInfo* info, const void* data, s32 len, UDPAddr* addr, UDPCal
     UDPHeader* udp;
     IPPacket* packet;
     IPInterface* interface;
-    u8* dst;
     s32 rc;
 
     interface = NULL;
@@ -477,11 +475,10 @@ s32 UDPSendAsync(UDPInfo* info, const void* data, s32 len, UDPAddr* addr, UDPCal
             rc = -7;
             goto Exit;
         }
-        ip = (IPHeader*)(packet + 1);
-        udp = (UDPHeader*)(ip + 1);
-        dst = (u8*)(udp + 1);
-        memmove(dst, data, len);
-        packet->vec[1].data = dst;
+        ip = (IPHeader*)((u8*)packet + sizeof(IPPacket));
+        udp = (UDPHeader*)((u8*)ip + sizeof(IPHeader));
+        memmove((u8*)udp + sizeof(UDPHeader), data, len);
+        packet->vec[1].data = (u8*)udp + sizeof(UDPHeader);
         packet->callback = NULL;
         packet->unk04 = 0;
         packet->unk00 = 0;
@@ -630,7 +627,8 @@ s32 UDPReceiveExAsync(UDPInfo* info, void* buf, s32 len, UDPAddr* local, UDPAddr
         if (n > 0) {
             PeekInput(info, IP_HLEN(&ip), &udp, n);
         }
-        rc = Min(udp.len - 8, len);
+        rc = udp.len - 8;
+        rc = Min(rc, len);
         if (info->ringUsed < IP_HLEN(&ip) + 8 + rc) {
             rc = info->ringUsed - (IP_HLEN(&ip) + 8);
         }
@@ -842,19 +840,17 @@ void UDPIn(IPInterface* interface, IPHeader* ip, u32 flag)
     UDPInfo* info;
     UDPHeader* udp;
     UDPCallback callback;
-    UDPAddr* local;
-    UDPAddr* remote;
     s32 n;
-    IPVec vec;
+    IPVec vec[2];
     ICMPHeader icmp;
 
     udp = (UDPHeader*)((u8*)ip + IP_HLEN(ip));
     if (ip->len < IP_HLEN(ip) + 8 || ip->len < IP_HLEN(ip) + udp->len || udp->len < 8) {
         return;
     }
-    vec.data = ip;
-    vec.len = ip->len;
-    if (udp->sum != 0 && UDPCheckSum(&vec, 1) != 0) {
+    vec[0].data = ip;
+    vec[0].len = ip->len;
+    if (udp->sum != 0 && UDPCheckSum(vec, 1) != 0) {
         return;
     }
     info = IPLookupInfo(&UDPInfoQueue, ip->src, ip->dst, udp->src, udp->dst, flag);
@@ -884,9 +880,7 @@ void UDPIn(IPInterface* interface, IPHeader* ip, u32 flag)
     }
     n = (info->recvLen < udp->len - 8) ? info->recvLen : udp->len - 8;
     memmove(info->recvBuf, udp + 1, n);
-    local = info->local_;
-    remote = info->remote_;
-    CopySockets(local, remote, ip, udp);
+    CopySockets(info->local_, info->remote_, ip, udp);
     if (info->recvResult) {
         *info->recvResult = udp->len - 8;
         info->recvResult = NULL;
@@ -910,18 +904,22 @@ void UDPNotify(IPHeader* ip, u8* src, s32 code)
         if (info->local.port != 0 && info->local.port == udp->src &&
             (*(u32*)info->local.addr == IPAddrAny || *(u32*)info->local.addr == *(u32*)ip->src) &&
             info->remote.port == udp->dst && *(u32*)info->remote.addr == *(u32*)ip->dst) {
-            Cancel(info, code);
+            UDPInfo* p = info;
+            Cancel(p, code);
         }
     }
 }
 
 BOOL UDPOnReset(BOOL final)
 {
+    UDPInfo* info;
+
     if (UDPInfoQueue.head == NULL) {
         return TRUE;
     }
     while (UDPInfoQueue.head) {
-        UDPClose(UDPInfoQueue.head);
+        info = UDPInfoQueue.head;
+        UDPClose(info);
     }
     return FALSE;
 }
