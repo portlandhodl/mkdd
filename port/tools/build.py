@@ -107,12 +107,13 @@ def job(kind, src, outdir, opt):
 LINK_COMMON = [
     "-sASYNCIFY=1", "-sASYNCIFY_STACK_SIZE=1048576", "-sSTACK_SIZE=1048576",
     "-sINITIAL_MEMORY=268435456", "-sALLOW_MEMORY_GROWTH=1", "-sGLOBAL_BASE=65536",
-    "-sERROR_ON_UNDEFINED_SYMBOLS=1", "-sASSERTIONS=1", "-sEXIT_RUNTIME=1",
+    "-sERROR_ON_UNDEFINED_SYMBOLS=1", "-sASSERTIONS=1",
     "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap", "-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$stringToNewUTF8,$UTF8ToString", "-g2",
 ]
 LINK_TARGET = {
-    "node": ["-sNODERAWFS=1", "-sENVIRONMENT=node"],
-    "web": ["-sENVIRONMENT=web", "-sFORCE_FILESYSTEM=1"],
+    "node": ["-sNODERAWFS=1", "-sENVIRONMENT=node", "-sEXIT_RUNTIME=1"],
+    "web": ["-sENVIRONMENT=web", "-sINVOKE_RUN=0", "-sEXIT_RUNTIME=0", "-sMIN_WEBGL_VERSION=2",
+            "-sMAX_WEBGL_VERSION=2", "-sEXPORTED_RUNTIME_METHODS=callMain,ccall,cwrap"],
 }
 
 def main():
@@ -145,6 +146,10 @@ def main():
     open(rsp, "w").write("\n".join(objs))
     cmd = [EMXX, f"@{rsp}", opt, *LINK_COMMON, *LINK_TARGET[a.target], "-o", os.path.join(out, "mkdd.js")]
     r = subprocess.run(cmd, cwd=ROOT)
+    if r.returncode == 0 and a.target == "web":
+        for f in glob.glob(os.path.join(ROOT, "port", "web", "*")):
+            if os.path.isfile(f) and f.endswith((".html", ".css", ".ico", ".png")):
+                shutil.copy(f, out)
     sys.exit(r.returncode)
 
 if __name__ == "__main__":

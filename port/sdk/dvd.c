@@ -1,7 +1,11 @@
-/* DVD: the disc filesystem served from an extracted directory on the host.
+/* DVD: the disc filesystem, served from the user's own disc.
  *
- * Entry numbers index a table built by walking the directory once, in sorted
- * order like the disc FST. Lookups are case-insensitive as on hardware.
+ * Two sources:
+ *  - a disc image (GCM/ISO): MKDD_DISC=/path/game.iso under node, or the File
+ *    the user picked in the browser (Module.discFile), read on demand;
+ *  - an extracted directory (files/ and sys/, as port/tools/extract_disc.py writes).
+ * Entry numbers index a table in FST order; lookups are case-insensitive as on
+ * hardware. Formats port/conv knows are served as converted (host-order) copies.
  * Reads complete immediately; async callbacks are delivered from port_poll(). */
 #include <dirent.h>
 #include <stdio.h>
@@ -14,10 +18,12 @@
 
 typedef struct Entry {
     char *name;     /* component name */
-    char *hostPath; /* full host path */
+    char *hostPath; /* directory source: full host path */
+    u32 discOffset; /* image source: byte offset of the file on the disc */
     int parent;
     int isDir;
     int next;       /* index after this entry's subtree (dirs) */
+    u32 rawSize;    /* size on disc */
     u32 size;       /* as served: the converted size for converted files */
     u8 *conv;       /* host-order copy (port/conv), loaded on first open */
     int convOpen;   /* open handles using conv */
@@ -32,15 +38,26 @@ static int sNumEntries, sCapEntries;
 static char sRoot[512];
 static DVDDiskID sDiskID;
 static int sCurrentDir;
+static int sImage;     /* 1: disc image source */
+static FILE *sImageFile; /* node: the image file */
 
 EM_JS(const char *, port_js_disc_root, (void), {
-    var p = (typeof process !== 'undefined' && process.env && process.env.MKDD_DISC) || '/disc';
+    var p = (typeof process !== 'undefined' && process.env && process.env.MKDD_DISC) || '';
     return stringToNewUTF8(p);
 });
 
 EM_JS(int, port_js_env, (const char *name), {
     var v = (typeof process !== 'undefined' && process.env) ? process.env[UTF8ToString(name)] : undefined;
+    if (v === undefined && typeof Module !== 'undefined' && Module.env) v = Module.env[UTF8ToString(name)];
     return v ? (parseInt(v, 10) || 1) : 0;
+});
+
+/* browser: the disc image is a File object; read a slice of it */
+EM_JS(int, port_js_has_disc_file, (void), { return (typeof Module !== 'undefined' && Module.discFile) ? 1 : 0; });
+EM_ASYNC_JS(int, port_js_disc_read, (u32 off, u32 len, u8 *dst), {
+    const ab = await Module.discFile.slice(off, off + len).arrayBuffer();
+    HEAPU8.set(new Uint8Array(ab), dst);
+    return ab.byteLength;
 });
 
 int port_env(const char *name) { return port_js_env(name); }
@@ -55,6 +72,18 @@ const char *port_disc_root(void)
     return sRoot;
 }
 
+/* Read from the disc image. Returns bytes read. */
+static u32 image_read(u32 off, u32 len, void *dst)
+{
+    if (sImageFile) {
+        fseek(sImageFile, (long)off, SEEK_SET);
+        return (u32)fread(dst, 1, len, sImageFile);
+    }
+    return (u32)port_js_disc_read(off, len, (u8 *)dst);
+}
+
+static u32 be32(const u8 *p) { return (u32)p[0] << 24 | (u32)p[1] << 16 | (u32)p[2] << 8 | p[3]; }
+
 static int add_entry(const char *name, const char *hostPath, int parent, int isDir, u32 size)
 {
     Entry *e;
@@ -63,17 +92,16 @@ static int add_entry(const char *name, const char *hostPath, int parent, int isD
         sEntries = (Entry *)realloc(sEntries, sCapEntries * sizeof(Entry));
     }
     e = &sEntries[sNumEntries];
+    memset(e, 0, sizeof *e);
     e->name = strdup(name);
-    e->hostPath = strdup(hostPath);
+    e->hostPath = hostPath ? strdup(hostPath) : NULL;
     e->parent = parent;
     e->isDir = isDir;
-    e->next = 0;
-    e->size = size;
-    e->conv = NULL;
-    e->convOpen = 0;
-    e->convState = 0;
+    e->rawSize = e->size = size;
     return sNumEntries++;
 }
+
+/* ---- extracted-directory source ---- */
 
 static int cmp_names(const void *a, const void *b) { return strcasecmp(*(char *const *)a, *(char *const *)b); }
 
@@ -102,35 +130,123 @@ static void walk(const char *hostDir, int self)
         struct stat st;
         int idx;
         snprintf(path, sizeof path, "%s/%s", hostDir, names[i]);
-        if (stat(path, &st) != 0)
-            continue;
-        idx = add_entry(names[i], path, self, S_ISDIR(st.st_mode), (u32)st.st_size);
-        if (S_ISDIR(st.st_mode))
-            walk(path, idx);
+        if (stat(path, &st) == 0) {
+            idx = add_entry(names[i], path, self, S_ISDIR(st.st_mode), (u32)st.st_size);
+            if (S_ISDIR(st.st_mode))
+                walk(path, idx);
+        }
         free(names[i]);
     }
     free(names);
     sEntries[self].next = sNumEntries;
 }
 
+/* ---- disc image source: boot.bin + FST ---- */
+
+static void load_image_fst(void)
+{
+    u8 hdr[0x440];
+    u32 fstOff, fstSize, n, i;
+    u8 *fst;
+    const char *names;
+    int stack[64], depth = 0;
+    image_read(0, sizeof hdr, hdr);
+    memcpy(&sDiskID, hdr, sizeof sDiskID);
+    fstOff = be32(hdr + 0x424);
+    fstSize = be32(hdr + 0x428);
+    fst = (u8 *)malloc(fstSize);
+    image_read(fstOff, fstSize, fst);
+    n = be32(fst + 8);
+    names = (const char *)fst + n * 12;
+    add_entry("", NULL, 0, 1, 0);
+    sEntries[0].next = (int)n;
+    stack[depth++] = 0;
+    for (i = 1; i < n; i++) {
+        const u8 *e = fst + i * 12;
+        int isDir = e[0] != 0, idx;
+        while (depth > 1 && (int)i >= sEntries[stack[depth - 1]].next)
+            depth--;
+        idx = add_entry(names + (be32(e) & 0xFFFFFF), NULL, stack[depth - 1], isDir, isDir ? 0 : be32(e + 8));
+        if (isDir) {
+            sEntries[idx].next = (int)be32(e + 8);
+            if (depth < 64)
+                stack[depth++] = idx;
+        } else {
+            sEntries[idx].discOffset = be32(e + 4);
+        }
+    }
+    free(fst);
+}
+
 void DVDInit(void)
 {
-    char boot[1024];
-    FILE *f;
+    const char *root;
     if (sNumEntries)
         return;
-    snprintf(boot, sizeof boot, "%s/files", port_disc_root());
-    add_entry("", boot, 0, 1, 0);
-    walk(boot, 0);
-    snprintf(boot, sizeof boot, "%s/sys/boot.bin", port_disc_root());
-    if ((f = fopen(boot, "rb"))) {
-        fread(&sDiskID, 1, sizeof sDiskID, f);
-        fclose(f);
+    root = port_disc_root();
+    if (port_js_has_disc_file()) {
+        sImage = 1;
     } else {
-        memcpy(sDiskID.gameName, "GM4E", 4);
-        memcpy(sDiskID.company, "01", 2);
+        struct stat st;
+        if (stat(root, &st) == 0 && S_ISREG(st.st_mode)) {
+            sImage = 1;
+            sImageFile = fopen(root, "rb");
+        }
     }
-    fprintf(stderr, "[dvd] %d entries under %s\n", sNumEntries, port_disc_root());
+    if (sImage) {
+        load_image_fst();
+    } else {
+        char path[1024];
+        FILE *f;
+        snprintf(path, sizeof path, "%s/files", root);
+        add_entry("", path, 0, 1, 0);
+        walk(path, 0);
+        snprintf(path, sizeof path, "%s/sys/boot.bin", root);
+        if ((f = fopen(path, "rb"))) {
+            fread(&sDiskID, 1, sizeof sDiskID, f);
+            fclose(f);
+        }
+    }
+    fprintf(stderr, "[dvd] %d entries from %s %s (%.6s)\n", sNumEntries, sImage ? "disc image" : "directory",
+            sImageFile || !sImage ? root : "(browser file)", sDiskID.gameName);
+}
+
+/* main.dol from the disc (for the blobs the original links into the DOL). */
+u8 *port_read_main_dol(u32 *outSize)
+{
+    u8 *buf = NULL;
+    DVDInit();
+    if (sImage) {
+        u8 hdr[0x440], dh[0x100];
+        u32 dolOff, size = 0;
+        int s;
+        image_read(0, sizeof hdr, hdr);
+        dolOff = be32(hdr + 0x420);
+        image_read(dolOff, sizeof dh, dh);
+        for (s = 0; s < 18; s++) {
+            u32 end = be32(dh + s * 4) + be32(dh + 0x90 + s * 4);
+            if (end > size)
+                size = end;
+        }
+        buf = (u8 *)malloc(size);
+        image_read(dolOff, size, buf);
+        *outSize = size;
+    } else {
+        char path[1024];
+        FILE *f;
+        long n;
+        snprintf(path, sizeof path, "%s/sys/main.dol", port_disc_root());
+        if (!(f = fopen(path, "rb")))
+            return NULL;
+        fseek(f, 0, SEEK_END);
+        n = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        buf = (u8 *)malloc((size_t)n);
+        fread(buf, 1, (size_t)n, f);
+        fclose(f);
+        *outSize = (u32)n;
+    }
+    return buf;
 }
 
 static int child_named(int dir, const char *name, int len)
@@ -171,30 +287,42 @@ s32 DVDConvertPathToEntrynum(const char *path)
     return dir;
 }
 
+/* Raw bytes of a file as stored on the disc. */
+static u32 raw_read(Entry *e, u32 offset, u32 length, void *dst)
+{
+    if (offset >= e->rawSize)
+        return 0;
+    if (length > e->rawSize - offset)
+        length = e->rawSize - offset;
+    if (sImage)
+        return image_read(e->discOffset + offset, length, dst);
+    {
+        FILE *f = fopen(e->hostPath, "rb");
+        u32 got;
+        if (!f)
+            return 0;
+        fseek(f, (long)offset, SEEK_SET);
+        got = (u32)fread(dst, 1, length, f);
+        fclose(f);
+        return got;
+    }
+}
+
 /* Disc formats are big-endian; serve converted (host-order) copies of the
  * formats port/conv knows. Media streams are read piecewise and stay raw. */
 static void load_converted(Entry *e)
 {
-    FILE *f;
     u8 *raw;
     unsigned outSize;
-    long n;
     if (e->convState == 2 || e->conv)
         return;
     if (!port_conv_wants(e->name)) {
         e->convState = 2;
         return;
     }
-    f = fopen(e->hostPath, "rb");
-    if (!f)
-        return;
-    fseek(f, 0, SEEK_END);
-    n = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    raw = (u8 *)malloc((size_t)n);
-    fread(raw, 1, (size_t)n, f);
-    fclose(f);
-    e->conv = port_conv_file(e->name, raw, (unsigned)n, &outSize);
+    raw = (u8 *)malloc(e->rawSize ? e->rawSize : 1);
+    raw_read(e, 0, e->rawSize, raw);
+    e->conv = port_conv_file(e->name, raw, e->rawSize, &outSize);
     free(raw);
     e->size = outSize;
     e->convState = 1;
@@ -242,25 +370,17 @@ BOOL DVDClose(DVDFileInfo *fi)
 static s32 read_entry(DVDFileInfo *fi, void *addr, s32 length, s32 offset)
 {
     Entry *e = &sEntries[fi->startAddr];
-    FILE *f;
-    size_t got;
+    u32 got;
     if (e->convState == 1 && !e->conv)
         load_converted(e); /* read after close: reload */
     if (e->conv) {
         got = offset < 0 || (u32)offset >= e->size ? 0 : e->size - (u32)offset;
-        if (got > (size_t)length)
-            got = (size_t)length;
+        if (got > (u32)length)
+            got = (u32)length;
         memcpy(addr, e->conv + offset, got);
-        if ((s32)got < length)
-            memset((u8 *)addr + got, 0, (size_t)length - got);
-        return length;
+    } else {
+        got = raw_read(e, (u32)offset, (u32)length, addr);
     }
-    f = fopen(e->hostPath, "rb");
-    if (!f)
-        return DVD_RESULT_FATAL_ERROR;
-    fseek(f, offset, SEEK_SET);
-    got = fread(addr, 1, (size_t)length, f);
-    fclose(f);
     /* the drive transfers whole 32-byte units; zero what lies past EOF */
     if ((s32)got < length)
         memset((u8 *)addr + got, 0, (size_t)length - got);

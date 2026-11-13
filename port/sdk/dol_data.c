@@ -35,24 +35,25 @@ static void convert_blob(void *data, u32 size, const char *name)
 
 static u32 be32(const u8 *p) { return (u32)p[0] << 24 | (u32)p[1] << 16 | (u32)p[2] << 8 | p[3]; }
 
-__attribute__((constructor)) static void load_dol_data(void)
+u8 *port_read_main_dol(u32 *outSize);
+
+/* Called from OSInit, before the game touches any of these. */
+void port_load_dol_data(void)
 {
-    char path[1024];
-    u8 hdr[0x100];
-    FILE *f;
+    u32 dolSize;
+    u8 *dol = port_read_main_dol(&dolSize);
     size_t b;
-    snprintf(path, sizeof path, "%s/sys/main.dol", port_disc_root());
-    if (!(f = fopen(path, "rb")) || fread(hdr, 1, sizeof hdr, f) != sizeof hdr) {
-        fprintf(stderr, "[dol] cannot read %s\n", path);
+    if (!dol || dolSize < 0x100) {
+        fprintf(stderr, "[dol] cannot read main.dol from the disc\n");
         abort();
     }
     for (b = 0; b < sizeof sBlobs / sizeof sBlobs[0]; b++) {
         int s;
         for (s = 0; s < 18; s++) {
-            u32 off = be32(hdr + s * 4), addr = be32(hdr + 0x48 + s * 4), size = be32(hdr + 0x90 + s * 4);
-            if (sBlobs[b].addr >= addr && sBlobs[b].addr + sBlobs[b].size <= addr + size) {
-                fseek(f, (long)(off + sBlobs[b].addr - addr), SEEK_SET);
-                fread(sBlobs[b].dst, 1, sBlobs[b].size, f);
+            u32 off = be32(dol + s * 4), addr = be32(dol + 0x48 + s * 4), size = be32(dol + 0x90 + s * 4);
+            if (sBlobs[b].addr >= addr && sBlobs[b].addr + sBlobs[b].size <= addr + size &&
+                off + (sBlobs[b].addr - addr) + sBlobs[b].size <= dolSize) {
+                memcpy(sBlobs[b].dst, dol + off + (sBlobs[b].addr - addr), sBlobs[b].size);
                 break;
             }
         }
@@ -61,7 +62,7 @@ __attribute__((constructor)) static void load_dol_data(void)
             abort();
         }
     }
-    fclose(f);
+    free(dol);
     convert_blob(_pSystemArc, sizeof _pSystemArc, "system.arc");
     convert_blob(JUTResFONT_Ascfont_fix12, sizeof JUTResFONT_Ascfont_fix12, "Ascfont_fix12.bfn");
 }

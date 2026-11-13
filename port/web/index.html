@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MKDD Web Port</title>
+<style>
+  :root { --bg: #111214; --panel: #1b1d21; --ink: #e6e6e6; --muted: #9aa0a6; --accent: #e8443a; --line: #2c2f35; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 18px; margin: 0 0 12px; font-weight: 600; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  button, label.btn { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px;
+    font: inherit; cursor: pointer; }
+  button[disabled] { opacity: .5; cursor: default; }
+  label.btn input { display: none; }
+  .muted { color: var(--muted); }
+  #screen { width: 100%; aspect-ratio: 640 / 480; background: #000; display: block; border-radius: 6px; }
+  #log { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px;
+    height: 220px; overflow: auto; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mario Kart: Double Dash!! — WebAssembly port (decomp)</h1>
+  <div class="bar">
+    <label class="btn">Choose disc image (.iso / .gcm)<input id="pick" type="file" accept=".iso,.gcm"></label>
+    <button id="start" disabled>Start</button>
+    <span id="status" class="muted">Your own disc image is read locally; nothing is uploaded.</span>
+  </div>
+  <canvas id="screen" width="640" height="480"></canvas>
+  <div id="log"></div>
+</main>
+<script>
+  const logEl = document.getElementById('log');
+  const statusEl = document.getElementById('status');
+  const startBtn = document.getElementById('start');
+  const pick = document.getElementById('pick');
+  const params = new URLSearchParams(location.search);
+  let discFile = null;
+
+  function log(text) {
+    logEl.textContent += text + '\n';
+    if (logEl.textContent.length > 200000) logEl.textContent = logEl.textContent.slice(-100000);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // Remember the chosen disc image between visits (browser-local IndexedDB).
+  function idb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('mkdd-port', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('disc');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function saveDisc(file) {
+    try { const db = await idb(); db.transaction('disc', 'readwrite').objectStore('disc').put(file, 'image'); } catch (e) {}
+  }
+  async function loadDisc() {
+    try {
+      const db = await idb();
+      return await new Promise(r => { const q = db.transaction('disc').objectStore('disc').get('image'); q.onsuccess = () => r(q.result || null); q.onerror = () => r(null); });
+    } catch (e) { return null; }
+  }
+  function setDisc(file) {
+    discFile = file;
+    startBtn.disabled = !file;
+    statusEl.textContent = file ? `${file.name} (${(file.size / 1048576).toFixed(0)} MB)` : 'No disc image chosen.';
+  }
+
+  pick.addEventListener('change', () => { const f = pick.files[0]; if (f) { setDisc(f); saveDisc(f); } });
+  loadDisc().then(f => { if (f && !discFile) setDisc(f); });
+
+  // Environment switches for the port, from the URL: ?fast=1&threads=1
+  const env = {};
+  if (params.has('fast')) env.MKDD_FAST_MOVIE = '1';
+  if (params.has('threads')) env.MKDD_THREADS = '1';
+
+  var Module = {
+    canvas: document.getElementById('screen'),
+    env,
+    print: t => log(t),
+    printErr: t => log(t),
+    onRuntimeInitialized() { if (discFile) startBtn.disabled = false; },
+    onAbort: what => { log('ABORT: ' + what); statusEl.textContent = 'Stopped (see log).'; },
+  };
+
+  startBtn.addEventListener('click', () => {
+    if (!discFile) return;
+    startBtn.disabled = true;
+    pick.disabled = true;
+    Module.discFile = discFile;
+    statusEl.textContent = 'Running ' + discFile.name;
+    Module.callMain([]);
+  });
+</script>
+<script src="mkdd.js"></script>
+</body>
+</html>

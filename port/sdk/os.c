@@ -20,6 +20,7 @@ static BOOL sInterruptsEnabled = TRUE;
 static u32 sProgressive, sSoundMode = 1;
 
 void port_dump_threads(void);
+void port_load_dol_data(void);
 
 void port_stub(const char *name)
 {
@@ -46,6 +47,7 @@ void OSInit(void)
     sArenaLo = memalign(32, PORT_ARENA_SIZE);
     sArenaHi = (u8 *)sArenaLo + PORT_ARENA_SIZE;
     port_os_init();
+    port_load_dol_data();
 }
 
 void *OSGetArenaLo(void) { OSInit(); return sArenaLo; }
