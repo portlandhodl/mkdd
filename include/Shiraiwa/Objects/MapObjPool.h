@@ -43,7 +43,7 @@ public:
     f32 getHeight(f32, f32);
     // Inline
     virtual ~TMapObjPool(); // 0x802c2134
-    virtual const char *getBmdFileName(); // 0x802c2b00
+    virtual const char *getBmdFileName() { return "/Objects/Pool.bmd"; } // 0x802c2b00
     virtual TPoolSupervisor *getSupervisor() { return sSupervisor; }
 
     static TPoolSupervisor *getSupervisor() { return sSupervisor; }

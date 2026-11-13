@@ -67,6 +67,11 @@ void TMapObjPool::reset() {
     }
 }
 
+void TMapObjPool::getUpDir(JGeometry::TVec3f *up) {
+    if (up != nullptr)
+        mRotMtx.getYDir(*up);
+}
+
 void TMapObjPool::calc() {
     JGeometry::TVec3f vec;
     vec.x = RCMGetCourse()->mDirY.x;
@@ -84,17 +89,20 @@ void TMapObjPool::calc() {
 
     JMAVECLerp((JGeometry::TVec3f *)ydir, &vec, &vec, mBlend);
 
-    JGeometry::TVec3f up(mRotMtx[0][1], mRotMtx[1][1], mRotMtx[2][1]);
+    JGeometry::TVec3f side;
+    JGeometry::TVec3f tmp;
+    JGeometry::TVec3f up;
     JGeometry::TVec3f dir;
-    dir.cross(vec, up);
+    mRotMtx.getYDir(up);
+    dir.sub(vec, up);
     if (dir.length() > 0.0006f)
-        dir.normalize();
+        dir.setLength(0.0006f);
+    vec.add(up, dir);
     vec.normalize();
 
-    JGeometry::TVec3f side(mRotMtx[0][2], mRotMtx[1][2], mRotMtx[2][2]);
+    mRotMtx.getZDir(side);
     side.normalize();
 
-    JGeometry::TVec3f tmp;
     tmp.cross(vec, side);
     tmp.normalize();
 
@@ -110,6 +118,17 @@ void TMapObjPool::calc() {
     mRotMtx[0][2] = side.x;
     mRotMtx[1][2] = side.y;
     mRotMtx[2][2] = side.z;
+    if (sUseBtk)
+        mBtk.mFrameCtrl.update();
+}
+
+f32 TMapObjPool::getHeight(f32 x, f32 z) {
+    JGeometry::TVec3f up;
+    mRotMtx.getYDir(up);
+    up.normalize();
+    f32 dx = x - mPos.x;
+    f32 dz = z - mPos.z;
+    return mPos.y + -(up.x * dx + up.z * dz) / up.y;
 }
 
 TPoolSupervisor::TPoolSupervisor() : mEntryList() {}
@@ -123,27 +142,24 @@ void TPoolSupervisor::entry(TMapObjPool *pool) {
 }
 
 f32 TPoolSupervisor::getHeight(f32 x, f32 z) {
-    f32 height = 0.0f;
+    f32 height = -1.0f;
 
     for (JSULink<TMapObjPool> *link = mEntryList.getFirst(); link != nullptr; link = link->getNext()) {
         TMapObjPool *pool = link->getObject();
 
+        JGeometry::TVec3f up;
+        pool->mRotMtx.getYDir(up);
         f32 dx = x - pool->mPos.x;
         f32 dz = z - pool->mPos.z;
-
-        JGeometry::TVec3f up(pool->mRotMtx[0][1], pool->mRotMtx[1][1], pool->mRotMtx[2][1]);
         up.normalize();
 
-        height = pool->mPos.y - (up.x * dx - up.z * dz) / up.y;
-        if (height > 0.0f)
+        f32 h = pool->mPos.y + -(up.x * dx + up.z * dz) / up.y;
+        height = h;
+        if (h > -1.0f)
             break;
     }
 
     return height;
-}
-
-__declspec(weak) const char *TMapObjPool::getBmdFileName() {
-    return "/Objects/Pool.bmd";
 }
 
 #include <JSystem/JAudio/JASFakeMatch2.h>

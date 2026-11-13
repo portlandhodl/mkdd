@@ -1407,7 +1407,7 @@ config.libs = [
             Object(Matching, "Shiraiwa/MapObjMoveItemBox.cpp"),
             Object(NonMatching, "Shiraiwa/Balloon.cpp"),
             Object(Matching, "Shiraiwa/MapObjJetCoaster.cpp"),
-            Object(NonMatching, "Shiraiwa/MapObjPool.cpp"),
+            Object(Matching, "Shiraiwa/MapObjPool.cpp"),
             Object(Matching, "Shiraiwa/MapObjKpFire.cpp"),
             Object(Matching, "Shiraiwa/MapObjRollTable.cpp"),
             Object(Matching, "Shiraiwa/MapObjNossie.cpp"),
