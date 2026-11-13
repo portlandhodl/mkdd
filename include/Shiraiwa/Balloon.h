@@ -43,7 +43,7 @@ class TBalloon : public GeographyObj
 public:
     // Global
     TBalloon();                               // 0x802bf9b8
-    virtual __declspec(weak) ~TBalloon();     // 0x802c0d8c
+    virtual ~TBalloon() {}
     void reset();                             // 0x802bfa54
     void update();                            // 0x802bfa80
     void loadAnimation();                     // 0x802bfae8
@@ -51,6 +51,9 @@ public:
     void viewCalc(u32);                       // 0x802bfef0
     void createModel(JKRSolidHeap *, u32);    // 0x802bff1c
     void setCurrentViewNo(u32);               // 0x802bff58
+    void setColor(u32);
+    void die();
+    void draw(u32);
     static const char *scEfctBreakColor[8];   // 0x803a85f0
     static f32 scScaleFrame1;                 // 0x80415394
     static f32 scScaleFrame2;                 // 0x80415398
@@ -60,9 +63,6 @@ public:
     static J3DAnmTevRegKey *sBalloonBrkAnm; // 0x80417078
     // Inline/Unused
 
-    // void setColor(u32);
-    // void die();
-    // void draw(u32);
     // void TBalloonSupervisor::TBalloonSupervisor();
     // void JSUList<TBalloonString>::~JSUList();
     // void TBalloonSupervisor::createSortBuffer(int, int);
@@ -109,6 +109,7 @@ public:
     void init();
     void setColor(u32);
     void unlock(u32);
+    f32 getCameraDistance(u32);
     void setMainViewNo(s8);
     void reset();
     void setCharID(const EKartWeight &, const ECharID &, const ECharID &);
@@ -174,7 +175,7 @@ class TBalloonManager : public TMapObjHioNode
 {
 public:
     TBalloonManager();
-    void init(u8, char, u8);
+    void init(u8, s8, u8);
     void reset();
     void calc();
     void killBalloon(TBalloonString *);
@@ -200,6 +201,11 @@ public:
     virtual ~TBalloonManager() { }
     virtual void createColModel(J3DModelData *) { }
 
+    f32 getCameraDistance(u32 viewNo) {
+        JUT_MINMAX_ASSERT(0, viewNo, 4);
+        return mCamDist[viewNo];
+    }
+
     void changeWinningPos() {
         if (RCMGetKartChecker(mKartIdx)->getRank() == 1) {
             mIsWinning = true;
@@ -212,7 +218,7 @@ public:
     u8 mCount;     // 0x16c
     u8 mWinningNo; // 0x16d
     u8 mKartIdx;   // 0x16e
-    u8 mMainViewNo; // 0x16f
+    s8 mMainViewNo; // 0x16f
     bool mIsWinning; // 0x170
     u8 _171[3];
     f32 mCamDist[4]; // 0x174

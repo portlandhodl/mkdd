@@ -3,6 +3,248 @@
 #include "JSystem/J3D/J3DAnmBase.h"
 #include "JSystem/JUtility/JUTAssert.h"
 #include "Sato/ObjUtility.h"
+#include "Sato/GeographyObjMgr.h"
+#include "Sato/JPEffectMgr.h"
+#include "Kaneshige/LightMgr.h"
+#include "Kaneshige/SimpleDrawer.h"
+#include "Yamamoto/kartCtrl.h"
+#include "Yamamoto/kartCamera.h"
+#include "JSystem/JMath/JMath.h"
+#include "mathHelper.h"
+
+f32 TBalloonManager::sPullDirX = 0.4f;
+f32 TBalloonManager::sPullDirY = 1.0f;
+f32 TBalloonManager::sPullDirZ;
+f32 TBalloonManager::sWinningOffset = 30.0f;
+f32 TBalloonManager::sFrameDiff = -10.0f;
+f32 TBalloonManager::sStartFrame = -150.0f;
+
+TBalloonManager::TBalloonManager() : TMapObjHioNode(0x26af) {}
+
+void TBalloonManager::init(u8 kartIdx, s8 viewNo, u8 num) {
+#line 59
+    JUT_ASSERT_F(num <= 3, "%s", "num <= cBalloonMax");
+    KartInfo *info = RaceMgr::getManager()->getKartInfo(kartIdx);
+    for (int i = 0; i < 3; i++) {
+        if (i < num) {
+            TBalloonString *string = (TBalloonString *)GetGeoObjMgr()->createGenSubObj(0x26ad);
+            string->setMainViewNo(viewNo);
+            string->setCharID(info->getKartWeight(), info->getDriverCharID(0), info->getDriverCharID(1));
+            mSpares[i] = string;
+        } else {
+            mSpares[i] = nullptr;
+        }
+    }
+    mCount = num;
+    mKartIdx = kartIdx;
+    mMainViewNo = viewNo;
+}
+
+void TBalloonManager::reset() {
+    mWinningNo = mCount;
+    mIsWinning = false;
+    JGeometry::TVec3f pos;
+    ObjUtility::getKartPos(mKartIdx, &pos);
+    JGeometry::TPos3f bodyMtx;
+    bodyMtx.set(ObjUtility::getKartBodyMtx(mKartIdx));
+    for (int i = 0; i < 4; i++) {
+        mCamDist[i] = -1.0f;
+    }
+    mGeoObjFlag &= ~2;
+    mCheckKartHitFlags = 0;
+    f32 pullY = sPullDirY;
+    f32 pullZ = -1.0f * sPullDirZ;
+    KartInfo *info = RaceMgr::getManager()->getKartInfo(mKartIdx);
+
+    static JGeometry::TVec3f ydir(0.0f, 1.0f, 0.0f);
+    JGeometry::TVec3f right;
+    JGeometry::TVec3f zdir;
+    ObjUtility::getKartZdir(mKartIdx, &zdir);
+    zdir.y = 0.0f;
+    zdir.normalize();
+    right.cross(ydir, zdir);
+    right.normalize();
+    Mtx mtx;
+    mtx[0][0] = right.x;
+    mtx[1][0] = right.y;
+    mtx[2][0] = right.z;
+    mtx[0][1] = ydir.x;
+    mtx[1][1] = ydir.y;
+    mtx[2][1] = ydir.z;
+    mtx[0][2] = zdir.x;
+    mtx[1][2] = zdir.y;
+    mtx[2][2] = zdir.z;
+
+    for (int i = 0; i < mCount; i++) {
+        mStrings[i] = mSpares[i];
+        mStrings[i]->setMainViewNo(mMainViewNo);
+        int color = RCMGetKartChecker(mKartIdx)->getPlayerKartColor();
+        u32 c = color;
+#line 137
+        JUT_ASSERT_F(color != -1, "%s", "color != -1");
+        mStrings[i]->setColor(c);
+        mStrings[i]->setCharID(info->getKartWeight(), info->getDriverCharID(0), info->getDriverCharID(1));
+        mStrings[i]->mManager = this;
+        mStrings[i]->mIsAlive = 1;
+        mStrings[i]->setPosition(pos, bodyMtx);
+        mStrings[i]->mBalloons[0]->mFrame = i * sFrameDiff + sStartFrame;
+        JGeometry::TVec3f vel(0.0f, pullY, pullZ);
+        vel.x += i * (-0.5f * sPullDirX) + sPullDirX;
+        vel.normalize();
+        PSMTXMultVecSR(mtx, &vel, &vel);
+        mStrings[i]->mVelOffset.set(vel);
+    }
+}
+
+void TBalloonManager::calc() {
+    checkCameraDistance();
+    JGeometry::TVec3f pos;
+    ObjUtility::getKartPos(mKartIdx, &pos);
+    JGeometry::TVec3f zdir;
+    ObjUtility::getKartZdir(mKartIdx, &zdir);
+    if (mIsWinning) {
+        JMAVECScaleAdd(&zdir, &pos, &pos, sWinningOffset);
+    }
+    if (RaceMgr::getManager()->getRaceMode() == BALLOON_BATTLE) {
+        u8 curNum = RCMGetKartChecker(mKartIdx)->getBalloonNumber();
+        if (mWinningNo > curNum) {
+#line 193
+            JUT_ASSERT_F(mWinningNo - curNum == 1, "%s", "mLastNum - curNum == 1");
+            killBalloon(mStrings[mWinningNo - 1]);
+            mStrings[mWinningNo - 1] = nullptr;
+            mWinningNo = curNum;
+        }
+    }
+    Mtx mtx;
+    PSMTXIdentity(mtx);
+    static JGeometry::TVec3f ydir(0.0f, 1.0f, 0.0f);
+    zdir.y = 0.0f;
+    zdir.normalize();
+    JGeometry::TVec3f right;
+    right.cross(ydir, zdir);
+    right.normalize();
+    mtx[0][0] = right.x;
+    mtx[1][0] = right.y;
+    mtx[2][0] = right.z;
+    mtx[0][1] = ydir.x;
+    mtx[1][1] = ydir.y;
+    mtx[2][1] = ydir.z;
+    mtx[0][2] = zdir.x;
+    mtx[1][2] = zdir.y;
+    mtx[2][2] = zdir.z;
+
+    int alive = 0;
+    for (int i = 0; i < mCount; i++) {
+        if (mStrings[i] != nullptr && mStrings[i]->mIsAlive) {
+            alive++;
+        }
+    }
+    JGeometry::TPos3f bodyMtx;
+    bodyMtx.set(ObjUtility::getKartBodyMtx(mKartIdx));
+    f32 base = -0.5f * sPullDirX * (alive - 1);
+    for (int i = 0; i < mCount; i++) {
+        if (mStrings[i] != nullptr && mStrings[i]->mIsAlive) {
+            JGeometry::TVec3f vel(0.0f, sPullDirY, -1.0f * sPullDirZ);
+            vel.x = sPullDirX * i + base;
+            vel.normalize();
+            PSMTXMultVecSR(mtx, &vel, &vel);
+            mStrings[i]->mVelOffset.set(vel);
+            mStrings[i]->setPosition(pos, bodyMtx);
+        }
+    }
+}
+
+void TBalloonManager::killBalloon(TBalloonString *string) {
+    int num = RCMGetKartChecker(mKartIdx)->getBalloonNumber();
+    u32 se = 0x40075;
+    if (num == 0) {
+        se = 0x40076;
+    }
+    string->unlock(se);
+    string->mVelOffset.set(0.0f, 1.0f, 0.0f);
+}
+
+void TBalloonManager::checkCameraDistance() {
+    int camNum = RaceMgr::getManager()->getCameraNumber();
+    for (int i = 0; i < camNum; i++) {
+        const JGeometry::TVec3f *camPos = (const JGeometry::TVec3f *)RaceMgr::getManager()->getCamera(i)->GetCameraPos();
+        JGeometry::TVec3f kartPos;
+        ObjUtility::getKartPos(mKartIdx, &kartPos);
+        JGeometry::TVec3f d;
+        d.sub(kartPos, *camPos);
+        mCamDist[i] = d.length();
+    }
+}
+
+void TBalloonManager::robRivalOfBalloon(u32 robbedKart) {
+#line 322
+    JUT_MINMAX_ASSERT(0, robbedKart, 8);
+    TBalloonString *string = GetGeoObjMgr()->getBalloonMgr(robbedKart)->rob();
+    RCMGetKartChecker(mKartIdx);
+    if (string != nullptr) {
+        setBalloon(string);
+    } else {
+#line 330
+        JUT_ASSERT_F(false, "TBalloonManager(%d): Rob Failed", mKartIdx);
+    }
+}
+
+TBalloonString *TBalloonManager::rob() {
+    TBalloonString *string = nullptr;
+    int num = RCMGetKartChecker(mKartIdx)->getBalloonNumber();
+    if (num >= 0) {
+        string = removeBalloon();
+    } else {
+#line 346
+        JUT_ASSERT_F(false, "TBalloonManager(%d): balloon count: %d < 0", mKartIdx, num);
+    }
+    return string;
+}
+
+void TBalloonManager::setBalloon(TBalloonString *string) {
+    int num = RCMGetKartChecker(mKartIdx)->getBalloonNumber();
+    string->setMainViewNo(mMainViewNo);
+    string->mManager = this;
+    KartInfo *info = RaceMgr::getManager()->getKartInfo(mKartIdx);
+    string->setCharID(info->getKartWeight(), info->getDriverCharID(0), info->getDriverCharID(1));
+    TBalloonString *old = mStrings[num - 1];
+    if (old != nullptr) {
+        killBalloon(old);
+    }
+    mStrings[num - 1] = string;
+    mWinningNo = num;
+}
+
+TBalloonString *TBalloonManager::removeBalloon() {
+    int num = RCMGetKartChecker(mKartIdx)->getBalloonNumber();
+    TBalloonString *string = mStrings[num];
+    mStrings[num] = nullptr;
+    mWinningNo = num;
+    return string;
+}
+
+f32 TBalloon::scScaleFrame1 = 10.0f;
+f32 TBalloon::scScaleFrame2 = 15.0f;
+f32 TBalloon::scScale1 = 1.5f;
+const char *TBalloon::scEfctBreakA = "mk_balloon_a";
+const char *TBalloon::scEfctBreakB = "mk_balloon_b";
+const char *TBalloon::scEfctBreakColor[8] = {
+    "mk_balloon_red",
+    "mk_balloon_blue",
+    "mk_balloon_green",
+    "mk_balloon_yellow",
+    "mk_balloon_pink",
+    "mk_balloon_orange",
+    "mk_balloon_lightb",
+    "mk_balloon_purple",
+};
+J3DAnmTevRegKey *TBalloon::sBalloonBrkAnm;
+
+TBalloon::TBalloon() : GeographyObj(0x26ae) {
+    mObjFlag |= 1;
+    mObjFlag |= 0x200;
+    createSoundMgr();
+}
 
 void TBalloon::reset() {
     mGeoObjFlag &= ~2;
@@ -12,489 +254,20 @@ void TBalloon::reset() {
     mCount = 0;
 }
 
+void TBalloon::setColor(u32 color) {
+    mMaterial.setFrame(color);
+}
+
 void TBalloon::update() {
     mMaterial.anmFrameProc();
     setModelMatrixAndScale();
     mModel.update(0);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void TBalloon::loadAnimation() {
     J3DModelData *modelData = mModel.getModelData();
     void *anm = ObjUtility::getPtrCourseArc("/Objects/MiniGame_Balloon.brk");
+#line 498
     JUT_ASSERT_MSG(anm != nullptr, "TBalloon: /Objects/MiniGame_Balloon.brk not found.");
     J3DAnmObjMaterial::setupTevRegAnmData(&sBalloonBrkAnm, modelData, anm);
 }
@@ -572,6 +345,21 @@ void TBalloon::calc() {
     }
 }
 
+void TBalloon::die() {
+    mFlag = 1;
+    if (mCount != 0) {
+        if (!RaceMgr::getManager()->isRaceEnd()) {
+            getSoundMgr()->setSe(mCount);
+        }
+    }
+    JPABaseEmitter *emt = JPEffectMgr::mThis->createEmt(scEfctBreakA, mPos);
+    emt->setGlobalScale(mScale);
+    emt = JPEffectMgr::mThis->createEmt(scEfctBreakB, mPos);
+    emt->setGlobalScale(mScale);
+    emt = JPEffectMgr::mThis->createEmt(scEfctBreakColor[(u32)mMaterial.getFrame()], mPos);
+    emt->setGlobalScale(mScale);
+}
+
 void TBalloon::viewCalc(u32 viewNo) {
     mModel.viewCalc(viewNo);
 }
@@ -584,6 +372,22 @@ void TBalloon::createModel(JKRSolidHeap *heap, u32 viewNo) {
 
 void TBalloon::setCurrentViewNo(u32 viewNo) {
     mModel.setCurrentViewNo(viewNo);
+}
+
+void TBalloon::draw(u32 viewNo) {
+    if (!mFlag) {
+        mMaterial.anmFrameProc();
+        MtxPtr effectMtx = LightMgr::getManager()->searchLight('BLN0' + viewNo)->getEffectMtx();
+        mModel.setScale(mScale);
+        mModel.clipAll(viewNo, true);
+        J3DModelData *modelData = mModel.getModelData();
+        SimpleDrawer drawer;
+        drawer.drawInit(modelData);
+        while (drawer.loadPreDrawSetting()) {
+            mModel.simpleDraw(viewNo, effectMtx, 0);
+        }
+    }
+    mModel.hide();
 }
 
 TBalloonSupervisor::~TBalloonSupervisor() {}
@@ -611,48 +415,17 @@ void TBalloonSupervisor::drawBalloon(u32 viewNo) {
     }
 }
 
-__declspec(weak) TBalloon::~TBalloon() {}
-
-#include "Sato/GeographyObjMgr.h"
-#include "Sato/JPEffectMgr.h"
-#include "Kaneshige/LightMgr.h"
-#include "Kaneshige/SimpleDrawer.h"
-#include "Yamamoto/kartCtrl.h"
-#include "Yamamoto/kartCamera.h"
-#include "JSystem/JMath/JMath.h"
-
-f32 TBalloonManager::sPullDirX = 0.4f;
-f32 TBalloonManager::sPullDirY = 1.0f;
-f32 TBalloonManager::sPullDirZ;
-f32 TBalloonManager::sWinningOffset = 30.0f;
-f32 TBalloonManager::sFrameDiff = -10.0f;
-f32 TBalloonManager::sStartFrame = -150.0f;
-f32 TBalloon::scScaleFrame1 = 10.0f;
-f32 TBalloon::scScaleFrame2 = 15.0f;
-f32 TBalloon::scScale1 = 1.5f;
-const char *TBalloon::scEfctBreakA = "mk_balloon_a";
-const char *TBalloon::scEfctBreakB = "mk_balloon_b";
-const char *TBalloon::scEfctBreakColor[8] = {
-    "mk_balloon_red",
-    "mk_balloon_blue",
-    "mk_balloon_green",
-    "mk_balloon_yellow",
-    "mk_balloon_pink",
-    "mk_balloon_orange",
-    "mk_balloon_lightb",
-    "mk_balloon_purple",
-};
-f32 TBalloonString::sAdjustRatio = 0.0f;
-f32 TBalloonString::sAirFric = 0.0f;
-f32 TBalloonString::sPower = 1.0f;
-f32 TBalloonString::sDemoPower = 0.9f;
-f32 TBalloonString::sGravity = 20.0f;
+f32 TBalloonString::sAdjustRatio = 1.0f;
+f32 TBalloonString::sAirFric = 0.9f;
+f32 TBalloonString::sPower = 20.0f;
+f32 TBalloonString::sDemoPower = 5.0f;
+f32 TBalloonString::sGravity = -0.3f;
 u8 TBalloonString::sNodeNum = 3;
-f32 TBalloonString::sOrgScale = 5.0f;
-f32 TBalloonString::sOrgLength = -0.3f;
-f32 TBalloonString::sBreakOffset = 0.35f;
-f32 TBalloonString::sBreakUpVel = 1200.0f;
-f32 TBalloonString::sShakePow = 150.0f;
+f32 TBalloonString::sOrgScale = 0.35f;
+f32 TBalloonString::sOrgLength = 1200.0f;
+f32 TBalloonString::sBreakOffset = 150.0f;
+f32 TBalloonString::sBreakUpVel = 4.0f;
+f32 TBalloonString::sShakePow = 5.0f;
 f32 TBalloonString::sOffset[12] = {
     0.0f, 70.0f, -25.0f,
     0.0f, 80.0f, -20.0f,
@@ -662,23 +435,12 @@ f32 TBalloonString::sOffset[12] = {
 f32 TBalloonString::sTotalLength[21] = {
     100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
     100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
-    100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
+    100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 180.0f,
 };
 TBalloonSupervisor *TBalloonString::sSupervisor;
 
-TBalloon::TBalloon() : GeographyObj(0x26ae) {
-    mObjFlag |= 1;
-    mObjFlag |= 0x200;
-    createSoundMgr();
-}
-
 TBalloonString::TBalloonString() : TMapObjHioNode(0x26ad), JKRDisposer(), mLink(this) {
     init();
-}
-
-TBalloonString::~TBalloonString() {
-    sSupervisor = nullptr;
-    delete mNodeMgr;
 }
 
 void TBalloonString::init() {
@@ -696,10 +458,15 @@ void TBalloonString::init() {
     }
 }
 
+TBalloonString::~TBalloonString() {
+    sSupervisor = nullptr;
+    delete mNodeMgr;
+}
+
 void TBalloonString::setColor(u32 color) {
     for (int i = 0; i < 8; i++) {
         if (mBalloons[i] != nullptr) {
-            mBalloons[i]->mMaterial.setFrame((f32)color);
+            mBalloons[i]->setColor(color);
         }
     }
 }
@@ -714,8 +481,38 @@ void TBalloonString::unlock(u32 val) {
     }
 }
 
+f32 TBalloonString::getCameraDistance(u32 viewNo) {
+    return mManager->getCameraDistance(viewNo);
+}
+
 void TBalloonString::setMainViewNo(s8 viewNo) {
     mMainViewNo = viewNo;
+}
+
+void TBalloonString::reset() {
+    resetObject();
+    sOrgLength = 1200.0f;
+    sOrgScale = 0.35f;
+    if (mBalloons[0] != nullptr) {
+        mBalloons[0]->mScaleRatio = sOrgScale;
+    }
+    mGeoObjFlag &= ~2;
+    mCheckKartHitFlags = 0;
+    mGeoObjFlag &= ~0x20;
+    PSMTXIdentity(mRotMtx);
+    mVel.set(0.0f, sBreakUpVel, 0.0f);
+    mNodeMgr->resetNodeAll(nullptr);
+    mIsAlive = 1;
+    JGeometry::TVec3f dir(0.0f, 1.0f, 0.0f);
+    for (u32 i = 0; i < sNodeNum; i++) {
+        JGeometry::TVec3f pos;
+        JMAVECScaleAdd(&pos, &dir, &pos, i * sOrgLength);
+        mNodeMgr->setNodePos(i, pos);
+        mNodeMgr->getStringNode(i)->_30 = 0;
+    }
+    resetNodeLength();
+    setParameters();
+    mNodeMgr->calc();
 }
 
 void TBalloonString::setCharID(const EKartWeight &weight, const ECharID &id1, const ECharID &id2) {
@@ -745,64 +542,28 @@ void TBalloonString::setPosition(const JGeometry::TVec3f &pos, const JGeometry::
     mPos.add(pos, offset);
 }
 
-void TBalloonString::setParameters() {
-    mNodeMgr->_24 = sAdjustRatio;
-    mNodeMgr->_20 = sAirFric;
-    mNodeMgr->_1c = sGravity;
-}
-
-void TBalloonString::reset() {
-    resetObject();
-    sOrgLength = 1200.0f;
-    sOrgScale = 0.35f;
-    if (mBalloons[0] != nullptr) {
-        mBalloons[0]->mScaleRatio = sOrgScale;
-    }
-    mGeoObjFlag &= ~7;
-    mCheckKartHitFlags = 0;
-    mGeoObjFlag &= ~0x70;
-    PSMTXIdentity(mRotMtx);
-    mVel.x = 0.0f;
-    mVel.y = sBreakUpVel;
-    mVel.z = 0.0f;
-    mNodeMgr->resetNodeAll(nullptr);
-    mIsAlive = 1;
-    JGeometry::TVec3f dir(0.0f, 1.0f, 0.0f);
-    for (int i = 0; i < sNodeNum; i++) {
-        JGeometry::TVec3f pos;
-        JMAVECScaleAdd(&pos, &dir, &pos, sOrgLength * i);
-        pos.add(mPos);
-        mNodeMgr->setNodePos(i, pos);
-        StringNode *node = mNodeMgr->mStrNodeList.getNth(i)->getObject();
-        node->_30 = 0;
-    }
-    resetNodeLength();
-    setParameters();
-    mNodeMgr->calc();
-}
-
 void TBalloonString::calc() {
     if (mManager == nullptr) {
         return;
     }
     JGeometry::TVec3f up;
     getUpDir(&up);
-    mNodeMgr->_28 = up;
+    *(JGeometry::TVec3f *)&mNodeMgr->_28 = up;
     mNodeMgr->calc();
     if (!mIsAlive) {
+        mPos.add(mVel);
         if (mPos.y - mStartY > sBreakOffset) {
             die();
         }
     }
-    JGeometry::TVec3f pos = mPos;
-    pos += mVel;
-    mNodeMgr->setNodePos(0, pos);
-    JGeometry::TVec3f vel = mVelOffset;
+    mNodeMgr->setNodePos(0, mPos);
+    JGeometry::TVec3f vel;
+    vel.set(mVelOffset);
     f32 power = sPower;
     if (!RaceMgr::getManager()->isAbleStart()) {
         power = sDemoPower;
     }
-    vel.y += power;
+    vel.scale(power);
     mNodeMgr->addNodeVel(mNodeMgr->mStrNodeList.getNumLinks() - 1, vel);
 }
 
@@ -811,42 +572,19 @@ void TBalloonString::die() {
         return;
     }
     for (int i = 0; i < 8; i++) {
-        TBalloon *balloon = mBalloons[i];
-        if (balloon == nullptr) {
-            continue;
+        if (mBalloons[i] != nullptr) {
+            mBalloons[i]->die();
         }
-        balloon->mFlag = 1;
-        if (balloon->mCount != 0) {
-            if (!RaceMgr::getManager()->isRaceEnd()) {
-                balloon->getSoundMgr()->setSe(balloon->mCount);
-            }
-        }
-        JPABaseEmitter *emt = JPEffectMgr::mThis->createEmt(TBalloon::scEfctBreakA, balloon->mPos);
-        emt->mGlobalScl = balloon->mScale;
-        emt->mGlobalPScl.x = balloon->mScale.x;
-        emt->mGlobalPScl.y = balloon->mScale.y;
-        emt = JPEffectMgr::mThis->createEmt(TBalloon::scEfctBreakB, balloon->mPos);
-        emt->mGlobalScl = balloon->mScale;
-        emt->mGlobalPScl.x = balloon->mScale.x;
-        emt->mGlobalPScl.y = balloon->mScale.y;
-        emt = JPEffectMgr::mThis->createEmt(TBalloon::scEfctBreakColor[(int)balloon->mMaterial.getFrame()], balloon->mPos);
-        emt->mGlobalScl = balloon->mScale;
-        emt->mGlobalPScl.x = balloon->mScale.x;
-        emt->mGlobalPScl.y = balloon->mScale.y;
     }
     mGeoObjFlag |= 0x20;
 }
 
 void TBalloonString::shake() {
-    stRandom *rnd = getGeoRnd();
-    u32 r = rnd->getRandom();
-    f32 f = (r >> 9 | 0x3f800000);
-    f = (*(f32 *)&f) - 1.0f;
-    s16 ang = (s16)(f * 10415.48f);
+    f32 rnd = getGeoRnd()->get_ufloat_1();
+    s16 ang = 10430.378f * (6.2831855f * rnd);
     JGeometry::TVec3f vel;
-    vel.x = JMath::sincosTable_.sinShort(ang) * sShakePow;
-    vel.y = JMath::sincosTable_.cosShort(ang) * sShakePow;
-    vel.z = 0.0f;
+    vel.x = sShakePow * JMASCos(ang);
+    vel.z = sShakePow * JMASSin(ang);
     mNodeMgr->addNodeVel(mNodeMgr->mStrNodeList.getNumLinks() - 1, vel);
 }
 
@@ -855,27 +593,9 @@ void TBalloonString::drawBalloon(u32 viewNo) {
         return;
     }
     for (int i = 0; i < 8; i++) {
-        TBalloon *balloon = mBalloons[i];
-        if (balloon == nullptr) {
-            continue;
+        if (mBalloons[i] != nullptr) {
+            mBalloons[i]->draw(viewNo);
         }
-        if (balloon->mFlag) {
-            balloon->mModel.hide();
-            continue;
-        }
-        balloon->mMaterial.anmFrameProc();
-        LightObj *light = LightMgr::getManager()->searchLight(0x424c4e30 + viewNo);
-        typedef MtxPtr (*DrawFn)(LightObj *);
-        MtxPtr effectMtx = ((DrawFn)(*(void ***)light)[3])(light);
-        mModel.setScale(balloon->mScale);
-        balloon->mModel.clipAll(viewNo, true);
-        J3DModelData *modelData = balloon->mModel.getModelData();
-        SimpleDrawer drawer;
-        drawer.drawInit(modelData);
-        while (drawer.loadPreDrawSetting()) {
-            balloon->mModel.simpleDraw(viewNo, effectMtx, 0);
-        }
-        balloon->mModel.hide();
     }
 }
 
@@ -902,207 +622,11 @@ void TBalloonString::getPointDir(JGeometry::TVec3f *dir) {
     dir->normalize();
 }
 
-TBalloonManager::TBalloonManager() : TMapObjHioNode(0x26af) {}
-
-void TBalloonManager::init(u8 kartIdx, char viewNo, u8 count) {
-    JUT_ASSERT_MSG(count <= 3, "num <= cBalloonMax");
-    JUT_MINMAX_ASSERT(0, kartIdx, 8);
-    KartInfo *info = RaceMgr::getManager()->getKartInfo(kartIdx);
-    for (int i = 0; i < 3; i++) {
-        if (i < count) {
-            TBalloonString *balloon = (TBalloonString *)GetGeoObjMgr()->createGenSubObj(0x26ad);
-            balloon->setMainViewNo(viewNo);
-            EKartWeight weight = (EKartWeight)info->getWeight();
-            ECharID id1 = info->getDriverCharID(0);
-            ECharID id2 = info->getDriverCharID(1);
-            balloon->setCharID(weight, id1, id2);
-            mSpares[i] = balloon;
-        } else {
-            mSpares[i] = nullptr;
-        }
-    }
-    mCount = count;
-    mKartIdx = kartIdx;
-    mMainViewNo = viewNo;
+void TBalloonString::setParameters() {
+    mNodeMgr->_24 = sAdjustRatio;
+    mNodeMgr->_20 = sAirFric;
+    mNodeMgr->_1c = sGravity;
 }
 
-void TBalloonManager::reset() {
-    mWinningNo = mCount;
-    mIsWinning = 0;
-    JGeometry::TVec3f pos;
-    ObjUtility::getKartPos(mKartIdx, &pos);
-    MtxPtr bodyMtx = ObjUtility::getKartBodyMtx(mKartIdx);
-    for (int i = 0; i < 4; i++) {
-        mCamDist[i] = -1.0f;
-    }
-    mGeoObjFlag &= ~7;
-    mCheckKartHitFlags = 0;
-
-    static JGeometry::TVec3f ydir(0.0f, 1.0f, 0.0f);
-    JGeometry::TVec3f zdir;
-    ObjUtility::getKartZdir(mKartIdx, &zdir);
-    zdir.normalize();
-    JGeometry::TVec3f right;
-    right.cross(ydir, zdir);
-    right.normalize();
-    Mtx mtx;
-    mtx[0][0] = right.x; mtx[0][1] = ydir.x; mtx[0][2] = zdir.x;
-    mtx[1][0] = right.y; mtx[1][1] = ydir.y; mtx[1][2] = zdir.y;
-    mtx[2][0] = right.z; mtx[2][1] = ydir.z; mtx[2][2] = zdir.z;
-    Mtx bodyCopy;
-    memcpy(bodyCopy, bodyMtx, sizeof(Mtx));
-
-    for (int i = 0; i < mCount; i++) {
-        mStrings[i] = mSpares[i];
-        mStrings[i]->setMainViewNo(mMainViewNo);
-        JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-        int rank = RCMGetKartChecker(mKartIdx)->getRank();
-        JUT_ASSERT_MSG(rank != -1, "color != -1");
-        mStrings[i]->setColor(rank);
-        KartInfo *info = RaceMgr::getManager()->getKartInfo(mKartIdx);
-        EKartWeight weight = (EKartWeight)info->getWeight();
-        ECharID id1 = info->getDriverCharID(0);
-        ECharID id2 = info->getDriverCharID(1);
-        mStrings[i]->setCharID(weight, id1, id2);
-        mStrings[i]->mManager = this;
-        mStrings[i]->mIsAlive = 1;
-        mStrings[i]->setPosition(pos, *(JGeometry::TPos3f *)bodyCopy);
-        mStrings[i]->mBalloons[0]->mFrame = sStartFrame + sFrameDiff * (f32)i;
-        JGeometry::TVec3f vel(sPullDirX * (1.0f - 0.5f * i), sPullDirY, -sPullDirZ);
-        vel.normalize();
-        PSMTXMultVecSR(mtx, &vel, &vel);
-        mStrings[i]->mVelOffset = vel;
-    }
-}
-
-void TBalloonManager::calc() {
-    checkCameraDistance();
-    JGeometry::TVec3f pos;
-    ObjUtility::getKartPos(mKartIdx, &pos);
-    JGeometry::TVec3f zdir;
-    ObjUtility::getKartZdir(mKartIdx, &zdir);
-    if (mIsWinning) {
-        JMAVECScaleAdd(&zdir, &pos, &pos, sWinningOffset);
-    }
-    if (RaceMgr::getManager()->getRaceMode() == BALLOON_BATTLE) {
-        int rank = RCMGetKartChecker(mKartIdx)->getRank();
-        if (mWinningNo > rank) {
-            JUT_ASSERT_MSG(mWinningNo - rank == 1, "mLastNum - curNum == 1");
-            killBalloon(mStrings[mWinningNo - 1]);
-            mStrings[mWinningNo - 1] = nullptr;
-            mWinningNo = rank;
-        }
-    }
-    Mtx mtx;
-    PSMTXIdentity(mtx);
-    static JGeometry::TVec3f ydir(0.0f, 1.0f, 0.0f);
-    zdir.normalize();
-    JGeometry::TVec3f right;
-    right.cross(ydir, zdir);
-    right.normalize();
-    mtx[0][0] = right.x; mtx[0][1] = ydir.x; mtx[0][2] = zdir.x;
-    mtx[1][0] = right.y; mtx[1][1] = ydir.y; mtx[1][2] = zdir.y;
-    mtx[2][0] = right.z; mtx[2][1] = ydir.z; mtx[2][2] = zdir.z;
-    Mtx bodyCopy;
-    memcpy(bodyCopy, ObjUtility::getKartBodyMtx(mKartIdx), sizeof(Mtx));
-
-    int alive = 0;
-    for (int i = 0; i < mCount; i++) {
-        if (mStrings[i] != nullptr && mStrings[i]->mIsAlive) {
-            alive++;
-        }
-    }
-    f32 base = -0.5f * sPullDirX * (alive - 1);
-    for (int i = 0; i < mCount; i++) {
-        if (mStrings[i] != nullptr && mStrings[i]->mIsAlive) {
-            JGeometry::TVec3f vel(sPullDirX * i + base, sPullDirY, -sPullDirZ);
-            vel.normalize();
-            PSMTXMultVecSR(mtx, &vel, &vel);
-            mStrings[i]->mVelOffset = vel;
-            mStrings[i]->setPosition(pos, *(JGeometry::TPos3f *)bodyCopy);
-        }
-    }
-}
-
-void TBalloonManager::killBalloon(TBalloonString *string) {
-    JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-    int rank = RCMGetKartChecker(mKartIdx)->getRank();
-    u32 val = 0x117;
-    if (rank != 0) {
-        val = 0x118;
-    }
-    string->unlock(val);
-    string->mVelOffset.set(0.0f, 1.0f, 0.0f);
-}
-
-void TBalloonManager::checkCameraDistance() {
-    int camNum = RaceMgr::getManager()->getConsoleNumber();
-    for (int i = 0; i < camNum; i++) {
-        JUT_MINMAX_ASSERT(0, i, 4);
-        JGeometry::TVec3f camPos = *GetKartCtrl()->getKartCam(i)->GetCameraPos();
-        JGeometry::TVec3f kartPos;
-        ObjUtility::getKartPos(mKartIdx, &kartPos);
-        JGeometry::TVec3f d;
-        d.sub(camPos, kartPos);
-        mCamDist[i] = d.length();
-    }
-}
-
-void TBalloonManager::robRivalOfBalloon(u32 rivalIdx) {
-    JUT_ASSERT_MSG(rivalIdx < 8, "rivalIdx < 8");
-    TBalloonManager *other = GetGeoObjMgr()->getBalloonMgr(rivalIdx);
-    TBalloonString *string = other->rob();
-    JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-    if (string != nullptr) {
-        setBalloon(string);
-    } else {
-        JUT_ASSERT_MSG(false, "TBalloonManager(0): Rob Failed");
-    }
-}
-
-TBalloonString *TBalloonManager::rob() {
-    JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-    int rank = RCMGetKartChecker(mKartIdx)->getRank();
-    TBalloonString *string = nullptr;
-    if (rank >= 0) {
-        string = removeBalloon();
-    } else {
-        JUT_ASSERT_MSG(false, "TBalloonManager(0): balloon count < 0");
-    }
-    return string;
-}
-
-void TBalloonManager::setBalloon(TBalloonString *string) {
-    JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-    int rank = RCMGetKartChecker(mKartIdx)->getRank();
-    string->setMainViewNo(mMainViewNo);
-    string->mManager = this;
-    JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-    KartInfo *info = RaceMgr::getManager()->getKartInfo(mKartIdx);
-    EKartWeight weight = (EKartWeight)info->getWeight();
-    ECharID id1 = info->getDriverCharID(0);
-    ECharID id2 = info->getDriverCharID(1);
-    string->setCharID(weight, id1, id2);
-    TBalloonString *old = mStrings[rank - 1];
-    if (old != nullptr) {
-        JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-        int r = RCMGetKartChecker(mKartIdx)->getRank();
-        u32 val = 0x117;
-        if (r != 0) {
-            val = 0x118;
-        }
-        old->unlock(val);
-        old->mVelOffset.set(0.0f, 1.0f, 0.0f);
-    }
-    mStrings[rank - 1] = string;
-    mWinningNo = rank;
-}
-
-TBalloonString *TBalloonManager::removeBalloon() {
-    JUT_MINMAX_ASSERT(0, mKartIdx, 8);
-    int rank = RCMGetKartChecker(mKartIdx)->getRank();
-    TBalloonString *string = mStrings[rank];
-    mStrings[rank] = nullptr;
-    mWinningNo = rank;
-    return string;
-}
+#include "JSystem/JAudio/JASFakeMatch.h"
+#include "JSystem/JAudio/JASFakeMatch2.h"
