@@ -13,6 +13,9 @@
 #include "Yamamoto/KartStrat.h"
 #include "Yamamoto/KartDamage.h"
 
+// The original call sites see getNowTandemDriverNum returning int (no zero-extension of the result)
+#define GET_NOW_TANDEM_DRIVER_NUM(idx) ((int (*)(int))ItemObjMgr::getNowTandemDriverNum)(idx)
+
 void KartItem::Init(int idx)
 {
     mBody = GetKartCtrl()->getKartBody(idx);
@@ -91,20 +94,22 @@ void KartItem::FallStealItem(int thiefIdx, int victimIdx)
     }
 
     ItemObjMgr *mgr = GetItemObjMgr();
-    u8 victimNum = ItemObjMgr::getNowTandemDriverNum(victimIdx);
+    int victimNum = GET_NOW_TANDEM_DRIVER_NUM(victimIdx);
     mgr->getKartEquipItem(victimIdx, victimNum ^ 1);
     ItemObj *victimItem = mgr->getKartEquipItem(victimIdx, victimNum);
 
-    u8 thiefNum = ItemObjMgr::getNowTandemDriverNum(thiefIdx);
-    ItemObj *thiefItem1 = mgr->getKartEquipItem(thiefIdx, thiefNum ^ 1);
-    ItemObj *thiefItem2 = mgr->getKartEquipItem(thiefIdx, thiefNum);
+    int thiefNum = GET_NOW_TANDEM_DRIVER_NUM(thiefIdx);
+    u8 thiefCur;
+    u8 thiefOther;
+    ItemObj *thiefItem1 = mgr->getKartEquipItem(thiefIdx, thiefOther = thiefNum ^ 1);
+    ItemObj *thiefItem2 = mgr->getKartEquipItem(thiefIdx, thiefCur = thiefNum);
 
     if (victimItem == 0 && thiefItem2 != 0) {
-        mgr->robRivalOfItem(victimIdx, thiefIdx, thiefNum);
+        mgr->robRivalOfItem(victimIdx, thiefIdx, thiefCur);
         if (thief->mCarStatus & 0x4000000000ull)
             thief->mCarStatus &= ~0x4000000000ull;
     } else if (victimItem == 0 && thiefItem2 == 0 && thiefItem1 != 0) {
-        mgr->robRivalOfItem(victimIdx, thiefIdx, thiefNum ^ 1);
+        mgr->robRivalOfItem(victimIdx, thiefIdx, thiefOther);
         if (thief->mCarStatus & 0x4000000000ull)
             thief->mCarStatus &= ~0x4000000000ull;
     }
@@ -140,11 +145,11 @@ void KartItem::FallStealItem(int thiefIdx, int victimIdx)
 
 void KartItem::FallItem()
 {
-    u8 idx = mBody->mMynum;
+    int idx = mBody->mMynum;
     KartBody *body = mBody;
     RaceMgr *raceMgr = RaceMgr::getCurrentManager();
     ItemObjMgr *mgr = GetItemObjMgr();
-    u8 num = ItemObjMgr::getNowTandemDriverNum(idx);
+    int num = GET_NOW_TANDEM_DRIVER_NUM(idx);
     ItemObj *item = mgr->getKartEquipItem(idx, num ^ 1);
     ItemObj *item2 = mgr->getKartEquipItem(idx, num);
 
@@ -170,7 +175,8 @@ void KartItem::FallItem()
             if (body->mCarStatus & 0x4000000000ull)
                 body->mCarStatus &= ~0x4000000000ull;
         } else if (item->IsSuccessionItem() && item->getKind() != 21) {
-            int n = item->getSuccessionItemNum() - 1;
+            int n = item->getSuccessionItemNum();
+            n--;
             for (int i = 0; i < n; i++)
                 item->setChildStateFall();
         }
@@ -204,7 +210,8 @@ void KartItem::FallItem()
         if (body->mCarStatus & 0x4000000000ull)
             body->mCarStatus &= ~0x4000000000ull;
     } else if (item2->IsSuccessionItem() && item2->getKind() != 21) {
-        int n = item2->getSuccessionItemNum() - 1;
+        int n = item2->getSuccessionItemNum();
+        n--;
         for (int i = 0; i < n; i++)
             item2->setChildStateFall();
     }
@@ -217,7 +224,7 @@ void KartItem::FallAllItem()
     RaceMgr *raceMgr = RaceMgr::getCurrentManager();
     ItemObj *item;
     ItemObjMgr *mgr = GetItemObjMgr();
-    int num = ItemObjMgr::getNowTandemDriverNum(idx);
+    int num = GET_NOW_TANDEM_DRIVER_NUM(idx);
     item = mgr->getKartEquipItem(idx, num ^ 1);
     mgr->deleteHeartItem(idx);
 
@@ -260,7 +267,7 @@ void KartItem::ReleseWanWan()
     u8 idx = mBody->mMynum;
     KartBody *body = mBody;
     ItemObjMgr *mgr = GetItemObjMgr();
-    u8 num = ItemObjMgr::getNowTandemDriverNum(idx);
+    int num = GET_NOW_TANDEM_DRIVER_NUM(idx);
     ItemObj *item = mgr->getKartEquipItem(idx, num);
     if (item == 0)
         return;
@@ -280,7 +287,7 @@ bool KartItem::CompulsionReleseWanWan()
     u8 idx = mBody->mMynum;
     KartBody *body = mBody;
     ItemObjMgr *mgr = GetItemObjMgr();
-    u8 num = ItemObjMgr::getNowTandemDriverNum(idx);
+    int num = GET_NOW_TANDEM_DRIVER_NUM(idx);
     ItemObj *item = mgr->getKartEquipItem(idx, num);
     if (item == 0)
         return false;
@@ -485,11 +492,11 @@ void KartItem::CheckOtherAnime()
 
 void KartItem::DoOtherAnime()
 {
-    u8 geoIdx = mBody->mMynum;
-    u8 idx = geoIdx;
+    int idx = mBody->mMynum;
     KartBody *body = mBody;
     GetKartCtrl()->GetCoDriveCont(idx);
     GetKartCtrl()->GetItemButton(idx);
+    u32 geoIdx = idx;
     ItemObjMgr *mgr = GetItemObjMgr();
     ItemObj *item = mgr->getKartEquipItem(idx);
 
