@@ -18,6 +18,21 @@ static const struct {
     {_pBuildtimeDat, 0x803608E0, sizeof _pBuildtimeDat},
 };
 
+unsigned char *port_conv_file(const char *name, const unsigned char *in, unsigned inSize, unsigned *outSize);
+
+/* convert in place; the blobs have fixed-size homes, so the layout must not change */
+static void convert_blob(void *data, u32 size, const char *name)
+{
+    unsigned outSize;
+    unsigned char *out = port_conv_file(name, (const unsigned char *)data, size, &outSize);
+    if (outSize != size) {
+        fprintf(stderr, "[dol] %s changed size on conversion (%u -> %u)\n", name, size, outSize);
+        abort();
+    }
+    memcpy(data, out, size);
+    free(out);
+}
+
 static u32 be32(const u8 *p) { return (u32)p[0] << 24 | (u32)p[1] << 16 | (u32)p[2] << 8 | p[3]; }
 
 __attribute__((constructor)) static void load_dol_data(void)
@@ -47,4 +62,6 @@ __attribute__((constructor)) static void load_dol_data(void)
         }
     }
     fclose(f);
+    convert_blob(_pSystemArc, sizeof _pSystemArc, "system.arc");
+    convert_blob(JUTResFONT_Ascfont_fix12, sizeof JUTResFONT_Ascfont_fix12, "Ascfont_fix12.bfn");
 }

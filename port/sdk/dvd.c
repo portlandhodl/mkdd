@@ -18,8 +18,14 @@ typedef struct Entry {
     int parent;
     int isDir;
     int next;       /* index after this entry's subtree (dirs) */
-    u32 size;
+    u32 size;       /* as served: the converted size for converted files */
+    u8 *conv;       /* host-order copy (port/conv), loaded on first open */
+    int convOpen;   /* open handles using conv */
+    int convState;  /* 0 unknown, 1 converted, 2 served raw */
 } Entry;
+
+int port_conv_wants(const char *name);
+unsigned char *port_conv_file(const char *name, const unsigned char *in, unsigned inSize, unsigned *outSize);
 
 static Entry *sEntries;
 static int sNumEntries, sCapEntries;
@@ -56,6 +62,9 @@ static int add_entry(const char *name, const char *hostPath, int parent, int isD
     e->isDir = isDir;
     e->next = 0;
     e->size = size;
+    e->conv = NULL;
+    e->convOpen = 0;
+    e->convState = 0;
     return sNumEntries++;
 }
 
@@ -155,11 +164,43 @@ s32 DVDConvertPathToEntrynum(const char *path)
     return dir;
 }
 
+/* Disc formats are big-endian; serve converted (host-order) copies of the
+ * formats port/conv knows. Media streams are read piecewise and stay raw. */
+static void load_converted(Entry *e)
+{
+    FILE *f;
+    u8 *raw;
+    unsigned outSize;
+    long n;
+    if (e->convState == 2 || e->conv)
+        return;
+    if (!port_conv_wants(e->name)) {
+        e->convState = 2;
+        return;
+    }
+    f = fopen(e->hostPath, "rb");
+    if (!f)
+        return;
+    fseek(f, 0, SEEK_END);
+    n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    raw = (u8 *)malloc((size_t)n);
+    fread(raw, 1, (size_t)n, f);
+    fclose(f);
+    e->conv = port_conv_file(e->name, raw, (unsigned)n, &outSize);
+    free(raw);
+    e->size = outSize;
+    e->convState = 1;
+}
+
 BOOL DVDFastOpen(s32 entrynum, DVDFileInfo *fi)
 {
     DVDInit();
     if (entrynum < 0 || entrynum >= sNumEntries || sEntries[entrynum].isDir)
         return FALSE;
+    load_converted(&sEntries[entrynum]);
+    if (sEntries[entrynum].conv)
+        sEntries[entrynum].convOpen++;
     memset(fi, 0, sizeof *fi);
     fi->startAddr = (u32)entrynum; /* host: the entry number stands in for the disc offset */
     fi->length = sEntries[entrynum].size;
@@ -179,15 +220,35 @@ BOOL DVDOpen(const char *fileName, DVDFileInfo *fi)
 
 BOOL DVDClose(DVDFileInfo *fi)
 {
-    (void)fi;
+    Entry *e;
+    if (fi->startAddr >= (u32)sNumEntries)
+        return TRUE;
+    e = &sEntries[fi->startAddr];
+    if (e->conv && --e->convOpen <= 0) {
+        free(e->conv);
+        e->conv = NULL;
+        e->convOpen = 0;
+    }
     return TRUE;
 }
 
 static s32 read_entry(DVDFileInfo *fi, void *addr, s32 length, s32 offset)
 {
     Entry *e = &sEntries[fi->startAddr];
-    FILE *f = fopen(e->hostPath, "rb");
+    FILE *f;
     size_t got;
+    if (e->convState == 1 && !e->conv)
+        load_converted(e); /* read after close: reload */
+    if (e->conv) {
+        got = offset < 0 || (u32)offset >= e->size ? 0 : e->size - (u32)offset;
+        if (got > (size_t)length)
+            got = (size_t)length;
+        memcpy(addr, e->conv + offset, got);
+        if ((s32)got < length)
+            memset((u8 *)addr + got, 0, (size_t)length - got);
+        return length;
+    }
+    f = fopen(e->hostPath, "rb");
     if (!f)
         return DVD_RESULT_FATAL_ERROR;
     fseek(f, offset, SEEK_SET);

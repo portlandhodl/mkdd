@@ -41,6 +41,8 @@ def job(kind, src, outdir, opt):
     if kind == "game":
         flags = [f for f in scan.FLAGS if f not in ("-fsyntax-only",)]
         cmd = [CLANGXX, *flags, "-fshort-wchar", opt, "-fno-delete-null-pointer-checks", "-fno-strict-aliasing", "-g1"]
+    elif kind == "conv":
+        cmd = [EMXX, "-std=c++17", opt, "-g1"]
     elif kind == "sdkcxx":
         cmd = [CLANGXX, "--target=wasm32-unknown-emscripten", *SDK_CXX_FLAGS, opt, "-g1"]
     else:
@@ -71,6 +73,7 @@ def main():
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.c")))]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gd/*.c")))]
     jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.cpp")))]
+    jobs += [("conv", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/conv/*.cpp"))) if not s.endswith("cli.cpp")]
     objs, errors = [], []
     with cf.ThreadPoolExecutor(a.jobs) as ex:
         for rel, obj, err in ex.map(lambda j: job(j[0], j[1], outdir, opt), jobs):
