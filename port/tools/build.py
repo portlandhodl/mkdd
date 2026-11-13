@@ -156,7 +156,7 @@ def main():
     r = subprocess.run(cmd, cwd=ROOT)
     if r.returncode == 0 and a.target == "web":
         for f in glob.glob(os.path.join(ROOT, "port", "web", "*")):
-            if os.path.isfile(f) and f.endswith((".html", ".css", ".ico", ".png")):
+            if os.path.isfile(f) and f.endswith((".html", ".css", ".js", ".ico", ".png")):
                 shutil.copy(f, out)
     sys.exit(r.returncode)
 
