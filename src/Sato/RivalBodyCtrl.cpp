@@ -1033,13 +1033,13 @@ int RivalBodyCtrl::findMyRankOnlyCom()
 }
 
 #line 1773
-int RivalBodyCtrl::getTopComKartIndex(RivalBodyCtrl *)
+int RivalBodyCtrl::getTopComKartIndex(RivalBodyCtrl *bodyCtrl)
 {
     u8 useKartRank = 1;
     s32 ret = sComKartRankArray[0];
     if (!RCMGetManager()->mRaceDirector->isRaceEnd())
     {
-        if (!RCMGetManager()->isKartGoal(mRival->mNo))
+        if (!RCMGetManager()->isKartGoal(bodyCtrl->mRival->mNo))
             useKartRank = 0;
     }
     if (useKartRank)

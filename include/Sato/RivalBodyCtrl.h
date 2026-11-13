@@ -59,7 +59,7 @@ public:
     bool isOneUpperLowerPlayer(bool);              // 0x802830e4
     bool getLowestPlayerDist(float *);             // 0x802831f4
     int findMyRankOnlyCom();                      // 0x802832cc
-    int getTopComKartIndex(RivalBodyCtrl *);       // 0x80283324
+    static int getTopComKartIndex(RivalBodyCtrl *);       // 0x80283324
     int getMyFowardComKartIndex();                // 0x802833e0
     int getMyBackwardComKartIndex(unsigned char); // 0x802834e0
     void setDriftInfo();                           // 0x802835f4
