@@ -15,7 +15,7 @@ CLANGXX = os.path.join(EMSDK, "upstream", "bin", "clang++")
 EMCC = shutil.which("emcc") or os.path.join(EMSDK, "upstream", "emscripten", "emcc")
 EMXX = shutil.which("em++") or os.path.join(EMSDK, "upstream", "emscripten", "em++")
 
-SDK_FLAGS = ["-std=gnu11", "-fsigned-char", "-fshort-wchar", "-Wno-typedef-redefinition", "-I", "include", "-I", "port/include", "-I", "port/sdk",
+SDK_FLAGS = ["-std=gnu11", "-fsigned-char", "-fshort-wchar", "-Wno-typedef-redefinition", "-I", "include", "-I", "port/include", "-I", "port/sdk", "-I", "port/gpu",
              "-DMKDD_PORT=1", "-DREGION_US=1", "-Wno-incompatible-library-redeclaration",
              "-fno-strict-aliasing"]
 SDK_CXX_FLAGS = ["-std=gnu++03", "-fsigned-char", "-fshort-wchar", "-fno-exceptions", "-fno-rtti", "-nostdinc", "-nostdinc++",
@@ -89,6 +89,9 @@ def job(kind, src, outdir, opt):
             open(rw, "w", encoding="latin-1").write(text)
             cmd += ["-iquote", os.path.dirname(src)]
             src = rw
+    elif kind == "gpucxx":
+        cmd = [EMXX, "-std=c++17", "-fno-exceptions", "-fno-rtti", "-I", "include", "-I", "port/include", "-I", "port/sdk",
+               "-I", "port/gpu", "-DMKDD_PORT=1", "-fshort-wchar", opt, "-g1"]
     elif kind == "conv":
         cmd = [EMXX, "-std=c++17", opt, "-g1"]
     elif kind == "sdkcxx":
@@ -129,6 +132,8 @@ def main():
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gd/*.c")))]
     jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.cpp")))]
     jobs += [("conv", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/conv/*.cpp"))) if not s.endswith("cli.cpp")]
+    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/gpu/*.c")))]
+    jobs += [("gpucxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/gpu/*.cpp")))]
     objs, errors = [], []
     with cf.ThreadPoolExecutor(a.jobs) as ex:
         for rel, obj, err in ex.map(lambda j: job(j[0], j[1], outdir, opt), jobs):
