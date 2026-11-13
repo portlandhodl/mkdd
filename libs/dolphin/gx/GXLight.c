@@ -225,7 +225,7 @@ void GXInitSpecularDirHA(GXLightObj* obj, f32 nX, f32 nY, f32 nZ, f32 hX, f32 hY
 void GXInitLightColor(GXLightObj* obj, GXColor color)
 {
 	GXLightObjPriv* pObj = (GXLightObjPriv*)obj;
-	pObj->color          = (*(u32*)&color);
+	pObj->color          = DECOMP_BE32(&color);
 }
 
 void GXGetLightColor(const GXLightObj* obj, GXColor* color)
@@ -320,12 +320,12 @@ void GXSetChanAmbColor(GXChannelID channel, GXColor color)
 	switch (channel) {
 	case GX_COLOR0:
 		rgb     = gx->ambColor[GX_COLOR0];
-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1:
 		rgb     = gx->ambColor[GX_COLOR1];
-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR1;
 		break;
 	case GX_ALPHA0:
@@ -339,11 +339,11 @@ void GXSetChanAmbColor(GXChannelID channel, GXColor color)
 		colorID = GX_COLOR1;
 		break;
 	case GX_COLOR0A0:
-		reg     = (*(u32*)&color);
+		reg     = DECOMP_BE32(&color);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1A1:
-		reg     = (*(u32*)&color);
+		reg     = DECOMP_BE32(&color);
 		colorID = GX_COLOR1;
 		break;
 	default:
@@ -364,12 +364,12 @@ void GXSetChanMatColor(GXChannelID channel, GXColor color)
 	switch (channel) {
 	case GX_COLOR0:
 		rgb     = gx->matColor[GX_COLOR0];
-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1:
 		rgb     = gx->matColor[GX_COLOR1];
-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR1;
 		break;
 	case GX_ALPHA0:
@@ -383,11 +383,11 @@ void GXSetChanMatColor(GXChannelID channel, GXColor color)
 		colorID = GX_COLOR1;
 		break;
 	case GX_COLOR0A0:
-		reg     = (*(u32*)&color);
+		reg     = DECOMP_BE32(&color);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1A1:
-		reg     = (*(u32*)&color);
+		reg     = DECOMP_BE32(&color);
 		colorID = GX_COLOR1;
 		break;
 	default:

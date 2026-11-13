@@ -89,12 +89,13 @@ OSInterruptMask __OSUnmaskInterrupts(OSInterruptMask mask)
 void OSClearContext(OSContext *context) { (void)context; }
 void OSSetCurrentContext(OSContext *context) { (void)context; }
 
-/* ---- INTERIM: always-idle GPU ----
- * Until port/gpu decodes the command stream, the GPU is treated as having
- * finished everything sent so far the moment a sync is requested. GX's PE
+/* ---- always-idle GPU fallback ----
+ * port/gpu decodes the command stream itself and handles BP 0x45/0x47/0x48 (PE
+ * draw done and tokens) as they arrive, so this path is off. Setting
+ * port_gx_idle_gpu = 1 reports the PE token/finish at once instead. GX's PE
  * interrupt enables live in PE reg 5 (bit 0 token, bit 1 finish), as
  * __GXPEInit sets them. */
-int port_gx_idle_gpu = 1;
+int port_gx_idle_gpu = 0;
 
 void port_gx_idle_sync(u32 bpReg)
 {

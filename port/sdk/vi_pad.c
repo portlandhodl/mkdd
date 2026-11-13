@@ -3,6 +3,8 @@
 #include <string.h>
 #include <emscripten.h>
 #include "port_sdk.h"
+#include "webgl_backend.h"
+#include "gpu.h"
 
 #define RETRACE_TICKS (PORT_TICKS_PER_SEC * 1001 / 60000) /* NTSC 59.94 Hz */
 
@@ -37,12 +39,22 @@ void port_vi_retrace(void)
     if (sPreCallback)
         sPreCallback(sRetraceCount);
     sCurrentFB = sNextFB;
+    gpu_present(sBlack ? 0 : (u32)(uintptr_t)sCurrentFB);
     OSWakeupThread(&sRetraceQueue);
     if (sPostCallback)
         sPostCallback(sRetraceCount);
 }
 
-void VIInit(void) { OSInitThreadQueue(&sRetraceQueue); }
+void VIInit(void)
+{
+    OSInitThreadQueue(&sRetraceQueue);
+    gpu_init();
+    {
+        const GpuBackend *be = gpu_webgl_create(); /* NULL under node: null/dump backend stays */
+        if (be)
+            gpu_set_backend(be);
+    }
+}
 void VIConfigure(const GXRenderModeObj *rm) { (void)rm; }
 void VIFlush(void) {}
 void VISetBlack(BOOL black) { sBlack = black; }

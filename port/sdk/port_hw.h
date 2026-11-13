@@ -19,10 +19,10 @@ extern u16 port_hw_mem[0x80]; /* memory interface, 0xCC004000 */
  * as hardware interrupts run between instructions. */
 void port_raise_interrupt(int interrupt);
 
-/* INTERIM always-idle GPU (port/sdk/os_irq.c): while port_gx_idle_gpu is nonzero,
- * GXSetDrawSync/GXSetDrawDone hand their BP register here and the PE token/finish
- * is reported at once (port_hw_pe[7] = token, PE_TOKEN/PE_FINISH interrupts), so
- * waits never hang. A GPU that decodes BP 0x45/0x47/0x48 itself sets it to 0. */
+/* Always-idle GPU fallback (port/sdk/os_irq.c), off (0) now that port/gpu decodes
+ * BP 0x45/0x47/0x48 itself: while port_gx_idle_gpu is nonzero, GXSetDrawSync/
+ * GXSetDrawDone hand their BP register here and the PE token/finish is reported
+ * at once (port_hw_pe[7] = token, PE_TOKEN/PE_FINISH interrupts). */
 extern int port_gx_idle_gpu;
 void port_gx_idle_sync(u32 bpReg);
 
