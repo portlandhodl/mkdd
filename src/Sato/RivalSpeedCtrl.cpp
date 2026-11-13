@@ -89,15 +89,21 @@ inline s32 abs32(s32 v)
     return (mask ^ v) - mask;
 }
 
+inline f32 stFsel(register f32 c, register f32 a, register f32 b)
+{
+    asm { fsel c, c, a, b }
+    return c;
+}
+
 inline f32 stConverge(f32 cur, f32 target, f32 up, f32 down)
 {
     if (cur < target)
     {
         f32 v = cur + up;
-        return __fsel(target - v, v, target);
+        return stFsel(target - v, v, target);
     }
     f32 v = cur - down;
-    return __fsel(target - v, target, v);
+    return stFsel(target - v, target, v);
 }
 
 } // namespace
