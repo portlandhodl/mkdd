@@ -50,21 +50,23 @@ void GameAudio::ShoreSoundMgr::frameWork() {
     _5c = 1;
 }
 
-static inline bool isNearXY(const JGeometry::TVec3f &a, const JGeometry::TVec3f &b, f32 eps) {
+static inline bool epsilonEqualsF(f32 a, f32 b, f32 eps)
+{
     bool equal = false;
-    if (JGeometry::TUtilf::epsilonEquals(a.x, b.x, eps) && JGeometry::TUtilf::epsilonEquals(a.y, b.y, eps)) {
+    f32 d = a - b;
+    if (-eps <= d && d <= eps)
         equal = true;
-    }
     return equal;
 }
 
-static inline bool isNear(const JGeometry::TVec3f &a, const JGeometry::TVec3f &b) {
-    f32 eps = JGeometry::TUtilf::epsilon();
-    bool equal = false;
-    if (isNearXY(a, b, eps) && JGeometry::TUtilf::epsilonEquals(a.z, b.z, eps)) {
-        equal = true;
-    }
-    return equal;
+static inline bool isNear(const JGeometry::TVec3f &a, const JGeometry::TVec3f &b, f32 eps) {
+    bool ret = false;
+    bool xy = false;
+    if (epsilonEqualsF(a.x, b.x, eps) && epsilonEqualsF(a.y, b.y, eps))
+        xy = true;
+    if (xy && epsilonEqualsF(a.z, b.z, eps))
+        ret = true;
+    return ret;
 }
 
 void GameAudio::ShoreSoundMgr::setTide(u8 tide, JGeometry::TVec3f *p1, JGeometry::TVec3f *p2) {
@@ -93,7 +95,7 @@ void GameAudio::ShoreSoundMgr::setTide(u8 tide, JGeometry::TVec3f *p1, JGeometry
             move->_0 = 1;
             move->_28 = 0;
         }
-        else if (!isNear(move->_4, *pos)) {
+        else if (!isNear(move->_4, *pos, JGeometry::TUtilf::epsilon())) {
             move->_10 = (*pos - move->_4) * (1.0f / 30.0f);
             move->_1c = *pos;
             if (_5d == 1) {
@@ -129,7 +131,7 @@ void GameAudio::ShoreSoundMgr::setTide(u8 tide, JGeometry::TVec3f *p1, JGeometry
     else if (!b->_0) {
         _64[tide] = a->_4;
     }
-    else if (!isNear(a->_4, b->_4)) {
+    else if (!isNear(a->_4, b->_4, JGeometry::TUtilf::epsilon())) {
         CameraInfo *camInfo = Main::getAudio()->getCamera()->getCameraInfo(tide);
         Vec ab = a->_4 - b->_4;
         Vec ac = a->_4 - camInfo->_0;
