@@ -626,11 +626,10 @@ static s32 VDevice_DownloadEffect(VDevice *vdevice, u32 *id, LGForceEffect *fx) 
 
     *id = VDevice_GetFreeEffect(vdevice);
     if (*id == -1) {
-        return -5;
-    }
-    effect = &vdevice->effectPool[*id & 0x3F];
-    index = *id & 0x3F;
-    {
+        ret = -5;
+    } else {
+        effect = &vdevice->effectPool[*id & 0x3F];
+        index = *id & 0x3F;
         switch (fx->type) {
         case 0:
         case 1:
@@ -1005,18 +1004,6 @@ static s32 Effect_UpdateSpring(Effect *effect, const void *param) {
     return 0;
 }
 
-static inline s32 Effect_DamperForce(s32 velocity, s32 coef, s32 sat) {
-    velocity *= coef;
-    velocity = velocity * 20 / 0xFF000;
-    if (-sat > velocity) {
-        velocity = -sat;
-    }
-    if (sat < velocity) {
-        velocity = sat;
-    }
-    return velocity;
-}
-
 static s32 Effect_UpdateDamper(Effect *effect, const void *param) {
     s32 velocity = effect->vdevice->sim.velocity;
     const LGCondition *condition = param;
@@ -1030,7 +1017,15 @@ static s32 Effect_UpdateDamper(Effect *effect, const void *param) {
         coefficient = -condition->coefficientPos;
         saturation = condition->saturationPos;
     }
-    return Effect_DamperForce(velocity, coefficient, saturation);
+    velocity *= coefficient;
+    velocity = velocity * 20 / 0xFF000;
+    if (-saturation > velocity) {
+        velocity = -saturation;
+    }
+    if (saturation < velocity) {
+        velocity = saturation;
+    }
+    return velocity;
 }
 
 static inline void SimThread_SetFilter(SimThread *sim, s32 *coefs) {

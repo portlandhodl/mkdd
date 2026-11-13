@@ -20,36 +20,50 @@ static BOOL __HTTPIsSpace(char c)
     return c == ' ' || c == '\t';
 }
 
-static char* __HTTPSkipSpace(char* p)
+static char* __HTTPSkipSpace(const char* p)
 {
     while (__HTTPIsSpace(*p)) {
         p++;
     }
-    return p;
+    return (char*)p;
 }
 
-static char* __HTTPSkipSWS(char* p)
+static char* __HTTPSkipSWS(const char* p)
 {
     for (;;) {
         p = __HTTPSkipSpace(p);
         if (p[0] == '\r' && p[1] == '\n' && __HTTPIsSpace(p[2])) {
             p += 3;
         } else {
-            return p;
+            return (char*)p;
         }
     }
 }
 
-static char* __HTTPSkipChar(char* p, char c)
+static char* __HTTPSkipChar(const char* p, char c)
 {
     p = __HTTPSkipSWS(p);
     if (p == NULL || *p != c) {
         return NULL;
     }
-    return __HTTPSkipSWS(p + 1);
+    return __HTTPSkipSWS(++p);
 }
 
-static char* __HTTPSkipColon(char* p)
+static char* __HTTPGetStartLine(char* msg, int* len)
+{
+    char* p;
+
+    p = strchr(msg, '\n');
+    if (p != NULL) {
+        *len = p - msg - 1;
+        msg = p + 1;
+    } else {
+        *len = 0;
+    }
+    return msg;
+}
+
+static char* __HTTPSkipColon(const char* p)
 {
     p = __HTTPSkipSpace(p);
     if (*p != ':') {
@@ -58,32 +72,32 @@ static char* __HTTPSkipColon(char* p)
     return __HTTPSkipSWS(p + 1);
 }
 
-static char* __HTTPGetToken(char* p, char** token, int* len)
+static char* __HTTPGetToken(const char* p, char** token, int* len)
 {
     *token = NULL;
     *len = 0;
     while (*p != '\0' && (isalpha(*p) || isdigit(*p) || strchr("-.!%*_+`'~", *p))) {
         if (*token == NULL) {
-            *token = p;
+            *token = (char*)p;
         }
         ++*len;
         ++p;
     }
-    return p;
+    return (char*)p;
 }
 
-static char* __HTTPGetDigit(char* p, char** token, int* len)
+static char* __HTTPGetDigit(const char* p, char** token, int* len)
 {
     *token = NULL;
     *len = 0;
     while (isdigit(*p)) {
         if (*token == NULL) {
-            *token = p;
+            *token = (char*)p;
         }
         ++*len;
         ++p;
     }
-    return p;
+    return (char*)p;
 }
 
 static char* __HTTPSkipToNextHeader(char* p)
@@ -97,6 +111,25 @@ static char* __HTTPSkipToNextHeader(char* p)
         }
         p++;
     }
+}
+
+static char* __HTTPSkipTo(const char* p, char c)
+{
+    BOOL quote = FALSE;
+
+    while (quote || *p != c) {
+        if (*p == '\0') {
+            return NULL;
+        }
+        if (*p == '\r' && p[1] == '\n' && !__HTTPIsSpace(*(p += 2))) {
+            return NULL;
+        }
+        if (*p == '"') {
+            quote ^= TRUE;
+        }
+        p++;
+    }
+    return (char*)p;
 }
 
 static inline int StrNICmp(const char* s1, const char* s2, u32 n)
@@ -121,16 +154,11 @@ static inline int StrNICmp(const char* s1, const char* s2, u32 n)
     return 0;
 }
 
-static inline int Min(int a, int b)
-{
-    return a < b ? a : b;
-}
-
 char* __HTTPGetHeader(char* msg, const char* name)
 {
+    char* token;
     char* sub;
     char* p;
-    char* token;
     int len;
 
     sub = strchr(name, '/');
@@ -138,8 +166,7 @@ char* __HTTPGetHeader(char* msg, const char* name)
         sub++;
     }
     while (msg != NULL) {
-        p = __HTTPGetToken(msg, &token, &len);
-        msg = p;
+        msg = p = __HTTPGetToken(msg, &token, &len);
         if (token == NULL) {
             return NULL;
         }
@@ -197,7 +224,7 @@ char* __HTTPGetVersion(char* msg, char** version, int* versionLen)
     return p;
 }
 
-static char* __HTTPGetURI(char* p, char** token, int* len)
+static char* __HTTPGetURI(const char* p, char** token, int* len)
 {
     char* q;
 
@@ -205,7 +232,7 @@ static char* __HTTPGetURI(char* p, char** token, int* len)
     *len = 0;
     for (q = p; *q != '\0' && strchr(" ", *q) == NULL; q++) {
         if (*token == NULL) {
-            *token = p;
+            *token = (char*)p;
         }
     }
     *len = q - p;
@@ -216,9 +243,8 @@ char* __HTTPGetParameter(char* p, const char* name)
 {
     char* token;
     int len;
-    BOOL quote;
 
-    do {
+    for (;;) {
         p = __HTTPGetToken(p, &token, &len);
         if (len > 0 && StrNICmp(token, name, len) == 0 && name[len] == '\0') {
             p = __HTTPSkipSWS(p);
@@ -227,26 +253,15 @@ char* __HTTPGetParameter(char* p, const char* name)
             }
             return p;
         }
-        quote = FALSE;
-        while (quote || *p != ';') {
-            if (*p == '\0') {
-                p = NULL;
-                break;
-            }
-            if (*p == '\r' && p[1] == '\n' && !__HTTPIsSpace(*(p += 2))) {
-                p = NULL;
-                break;
-            }
-            if (*p == '"') {
-                quote ^= TRUE;
-            }
-            p++;
-        }
+        p = __HTTPSkipTo(p, ';');
         if (p == NULL) {
             return NULL;
         }
-    } while ((p = __HTTPSkipChar(p, ';')) != NULL);
-    return NULL;
+        p = __HTTPSkipChar(p, ';');
+        if (p == NULL) {
+            return NULL;
+        }
+    }
 }
 
 s32 HTTPGetProtocol(char* msg, char* protocol)
@@ -350,14 +365,8 @@ s32 HTTPGetHeader(char* msg, const char* name, char* value, s32 size)
     if (size < 1) {
         return -1;
     }
-    p = strchr(msg, '\n');
-    if (p != NULL) {
-        n = p - msg - 1;
-        msg = p + 1;
-    } else {
-        n = 0;
-    }
-    if (n <= 0) {
+    msg = __HTTPGetStartLine(msg, &len);
+    if (len <= 0) {
         return -1;
     }
     p = header = __HTTPGetHeader(msg, name);
@@ -372,10 +381,9 @@ s32 HTTPGetHeader(char* msg, const char* name, char* value, s32 size)
     while (len > 0 && __HTTPIsSpace(p[len - 1])) {
         len--;
     }
-    n = Min(len, size - 1);
-    memcpy(value, p, size = n);
-    value[n] = 0;
-
+    size = (len < --size) ? len : size;
+    memcpy(value, p, n = size);
+    value[size] = '\0';
     return len;
 }
 
