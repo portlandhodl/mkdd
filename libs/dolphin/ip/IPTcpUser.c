@@ -21,8 +21,8 @@ typedef struct TCPInfoList {
     TCPSocket* tail;
 } TCPInfoList;
 
-extern TCPInfoList TCPInfoQueue;
-extern u16 Port;
+TCPInfoList TCPInfoQueue;
+static u16 Port = 1024;
 
 extern BOOL __IPIsMember(TCPInfoList* queue, TCPSocket* so);
 extern s32 IPBind(TCPInfoList* queue, TCPSocket* so, u8* addr, s32 flag);
@@ -366,22 +366,8 @@ s32 TCPOpen(TCPSocket* so, u8* send, u32 sendSize, u8* recv, u32 recvSize)
     so->flags = 0x82;
     so->snd_wnd = 536;
 
-    enabled = OSDisableInterrupts();
-    if (so->unk00[0] == IP_PROTO_TCP && so->state == 0) {
-        so->unk178 = sendSize;
-        so->unk174 = (s32)send;
-        so->ringBase = (s32)send;
-    }
-    OSRestoreInterrupts(enabled);
-
-    enabled = OSDisableInterrupts();
-    if (so->unk00[0] == IP_PROTO_TCP && so->state == 0) {
-        so->unk1FC = recvSize;
-        so->unk1F8 = (u32)recv;
-        so->unk204 = (u32)recv;
-        so->unk58 = so->unk1FC;
-    }
-    OSRestoreInterrupts(enabled);
+    TCPSetSendBuff(so, send, sendSize);
+    TCPSetRecvBuff(so, recv, recvSize);
 
     so->idleTimeout.value = (s64)(OS_BUS_CLOCK / 4) * 100;
 
@@ -528,70 +514,68 @@ static s32 SendAsync(TCPSocket* so, const void* buf, s32 len, s32 flags,
 {
     BOOL enabled;
     s32 result;
-    s32 urgent;
+    u32 urgent;
 
     enabled = OSDisableInterrupts();
     if (so->unk00[0] != IP_PROTO_TCP || len < 0) {
         result = SO_ENOMEM;
     } else if (so->recvCallback != NULL) {
         result = -1;
+    } else if ((urgent = flags & 1) && len == 0) {
+        result = SO_ENOMEM;
     } else {
-        urgent = flags & 1;
-        if (urgent && len == 0) {
-            result = SO_ENOMEM;
-        } else {
-            if (callback == NULL) {
-                callback = NullCallback;
-            }
-            switch (so->state) {
-            case 0:
-                result = SO_EINTR;
-                break;
-            case 1:
-                result = SO_EWOULDBLOCK;
-                break;
-            case 2:
-            case 3:
-            case 4:
-            case 7:
-                if (so->flags & 8) {
-                    result = SO_EBADF;
-                } else {
-                    result = 0;
-                    so->recvWritten = 0;
-                    so->data = (u8*)buf;
-                    so->dataLen = len;
-                    so->recvCallback = (void*)callback;
-                    so->recvArg = arg;
-                    if (arg != NULL) {
-                        *arg = -1;
-                    }
-                    TCPSendIn(so, flags & 4);
-                    if (urgent) {
-                        so->unk3C = so->snd_una + so->ringSize + so->dataLen;
-                        if (so->state < 4 && so->unk48 == so->snd_una) {
-                            so->unk3C++;
-                        }
-                    }
-                    if (so->dataLen <= 0) {
-                        if (so->recvArg != NULL) {
-                            *so->recvArg = so->recvWritten;
-                            so->recvArg = NULL;
-                        }
-                        so->recvCallback = NULL;
-                        callback(so, so->recvWritten);
-                    }
-                    if (so->state == 4 || so->state == 7) {
-                        TCPOutput(so, 0);
-                    }
-                }
-                break;
-            case 5:
-            case 6:
-            default:
+        result = 0;
+        callback = callback ? callback : NullCallback;
+        switch (so->state) {
+        case 0:
+            result = SO_EINTR;
+            break;
+        case 1:
+            result = SO_EWOULDBLOCK;
+            break;
+        case 2:
+        case 3:
+        case 4:
+        case 7:
+            if (so->flags & 8) {
                 result = SO_EBADF;
                 break;
             }
+            so->recvWritten = 0;
+            so->data = (u8*)buf;
+            so->dataLen = len;
+            so->recvCallback = (void*)callback;
+            so->recvArg = arg;
+            if (arg != NULL) {
+                *arg = -1;
+            }
+            TCPSendIn(so, flags & 4);
+            if (urgent) {
+                so->unk3C = so->snd_una + so->ringSize + so->dataLen;
+                if (so->state < 4 && so->unk48 == so->snd_una) {
+                    so->unk3C++;
+                }
+            }
+            if (so->dataLen <= 0) {
+                if (so->recvArg != NULL) {
+                    *so->recvArg = so->recvWritten;
+                    so->recvArg = NULL;
+                }
+                so->recvCallback = NULL;
+                callback(so, so->recvWritten);
+            }
+            if (so->state == 4 || so->state == 7) {
+                TCPOutput(so, 0);
+            }
+            break;
+        case 5:
+        case 6:
+        case 8:
+        case 9:
+        case 10:
+        default:
+            result = SO_EBADF;
+            break;
         }
     }
     if (arg != NULL && result < 0) {
@@ -684,7 +668,6 @@ s32 TCPReceiveExAsync(TCPSocket* so, void* buf, s32 len, s32 flags,
 {
     BOOL enabled;
     s32 result;
-    s32 state;
 
     enabled = OSDisableInterrupts();
     if (so->unk00[0] != IP_PROTO_TCP || len < 0) {
@@ -694,102 +677,78 @@ s32 TCPReceiveExAsync(TCPSocket* so, void* buf, s32 len, s32 flags,
     } else if (so->flags & 0x11) {
         result = SO_EBADF;
     } else {
-        if (callback == NULL) {
-            callback = NullCallback;
-        }
-        state = so->state;
-        if (state < 0) {
-            goto not_connected;
-        } else if (state == 0) {
-            goto closed;
-        } else if (state < 4) {
-            goto connected;
-        } else if (state < 8) {
-            goto active;
-        } else {
-            goto not_connected;
-        }
-
-    closed:
-        if (so->flags & 8) {
-            result = 0;
-            if (arg != NULL) {
-                *arg = 0;
-            }
-            callback(so, 0);
-        } else {
-            result = SO_EINTR;
-        }
-        goto done;
-
-    not_connected:
         result = 0;
-        if (arg != NULL) {
-            *arg = 0;
-        }
-        callback(so, 0);
-        goto done;
-
-    connected:
-        if (len == 0) {
-            result = 0;
-            if (arg != NULL) {
-                *arg = 0;
+        callback = callback ? callback : NullCallback;
+        switch (so->state) {
+        case 0:
+            if (so->flags & 8) {
+                result = 0;
+                if (arg != NULL) {
+                    *arg = 0;
+                }
+                callback(so, 0);
+            } else {
+                result = SO_EINTR;
             }
-            callback(so, 0);
-            goto done;
-        }
-        if (flags & 8) {
-            result = -9;
-            goto done;
-        }
-        {
-            s32* start = (s32*)((u8*)so + 0x218);
+            break;
+        case 1:
+        case 2:
+        case 3:
+            if (len == 0) {
+                result = 0;
+                if (arg != NULL) {
+                    *arg = 0;
+                }
+                callback(so, 0);
+                break;
+            }
             if (flags & 4) {
+                result = -9;
+                break;
+            }
+            if (flags & 2) {
                 so->flags |= 0x400;
             } else {
                 so->flags &= ~0x400;
             }
-            start[0] = (s32)buf;
-            start[1] = len;
-            start[2] = 0;
+            so->recvOutputStart = (s32)buf;
+            so->recvOutputEnd = len;
+            so->recvOutputOffset = 0;
             so->recvOutputCallback = callback;
             so->recvOutputArg = arg;
-            result = 0;
             if (arg != NULL) {
                 *arg = -1;
             }
-        }
-        goto done;
-
-    active:
-        if (len == 0) {
-            result = 0;
-            if (arg != NULL) {
-                *arg = 0;
+            break;
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            if (len == 0) {
+                result = 0;
+                if (arg != NULL) {
+                    *arg = 0;
+                }
+                callback(so, 0);
+                break;
             }
-            callback(so, 0);
-            goto done;
-        }
-        {
-            s32* start = (s32*)((u8*)so + 0x218);
-            if (flags & 4) {
+            if (flags & 2) {
                 so->flags |= 0x400;
             } else {
                 so->flags &= ~0x400;
             }
-            start[0] = (s32)buf;
-            start[1] = len;
-            start[2] = 0;
+            so->recvOutputStart = (s32)buf;
+            so->recvOutputEnd = len;
+            so->recvOutputOffset = 0;
             result = TCPRecvOut(so);
             if (result > 0) {
-                start[2] = 0;
+                so->recvOutputOffset = 0;
                 if (arg != NULL) {
                     *arg = result;
                 }
                 callback(so, result);
                 TCPOutput(so, 0);
-                goto done;
+                break;
             }
             if (so->state == 7 && so->unk200 == 0) {
                 result = 0;
@@ -797,11 +756,11 @@ s32 TCPReceiveExAsync(TCPSocket* so, void* buf, s32 len, s32 flags,
                     *arg = 0;
                 }
                 callback(so, 0);
-                goto done;
+                break;
             }
-            if (flags & 8) {
+            if (flags & 4) {
                 result = -9;
-                goto done;
+                break;
             }
             so->recvOutputCallback = callback;
             so->recvOutputArg = arg;
@@ -809,13 +768,21 @@ s32 TCPReceiveExAsync(TCPSocket* so, void* buf, s32 len, s32 flags,
             if (arg != NULL) {
                 *arg = -1;
             }
+            break;
+        case 8:
+        case 9:
+        case 10:
+        default:
+            result = 0;
+            if (arg != NULL) {
+                *arg = 0;
+            }
+            callback(so, 0);
+            break;
         }
-        goto done;
-
-    done:
-        if (arg != NULL && result < 0) {
-            *arg = result;
-        }
+    }
+    if (arg != NULL && result < 0) {
+        *arg = result;
     }
     OSRestoreInterrupts(enabled);
     return result;
@@ -883,40 +850,35 @@ s32 TCPCloseAsync(TCPSocket* so, void (*callback)(TCPSocket*, s32), s32* arg)
         }
         switch (so->state) {
         case 0:
+        case 1:
+        case 2:
             so->error = SO_EBADF;
             TCPAbort(so);
+            break;
+        case 3:
             break;
         case 4:
             so->state = 5;
             TCPOutput(so, 0);
             break;
+        case 5:
+        case 6:
+            break;
         case 7:
             so->state = 9;
             TCPOutput(so, 0);
             break;
-        case 1:
-            break;
-        case 2:
-            break;
-        case 3:
-            break;
-        case 5:
-            break;
-        case 6:
-            break;
         case 8:
-            break;
         case 9:
-            break;
         case 10:
             break;
         default:
             result = SO_ENOMEM;
             break;
         }
-    }
-    if (so->unk04 > 0) {
-        __IPWakeupPollingThreads();
+        if (so->unk04 > 0) {
+            __IPWakeupPollingThreads();
+        }
     }
     if (arg != NULL && result < 0) {
         *arg = result;
@@ -1067,11 +1029,11 @@ s32 TCPShutdown(TCPSocket* so, u32 how)
             result2 = SO_EBADF;
             break;
         }
+        if (so->unk04 > 0) {
+            __IPWakeupPollingThreads();
+        }
     }
 
-    if (so->unk04 > 0) {
-        __IPWakeupPollingThreads();
-    }
     if (changed) {
         TCPOutput(so, 0);
     }
@@ -1094,14 +1056,20 @@ s32 TCPCancel(TCPSocket* so)
         result = 0;
         so->flags |= 0x19;
         so->error = -3;
-        if (so->state >= 8) {
-            goto cancel_abort;
-        }
-        if (so->state >= 3) {
+        switch (so->state) {
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
             TCPRespond(so->iface, NULL, so->connRemoteAddr, so->remotePort,
                        so->unk0C, so->localPort, so->snd_max, 0, 4, 0);
+            break;
+        case 8:
+        case 9:
+        case 10:
+            break;
         }
-    cancel_abort:
         TCPAbort(so);
         if (so->unk04 > 0) {
             __IPWakeupPollingThreads();
@@ -1116,7 +1084,6 @@ s32 TCPReceiveUrgExAsync(TCPSocket* so, void* buf, s32 len, s32 flags,
 {
     BOOL enabled;
     s32 result;
-    s32 state;
 
     enabled = OSDisableInterrupts();
     if (so->unk00[0] != IP_PROTO_TCP || len < 1) {
@@ -1126,108 +1093,98 @@ s32 TCPReceiveUrgExAsync(TCPSocket* so, void* buf, s32 len, s32 flags,
     } else if (so->flags & 0x11) {
         result = SO_EBADF;
     } else {
-        if (callback == NULL) {
-            callback = NullCallback;
-        }
-        state = so->state;
-        if (state < 0) {
-            goto not_connected;
-        } else if (state == 0) {
-            goto closed;
-        } else if (state < 4) {
-            goto connected;
-        } else if (state < 8) {
-            goto active;
-        } else {
-            goto not_connected;
-        }
-
-    closed:
-        if (so->flags & 8) {
-            result = 0;
-        } else {
-            result = SO_EINTR;
-        }
-        goto done;
-
-    not_connected:
         result = 0;
-        if (arg != NULL) {
-            *arg = 0;
-        }
-        callback(so, 0);
-        goto done;
-
-    connected:
-        if (flags & 8) {
-            result = SO_ENOMEM;
-            goto done;
-        }
-        if (flags & 4) {
-            so->flags |= 0x800;
-        } else {
-            so->flags &= ~0x800;
-        }
-        so->urgentData = (u8*)buf;
-        so->urgentCallback = callback;
-        so->urgentArg = arg;
-        result = 0;
-        if (arg != NULL) {
-            *arg = -1;
-        }
-        goto done;
-
-    active:
-        if (flags & 4) {
-            so->flags |= 0x800;
-        } else {
-            so->flags &= ~0x800;
-        }
-        so->urgentData = (u8*)buf;
-        if (so->urgentLen > 0 || (so->flags & 0x20)) {
-            if (!(so->flags & 0x40)) {
-                if (so->flags & 0x20) {
-                    result = 1;
-                    if (buf != NULL) {
-                        *so->urgentData = so->urgentByte;
-                    }
-                    if (so->flags & 0x10) {
-                        so->flags ^= 0x60;
-                    }
-                    if (arg != NULL) {
-                        *arg = 1;
-                    }
-                    callback(so, 1);
-                    goto done;
-                }
-                result = -9;
-                goto done;
+        callback = callback ? callback : NullCallback;
+        switch (so->state) {
+        case 0:
+            if (so->flags & 8) {
+                result = 0;
+            } else {
+                result = SO_EINTR;
             }
-        }
-        if (so->state == 7) {
+            break;
+        case 1:
+        case 2:
+        case 3:
+            if (flags & 4) {
+                result = SO_ENOMEM;
+                break;
+            }
+            if (flags & 2) {
+                so->flags |= 0x800;
+            } else {
+                so->flags &= ~0x800;
+            }
+            so->urgentData = (u8*)buf;
+            so->urgentCallback = callback;
+            so->urgentArg = arg;
+            if (arg != NULL) {
+                *arg = -1;
+            }
+            break;
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            if (flags & 2) {
+                so->flags |= 0x800;
+            } else {
+                so->flags &= ~0x800;
+            }
+            so->urgentData = (u8*)buf;
+            if (so->urgentLen > 0 || (so->flags & 0x20)) {
+                if (!(so->flags & 0x40)) {
+                    if (so->flags & 0x20) {
+                        result = 1;
+                        if (buf != NULL) {
+                            *so->urgentData = so->urgentByte;
+                        }
+                        if (so->flags & 0x800) {
+                            so->flags ^= 0x60;
+                        }
+                        if (arg != NULL) {
+                            *arg = 1;
+                        }
+                        callback(so, 1);
+                        break;
+                    }
+                    result = -9;
+                    break;
+                }
+            }
+            if (so->state == 7) {
+                result = 0;
+                if (arg != NULL) {
+                    *arg = 0;
+                }
+                callback(so, 0);
+                break;
+            }
+            if (flags & 4) {
+                result = SO_ENOMEM;
+                break;
+            }
+            so->urgentCallback = callback;
+            so->urgentArg = arg;
+            result = 0;
+            if (arg != NULL) {
+                *arg = -1;
+            }
+            break;
+        case 8:
+        case 9:
+        case 10:
+        default:
             result = 0;
             if (arg != NULL) {
                 *arg = 0;
             }
             callback(so, 0);
-            goto done;
+            break;
         }
-        if (flags & 8) {
-            result = SO_ENOMEM;
-            goto done;
-        }
-        so->urgentCallback = callback;
-        so->urgentArg = arg;
-        result = 0;
-        if (arg != NULL) {
-            *arg = -1;
-        }
-        goto done;
-
-    done:
-        if (arg != NULL && result < 0) {
-            *arg = result;
-        }
+    }
+    if (arg != NULL && result < 0) {
+        *arg = result;
     }
     OSRestoreInterrupts(enabled);
     return result;
@@ -1393,12 +1350,7 @@ s32 TCPSetSockOpt(TCPSocket* so, s32 level, s32 opt, void* val, u32 len)
                 {
                     s32 linger = ((s32*)val)[1];
 
-                    if (linger > 0) {
-                        goto linger_store;
-                    }
-                    linger = 0;
-                linger_store:
-                    so->unk2DC = linger;
+                    so->unk2DC = linger > 0 ? linger : 0;
                 }
                 result = 0;
             } else {
@@ -1464,11 +1416,9 @@ BOOL TCPOnReset(BOOL final)
     if (TCPInfoQueue.head == NULL) {
         return TRUE;
     }
-    for (;;) {
-        TCPCancel(TCPInfoQueue.head);
-        if (TCPInfoQueue.head == NULL) {
-            break;
-        }
+    while (TCPInfoQueue.head != NULL) {
+        so = TCPInfoQueue.head;
+        TCPCancel(so);
     }
     return FALSE;
 }
@@ -1482,80 +1432,67 @@ s32 __TCPPoll(TCPSocket* so)
     if (so->unk00[0] != IP_PROTO_TCP) {
         return 0x80;
     }
-    state = so->state;
+    state = *(u32*)&so->state;
     flags = 0;
     if (state == 1 && *(u32*)((u8*)so + 0x314) != 0) {
         flags |= 1;
     }
     state2 = so->state;
-    if (state2 < 5) {
-        if (state2 == 1) {
-            goto check;
-        } else if (state2 >= 1) {
-            goto check;
-        } else if (state2 >= 0) {
-            goto bad;
-        } else {
-            goto bad;
+    switch (state2) {
+    case 0:
+        flags |= 8;
+        break;
+    case 1:
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 7:
+        if (so->dataLen <= 0 && so->unk178 - so->ringSize > 0) {
+            flags |= 0x18;
         }
-    } else if (state2 == 7) {
-        goto check;
-    } else if (state2 < 7) {
-        goto bad;
-    } else {
-        goto bad;
+        break;
+    case 5:
+    case 6:
+    case 8:
+    case 9:
+    case 10:
+    default:
+        flags |= 8;
+        break;
     }
 
-check:
-    if (so->dataLen > 0) {
-        goto second;
-    }
-    if (so->unk178 - so->ringSize > 0) {
-        flags |= 0x18;
-    }
-    goto second;
-bad:
-    flags |= 8;
-    goto second;
-
-second:
-    if (state2 < 4) {
-        if (state2 == 0) {
-            goto zero;
-        } else if (state2 >= 0) {
-            goto done;
-        } else {
-            goto one;
-        }
-    } else if (state2 >= 11) {
-        goto one;
-    } else if (state2 >= 8) {
-        goto one;
-    } else {
-        goto active;
-    }
-
-zero:
-    flags |= 1;
-    goto done;
-one:
-    flags |= 1;
-    goto done;
-
-active:
-    if (so->unk200 > 0) {
+    switch (state2) {
+    case 0:
         flags |= 1;
-    } else if (state2 == 7) {
-        flags |= 1;
-    }
-    if (so->urgentLen > 0 || (so->flags & 0x20)) {
-        if (!(so->flags & 0x40)) {
-            flags |= 2;
+        break;
+    case 1:
+    case 2:
+    case 3:
+        break;
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+        if (so->unk200 > 0) {
+            flags |= 1;
+        } else if (state == 7) {
+            flags |= 1;
         }
+        if (so->urgentLen > 0 || (so->flags & 0x20)) {
+            if (!(so->flags & 0x40)) {
+                flags |= 2;
+            }
+        }
+        break;
+    case 8:
+    case 9:
+    case 10:
+    default:
+        flags |= 1;
+        break;
     }
-    goto done;
 
-done:
     if (so->flags & 8) {
         flags |= 8;
     }

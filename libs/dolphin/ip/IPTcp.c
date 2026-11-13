@@ -36,6 +36,9 @@ typedef struct TCPPacket {
 typedef struct TCPStat {
     u32 unk00;
     u32 rxPackets;
+    u32 unk08;
+    u32 unk0C;
+    u32 unk10;
 } TCPStats;
 
 typedef struct TCPInfoAddr {
@@ -44,7 +47,7 @@ typedef struct TCPInfoAddr {
     u8 addr[4];
 } TCPInfoAddr;
 
-extern TCPStats TCPStat;
+TCPStats TCPStat;
 extern TCPInfoList TCPInfoQueue;
 
 extern TCPSocket* TCPLookupInfo(IPHeader* ip, TCPHeader* tcp);
@@ -56,6 +59,7 @@ extern s32 TCPSendIn(TCPSocket* so, s32 reset);
 extern s32 TCPPeekOut(TCPSocket* so, u8* dst, s32 len, s32 peek);
 extern s32 TCPRecvOut(TCPSocket* so);
 extern void TCPDeleteSackHoles(TCPSocket* so, TCPHeader* tcp);
+extern int TCPUpdateScoreboard(TCPSocket* so, TCPHeader* tcp, u8* opt, s32 len);
 extern void TCPInitRtt(TCPSocket* so);
 extern void TCPStopRxmitTimer(TCPSocket* so, TCPHeader* tcp);
 extern s32 TCPMakeOption(TCPHeader* tcp, TCPSocket* so, u16 flag);
@@ -577,7 +581,7 @@ LDoOption_1c4:
 LDoOption_1c8:
     addi    r6,r26,0
 LDoOption_1cc:
-    bl LDoOption_1cc
+    bl TCPUpdateScoreboard
 LDoOption_1d0:
     add     r30,r30,r26
 LDoOption_1d4:
@@ -737,7 +741,7 @@ LTCPRespond_2d0:
 LTCPRespond_2d4:
     li      r5,4
 LTCPRespond_2d8:
-    bl LTCPRespond_2d8
+    bl memmove
 LTCPRespond_2dc:
     addi    r4,r31,0
 LTCPRespond_2e0:
@@ -745,7 +749,7 @@ LTCPRespond_2e0:
 LTCPRespond_2e4:
     li      r5,4
 LTCPRespond_2e8:
-    bl LTCPRespond_2e8
+    bl memmove
 LTCPRespond_2ec:
     li      r0,69
 LTCPRespond_2f0:
@@ -791,7 +795,7 @@ LTCPRespond_33c:
 LTCPRespond_340:
     mr      r3,r19
 LTCPRespond_344:
-    bl LTCPRespond_344
+    bl TCPMakeOption
 LTCPRespond_348:
     sth     r22,0(r19)
 LTCPRespond_34c:
@@ -827,7 +831,7 @@ LTCPRespond_384:
 LTCPRespond_388:
     stb     r31,37(r29)
 LTCPRespond_38c:
-    bl LTCPRespond_38c
+    bl IPOut
 LTCPRespond_390:
     cmpwi   r3,0
 LTCPRespond_394:
@@ -3418,7 +3422,7 @@ LDoSynSent_16c0:
 LDoSynSent_16c4:
     lhz     r8,2(r31)
 LDoSynSent_16c8:
-    bl LDoSynSent_16c8
+    bl TCPRespond
 LDoSynSent_16cc:
     li      r3,0
 LDoSynSent_16d0:
@@ -3438,7 +3442,7 @@ LDoSynSent_16e8:
 LDoSynSent_16ec:
     mr      r3,r30
 LDoSynSent_16f0:
-    bl LDoSynSent_16f0
+    bl TCPAbort
 LDoSynSent_16f4:
     li      r3,0
 LDoSynSent_16f8:
@@ -3474,7 +3478,7 @@ LDoSynSent_1730:
 LDoSynSent_1734:
     stw     r0,520(r30)
 LDoSynSent_1738:
-    bl LDoSynSent_1738
+    bl DoOption
 LDoSynSent_173c:
     lhz     r0,12(r31)
 LDoSynSent_1740:
@@ -3500,7 +3504,7 @@ LDoSynSent_1764:
 LDoSynSent_1768:
     stw     r0,648(r30)
 LDoSynSent_176c:
-    bl LDoSynSent_176c
+    bl OSGetTime
 LDoSynSent_1770:
     lwz     r5,660(r30)
 LDoSynSent_1774:
@@ -3512,7 +3516,7 @@ LDoSynSent_177c:
 LDoSynSent_1780:
     addi    r3,r30,0
 LDoSynSent_1784:
-    bl LDoSynSent_1784
+    bl TCPUpdateRtt
 LDoSynSent_1788:
     lhz     r0,14(r31)
 LDoSynSent_178c:
@@ -3556,7 +3560,7 @@ LDoSynSent_17d4:
 LDoSynSent_17d8:
     addi    r4,r31,0
 LDoSynSent_17dc:
-    bl LDoSynSent_17dc
+    bl TCPStopRxmitTimer
 LDoSynSent_17e0:
     li      r0,4
 LDoSynSent_17e4:
@@ -3707,7 +3711,7 @@ LDoData_1948:
 LDoData_194c:
     addi    r4,r30,0
 LDoData_1950:
-    bl LDoData_1950
+    bl DoUrg
 LDoData_1954:
     lwz     r0,228(r28)
 LDoData_1958:
@@ -3843,11 +3847,11 @@ LDoData_1a58:
 LDoData_1a5c:
     lhz     r8,2(r30)
 LDoData_1a60:
-    bl LDoData_1a60
+    bl TCPRespond
 LDoData_1a64:
     mr      r3,r28
 LDoData_1a68:
-    bl LDoData_1a68
+    bl TCPAbort
 LDoData_1a6c:
     b LDoData_1d0c
 LDoData_1a70:
@@ -3887,7 +3891,7 @@ LDoData_1ab0:
 LDoData_1ab4:
     lwz     r8,104(r28)
 LDoData_1ab8:
-    bl LDoData_1ab8
+    bl IFRingInEx
 LDoData_1abc:
     stw     r3,516(r28)
 LDoData_1ac0:
@@ -3929,7 +3933,7 @@ LDoData_1b04:
 LDoData_1b08:
     ble LDoData_1b74
 LDoData_1b0c:
-    bl LDoData_1b0c
+    bl __IPWakeupPollingThreads
 LDoData_1b10:
     b LDoData_1b74
 LDoData_1b14:
@@ -3961,7 +3965,7 @@ LDoData_1b44:
 LDoData_1b48:
     lwz     r8,104(r28)
 LDoData_1b4c:
-    bl LDoData_1b4c
+    bl IFRingInEx
 LDoData_1b50:
     stw     r3,516(r28)
 LDoData_1b54:
@@ -4037,7 +4041,7 @@ LDoData_1bdc:
 LDoData_1be0:
     mr      r3,r28
 LDoData_1be4:
-    bl LDoData_1be4
+    bl TCPRecvOut
 LDoData_1be8:
     mr.     r4,r3
 LDoData_1bec:
@@ -4175,7 +4179,7 @@ LDoData_1cf0:
 LDoData_1cf4:
     mr      r4,r28
 LDoData_1cf8:
-    bl LDoData_1cf8
+    bl TCPStartTimeWait
 LDoData_1cfc:
     b LDoData_1d0c
 LDoData_1d00:
@@ -4183,7 +4187,7 @@ LDoData_1d00:
 LDoData_1d04:
     addi    r4,r31,0
 LDoData_1d08:
-    bl LDoData_1d08
+    bl TCPOutput
 LDoData_1d0c:
     lmw     r27,52(r1)
 LDoData_1d10:
@@ -4565,7 +4569,7 @@ LTCPDeleteSackHoles_2158:
 LTCPDeleteSackHoles_215c:
     stw     r0,204(r31)
 LTCPDeleteSackHoles_2160:
-    bl LTCPDeleteSackHoles_2160
+    bl memmove
 LTCPDeleteSackHoles_2164:
     lwz     r0,204(r31)
 LTCPDeleteSackHoles_2168:
@@ -4834,7 +4838,7 @@ LTCPUpdateScoreboard_2368:
 LTCPUpdateScoreboard_236c:
     subf    r5,r4,r27
 LTCPUpdateScoreboard_2370:
-    bl LTCPUpdateScoreboard_2370
+    bl memmove
 LTCPUpdateScoreboard_2374:
     lwz     r3,204(r22)
 LTCPUpdateScoreboard_2378:
@@ -4934,7 +4938,7 @@ LTCPUpdateScoreboard_2430:
 LTCPUpdateScoreboard_2434:
     subf    r5,r29,r27
 LTCPUpdateScoreboard_2438:
-    bl LTCPUpdateScoreboard_2438
+    bl memmove
 LTCPUpdateScoreboard_243c:
     lwz     r3,204(r22)
 LTCPUpdateScoreboard_2440:
@@ -4962,7 +4966,7 @@ LTCPUpdateScoreboard_2468:
 LTCPUpdateScoreboard_246c:
     subf    r5,r29,r5
 LTCPUpdateScoreboard_2470:
-    bl LTCPUpdateScoreboard_2470
+    bl memmove
 LTCPUpdateScoreboard_2474:
     b LTCPUpdateScoreboard_247c
 LTCPUpdateScoreboard_2478:
