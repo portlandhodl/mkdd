@@ -1494,7 +1494,7 @@ void GeographyObjManager::createAllBalloonObj()
     u8 playerNum = RaceMgr::getManager()->getPlayerNumber();
     JUT_ASSERT_MSG(playerNum > 0, "playernum > 0");
 
-    char map[8];
+    s8 map[8];
     for (int i = 0; i < 8; i++)
         map[i] = -1;
 
@@ -1723,7 +1723,8 @@ void GeographyObjManager::setGeoObjNum(const CrsData &crsData)
         countObjNum(&crsData.getObjectTable()[i]);
 }
 
-static inline void checkObjResource(void *data, char *path) // fabricated
+// Not inline: compiling it here pools its strings ahead of setModelData's.
+static void checkObjResource(void *data, char *path) // fabricated
 {
     if (data == nullptr)
         OSReport("not found %s\n", path);
@@ -2301,9 +2302,62 @@ void GeographyObjManager::Calc_norm(const JSUListIterator<GeographyObj> &it)
     }
 }
 
+static inline void loadShadowModelData(GeographyObjManager *mgr, GeographyObj *obj)
+{
+    void *data;
+    u32 seqIdx = (u16)obj->_110;
+    if (mgr->mShadowModelData[seqIdx] == nullptr)
+    {
+        const char *name = obj->getShadowBmdFileName();
+        if (name != nullptr)
+        {
+            char buf[64];
+            char *path;
+            if (obj != nullptr && obj->mObjFlag & 0x20)
+            {
+                snprintf(buf, sizeof(buf), "/Objects/%s", name);
+                path = buf;
+            }
+            else
+            {
+                path = (char *)name;
+            }
+            if (obj->mObjFlag & 0x2)
+            {
+                data = ObjUtility::getPtrMainArc(path);
+                if (data == nullptr)
+                    data = ObjUtility::getPtrCourseArc(path);
+            }
+            else
+            {
+                data = ObjUtility::getPtrCourseArc(path);
+                if (data == nullptr)
+                    data = ObjUtility::getPtrMainArc(path);
+                if (data == nullptr)
+                    data = ObjUtility::getPtrMainLocaleArc(path);
+            }
+
+            if (RaceMgr::getManager()->mRaceInfo->mRaceMode == AWARD_DEMO && data == nullptr)
+                data = (*(JKRArchive **)((char *)RaceMgr::getManager() + 0x90))->getResource(path); // mAwardArc
+
+            checkObjResource(data, path);
+#line 1604 "GeographyObjMgr.cpp"
+            mgr->mShadowModelData[seqIdx] = (J3DModelData *)J3DModelLoaderDataBase::load(data, 0x19210010);
+            ExModel::patchModelData(mgr->mShadowModelData[seqIdx]);
+            mgr->mShadowModelData[seqIdx]->newSharedDisplayList(0x40000);
+        }
+    }
+}
+
+template <>
+void GeographyObjManager::loadObjects(JSUList<ExGeographyObj> *list, JSUListIterator<ExGeographyObj> &iterator);
+template <>
+void GeographyObjManager::loadObjects(JSUList<GeographyObj> *list, JSUListIterator<GeographyObj> &iterator);
+
 void GeographyObjManager::load()
 {
     JSUListIterator<GeographyObj> it;
+    JSUListIterator<ExGeographyObj> exIt;
     loadObjects(&mGeoObjList, it);
     for (u8 i = 0; i < 3; i++)
         loadObjects(&mItemBoxStockList[i], it);
@@ -2311,124 +2365,48 @@ void GeographyObjManager::load()
     loadObjects(&mPrevDrawObjList, it);
     loadObjects(&mJugemObjList, it);
 
-    for (JSUListIterator<GeographyObj> genIt(mGenObjList.getFirst()); genIt.isAvailable(); ++genIt)
+    for (it = mGenObjList.getFirst(); it.isAvailable(); ++it)
     {
-        GeographyObj *obj = genIt.getObject();
-        if (mShadowModelData[(u16)obj->_110] == nullptr)
-        {
-            const char *name = obj->getShadowBmdFileName();
-            if (name != nullptr)
-            {
-                char buf[64];
-                char *path;
-                if (obj != nullptr && obj->mObjFlag & 0x20)
-                {
-                    snprintf(buf, sizeof(buf), "/Objects/%s", name);
-                    path = buf;
-                }
-                else
-                {
-                    path = (char *)name;
-                }
-                void *data;
-                if (obj->mObjFlag & 0x2)
-                {
-                    data = ObjUtility::getPtrMainArc(path);
-                    if (data == nullptr)
-                        data = ObjUtility::getPtrCourseArc(path);
-                }
-                else
-                {
-                    data = ObjUtility::getPtrCourseArc(path);
-                    if (data == nullptr)
-                        data = ObjUtility::getPtrMainArc(path);
-                    if (data == nullptr)
-                        data = ObjUtility::getPtrMainLocaleArc(path);
-                }
-
-                if (RaceMgr::getManager()->mRaceInfo->mRaceMode == AWARD_DEMO && data == nullptr)
-                    data = (*(JKRArchive **)((char *)RaceMgr::getManager() + 0x90))->getResource(path); // mAwardArc
-
-                checkObjResource(data, path);
-#line 1604 "GeographyObjMgr.cpp"
-                mShadowModelData[(u16)obj->_110] = J3DModelLoaderDataBase::load(data, 0x192110);
-                ExModel::patchModelData(mShadowModelData[(u16)obj->_110]);
-                mShadowModelData[(u16)obj->_110]->newSharedDisplayList(0x40000);
-            }
-        }
-        genIt.getObject()->loadShadowModel(getShadowModelData((u16)genIt.getObject()->_110), genIt.getObject()->getKind());
+        loadShadowModelData(this, it.getObject());
+        it->loadShadowModel(getShadowModelData((u16)it->_110), it->getKind());
     }
 
-    {
-        JSUListIterator<ExGeographyObj> exIt;
-        loadObjects(&mBlockObjList, exIt);
-    }
+    loadObjects(&mBlockObjList, exIt);
 
     for (JSUListIterator<GeoObjSupervisor> svIt(mSupervisorList.getFirst()); svIt.isAvailable(); ++svIt)
         svIt->load();
 
-    for (JSUListIterator<ExGeographyObj> spIt(mSpObjList.getFirst()); spIt.isAvailable(); ++spIt)
+    JSUListIterator<ExGeographyObj> spIt;
+    for (spIt = mSpObjList.getFirst(); spIt.isAvailable(); ++spIt)
     {
         setModelData(spIt.getObject());
         spIt.getObject()->loadmodel(getModelData((u16)spIt.getObject()->_110));
     }
 }
 
-// Defined after GeographyObjManager::load so the template is instantiated
-// out-of-line instead of being inlined into load.
-template <typename L, typename I>
-void GeographyObjManager::loadObjects(L *list, I &iterator)
+template <>
+void GeographyObjManager::loadObjects(JSUList<ExGeographyObj> *list, JSUListIterator<ExGeographyObj> &iterator)
 {
     for (iterator = list->getFirst(); iterator.isAvailable(); ++iterator)
     {
+        setModelData(iterator.getObject());
         GeographyObj *obj = iterator.getObject();
-        setModelData(obj);
         obj->loadmodel(getModelData(obj->_110));
+        loadShadowModelData(this, iterator.getObject());
+        iterator.getObject()->loadShadowModel(getShadowModelData((u16)iterator.getObject()->_110), iterator.getObject()->getKind());
+    }
+}
 
-        u32 seqIdx = (u16)obj->_110;
-        if (mShadowModelData[seqIdx] == nullptr)
-        {
-            const char *name = obj->getShadowBmdFileName();
-            if (name != nullptr)
-            {
-                char buf[64];
-                char *path;
-                if (obj != nullptr && obj->mObjFlag & 0x20)
-                {
-                    snprintf(buf, sizeof(buf), "/Objects/%s", name);
-                    path = buf;
-                }
-                else
-                {
-                    path = (char *)name;
-                }
-                void *data;
-                if (obj->mObjFlag & 0x2)
-                {
-                    data = ObjUtility::getPtrMainArc(path);
-                    if (data == nullptr)
-                        data = ObjUtility::getPtrCourseArc(path);
-                }
-                else
-                {
-                    data = ObjUtility::getPtrCourseArc(path);
-                    if (data == nullptr)
-                        data = ObjUtility::getPtrMainArc(path);
-                    if (data == nullptr)
-                        data = ObjUtility::getPtrMainLocaleArc(path);
-                }
-
-                if (RaceMgr::getManager()->mRaceInfo->mRaceMode == AWARD_DEMO && data == nullptr)
-                    data = (*(JKRArchive **)((char *)RaceMgr::getManager() + 0x90))->getResource(path); // mAwardArc
-
-                checkObjResource(data, path);
-#line 1604 "GeographyObjMgr.cpp"
-                mShadowModelData[seqIdx] = (J3DModelData *)J3DModelLoaderDataBase::load(data, 0x192110);
-                ExModel::patchModelData(mShadowModelData[seqIdx]);
-                mShadowModelData[seqIdx]->newSharedDisplayList(0x40000);
-            }
-        }
-        obj->loadShadowModel(getShadowModelData(seqIdx), obj->getKind());
+template <>
+void GeographyObjManager::loadObjects(JSUList<GeographyObj> *list, JSUListIterator<GeographyObj> &iterator)
+{
+    for (iterator = list->getFirst(); iterator.isAvailable(); ++iterator)
+    {
+        setModelData(iterator.getObject());
+        GeographyObj *obj = iterator.getObject();
+        obj->loadmodel(getModelData(obj->_110));
+        loadShadowModelData(this, iterator.getObject());
+        iterator->loadShadowModel(getShadowModelData((u16)iterator->_110), iterator->getKind());
     }
 }
 
