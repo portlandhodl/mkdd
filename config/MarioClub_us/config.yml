@@ -7,6 +7,13 @@ splits: config/MarioClub_us/splits.txt
 mw_comment_version: 8
 ldscript_template: config/ld.tpl
 
+# ETHInit loads plain 0x8000xxxx constants that dtk misreads as code pointers
+block_relocations:
+- source: .text:0x800E9544
+- source: .text:0x800E9548
+- source: .text:0x800E96C0
+- source: .text:0x800E97CC
+
 extract:
 - symbol: JUTResFONT_Ascfont_fix12
   binary: JSystem/JUtility/FontData/Ascfont_fix12.bfn
