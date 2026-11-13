@@ -111,7 +111,8 @@ void CheckMaxNeckAngle(float (*base)[4], float (*neck)[4], char axis, float maxC
 
 static inline f32 getBoneLength(DriverLoader *loader, LumbarCtrl *lumbar, u16 boneNo)
 {
-    return loader->getBoneLength(boneNo) * lumbar->mScale;
+    f32 len = loader->getBoneLength(boneNo);
+    return len * lumbar->mScale;
 }
 
 static inline bool epsilonEqualsF(f32 a, f32 b, f32 eps)
