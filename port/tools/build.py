@@ -126,9 +126,11 @@ def main():
     ap.add_argument("--target", choices=sorted(LINK_TARGET), default="node")
     ap.add_argument("--jobs", type=int, default=os.cpu_count())
     ap.add_argument("-O", dest="opt", default="2")
+    ap.add_argument("--tag", default="", help="separate object/output directories (parallel builds)")
     a = ap.parse_args()
     opt = f"-O{a.opt}"
-    outdir = os.path.join(ROOT, "build", "port", f"obj-O{a.opt}")
+    suffix = f"-{a.tag}" if a.tag else ""
+    outdir = os.path.join(ROOT, "build", "port", f"obj-O{a.opt}{suffix}")
     jobs = [("game", s) for s in scan.sources()]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.c")))]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gd/*.c")))]
@@ -148,7 +150,7 @@ def main():
         print(f"--- {rel}\n{err}", file=sys.stderr)
     if errors:
         sys.exit(f"{len(errors)} compile failures")
-    out = os.path.join(ROOT, "build", "port", a.target)
+    out = os.path.join(ROOT, "build", "port", a.target + suffix)
     os.makedirs(out, exist_ok=True)
     rsp = os.path.join(out, "objs.rsp")
     open(rsp, "w").write("\n".join(objs))
