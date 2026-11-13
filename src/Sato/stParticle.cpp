@@ -913,3 +913,8 @@ void stParticleMgr::init(int num)
 }
 
 #include "JSystem/JAudio/JASFakeMatch2.h"
+
+#ifndef __MWERKS__
+// host build: other units call setRotate through its declaration only
+template void JGeometry::TRotation3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >::setRotate(const TVec3f &, f32);
+#endif

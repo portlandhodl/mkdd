@@ -25,10 +25,15 @@
 #define DECL_SECTION(x) __declspec(section x)
 #define DECL_WEAK __declspec(weak)
 #define DONT_INLINE __attribute__((never_inline))
+// inline definitions placed in a .cpp to control weak emission; the host build needs them out of line
+#define DECOMP_INLINE inline
+#define DECOMP_MWERKS 1
 #else
 #define DECL_SECTION(x)
 #define DECL_WEAK __attribute__((weak))
 #define DONT_INLINE __attribute__((noinline))
+#define DECOMP_INLINE
+#define DECOMP_MWERKS 0
 #endif
 
 // Align X to the previous N bytes (N must be power of two)

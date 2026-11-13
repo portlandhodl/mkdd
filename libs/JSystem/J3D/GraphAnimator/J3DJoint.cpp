@@ -148,7 +148,7 @@ inline void J3DMtxCalcAnimation<J3DMtxCalcAnimationAdaptorDefault<J3DMtxCalcCalc
     PSMTXCopy(mtx, J3DSys::mCurrentMtx);
 }
 
-inline J3DMtxCalcAnmBase::~J3DMtxCalcAnmBase() { }
+DECOMP_INLINE J3DMtxCalcAnmBase::~J3DMtxCalcAnmBase() { }
 
 J3DMtxCalcAnmBase* J3DNewMtxCalcAnm(u32 type, J3DAnmTransform* animation)
 {

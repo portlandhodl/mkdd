@@ -14,17 +14,26 @@ extern "C"
 #define OS_UNCACHED_REGION_PREFIX 0xC000
 #define OS_PHYSICAL_MASK 0x3FFF
 
+#ifdef __MWERKS__
 #define OS_BASE_CACHED (OS_CACHED_REGION_PREFIX << 16)
 #define OS_BASE_UNCACHED (OS_UNCACHED_REGION_PREFIX << 16)
+#else
+// host port: physical address == host address; low memory is reserved below GLOBAL_BASE
+#define OS_BASE_CACHED 0
+#define OS_BASE_UNCACHED 0
+#endif
 
 #ifdef __MWERKS__
 #define AT_ADDRESS(xyz) : (xyz)
-#else
-#define AT_ADDRESS
-#endif
 volatile int __OSTVMode AT_ADDRESS(OS_BASE_CACHED | 0xCC);
 u32 __OSBusClock AT_ADDRESS(OS_BASE_CACHED | 0x00F8);  // sync with OSLoMem.h
 u32 __OSCoreClock AT_ADDRESS(OS_BASE_CACHED | 0x00FC); // sync with OSLoMem.h
+#else
+#define AT_ADDRESS(xyz)
+extern volatile int __OSTVMode;
+extern u32 __OSBusClock;
+extern u32 __OSCoreClock;
+#endif
 #define OS_BUS_CLOCK (u32) __OSBusClock
 #define OS_CORE_CLOCK __OSCoreClock
 #define OS_TIMER_CLOCK (OS_BUS_CLOCK / 4)

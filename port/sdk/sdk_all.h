@@ -1,0 +1,22 @@
+/* Every SDK header the decomp uses, for the port's SDK replacement. */
+#include <dolphin/os.h>
+#include <dolphin/gx.h>
+#include <dolphin/gd.h>
+#include <dolphin/vi.h>
+#include <dolphin/pad.h>
+#include <dolphin/dvd.h>
+#include <dolphin/card.h>
+#include <dolphin/ai.h>
+#include <dolphin/ar/ar.h>
+#include <dolphin/ar/arq.h>
+#include <dolphin/dsp.h>
+#include <dolphin/mtx.h>
+#include <dolphin/lg.h>
+#include <dolphin/exi.h>
+#include <dolphin/os/OSSerial.h>
+#include <dolphin/os/OSExpansion.h>
+#include <dolphin/ip/IPSocket.h>
+#include <dolphin/upnp/UPnP.h>
+#include <dolphin/upnp/UPnPHttp.h>
+#include <dolphin/upnp/UPnPHttpd.h>
+#include <dolphin/upnp/UPnPSsdp.h>

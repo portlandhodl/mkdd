@@ -35,7 +35,7 @@ struct J3DMatColorAnm {
 struct J3DTexNoAnm {
     J3DTexNoAnm();
 
-    inline virtual void calc(u16*) const; // _08 (weak)
+    DECOMP_INLINE virtual void calc(u16*) const; // _08 (weak)
 
     void operator=(J3DTexNoAnm const& other)
     {
@@ -44,7 +44,7 @@ struct J3DTexNoAnm {
         mAnmFlag = other.mAnmFlag;
     }
 
-    inline ~J3DTexNoAnm();
+    DECOMP_INLINE ~J3DTexNoAnm();
 
     void setAnmFlag(bool flag) { mAnmFlag = flag; }
     bool getAnmFlag() const { return mAnmFlag; }

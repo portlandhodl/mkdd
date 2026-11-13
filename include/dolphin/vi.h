@@ -149,7 +149,7 @@ void VIFlush(void);
 void *VIGetNextFrameBuffer();
 void VIWaitForRetrace(void);
 
-void VIConfigure(const struct _GXRenderModeObj *rm);
+struct _GXRenderModeObj; void VIConfigure(const struct _GXRenderModeObj *rm);
 void VIConfigurePan(u16 PanPosX, u16 PanPosY, u16 PanSizeX, u16 PanSizeY);
 void VISetNextFrameBuffer(void *fb);
 void *VIGetCurrentFrameBuffer();

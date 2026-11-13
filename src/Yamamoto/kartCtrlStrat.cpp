@@ -1356,7 +1356,7 @@ bool KartGame::KeepWatch() {
     return false;
 }
 
-inline ItemObjMgr::KartHitList *ItemObjMgr::getKartHitList(int idx) { return &mHitList[idx]; }
+DECOMP_INLINE ItemObjMgr::KartHitList *ItemObjMgr::getKartHitList(int idx) { return &mHitList[idx]; }
 
 void KartGame::DoActionMgr() {
     KartBody *body = mBody;

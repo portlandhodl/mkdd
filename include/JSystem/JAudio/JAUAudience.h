@@ -139,7 +139,7 @@ public:
 class JAUAudience_withSetting : public JAIAudience {
 public:
     JAUAudience_withSetting()
-#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
+#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && DECOMP_MWERKS
     ;
 #else
     {
@@ -351,7 +351,7 @@ public:
     }
 
     void mixChannelOut(const JASSoundParams &params, JAIAudible *pAudible, int index)
-#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
+#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && DECOMP_MWERKS
     ;
 #else
     {
@@ -474,7 +474,7 @@ public:
         delete audible;
     }
     JAIAudible *newAudible(const JGeometry::TVec3f &pos, JAISoundID soundID, const JGeometry::TVec3f *p3, u32 channels)
-#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
+#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && DECOMP_MWERKS
     ;
 #else
     {

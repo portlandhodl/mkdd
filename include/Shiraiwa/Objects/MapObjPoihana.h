@@ -44,7 +44,7 @@ public:
     void init(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
     void setParameters(f32, f32, f32, f32, f32);
     void reset();
-    void update();
+    s16 update();
     void forceTurn(const JGeometry::TVec3f &);
 
     TPathWalkNode *_04; // 0x04

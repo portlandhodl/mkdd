@@ -25,7 +25,7 @@ void *ObjUtility::getPtrMainArc(char *path) { return ResMgr::getPtr(ResMgr::mcAr
 
 void *ObjUtility::getPtrCourseArc(char *path) { return ResMgr::getPtr(ResMgr::mcArcCourse, path); }
 
-void ObjUtility::getPtrMainLocaleArc(char *path) { ResMgr::getPtr(ResMgr::mcArcMRAMLoc, path); }
+void *ObjUtility::getPtrMainLocaleArc(char *path) { return ResMgr::getPtr(ResMgr::mcArcMRAMLoc, path); }
 
 void ObjUtility::setRMtx(MtxPtr mtx, const JGeometry::TVec3f &vec1, const JGeometry::TVec3f &vec2)
 {

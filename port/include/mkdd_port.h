@@ -59,5 +59,10 @@ static inline void *__memcpy(void *d, const void *s, unsigned long n) { return _
 #define __mkdd_declspec_section __mkdd_drop_section
 #define __mkdd_drop_section(s)
 
+/* Fakematches that name MWCC-mangled symbols directly; port/sdk/game_missing.cpp
+ * fills these host-side stand-ins at startup. */
+#define __vt__11J3DTexNoAnm port_vt_J3DTexNoAnm
+#define mscaCallBackTbl__11DriverModel port_DriverModel_mscaCallBackTbl
+
 #endif /* !__MWERKS__ */
 #endif /* MKDD_PORT_H */
