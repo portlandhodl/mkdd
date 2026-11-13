@@ -16,6 +16,44 @@ This repository does **not** contain any game assets or assembly whatsoever. An 
 
 Currently only the debug version is supported.
 
+Progress
+========
+
+Snapshot of this fork against upstream [doldecomp/mkdd](https://github.com/doldecomp/mkdd)
+(`b56cc76`), both built from source on 2026-11-13. The badges above track upstream.
+
+| | Upstream | This fork |
+|---|---:|---:|
+| Code matched | 47.90% | **93.05%** |
+| Functions matched | 8,737 / 15,357 | **15,099 / 15,357** |
+| Units fully linked | 519 / 807 | **713 / 807** |
+| Data matched | 25.08% | **46.31%** |
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/progress-overview-dark.svg">
+  <img alt="Code matched by category, upstream vs this fork" src="docs/images/progress-overview-light.svg">
+</picture>
+
+Each bar below is all code owned by one area. Dark segments are linked into `main.dol` from
+source marked `Matching`; light segments are functions that match but sit in units that still
+contain unmatched functions. The tick marks where upstream stands.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/progress-areas-dark.svg">
+  <img alt="Progress by area: linked, matched-not-linked and unmatched code, with the upstream position" src="docs/images/progress-areas-light.svg">
+</picture>
+
+What is left, one box per unit sized by unmatched code bytes. Most of the remainder is
+register-allocation differences in large Kameda/Sato scene and object code.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/progress-remaining-dark.svg">
+  <img alt="Treemap of remaining unmatched code by unit" src="docs/images/progress-remaining-light.svg">
+</picture>
+
+Regenerate the charts after a build with
+`python tools/progress_charts.py --upstream <upstream checkout>/build/MarioClub_us/report.json`.
+
 Dependencies
 ============
 

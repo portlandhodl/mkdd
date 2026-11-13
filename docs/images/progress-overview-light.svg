@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="448" viewBox="0 0 880 448" role="img" aria-labelledby="t d" font-family='system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif'>
+<title id="t">Matching progress: this fork vs upstream</title><desc id="d">Code matched 93.05% vs 47.90% upstream.</desc>
+<rect width="880" height="448" rx="12" fill="#fcfcfb" stroke="rgba(11,11,11,0.10)"/>
+<text x="32.0" y="44.0" font-size="20" font-weight="650" fill="#0b0b0b" text-anchor="start" >Matching progress</text>
+<text x="32.0" y="66.0" font-size="13" font-weight="400" fill="#52514e" text-anchor="start" >MarioClub_us · share of original code bytes reproduced exactly</text>
+<text x="32.0" y="104.0" font-size="12" font-weight="400" fill="#52514e" text-anchor="start" >Code matched</text>
+<text x="32.0" y="136.0" font-size="28" font-weight="650" fill="#0b0b0b" text-anchor="start" >93.05%</text>
+<text x="32.0" y="156.0" font-size="12" font-weight="400" fill="#898781" text-anchor="start" >upstream 47.90%</text>
+<text x="314.0" y="104.0" font-size="12" font-weight="400" fill="#52514e" text-anchor="start" >Functions matched</text>
+<text x="314.0" y="136.0" font-size="28" font-weight="650" fill="#0b0b0b" text-anchor="start" >15,099 / 15,357</text>
+<text x="314.0" y="156.0" font-size="12" font-weight="400" fill="#898781" text-anchor="start" >upstream 8,737</text>
+<text x="596.0" y="104.0" font-size="12" font-weight="400" fill="#52514e" text-anchor="start" >Units fully linked</text>
+<text x="596.0" y="136.0" font-size="28" font-weight="650" fill="#0b0b0b" text-anchor="start" >713 / 807</text>
+<text x="596.0" y="156.0" font-size="12" font-weight="400" fill="#898781" text-anchor="start" >upstream 519</text>
+<line x1="150.0" y1="196" x2="150.0" y2="390" stroke="#c3c2b7" stroke-width="1"/>
+<text x="150.0" y="406.0" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" >0%</text>
+<line x1="308.5" y1="196" x2="308.5" y2="390" stroke="#e1e0d9" stroke-width="1"/>
+<text x="308.5" y="406.0" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" >25%</text>
+<line x1="467.0" y1="196" x2="467.0" y2="390" stroke="#e1e0d9" stroke-width="1"/>
+<text x="467.0" y="406.0" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" >50%</text>
+<line x1="625.5" y1="196" x2="625.5" y2="390" stroke="#e1e0d9" stroke-width="1"/>
+<text x="625.5" y="406.0" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" >75%</text>
+<line x1="784.0" y1="196" x2="784.0" y2="390" stroke="#e1e0d9" stroke-width="1"/>
+<text x="784.0" y="406.0" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" >100%</text>
+<text x="136.0" y="223.0" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end" >All code</text>
+<path d="M150.0,206.0h299.7a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-299.7z" fill="#b4b2a9"/>
+<path d="M150.0,219.0h585.9a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-585.9z" fill="#2a78d6"/>
+<text x="459.7" y="216.0" font-size="11" font-weight="400" fill="#52514e" text-anchor="start" >47.9%</text>
+<text x="745.9" y="229.0" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="start" >93.0%</text>
+<text x="136.0" y="261.0" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="end" >Game Code</text>
+<path d="M150.0,244.0h249.7a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-249.7z" fill="#b4b2a9"/>
+<path d="M150.0,257.0h573.1a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-573.1z" fill="#2a78d6"/>
+<text x="409.7" y="254.0" font-size="11" font-weight="400" fill="#52514e" text-anchor="start" >40.0%</text>
+<text x="733.1" y="267.0" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="start" >91.0%</text>
+<text x="136.0" y="299.0" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="end" >JSystem</text>
+<path d="M150.0,282.0h437.6a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-437.6z" fill="#b4b2a9"/>
+<path d="M150.0,295.0h619.2a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-619.2z" fill="#2a78d6"/>
+<text x="597.6" y="292.0" font-size="11" font-weight="400" fill="#52514e" text-anchor="start" >69.7%</text>
+<text x="779.2" y="305.0" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="start" >98.3%</text>
+<text x="136.0" y="337.0" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="end" >Dolphin SDK</text>
+<path d="M150.0,320.0h299.3a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-299.3z" fill="#b4b2a9"/>
+<path d="M150.0,333.0h585.6a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-585.6z" fill="#2a78d6"/>
+<text x="459.3" y="330.0" font-size="11" font-weight="400" fill="#52514e" text-anchor="start" >47.8%</text>
+<text x="745.6" y="343.0" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="start" >93.0%</text>
+<text x="136.0" y="375.0" font-size="13" font-weight="400" fill="#0b0b0b" text-anchor="end" >MSL</text>
+<path d="M150.0,358.0h396.6a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-396.6z" fill="#b4b2a9"/>
+<path d="M150.0,371.0h630.0a4,4 0 0 1 4,4v3.0a4,4 0 0 1 -4,4h-630.0z" fill="#2a78d6"/>
+<text x="556.6" y="368.0" font-size="11" font-weight="400" fill="#52514e" text-anchor="start" >63.2%</text>
+<text x="790.0" y="381.0" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="start" >100.0%</text>
+<rect x="32.0" y="417.0" width="12.0" height="12.0" rx="3" fill="#2a78d6" />
+<text x="50.0" y="427.0" font-size="12" font-weight="400" fill="#52514e" text-anchor="start" >This fork</text>
+<rect x="136.8" y="417.0" width="12.0" height="12.0" rx="3" fill="#b4b2a9" />
+<text x="154.8" y="427.0" font-size="12" font-weight="400" fill="#52514e" text-anchor="start" >Upstream doldecomp/mkdd</text>
+</svg>

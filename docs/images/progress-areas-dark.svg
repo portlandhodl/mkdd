@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="568" viewBox="0 0 880 568" role="img" aria-labelledby="t d" font-family='system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif'>
+<title id="t">Progress by area</title><desc id="d">Per-area share of code bytes linked from matching source, matched but not yet linked, and unmatched, with the upstream matched share marked.</desc>
+<rect width="880" height="568" rx="12" fill="#1a1a19" stroke="rgba(255,255,255,0.10)"/>
+<text x="32.0" y="44.0" font-size="20" font-weight="650" fill="#f0efec" text-anchor="start" >Progress by area</text>
+<text x="32.0" y="66.0" font-size="13" font-weight="400" fill="#c3c2b7" text-anchor="start" >Bar = all code in the area · tick = upstream matched share</text>
+<text x="32.0" y="111.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Sato</text>
+<text x="234.0" y="111.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >443 KB</text>
+<rect x="248.0" y="96.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="96.0" width="129.0" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="379.0" y="96.0" width="204.7" height="20.0" rx="4" fill="#256abf" />
+<line x1="353.3" y1="92" x2="353.3" y2="120" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="111.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >84.8%</text>
+<text x="710.0" y="111.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 27% · 30/50 units</text>
+<text x="32.0" y="145.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Kameda</text>
+<text x="234.0" y="145.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >417 KB</text>
+<rect x="248.0" y="130.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="130.0" width="87.8" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="337.8" y="130.0" width="233.2" height="20.0" rx="4" fill="#256abf" />
+<line x1="310.1" y1="126" x2="310.1" y2="154" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="145.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >81.6%</text>
+<text x="710.0" y="145.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 16% · 31/44 units</text>
+<text x="32.0" y="179.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Shiraiwa</text>
+<text x="234.0" y="179.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >329 KB</text>
+<rect x="248.0" y="164.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="164.0" width="293.2" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="543.2" y="164.0" width="89.5" height="20.0" rx="4" fill="#256abf" />
+<line x1="354.0" y1="160" x2="354.0" y2="188" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="179.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >97.2%</text>
+<text x="710.0" y="179.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 27% · 73/83 units</text>
+<text x="32.0" y="213.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Kaneshige</text>
+<text x="234.0" y="213.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >273 KB</text>
+<rect x="248.0" y="198.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="198.0" width="381.0" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="631.0" y="198.0" width="13.0" height="20.0" rx="4" fill="#256abf" />
+<line x1="644.0" y1="194" x2="644.0" y2="222" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="213.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >100.0%</text>
+<text x="710.0" y="213.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 100% · 71/72 units</text>
+<text x="32.0" y="247.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Yamamoto</text>
+<text x="234.0" y="247.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >236 KB</text>
+<rect x="248.0" y="232.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="232.0" width="324.7" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="574.7" y="232.0" width="59.8" height="20.0" rx="4" fill="#256abf" />
+<line x1="412.0" y1="228" x2="412.0" y2="256" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="247.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >97.6%</text>
+<text x="710.0" y="247.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 41% · 31/34 units</text>
+<text x="32.0" y="281.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Osako</text>
+<text x="234.0" y="281.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >140 KB</text>
+<rect x="248.0" y="266.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="266.0" width="370.2" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="620.2" y="266.0" width="14.7" height="20.0" rx="4" fill="#256abf" />
+<line x1="545.7" y1="262" x2="545.7" y2="290" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="281.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >97.7%</text>
+<text x="710.0" y="281.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 75% · 49/51 units</text>
+<text x="32.0" y="315.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Kawano</text>
+<text x="234.0" y="315.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >105 KB</text>
+<rect x="248.0" y="300.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="300.0" width="139.7" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="389.7" y="300.0" width="203.3" height="20.0" rx="4" fill="#256abf" />
+<line x1="266.4" y1="296" x2="266.4" y2="324" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="315.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >87.1%</text>
+<text x="710.0" y="315.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 5% · 12/17 units</text>
+<text x="32.0" y="349.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Inagaki</text>
+<text x="234.0" y="349.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >94 KB</text>
+<rect x="248.0" y="334.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="334.0" width="237.6" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="487.6" y="334.0" width="127.3" height="20.0" rx="4" fill="#256abf" />
+<line x1="511.7" y1="330" x2="511.7" y2="358" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="349.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >92.6%</text>
+<text x="710.0" y="349.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 67% · 15/18 units</text>
+<line x1="32" y1="360" x2="848" y2="360" stroke="#2c2c2a"/>
+<text x="32.0" y="383.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >JSystem</text>
+<text x="234.0" y="383.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >679 KB</text>
+<rect x="248.0" y="368.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="368.0" width="326.8" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="576.8" y="368.0" width="60.4" height="20.0" rx="4" fill="#256abf" />
+<line x1="523.8" y1="364" x2="523.8" y2="392" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="383.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >98.3%</text>
+<text x="710.0" y="383.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 70% · 192/207 units</text>
+<line x1="32" y1="394" x2="848" y2="394" stroke="#2c2c2a"/>
+<text x="32.0" y="417.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Dolphin SDK</text>
+<text x="234.0" y="417.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >346 KB</text>
+<rect x="248.0" y="402.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="402.0" width="294.3" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="544.3" y="402.0" width="72.0" height="20.0" rx="4" fill="#256abf" />
+<line x1="437.5" y1="398" x2="437.5" y2="426" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="417.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >93.0%</text>
+<text x="710.0" y="417.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 48% · 114/132 units</text>
+<text x="32.0" y="451.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >MSL / Runtime</text>
+<text x="234.0" y="451.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >54 KB</text>
+<rect x="248.0" y="436.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="436.0" width="396.0" height="20.0" rx="4" fill="#6da7ec" />
+<line x1="644.0" y1="432" x2="644.0" y2="460" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="451.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >100.0%</text>
+<text x="710.0" y="451.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 100% · 61/61 units</text>
+<text x="32.0" y="485.0" font-size="13" font-weight="600" fill="#f0efec" text-anchor="start" >Debugger / gamedev</text>
+<text x="234.0" y="485.0" font-size="11" font-weight="400" fill="#898781" text-anchor="end" >31 KB</text>
+<rect x="248.0" y="470.0" width="396.0" height="20.0" rx="4" fill="#33332f" />
+<rect x="248.0" y="470.0" width="370.6" height="20.0" rx="4" fill="#6da7ec" />
+<rect x="620.6" y="470.0" width="23.4" height="20.0" rx="4" fill="#256abf" />
+<line x1="248.0" y1="466" x2="248.0" y2="494" stroke="#f0efec" stroke-width="2"/>
+<text x="658.0" y="485.0" font-size="13" font-weight="650" fill="#f0efec" text-anchor="start" >100.0%</text>
+<text x="710.0" y="485.0" font-size="11" font-weight="400" fill="#c3c2b7" text-anchor="start" >upstream 0% · 27/30 units</text>
+<rect x="32.0" y="535.0" width="12.0" height="12.0" rx="3" fill="#6da7ec" />
+<text x="50.0" y="545.0" font-size="12" font-weight="400" fill="#c3c2b7" text-anchor="start" >Linked from matching source</text>
+<rect x="266.4" y="535.0" width="12.0" height="12.0" rx="3" fill="#256abf" />
+<text x="284.4" y="545.0" font-size="12" font-weight="400" fill="#c3c2b7" text-anchor="start" >Matched, not yet linked</text>
+<rect x="472.0" y="535.0" width="12.0" height="12.0" rx="3" fill="#33332f" />
+<text x="490.0" y="545.0" font-size="12" font-weight="400" fill="#c3c2b7" text-anchor="start" >Not matched</text>
+<line x1="591.2" y1="534" x2="591.2" y2="548" stroke="#f0efec" stroke-width="2"/>
+<text x="599.2" y="545.0" font-size="12" font-weight="400" fill="#c3c2b7" text-anchor="start" >Upstream matched</text>
+</svg>
