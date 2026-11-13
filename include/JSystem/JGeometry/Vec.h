@@ -17,6 +17,8 @@ namespace JGeometry {
             stfs z, 8(dst)
             // clang-format on
         }
+#else
+        dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];
 #endif
     }
 
@@ -32,6 +34,8 @@ namespace JGeometry {
             // clang-format on
         }
         dst[2] = -src[2];
+#else
+        dst[0] = -src[0]; dst[1] = -src[1]; dst[2] = -src[2];
 #endif
     }
 
@@ -48,6 +52,8 @@ namespace JGeometry {
             // clang-format on
         }
         dst[2] = vec1[2] * vec2[2];
+#else
+        dst[0] = vec1[0] * vec2[0]; dst[1] = vec1[1] * vec2[1]; dst[2] = vec1[2] * vec2[2];
 #endif
     }
 

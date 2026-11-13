@@ -1,4 +1,5 @@
 /* VI (video timing) and PAD (controllers). */
+#include <stdio.h>
 #include <string.h>
 #include <emscripten.h>
 #include "port_sdk.h"
@@ -23,6 +24,12 @@ void port_vi_retrace(void)
 {
     OSTime now = (OSTime)(emscripten_get_now() * (PORT_TICKS_PER_SEC / 1000));
     sRetraceCount++;
+    if (sRetraceCount % 600 == 0)
+    {
+        fprintf(stderr, "[vi] %u retraces (%.1fs)\n", sRetraceCount, emscripten_get_now() / 1000.0);
+        if (port_env("MKDD_THREADS"))
+            port_dump_threads();
+    }
     /* catch up without bursting if the host stalled */
     sNextRetrace += RETRACE_TICKS;
     if (sNextRetrace < now)

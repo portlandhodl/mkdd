@@ -3,6 +3,7 @@
 // No host implementation yet: report "not available" so the game takes its fallback path.
 #include "types.h"
 extern "C" void port_stub(const char *name);
+extern "C" int port_env(const char *name);
 #define MKDD_STUB(name) port_stub(name)
 #include "Kaneshige/THP/THPPlayer.h"
 #include "JSystem/Logitech/LGForceEffect.h"
@@ -40,6 +41,8 @@ BOOL THPPlayerOpen(const char *fileName, BOOL)
     if (memcmp(hdr, "THP", 3) != 0)
         return FALSE;
     sThp.totalFrames = (u32)hdr[0x14] << 24 | (u32)hdr[0x15] << 16 | (u32)hdr[0x16] << 8 | hdr[0x17];
+    if (port_env("MKDD_FAST_MOVIE") && sThp.totalFrames > 2)
+        sThp.totalFrames = 2;
     sThp.open = TRUE;
     sThp.frame = -1;
     MKDD_STUB("THPPlayerOpen (no decoder: blank frames)");

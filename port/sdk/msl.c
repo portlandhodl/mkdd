@@ -15,18 +15,9 @@ static FILE *host_stream(void *f)
     return f == &__files[2] ? stderr : stdout;
 }
 
-/* fprintf/fiprintf take MSL FILE pointers; route them to the host streams. */
-int fprintf(FILE *f, const char *fmt, ...)
-{
-    va_list ap;
-    int r;
-    va_start(ap, fmt);
-    r = vfprintf(host_stream(f), fmt, ap);
-    va_end(ap);
-    return r;
-}
-
-int fiprintf(FILE *f, const char *fmt, ...)
+/* Game code's fprintf (renamed by port/include/mkdd_port.h) takes MSL FILE
+ * pointers; route them to the host streams. */
+int port_msl_fprintf(void *f, const char *fmt, ...)
 {
     va_list ap;
     int r;

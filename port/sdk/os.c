@@ -19,6 +19,8 @@ static void *sArenaLo, *sArenaHi;
 static BOOL sInterruptsEnabled = TRUE;
 static u32 sProgressive, sSoundMode = 1;
 
+void port_dump_threads(void);
+
 void port_stub(const char *name)
 {
     static const char *seen[512];
@@ -85,10 +87,15 @@ BOOL OSDisableInterrupts(void)
     return old;
 }
 
+int port_interrupts_enabled(void) { return sInterruptsEnabled; }
+void port_interrupts_reenabled(void);
+
 BOOL OSEnableInterrupts(void)
 {
     BOOL old = sInterruptsEnabled;
     sInterruptsEnabled = TRUE;
+    if (!old)
+        port_interrupts_reenabled();
     return old;
 }
 
@@ -96,6 +103,8 @@ BOOL OSRestoreInterrupts(BOOL level)
 {
     BOOL old = sInterruptsEnabled;
     sInterruptsEnabled = level;
+    if (level && !old)
+        port_interrupts_reenabled();
     return old;
 }
 
@@ -116,6 +125,7 @@ void OSPanic(const char *file, int line, const char *msg, ...)
     vfprintf(stderr, msg, ap);
     va_end(ap);
     fputc('\n', stderr);
+    port_dump_threads();
     abort();
 }
 

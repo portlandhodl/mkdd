@@ -43,6 +43,8 @@
 #define DECOMP_BE32(p) ((u32)((const u8 *)(p))[0] << 24 | (u32)((const u8 *)(p))[1] << 16 | (u32)((const u8 *)(p))[2] << 8 | ((const u8 *)(p))[3])
 #define DECOMP_HOST(orig, host) host
 #endif
+// integer division that PowerPC's divw/divwu tolerate by zero (wasm traps)
+#define DECOMP_IDIV(a, b) DECOMP_HOST((a) / (b), ((b) == 0 ? 0 : (a) / (b)))
 
 // Align X to the previous N bytes (N must be power of two)
 #define ALIGN_PREV(X, N) ((X) & ~((N)-1))

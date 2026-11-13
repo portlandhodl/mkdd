@@ -59,6 +59,9 @@ static inline void *__memcpy(void *d, const void *s, unsigned long n) { return _
 #define __mkdd_declspec_section __mkdd_drop_section
 #define __mkdd_drop_section(s)
 
+/* MSL FILE objects are not host FILEs: game code's fprintf goes to port/sdk/msl.c. */
+#define fprintf port_msl_fprintf
+
 /* Host-order copy of an oscillator table embedded in big-endian sequence data. */
 #ifdef __cplusplus
 extern "C"

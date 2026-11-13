@@ -89,6 +89,8 @@ void port_os_init(void)
     sCurPort = p;
 }
 
+int port_interrupts_enabled(void);
+
 static void ensure_init(void)
 {
     if (!sCurrent)
@@ -184,6 +186,11 @@ static void reschedule(void)
             switch_to(next);
             return;
         }
+        /* deliver pending completions before waiting: they may ready a thread */
+        if (sDeferHead != sDeferTail) {
+            port_poll();
+            continue;
+        }
         {
             OSTime now = (OSTime)(emscripten_get_now() * (PORT_TICKS_PER_SEC / 1000));
             OSTime due = port_vi_next_retrace();
@@ -212,6 +219,22 @@ static void maybe_preempt(void)
         switch_to(next);
 }
 
+/* Debug aid: print every live thread (called on OSPanic). */
+void port_dump_threads(void)
+{
+    int i;
+    fprintf(stderr, "[os] threads (current %p):\n", (void *)sCurrent);
+    for (i = 0; i < MAX_THREADS; i++) {
+        PortThread *p = &sPorts[i];
+        OSThread *t = p->thread;
+        if (!t || p->dead)
+            continue;
+        fprintf(stderr, "[os]   %p prio %d state %d suspend %d queue %p entry %p%s\n", (void *)t, (int)t->priority,
+                t->state, (int)t->suspend, (void *)t->queue, t->specific[0], t == sCurrent ? " <- current" : "");
+    }
+    fprintf(stderr, "[os] deferred %d, sched disable %d\n", (sDeferTail - sDeferHead + 256) % 256, (int)sSchedDisable);
+}
+
 void port_defer(void (*fn)(void *, void *), void *a, void *b)
 {
     int next = (sDeferTail + 1) % 256;
@@ -229,6 +252,14 @@ void port_poll(void)
 {
     OSTime now;
     OSAlarm *a;
+    static int exitAfter = -1;
+    if (exitAfter < 0)
+        exitAfter = port_env("MKDD_EXIT_AFTER");
+    if (exitAfter && emscripten_get_now() > exitAfter * 1000.0) {
+        fprintf(stderr, "[os] MKDD_EXIT_AFTER reached\n");
+        port_dump_threads();
+        exit(0);
+    }
     if (sInIrq)
         return;
     sInIrq = 1;
@@ -251,6 +282,16 @@ void port_poll(void)
     if (port_vi_next_retrace() <= now)
         port_vi_retrace();
     sInIrq = 0;
+    /* like returning from an interrupt: run a higher-priority thread it readied */
+    if (port_interrupts_enabled())
+        maybe_preempt();
+}
+
+/* OSEnableInterrupts/OSRestoreInterrupts: deliver what was held off. */
+void port_interrupts_reenabled(void)
+{
+    if (sCurrent && !sInIrq)
+        port_poll();
 }
 
 static void thread_entry(void *arg)

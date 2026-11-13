@@ -38,6 +38,13 @@ EM_JS(const char *, port_js_disc_root, (void), {
     return stringToNewUTF8(p);
 });
 
+EM_JS(int, port_js_env, (const char *name), {
+    var v = (typeof process !== 'undefined' && process.env) ? process.env[UTF8ToString(name)] : undefined;
+    return v ? (parseInt(v, 10) || 1) : 0;
+});
+
+int port_env(const char *name) { return port_js_env(name); }
+
 const char *port_disc_root(void)
 {
     if (!sRoot[0]) {

@@ -68,8 +68,8 @@ void JPAVolumeSphere(JPAEmitterWorkData* workData)
     s16 theta; // r4
     if (workData->mEmitter->checkDynFlag(JPADYN_FixedInterval)) {
 
-        u16 preTheta = (workData->mVolumeAngleNum << 16) / (workData->mVolumeAngleMax - 1);
-        phi          = u16((workData->mVolumeX << 15) / (workData->mDivNumber - 1) + 0x4000);
+        u16 preTheta = DECOMP_IDIV((workData->mVolumeAngleNum << 16), (workData->mVolumeAngleMax - 1));
+        phi          = u16(DECOMP_IDIV((workData->mVolumeX << 15), (workData->mDivNumber - 1)) + 0x4000);
         theta        = f32(preTheta) * workData->mVolumeSweep + 32768.0f;
         workData->mVolumeAngleNum++;
         if (workData->mVolumeAngleNum == workData->mVolumeAngleMax) {
