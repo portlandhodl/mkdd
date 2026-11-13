@@ -153,14 +153,13 @@ static inline f32 stAsinClamp(f32 x)
 
 static inline void stGetEulerYXZ(const Mtx m, f32& x, f32& y, f32& z)
 {
-    f32 eps = JGeometry::TUtilf::epsilon();
-    if (m[1][2] - 1.0f >= -eps)
+    if (m[1][2] - JGeometry::TUtilf::one() >= -JGeometry::TUtilf::epsilon())
     {
         y = -JGeometry::TUtilf::atan2(m[2][0], m[0][0]);
         x = -1.5707964f;
         z = 0.0f;
     }
-    else if (m[1][2] + 1.0f <= eps)
+    else if (m[1][2] + JGeometry::TUtilf::one() <= JGeometry::TUtilf::epsilon())
     {
         y = -JGeometry::TUtilf::atan2(m[2][0], m[0][0]);
         x = 1.5707964f;
@@ -546,14 +545,13 @@ static inline void stAsin(f32 x, f32& out)
 static inline void stGetEuler360(const Mtx m, f32& yaw, f32& pitch, f32& roll)
 {
     f32 zy = m[2][1];
-    f32 eps = JGeometry::TUtilf::epsilon();
-    if (zy - 1.0f >= -eps)
+    if (zy - JGeometry::TUtilf::one() >= -JGeometry::TUtilf::epsilon())
     {
         yaw = JGeometry::TUtilf::atan2(m[0][2], m[0][0]);
         roll = 1.5707964f;
         pitch = 0.0f;
     }
-    else if (zy + 1.0f <= eps)
+    else if (zy + JGeometry::TUtilf::one() <= JGeometry::TUtilf::epsilon())
     {
         yaw = JGeometry::TUtilf::atan2(m[0][2], m[0][0]);
         roll = -1.5707964f;
@@ -562,8 +560,10 @@ static inline void stGetEuler360(const Mtx m, f32& yaw, f32& pitch, f32& roll)
     else
     {
         stAsin(zy, roll);
-        yaw = JGeometry::TUtilf::atan2(-m[2][0], m[2][2]);
-        pitch = JGeometry::TUtilf::atan2(-m[0][1], m[1][1]);
+        f32 y = JGeometry::TUtilf::atan2(-m[2][0], m[2][2]);
+        f32 p = JGeometry::TUtilf::atan2(-m[0][1], m[1][1]);
+        yaw = y;
+        pitch = p;
     }
 }
 
@@ -575,7 +575,7 @@ static inline void stMakeEulerMtx(Mtx m, f32 pitch, f32 yaw, f32 roll)
     f32 sp = sin(pitch);
     f32 sy = sin(yaw);
     f32 sr = sin(roll);
-    m[0][0] = cy * cp - sr * sy * sp;
+    m[0][0] = cy * cp - sp * (sr * sy);
     m[0][1] = -sp * cr;
     m[0][2] = sp * (sr * cy) + sy * cp;
     m[1][0] = sp * cy + sr * sy * cp;
@@ -601,9 +601,10 @@ void NeckCtrl::checkMaxAngle(float (*mtx)[4])
     f32 roll;
     stGetEuler360(work, yaw, pitch, roll);
 
-    bool rollClamped = false;
-    bool yawClamped = false;
-    bool pitchClamped = false;
+    bool rollClamped, yawClamped, pitchClamped;
+    pitchClamped = false;
+    yawClamped = false;
+    rollClamped = false;
     bool wasLocked = false;
     if (mED)
         wasLocked = true;
