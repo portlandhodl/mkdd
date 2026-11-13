@@ -407,9 +407,9 @@ void ARPHold(IFInterface* interface, IFDatagram* datagram)
 
 static void ARPUpdate(IFInterface* interface, ARPHeader* arp)
 {
-    u8* spa;
     ARPEntry* entry;
     s32 state;
+    u8* spa;
     BOOL create;
     IFDatagram* datagram;
 
@@ -436,8 +436,8 @@ static void ARPUpdate(IFInterface* interface, ARPHeader* arp)
     memmove(entry->mac, ARP_SHA(arp), 6);
     if (entry->interface != interface) {
         DiscardPendingPackets(entry, -2);
+        entry->interface = interface;
     }
-    entry->interface = interface;
     if (state == ARP_STATE_INCOMPLETE) {
         while ((datagram = entry->pending.head) != NULL) {
             DequeueHead(IFDatagram*, &entry->pending, datagram, next, prev);
@@ -605,7 +605,6 @@ static BOOL DetectCollision(IFInterface* interface, ARPHeader* arp)
 void ARPIn(IFInterface* interface, u8* packet, s32 len)
 {
     ARPHeader* arp = (ARPHeader*)(packet + 14);
-    u8* tpa;
 
     if (interface->out != ETHOut || len < 14 + 8 ||
         len < 14 + 8 + 2 * (arp->hln + arp->pln))
@@ -617,15 +616,12 @@ void ARPIn(IFInterface* interface, u8* packet, s32 len)
     }
     DetectCollision(interface, arp);
     ARPUpdate(interface, arp);
-    tpa = ARP_TPA(arp);
-    if (ADDR(tpa) == IPAddrAny) {
-        return;
-    }
-    if (ADDR(tpa) != ADDR(interface->addr) && ADDR(tpa) != ADDR(interface->alias)) {
+    if (ADDR(ARP_TPA(arp)) == IPAddrAny ||
+        (ADDR(ARP_TPA(arp)) != ADDR(interface->addr) && ADDR(ARP_TPA(arp)) != ADDR(interface->alias))) {
         return;
     }
     if (arp->op == 1) {
-        ARPOut(interface, 2, ARP_SPA(arp), ARP_SHA(arp), tpa, NULL);
+        ARPOut(interface, 2, ARP_SPA(arp), ARP_SHA(arp), ARP_TPA(arp), NULL);
     }
 }
 

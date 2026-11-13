@@ -292,8 +292,8 @@ static void TCPOutputCallback(TCPSocket* so, s32 result)
 
 void TCPOutput(TCPSocket* so, u16 flags)
 {
-    TCPHeader* ip;
     IPHeader* tcp;
+    TCPHeader* ip;
     s32 sendSize;
     TCPSegment* fragment;
     TCPSackHole* hole;
@@ -301,6 +301,7 @@ void TCPOutput(TCPSocket* so, u16 flags)
     s32 oldNxt;
     s32 result;
     s32 difference;
+    s32 urgent;
 
     hole = NULL;
     if (so->state == 0) {
@@ -349,9 +350,8 @@ void TCPOutput(TCPSocket* so, u16 flags)
 
     tcp = &so->ip;
     tcp->len = (tcp->verlen & 0xF) << 2;
-    ip = (TCPHeader*)((u8*)so + ((tcp->verlen & 0xF) << 2));
-    *(u16*)((u8*)ip + 264) = 0;
-    ip = (TCPHeader*)((u8*)ip + 252);
+    ip = (TCPHeader*)((u8*)&so->ip + ((so->ip.verlen & 0xF) << 2));
+    ip->flag = 0;
     optionLen = TCPMakeOption(ip, so, flags);
     sendSize = TCPCalcSendSize(so, so->mss - optionLen, &flags, hole);
 
@@ -386,8 +386,8 @@ void TCPOutput(TCPSocket* so, u16 flags)
 
     if (so->unk3C - ip->seq > 0) {
         flags |= 0x20;
-        difference = so->unk3C - ip->seq;
-        ip->urg = (u16)(65535 - 20 - 20 < difference ? 65535 : difference);
+        urgent = so->unk3C - ip->seq;
+        ip->urg = (u16)(65535 - 20 - 20 < urgent ? 65535 : urgent);
     } else {
         ip->urg = 0;
         so->unk3C = so->snd_una;
@@ -418,8 +418,8 @@ void TCPOutput(TCPSocket* so, u16 flags)
         }
     } else if (sendSize > 0) {
         TCPStat.sentDataPackets++;
-        TCPStat.sentBytes += tcp->len - (((tcp->verlen << 2) & 0x3C) +
-                                        ((ip->flag >> 10) & 0x3C));
+        TCPStat.sentBytes += tcp->len - (((tcp->verlen & 0xF) << 2) +
+                                         ((ip->flag & 0xF000) >> 10));
     }
     if (so->snd_nxt != so->snd_una) {
         TCPStartRxmitTimer(so);
