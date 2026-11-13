@@ -460,6 +460,7 @@ namespace JGeometry {
     typedef TVec4<s16> TVec4s;
 
 
+#ifdef __MWERKS__
 #pragma use_lmw_stmw off
     template <> inline void TVec3<f32>::div(f32 divisor, const TVec3<f32> &operand) { scale(TUtilf::invert(divisor), operand); }
 #pragma use_lmw_stmw on
@@ -469,6 +470,9 @@ namespace JGeometry {
     template <> template <> inline TVec3f::TVec3(f32 X, f32 Y, f32 Z) { set(X, Y, Z); }
 #ifndef JGEOM_NO_TVEC3_SET
     template <> template <> inline void TVec3f::set(f32 X, f32 Y, f32 Z) { x = X; y = Y; z = Z; }
+#endif
+#else
+    inline void TVec3<f32>::div(f32 divisor, const TVec3<f32> &operand) { scale(TUtilf::invert(divisor), operand); }
 #endif
 }
 

@@ -22,6 +22,25 @@ inline f32 J3DHermiteInterpolation<f32>(f32 f1, f32 *f2, f32 *f3, f32 *f4, f32 *
     return JMAHermiteInterpolation(f1, *f2, *f3, *f4, *f5, *f6, *f7);
 }
 
+#ifndef __MWERKS__
+template <>
+inline f32 J3DHermiteInterpolation<s16>(f32 pp1, s16 *pp2, s16 *pp3, s16 *pp4, s16 *pp5, s16 *pp6, s16 *pp7)
+{
+    f32 ff2 = *pp2, ff7 = *pp3, fout = *pp4, ff0 = *pp5, ff6 = *pp6;
+    f32 ff5 = ff0 - ff2;
+    f32 ff3 = (pp1 - ff2) / ff5;
+    f32 ff4 = ff6 - ff7;
+    ff0 = (f32)*pp7 * ff5 + ff7;
+    f32 ff2sq = ff3 * ff3;
+    ff4 = -(ff5 * fout - ff4);
+    ff0 = ff0 - ff6 - ff4;
+    ff0 = ff2sq * ff0;
+    fout = ff5 * fout + ff0;
+    fout = fout * ff3 + ff7;
+    fout = ff4 * ff2sq + fout;
+    return fout - ff0;
+}
+#else
 template <>
 inline f32 J3DHermiteInterpolation<s16>(register f32 pp1, register s16 *pp2, register s16 *pp3, register s16 *pp4, register s16 *pp5,
                                         register s16 *pp6, register s16 *pp7)
@@ -68,6 +87,7 @@ inline f32 J3DHermiteInterpolation<s16>(register f32 pp1, register s16 *pp2, reg
     // clang-format on
     return fout;
 }
+#endif
 
 /**
  * @fabricated

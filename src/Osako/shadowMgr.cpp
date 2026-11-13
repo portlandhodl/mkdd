@@ -1,8 +1,8 @@
 #include "Osako/shadowMgr.h"
 #include "JSystem/JUtility/JUTAssert.h"
 #include "JSystem/J3D/J3DColorBlock.h"
-#include "Dolphin/os.h"
-#include "Dolphin/gx.h"
+#include "dolphin/os.h"
+#include "dolphin/gx.h"
 
 ShadowManager* ShadowManager::mspShadowManager = nullptr;
 

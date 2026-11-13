@@ -62,6 +62,15 @@ struct J3DMtxBuffer : public J3DMtxBufferParent {
     Mtx33*** getBumpMtxPtrPtr() const { return mBumpMatrices[1]; }
     Mtx33* getBumpMtxPtr(int idx) const { return mBumpMatrices[1][idx][mCurrentViewNumber]; }
 
+#ifndef __MWERKS__
+    void setNrmMtx(int idx, Mtx mtx)
+    {
+        f32 *dst = (f32 *)mNormMatrices[1][mCurrentViewNumber][idx];
+        for (int r = 0; r < 3; r++)
+            for (int c = 0; c < 3; c++)
+                dst[r * 3 + c] = mtx[r][c];
+    }
+#else
     void setNrmMtx(int idx, Mtx mtx)
     {
         register const void* source = mtx;
@@ -81,6 +90,7 @@ struct J3DMtxBuffer : public J3DMtxBufferParent {
             stfs f0, 32(destination)
         }
     }
+#endif
 
     void swapDrawMtx()
     {

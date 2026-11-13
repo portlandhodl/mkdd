@@ -1,7 +1,7 @@
 #ifndef _JSYSTEM_J3D_J3DMTXCALC_H
 #define _JSYSTEM_J3D_J3DMTXCALC_H
 
-#include "Dolphin/mtx.h"
+#include "dolphin/mtx.h"
 #include "JSystem/J3D/J3DJoint.h"
 #include "JSystem/J3D/J3DSys.h"
 #include "JSystem/J3D/J3DTypes.h"

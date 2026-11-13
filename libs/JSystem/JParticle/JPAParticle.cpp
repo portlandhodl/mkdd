@@ -1,4 +1,4 @@
-#include "Dolphin/mtx.h"
+#include "dolphin/mtx.h"
 #include "JSystem/JParticle/JPABlock.h"
 #include "JSystem/JParticle/JPAEmitter.h"
 #include "JSystem/JParticle/JPAResource.h"
