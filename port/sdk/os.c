@@ -162,3 +162,8 @@ void DCZeroRange(void *addr, u32 nBytes) { memset(addr, 0, nBytes); }
 u32 PPCMfmsr(void) { return sInterruptsEnabled ? 0x8000 : 0; }
 void PPCMtmsr(u32 msr) { sInterruptsEnabled = (msr & 0x8000) != 0; }
 void PPCSync(void) {}
+/* HID2/WPAR: the write-gather pipe is port_gx_w* (port_gxfifo.h); nothing to configure. */
+u32 PPCMfhid2(void) { return 0; }
+void PPCMthid2(u32 val) { (void)val; }
+u32 PPCMfwpar(void) { return 0; }
+void PPCMtwpar(u32 val) { (void)val; }

@@ -94,6 +94,8 @@ def job(kind, src, outdir, opt):
                "-I", "port/gpu", "-DMKDD_PORT=1", "-fshort-wchar", opt, "-g1"]
     elif kind == "conv":
         cmd = [EMXX, "-std=c++17", opt, "-g1"]
+    elif kind == "gx":
+        cmd = [EMCC, *SDK_FLAGS, "-include", "port/include/mkdd_port.h", opt, "-g1"]
     elif kind == "sdkcxx":
         cmd = [CLANGXX, "--target=wasm32-unknown-emscripten", *SDK_CXX_FLAGS, opt, "-g1"]
     else:
@@ -130,6 +132,7 @@ def main():
     jobs = [("game", s) for s in scan.sources()]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.c")))]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gd/*.c")))]
+    jobs += [("gx", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gx/*.c")))]
     jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.cpp")))]
     jobs += [("conv", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/conv/*.cpp"))) if not s.endswith("cli.cpp")]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/gpu/*.c")))]

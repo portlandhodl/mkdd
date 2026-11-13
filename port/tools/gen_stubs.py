@@ -3,7 +3,7 @@
 
     python port/tools/gen_stubs.py [build/port/undefined.txt] > port/sdk/stubs_auto.c
 Reads declarations from port/sdk/sdk_all.h via clang's JSON AST so the wasm
-signatures match the callers. Symbols already defined in port/sdk/*.c are skipped.
+signatures match the callers. Symbols already defined in port/sdk, port/gpu, libs/dolphin/gd or libs/dolphin/gx are skipped.
 """
 import json, os, re, subprocess, sys
 
@@ -45,7 +45,7 @@ def decl_param(t, name):
 def main():
     want = [l.strip() for l in open(sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build/port/undefined.txt"))]
     have = set()
-    for d in ("port/sdk", "libs/dolphin/gd"):
+    for d in ("port/sdk", "port/gpu", "libs/dolphin/gd", "libs/dolphin/gx"):
         for f in os.listdir(os.path.join(ROOT, d)):
             if f.endswith((".c", ".cpp")) and f != "stubs_auto.c":
                 src = open(os.path.join(ROOT, d, f)).read()

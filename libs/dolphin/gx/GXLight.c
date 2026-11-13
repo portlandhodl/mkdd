@@ -261,6 +261,16 @@ static inline void PushLight(const register GXLightObjPriv* lt_obj, register voi
 		psq_st  pz_dx, 0(dest), 0, 0
 		psq_st  dy_dz, 0(dest), 0, 0
 	}
+#else
+	const u32* words = (const u32*)lt_obj;
+	int i;
+	port_gx_w32(0);
+	port_gx_w32(0);
+	port_gx_w32(0);
+	port_gx_w32(words[3]);
+	for (i = 4; i < 16; i++) {
+		port_gx_w32(words[i]);
+	}
 #endif // clang-format on
 }
 

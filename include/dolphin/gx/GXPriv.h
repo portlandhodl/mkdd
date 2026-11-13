@@ -32,10 +32,10 @@ typedef struct GXLightObj_ {
 
 #define GX_FIFO_ADDR 0xCC008000
 
-#define GX_WRITE_U8(v) GXWGFifo.u8 = (u8)(v)
-#define GX_WRITE_U16(v) GXWGFifo.u16 = (u16)(v)
-#define GX_WRITE_U32(v) GXWGFifo.u32 = (u32)v
-#define GX_WRITE_F32(v) (GXWGFifo.f32 = (f32)(v))
+#define GX_WRITE_U8(v) DECOMP_HOST(GXWGFifo.u8 = (u8)(v), port_gx_w8((u8)(v)))
+#define GX_WRITE_U16(v) DECOMP_HOST(GXWGFifo.u16 = (u16)(v), port_gx_w16((u16)(v)))
+#define GX_WRITE_U32(v) DECOMP_HOST(GXWGFifo.u32 = (u32)v, port_gx_w32((u32)v))
+#define GX_WRITE_F32(v) DECOMP_HOST((GXWGFifo.f32 = (f32)(v)), port_gx_wf32((f32)(v)))
 
 #define GX_BITFIELD(field, pos, size, value) \
   (__rlwimi((field), (value), 31 - (pos) - (size) + 1, (pos), (pos) + (size) - 1))
@@ -52,18 +52,18 @@ typedef struct GXLightObj_ {
 #define GX_SET_TRUNC(reg, x, st, end) GX_BITFIELD_TRUNC((reg), (st), ((end) - (st) + 1), (x))
 
 #define GX_BP_LOAD_REG(data) \
-  GXWGFifo.s8 = GX_LOAD_BP_REG; \
-  GXWGFifo.s32 = (data);
+  DECOMP_HOST(GXWGFifo.s8 = GX_LOAD_BP_REG, port_gx_w8((u8)GX_LOAD_BP_REG)); \
+  DECOMP_HOST(GXWGFifo.s32 = (data), port_gx_w32((u32)(data)));
 #define GX_CP_LOAD_REG(addr, data) \
-  GXWGFifo.s8 = GX_LOAD_CP_REG; \
-  GXWGFifo.s8 = (addr); \
-  GXWGFifo.s32 = (data);
+  DECOMP_HOST(GXWGFifo.s8 = GX_LOAD_CP_REG, port_gx_w8((u8)GX_LOAD_CP_REG)); \
+  DECOMP_HOST(GXWGFifo.s8 = (addr), port_gx_w8((u8)(addr))); \
+  DECOMP_HOST(GXWGFifo.s32 = (data), port_gx_w32((u32)(data)));
 #define GX_XF_LOAD_REG_HDR(addr) \
-  GXWGFifo.s8 = GX_LOAD_XF_REG; \
-  GXWGFifo.s32 = (addr);
+  DECOMP_HOST(GXWGFifo.s8 = GX_LOAD_XF_REG, port_gx_w8((u8)GX_LOAD_XF_REG)); \
+  DECOMP_HOST(GXWGFifo.s32 = (addr), port_gx_w32((u32)(addr)));
 #define GX_XF_LOAD_REG(addr, data) \
   GX_XF_LOAD_REG_HDR(addr); \
-  GXWGFifo.s32 = (data);
+  DECOMP_HOST(GXWGFifo.s32 = (data), port_gx_w32((u32)(data)));
 #define GX_XF_LOAD_REGS(size, addr) \
   { \
     u32 cmd = (size) << 16 | addr; \

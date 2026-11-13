@@ -185,11 +185,13 @@ void __GXSaveCPUFifoAux(GXFifoObj* fifo)
   GXFlush();
   pFifo->base = OSPhysicalToCached(GX_GET_PI_REG(3));
   pFifo->end = OSPhysicalToCached(GX_GET_PI_REG(4));
+#ifdef __MWERKS__
   pFifo->writePtr = OSPhysicalToCached(GX_GET_PI_REG(5) & ~0x4000000);
+#endif
   if (CPGPLinked != 0) {
     u32 reg = GX_GET_CP_REG(29) << 16;
     u32 reg2 = GX_GET_CP_REG(28) | reg;
-    pFifo->readPtr = (void*)(reg2 + -0x80000000);
+    pFifo->readPtr = (void*)(reg2 + DECOMP_HOST(-0x80000000, OS_BASE_CACHED));
     reg = GX_GET_CP_REG(25) << 16;
     pFifo->rwDistance = (((u32)GX_GET_CP_REG(24) | reg));
   } else {
@@ -257,12 +259,14 @@ void GXGetFifoPtrs(GXFifoObj* obj, void** readPtr, void** writePtr)
 {
   GXFifoObjPriv* pFifo = (GXFifoObjPriv*)obj;
 
+#ifdef __MWERKS__
   if (obj == CPUFifo) {
     pFifo->writePtr = OSPhysicalToCached(GX_GET_PI_REG(5) & ~0x4000000);
   }
+#endif
   if (obj == GPFifo) {
     u32 reg = GX_GET_CP_REG(29) << 16;
-    pFifo->readPtr = (void*)((GX_GET_CP_REG(28) | reg) + -0x80000000);
+    pFifo->readPtr = (void*)((GX_GET_CP_REG(28) | reg) + DECOMP_HOST(-0x80000000, OS_BASE_CACHED));
     reg = GX_GET_CP_REG(25) << 16;
     pFifo->rwDistance = (GX_GET_CP_REG(24) | reg);
   } else {
@@ -334,19 +338,19 @@ void __GXFifoInit(void)
   GPFifo = NULL;
 }
 
-static void __GXFifoReadEnable(void)
+DECOMP_HOST(static, ) void __GXFifoReadEnable(void)
 {
   GX_SET_REG(gx->cpEnable, GX_TRUE, 31, 31);
   GX_SET_CP_REG(1, gx->cpEnable);
 }
 
-static void __GXFifoReadDisable(void)
+DECOMP_HOST(static, ) void __GXFifoReadDisable(void)
 {
   GX_SET_REG(gx->cpEnable, GX_FALSE, 31, 31);
   GX_SET_CP_REG(1, gx->cpEnable);
 }
 
-static void __GXFifoLink(u8 link)
+DECOMP_HOST(static, ) void __GXFifoLink(u8 link)
 {
   u32 b;
   if (link) {
@@ -358,14 +362,14 @@ static void __GXFifoLink(u8 link)
   GX_SET_CP_REG(1, gx->cpEnable);
 }
 
-static void __GXWriteFifoIntEnable(u32 p1, u32 p2)
+DECOMP_HOST(static, ) void __GXWriteFifoIntEnable(u32 p1, u32 p2)
 {
   GX_SET_REG(gx->cpEnable, p1, 29, 29);
   GX_SET_REG(gx->cpEnable, (u8)p2, 28, 28);
   GX_SET_CP_REG(1, gx->cpEnable);
 }
 
-static void __GXWriteFifoIntReset(u32 p1, u32 p2)
+DECOMP_HOST(static, ) void __GXWriteFifoIntReset(u32 p1, u32 p2)
 {
   GX_SET_REG(gx->cpClr, p1, 31, 31);
   GX_SET_REG(gx->cpClr, (u8)p2, 30, 30);

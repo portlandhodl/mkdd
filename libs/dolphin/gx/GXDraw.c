@@ -7,8 +7,16 @@ extern f32 cosf(f32);
 extern f32 sinf(f32);
 extern f32 sqrtf(f32);
 
+#ifdef __MWERKS__
 #define GXPosition3f32(a, b, c) do { GXWGFifo.f32 = (a); GXWGFifo.f32 = (b); GXWGFifo.f32 = (c); } while (0)
 #define GXNormal3f32(a, b, c) do { GXWGFifo.f32 = (a); GXWGFifo.f32 = (b); GXWGFifo.f32 = (c); } while (0)
+#else
+// host port: the GXVert.h inlines store to a dummy pipe in C; send the vertex data to the FIFO
+#define GXPosition3f32(a, b, c) do { port_gx_wf32(a); port_gx_wf32(b); port_gx_wf32(c); } while (0)
+#define GXNormal3f32(a, b, c) do { port_gx_wf32(a); port_gx_wf32(b); port_gx_wf32(c); } while (0)
+#define GXTexCoord2f32(u, v) do { port_gx_wf32(u); port_gx_wf32(v); } while (0)
+#define GXTexCoord2s8(u, v) do { port_gx_w8((u8)(u)); port_gx_w8((u8)(v)); } while (0)
+#endif
 
 static GXVtxDescList vcd[27];
 static GXVtxAttrFmtList vat[27];
