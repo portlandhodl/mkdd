@@ -133,9 +133,16 @@ public:
     void init();
 };
 
+// The original defines some members out of line in JAUAudience.cpp. TUs that define
+// JAUAUDIENCE_EXTERN_DEFINITIONS must not instantiate them, or their literals land
+// earlier in the TU's string/float pools.
 class JAUAudience_withSetting : public JAIAudience {
 public:
-    JAUAudience_withSetting() {
+    JAUAudience_withSetting()
+#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
+    ;
+#else
+    {
         setting_._04 = 7000.0f;
         setting_._08 = 800.0f;
         setting_.minVolume = 0.005f;
@@ -152,6 +159,7 @@ public:
         setting_._34 = 1.5f;
         updateSetting();
     }
+#endif
     ~JAUAudience_withSetting() {}
 
     //virtual JAIAudible *newAudible(const JGeometry::TVec3f &, JAISoundID soundID, const JGeometry::TVec3f *, u32 channels) = 0;
@@ -342,7 +350,11 @@ public:
         return 1.0f;
     }
 
-    void mixChannelOut(const JASSoundParams &params, JAIAudible *pAudible, int index) {
+    void mixChannelOut(const JASSoundParams &params, JAIAudible *pAudible, int index)
+#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
+    ;
+#else
+    {
         Audible *audible = (Audible *)pAudible;
         JAUAudibleChannel *channel = audible->getChannel(index);
 
@@ -407,6 +419,7 @@ public:
 
         audible->getOuterParams(index)->combine(params, newParams);
     }
+#endif
 
     u32 calcDeltaPriority_(f32 p1, bool p2) const {
         if (p1 > this->setting_._04) {
@@ -460,7 +473,11 @@ public:
     void deleteAudible(JAIAudible *audible) {
         delete audible;
     }
-    JAIAudible *newAudible(const JGeometry::TVec3f &pos, JAISoundID soundID, const JGeometry::TVec3f *p3, u32 channels) {
+    JAIAudible *newAudible(const JGeometry::TVec3f &pos, JAISoundID soundID, const JGeometry::TVec3f *p3, u32 channels)
+#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
+    ;
+#else
+    {
         u32 channelNum = channels | ~((1 << numPlayers_) - 1);
         if (channelNum == 0xffffffff) {
 #line 642
@@ -488,6 +505,7 @@ public:
 
         return audible;
     }
+#endif
 
     void setAudienceMtx(MtxPtr m, int playerNumber, bool doReset) {
 #line 756

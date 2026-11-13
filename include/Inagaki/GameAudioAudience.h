@@ -201,12 +201,13 @@ void CustomAudience<N>::mixChannelOut(const JASSoundParams &params, JAIAudible *
     JASSoundParams newParams;
     if (audible->getAudibleParam()._00.bytes.b0_5) {
         f32 dist = channel->_2C;
-        u16 sw = audible->getAudibleParam()._00.half.f1;
-        newParams.mVolume = !(sw & 0x7000) ? calcVolume_(dist, this->setting_._04, this->setting_._44)
-            : calcVolume_(dist, mDistanceThreshold[(u16)(((sw & 0xf000) >> 12) - 1)], mVolumeSlope[(u16)(((sw & 0xf000) >> 12) - 1)]);
+        u16 sw = audible->getAudibleParam()._00.half.f1 & 0x7000;
+        newParams.mVolume = !sw ? calcVolume_(dist, this->setting_._04, this->setting_._44)
+            : calcVolume_(dist, mDistanceThreshold[(u16)((sw >> 12) - 1)], mVolumeSlope[(u16)((sw >> 12) - 1)]);
 
         if (audible->getAudibleParam()._00.bytes.b1_2_7 & 1) {
-            f32 height = fabs(this->state[index]._3c.y - audible->mPos.y);
+            JGeometry::TVec3f &camPos = this->state[index]._3c;
+            f32 height = fabs(camPos.y - audible->mPos.y);
             if (height > 1500.0f) {
                 height = 1500.0f;
             }

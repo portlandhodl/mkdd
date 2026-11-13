@@ -1,3 +1,4 @@
+#define JAUAUDIENCE_EXTERN_DEFINITIONS
 #include "Inagaki/GameAudioMain.h"
 
 #include "JSystem/JAudio/System/JASAudioThread.h"
@@ -26,7 +27,7 @@ namespace GameAudio {
 
 Main *Main::msBasic;
 static const void *mLastBaaPointer;
-int GoalFanfareDelayFrame = 90;
+const int GoalFanfareDelayFrame = 90;
 
 Main::Main() {
     mState.bits.bgmRequest = false;

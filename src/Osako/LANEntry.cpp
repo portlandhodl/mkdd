@@ -231,11 +231,11 @@ void LANEntry::setRaceInfo() {
     int kartNo = 0;
     int padNo = 0;
     int target = 0;
+    int j;
     for (int i = 0; i < mPlayerNum; i++) {
         if (mMask & (1 << i)) {
             gLANPlayInfo.setActiveNum(i, _15[i]);
             if (_1d) {
-                int j;
                 for (j = 0; j < _15[i]; j++) {
                     EKartID kart = (EKartID)gLANPlayInfo.mPlayers[kartNo].mKart;
                     gRaceInfo.setKart(kartNo, kart, gLANPlayInfo.getFront(kartNo),
@@ -244,10 +244,9 @@ void LANEntry::setRaceInfo() {
                         gRaceInfo.setConsoleTarget(j, kartNo, false);
                     }
                     gRaceInfo.setStartPosIdx(kartNo, gLANPlayInfo.mPlayers[kartNo].mUnk);
-                    netMgr->setPadConv(padNo, i * 4 + j * 2);
-                    netMgr->setPadConv(padNo + 1, i * 4 + j * 2 + 1);
+                    netMgr->setPadConv(padNo++, i * 4 + j * 2);
+                    netMgr->setPadConv(padNo++, i * 4 + j * 2 + 1);
                     kartNo++;
-                    padNo += 2;
                 }
                 if (i == mSelfIndex) {
                     for (; j < mDisplayNum; j++) {
@@ -256,7 +255,6 @@ void LANEntry::setRaceInfo() {
                     }
                 }
             } else {
-                int j;
                 for (j = 0; j < _15[i]; j++) {
                     EKartID kart = (EKartID)gLANPlayInfo.mPlayers[kartNo].mKart;
                     gRaceInfo.setKart(kartNo, kart, gLANPlayInfo.getFront(kartNo),
@@ -278,7 +276,7 @@ void LANEntry::setRaceInfo() {
             }
         } else {
             if (i == mSelfIndex) {
-                for (int j = 0; j < mDisplayNum; j++) {
+                for (j = 0; j < mDisplayNum; j++) {
                     gRaceInfo.setConsoleTarget(j, target, true);
                 }
             }

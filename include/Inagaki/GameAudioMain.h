@@ -238,7 +238,7 @@ extern const f32 GA_PLAY_SE_VOLUME_2P;
 extern const f32 GA_PLAY_SE_VOLUME_3P;
 extern const f32 GA_PLAY_SE_VOLUME_4P;
 
-extern int GoalFanfareDelayFrame;
+extern const int GoalFanfareDelayFrame;
 extern int ParadeBgmMuteFrame;
 extern f32 ParadeBgmMuteVolume;
 }
