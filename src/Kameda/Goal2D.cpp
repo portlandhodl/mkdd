@@ -271,15 +271,14 @@ void Goal2D::calc() {
             }
 
             if (mStatus[i].mFrame == 1) {
-                f32 sx = 1.0f;
-                f32 sy = sx;
+                JGeometry::TVec3f scale(1.0f, 1.0f, 1.0f);
                 JGeometry::TVec3f vec(0.0f, 0.0f, 0.0f);
                 switch (RCMGetManager()->getConsoleNumber()) {
                 case 1:
                     vec.set(304.0f, 260.0f, 0.0f);
                     break;
                 case 2:
-                    sy = sx = 0.7f;
+                    scale.x = scale.y = scale.z = 0.7f;
                     if (i == 0) {
                         vec.set(304.0f, 130.0f, 0.0f);
                     } else {
@@ -288,7 +287,7 @@ void Goal2D::calc() {
                     break;
                 case 3:
                 case 4:
-                    sy = sx = 0.5f;
+                    scale.x = scale.y = scale.z = 0.5f;
                     switch (i) {
                     case 0:
                         vec.set(152.0f, 130.0f, 0.0f);
@@ -338,11 +337,7 @@ void Goal2D::calc() {
                 }
 
                 if (emt != nullptr) {
-                    emt->mGlobalScl.x = sx;
-                    emt->mGlobalScl.y = sy;
-                    emt->mGlobalScl.z = sx;
-                    emt->mGlobalPScl.x = sx;
-                    emt->mGlobalPScl.y = sy;
+                    emt->setGlobalScale(scale);
                 }
             }
         }
