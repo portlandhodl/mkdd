@@ -846,16 +846,16 @@ void SceneOption::option() {
         GameAudio::Main::getAudio()->startSystemSe(0x20004);
         SceneChange_ExitOption(1);
     } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_UP)) {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
         while (true) {
-            GameAudio::Main::getAudio()->startSystemSe(0x20000);
             if (--mMenuCursor < 0)
                 mMenuCursor = 6;
             if (isMenuExist(mMenuCursor))
                 break;
         }
     } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_DOWN)) {
+        GameAudio::Main::getAudio()->startSystemSe(0x20000);
         while (true) {
-            GameAudio::Main::getAudio()->startSystemSe(0x20000);
             if (++mMenuCursor >= 7)
                 mMenuCursor = 0;
             if (isMenuExist(mMenuCursor))
@@ -877,36 +877,36 @@ void SceneOption::option() {
                 int &timer = mSubCursorTimer2[mMenuCursor][0];
                 timer = 2;
             }
-            switch (mMenuCursor) {
-            case 2:
-                if (--mRumble < 0)
-                    mRumble = 1;
-                rumble(0);
-                break;
-            case 0:
-                if (--mSoundMode < 0)
-                    mSoundMode = 2;
-                break;
-            case 3:
-                if (--mOnOff2 < 0)
-                    mOnOff2 = 1;
-                break;
-            case 4:
-                if (--mItemSlot < 0)
-                    mItemSlot = 3;
-                break;
-            case 5:
-                if (--mVsLap < 0)
-                    mVsLap = 9;
-                break;
-            case 1:
-            case 6:
-                break;
-            default:
+        }
+        switch (mMenuCursor) {
+        case 2:
+            if (--mRumble < 0)
+                mRumble = 1;
+            rumble(0);
+            break;
+        case 0:
+            if (--mSoundMode < 0)
+                mSoundMode = 2;
+            break;
+        case 3:
+            if (--mOnOff2 < 0)
+                mOnOff2 = 1;
+            break;
+        case 4:
+            if (--mItemSlot < 0)
+                mItemSlot = 3;
+            break;
+        case 5:
+            if (--mVsLap < 0)
+                mVsLap = 9;
+            break;
+        case 1:
+        case 6:
+            break;
+        default:
 #line 1519
-                JUT_ASSERT_F(0, "%s", "0");
-                break;
-            }
+            JUT_ASSERT_F(0, "%s", "0");
+            break;
         }
     } else if (gpaGamePad[0]->testRepeat(JUTGamePad::MAINSTICK_RIGHT)) {
         if (mMenuCursor != 1 && mMenuCursor < 6) {
@@ -924,36 +924,36 @@ void SceneOption::option() {
                 int &timer = mSubCursorTimer2[mMenuCursor][1];
                 timer = 2;
             }
-            switch (mMenuCursor) {
-            case 2:
-                if (++mRumble >= 2)
-                    mRumble = 0;
-                rumble(0);
-                break;
-            case 0:
-                if (++mSoundMode >= 3)
-                    mSoundMode = 0;
-                break;
-            case 3:
-                if (++mOnOff2 >= 2)
-                    mOnOff2 = 0;
-                break;
-            case 4:
-                if (++mItemSlot >= 4)
-                    mItemSlot = 0;
-                break;
-            case 5:
-                if (++mVsLap >= 10)
-                    mVsLap = 0;
-                break;
-            case 1:
-            case 6:
-                break;
-            default:
+        }
+        switch (mMenuCursor) {
+        case 2:
+            if (++mRumble >= 2)
+                mRumble = 0;
+            rumble(0);
+            break;
+        case 0:
+            if (++mSoundMode >= 3)
+                mSoundMode = 0;
+            break;
+        case 3:
+            if (++mOnOff2 >= 2)
+                mOnOff2 = 0;
+            break;
+        case 4:
+            if (++mItemSlot >= 4)
+                mItemSlot = 0;
+            break;
+        case 5:
+            if (++mVsLap >= 10)
+                mVsLap = 0;
+            break;
+        case 1:
+        case 6:
+            break;
+        default:
 #line 1574
-                JUT_ASSERT_F(0, "%s", "0");
-                break;
-            }
+            JUT_ASSERT_F(0, "%s", "0");
+            break;
         }
     }
 
