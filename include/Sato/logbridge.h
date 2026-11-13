@@ -304,15 +304,14 @@ public:
     }
 
     void setPosition(JGeometry::TVec3f &, JGeometry::TVec3f &, u32);
-    void calcNodePos() {
-        JSUListIterator<BridgeNode> prev(getFirst());
-        JGeometry::TVec3f *np = mNodePos;
-        for (JSUListIterator<BridgeNode> it(prev.mLink->getNext()); it != nullptr; ++it, ++prev) {
-            np->add(prev->mPos, it->mPos);
-            np->scale(0.5f);
-            np++;
-        }
-    }
+    void calcMove(f32);
+    void doMove();
+    void doCtrlPos(f32);
+    void doAirFricG(f32, f32);
+    void doHung(u32, f32, u8);
+    void calcbetweenVel(BridgeNode *, BridgeNode *, f32);
+    void calcCenter();
+    void setbwLength(f32 ratio);
 
     BridgeNode *mNodes;       // 0x0C
     JGeometry::TVec3f *mNodePos; // 0x10
