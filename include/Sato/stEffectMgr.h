@@ -33,8 +33,7 @@ struct stEffectMgr {
         {
             for (u8 i = 0; i < 2; i++) {
                 mTrack[i] = nullptr;
-                mBubble[i] = nullptr;
-                mSpray[i] = nullptr;
+                mSpray[i] = mBubble[i] = nullptr;
             }
         }
         stEmitter *mSpray[2];  // 0x00

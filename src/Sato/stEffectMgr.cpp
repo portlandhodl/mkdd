@@ -84,14 +84,7 @@ stEffectMgr::stEffectMgr()
 
 __declspec(weak) stEffectMgr::stWaterEffectStatus::stWaterEffectStatus()
 {
-    u8 i = 0;
-    stEmitter *a = (stEmitter *)i;
-    stEmitter *b = (stEmitter *)i;
-    for (; i < 2; i++) {
-        mTrack[i] = a;
-        mBubble[i] = b;
-        mSpray[i] = b;
-    }
+    init();
 }
 
 __declspec(weak) stEffectMgr::stTireEffectStatus::stTireEffectStatus()
@@ -242,7 +235,7 @@ void stEffectMgr::init()
         for (s16 j = 0; j < 2; j++) {
             s16 tire = j + 2;
             mpWeedCb[i][j] = new stEfctWeed();
-            initCallBackPtr(mpWeedCb[i][j], i, j);
+            initCallBackPtr(mpWeedCb[i][j], i, (s16)j);
             mpRoadCb[i][j] = new stEfctRoad();
             initCallBackPtr(mpRoadCb[i][j], i, tire);
             mpTireSpinCb[i][j] = new stEfctTireSpin();
@@ -258,12 +251,13 @@ void stEffectMgr::init()
 
         mpWaterTrack[i].kartNum = i;
         mpWaterSprayCenter[i].kartNum = i;
+        s16 kart = i;
         for (int j = 0; j < 2; j++) {
             s16 tire = j + 2;
-            initCallBackPtr(&mpWaterSpray[j][i], i, tire);
-            initCallBackPtr(&mpWaterBubble[j][i], i, tire);
-            initCallBackPtr(&mpCrsWaterSpray[j][i], i, tire);
-            initCallBackPtr(&mpCrsWaterBubble[j][i], i, tire);
+            initCallBackPtr(&mpWaterSpray[j][i], kart, (s16)tire);
+            initCallBackPtr(&mpWaterBubble[j][i], kart, (s16)tire);
+            initCallBackPtr(&mpCrsWaterSpray[j][i], kart, (s16)tire);
+            initCallBackPtr(&mpCrsWaterBubble[j][i], kart, (s16)tire);
         }
     }
 }
@@ -350,7 +344,7 @@ void stEffectMgr::calcGndAttrEffect()
 void stEffectMgr::calcGndCenterEffect(int kartIndex, bool inWater)
 {
     int attr;
-    u32 attrIdx;
+    int attrIdx;
     CrsGround *ground = KartCtrl::getKartCtrl()->GetBodyGround(kartIndex);
     stTireEffectStatus *status = &mpCenterStatus[kartIndex];
     attr = ground->getAttribute();
@@ -360,8 +354,9 @@ void stEffectMgr::calcGndCenterEffect(int kartIndex, bool inWater)
         status->mEmitter[0]->mFlags |= 0x200;
         status->mEmitter[0] = nullptr;
         for (u8 i = 1; i < 2; i++) {
-            if (status->mEmitter[i]) {
-                status->mEmitter[i]->mFlags |= 0x200;
+            stEmitter *e = status->mEmitter[i];
+            if (e) {
+                e->mFlags |= 0x200;
                 status->mEmitter[i] = nullptr;
             }
         }
@@ -369,7 +364,7 @@ void stEffectMgr::calcGndCenterEffect(int kartIndex, bool inWater)
 
     for (u8 i = 0; i < 2; i++) {
         if (status->mEmitter[i] == nullptr) {
-            stEmitterCallBack::stFileParamPtrList *ptr = findParamPtrCenter(kartIndex, ground, status, i);
+            stEmitterCallBack::stFileParamPtrList *ptr = findParamPtrCenter(kartIndex, ground, status, (u8)i);
             if (ptr && ptr->_00) {
                 switch (attr) {
                 case CrsGround::Attr_0:
@@ -436,7 +431,7 @@ void stEffectMgr::calcGndTireEffect(int kartIndex, bool inWater, stTireEfctStatu
         if (!inWater && !stop && !RaceMgr::getManager()->mRaceDirector->isRaceEnd() &&
             __fabsf(KartCtrl::getKartCtrl()->GetCarSpeed(kartIndex)) > 15.0f && (trigger || button)) {
             for (u8 j = 0; j < 2; j++)
-                calcDriftSparkEfct(kartIndex, j, &set->mStatus[j], trigger);
+                calcDriftSparkEfct(kartIndex, (u8)j, &set->mStatus[j], trigger);
         }
 
         if (!RaceMgr::getManager()->getKartInfo(kartIndex)->isGhostKart()) {
@@ -448,7 +443,7 @@ void stEffectMgr::calcGndTireEffect(int kartIndex, bool inWater, stTireEfctStatu
                     status->mEmitter[j] = nullptr;
                 }
                 if (status->mEmitter[j] == nullptr) {
-                    stEmitterCallBack::stFileParamPtrList *ptr = findParamPtrTire(kartIndex, ground, status, j);
+                    stEmitterCallBack::stFileParamPtrList *ptr = findParamPtrTire(kartIndex, ground, status, (u8)j);
                     if (ptr && ptr->_00) {
                         switch (attr) {
                         case CrsGround::Attr_0:
@@ -514,8 +509,9 @@ void stEffectMgr::calcSideGEfct(int kartIndex, int tire, stTireEffectStatus *sta
             status->mSideGEmitter = nullptr;
         }
     } else {
+        u32 kart = kartIndex;
         if (__fabsf(KartCtrl::getKartCtrl()->GeTireG(kartIndex)) >= stEfctTireSpin::sMinSideG && !inWater &&
-            !status->_24 && !RaceMgr::getManager()->isKartGoal(kartIndex) &&
+            !status->_24 && !RaceMgr::getManager()->isKartGoal(kart) &&
             !RaceMgr::getManager()->mRaceDirector->isRaceEnd() && status->mSideGEmitter == nullptr) {
             stEmitterCallBack::stFileParamPtrList *ptr = findParamPtrCommon(_3d0);
             if (ptr) {
@@ -554,12 +550,14 @@ void stEffectMgr::calcSpinTurnEfct(int kartIndex, int tire, stTireEffectStatus *
 
 void stEffectMgr::calcDriftEfct(int kartIndex, int tire, stTireEffectStatus *status, bool driftEnd)
 {
-    int driftCnt = (u8)KartCtrl::getKartCtrl()->GetDriftCnt(kartIndex);
+    u32 kart = kartIndex;
+    int driftCnt = KartCtrl::getKartCtrl()->GetDriftCnt(kartIndex) & 0xff;
+    u8 end = driftEnd;
     bool cntChanged = false;
     if (driftCnt > 0 && driftCnt != mDriftCnt[kartIndex])
         cntChanged = true;
 
-    u8 remove = driftEnd | cntChanged;
+    u8 remove = end | cntChanged;
     if (status->mDriftEmitters[0] && remove) {
         status->mDriftEmitters[0]->mFlags |= 0x200;
         status->mDriftEmitters[0] = nullptr;
@@ -576,7 +574,7 @@ void stEffectMgr::calcDriftEfct(int kartIndex, int tire, stTireEffectStatus *sta
     }
 
     if (status->_24 && !driftEnd)
-        createDriftEfct(kartIndex, tire, status, driftCnt);
+        createDriftEfct(kart, tire, status, driftCnt);
 }
 
 void stEffectMgr::createDriftEfct(int kartIndex, int side, stTireEffectStatus *status, int type)
@@ -595,10 +593,10 @@ void stEffectMgr::calcGndCharEffect(int kartIndex, bool inWater)
     u8 driverNum = ItemObjMgr::getNowTandemDriverNum(kartIndex);
     LumbarCtrl *lumbar =
         RaceMgr::getManager()->getKartLoader(kartIndex)->getExModelDriver(driverNum)->mLumbarCtrl;
-    stTireEffectStatus *status = &mpCharStatus[kartIndex];
     CrsGround *ground = lumbar->mNodeMgr->mCrsGround;
     int attr = ground->getAttribute();
-    u32 attrIdx = ground->getAttrIndex();
+    int attrIdx = ground->getAttrIndex();
+    stTireEffectStatus *status = &mpCharStatus[kartIndex];
 
     if (!(lumbar->m70 & 4)) {
         if (status->mEmitter[0]) {
@@ -615,7 +613,7 @@ void stEffectMgr::calcGndCharEffect(int kartIndex, bool inWater)
 
     for (u8 i = 0; i < 1; i++) {
         if (status->mEmitter[i] == nullptr) {
-            stEmitterCallBack::stFileParamPtrList *ptr = findParamPtrChar(kartIndex, ground, status, i);
+            stEmitterCallBack::stFileParamPtrList *ptr = findParamPtrChar(kartIndex, ground, status, (u8)i);
             if (ptr && ptr->_00) {
                 switch (attr) {
                 case CrsGround::Attr_0:
@@ -649,15 +647,15 @@ void stEffectMgr::calcGndCharEffect(int kartIndex, bool inWater)
 
 bool stEffectMgr::calcWaterAttrEffect(int kartIndex)
 {
-    stWaterEffectStatus *status = &mpWaterStatus[kartIndex];
     bool ret = false;
+    stWaterEffectStatus *status = &mpWaterStatus[kartIndex];
     if (KartCtrl::getKartCtrl()->GetBodyGround(kartIndex)->getAttribute() == CrsGround::Attr_Water) {
         f32 height = KartCtrl::getKartCtrl()->GetWaterHeight(kartIndex);
-        int kartID = RaceMgr::getManager()->getKartInfo(kartIndex)->getKartID();
+        int kartID = RaceMgr::getManager()->getKartInfo((int)kartIndex)->getKartID();
         ST_EFCT_ASSERT_NAME("kartID", kartID, 21, 1087);
         if (height < sWaterBodyHeightOffset[kartID])
             ret = true;
-        if (RaceMgr::getManager()->getKartInfo(kartIndex)->isGhostKart())
+        if (RaceMgr::getManager()->getKartInfo((int)kartIndex)->isGhostKart())
             return ret;
 
         if (status->mTrack[0] == nullptr)
@@ -1074,9 +1072,9 @@ void stEffectMgr::getExhaustPosDir(JGeometry::TVec3f *pos, JGeometry::TVec3f *di
 {
     Mtx *mtx;
     if (side == 0)
-        mtx = getKartExhaustMtxL(index);
+        mtx = getKartExhaustMtxL((int)index);
     else
-        mtx = getKartExhaustMtxR(index);
+        mtx = getKartExhaustMtxR((int)index);
     pos->x = (*mtx)[0][3];
     pos->y = (*mtx)[1][3];
     pos->z = (*mtx)[2][3];
@@ -1127,7 +1125,7 @@ void stEffectMgr::createKinokoDashEmt(int kartIndex)
     }
     if (tstUseMufllerR(kartIndex)) {
         GetStEfctMgr()->getExhaustPosDir(&pos, &dir, kartIndex, 1);
-        JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)0x1f, kartIndex, pos, 1);
+        JPEffectPerformer::setEffect((JPEffectPerformer::EffectType)0x1f, (int)kartIndex, pos, 1);
     }
 }
 
