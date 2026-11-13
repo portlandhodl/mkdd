@@ -28,12 +28,20 @@
 // inline definitions placed in a .cpp to control weak emission; the host build needs them out of line
 #define DECOMP_INLINE inline
 #define DECOMP_MWERKS 1
+// big-endian data read through typed loads (left big-endian in the host port)
+#define DECOMP_BE16(p) (*(u16 *)(p))
+#define DECOMP_BE32(p) (*(u32 *)(p))
+// choose the original expression, or a host-port replacement
+#define DECOMP_HOST(orig, host) orig
 #else
 #define DECL_SECTION(x)
 #define DECL_WEAK __attribute__((weak))
 #define DONT_INLINE __attribute__((noinline))
 #define DECOMP_INLINE
 #define DECOMP_MWERKS 0
+#define DECOMP_BE16(p) ((u16)(((const u8 *)(p))[0] << 8 | ((const u8 *)(p))[1]))
+#define DECOMP_BE32(p) ((u32)((const u8 *)(p))[0] << 24 | (u32)((const u8 *)(p))[1] << 16 | (u32)((const u8 *)(p))[2] << 8 | ((const u8 *)(p))[3])
+#define DECOMP_HOST(orig, host) host
 #endif
 
 // Align X to the previous N bytes (N must be power of two)

@@ -810,7 +810,7 @@ void ItemObjMgr::releaseItemByKartEquipItemList(ItemObj *obj)
 bool ItemObjMgr::IsItemAvailable(int) { 
     // UNUSED
     // SIZE: 0x48
-}
+DECOMP_HOST(, return false;) }
 
 ItemObj *ItemObjMgr::getKartEquipItem(int kart_index, u8 driver_index)
 {
@@ -826,7 +826,7 @@ bool ItemObjMgr::tstKartEquipItemTrigger(int kart_index, u8 driver_index)
 {
     // UNUSED
     // SIZE: 0x18
-}
+DECOMP_HOST(, return false;) }
 
 int ItemObjMgr::getStockItem(int kart_index, u8 driver_index)
 {

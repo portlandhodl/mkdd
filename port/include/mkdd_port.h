@@ -59,6 +59,12 @@ static inline void *__memcpy(void *d, const void *s, unsigned long n) { return _
 #define __mkdd_declspec_section __mkdd_drop_section
 #define __mkdd_drop_section(s)
 
+/* Host-order copy of an oscillator table embedded in big-endian sequence data. */
+#ifdef __cplusplus
+extern "C"
+#endif
+const void *port_osc_table(const void *be);
+
 /* Fakematches that name MWCC-mangled symbols directly; port/sdk/game_missing.cpp
  * fills these host-side stand-ins at startup. */
 #define __vt__11J3DTexNoAnm port_vt_J3DTexNoAnm

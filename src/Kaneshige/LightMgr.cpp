@@ -128,7 +128,7 @@ LightObj *LightMgr::searchLight(u32 tagName) {
 RaceSceneLight *LightMgr::searchRaceSceneLight(u32 viewNo) {
     // UNUSED, should call another unused function
     // getTagName__14RaceSceneLightFUl
-}
+DECOMP_HOST(, return nullptr;) }
 
 RaceKartLight *LightMgr::searchRaceKartLight(u32 viewNo, int kartNo) {
     // UNUSED

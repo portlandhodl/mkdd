@@ -137,6 +137,7 @@ void convBAS(Swapper &s);
 void convBLO(Swapper &s);
 void convBTI(Swapper &s);
 void convBMG(Swapper &s);
+void convBMC(Swapper &s);
 // fmt_course.cpp: bol (course data), bco (collision)
 void convBOL(Swapper &s);
 void convBCO(Swapper &s);

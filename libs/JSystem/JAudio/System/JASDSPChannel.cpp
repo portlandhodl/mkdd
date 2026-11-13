@@ -226,12 +226,12 @@ JASDSPChannel *JASDSPChannel::getHandle(u32 index) {
     return &sDspChannels[index];
 }
 
-int JASDSPChannel::getNumUse() {}
+int JASDSPChannel::getNumUse() { DECOMP_HOST(, return 0;) }
 
-int JASDSPChannel::getNumFree() {}
+int JASDSPChannel::getNumFree() { DECOMP_HOST(, return 0;) }
 
-int JASDSPChannel::getNumBreak() {}
+int JASDSPChannel::getNumBreak() { DECOMP_HOST(, return 0;) }
 
-u16 JASDSPChannel::getBlockCounter() const {}
+u16 JASDSPChannel::getBlockCounter() const { DECOMP_HOST(, return 0;) }
 
-u16 JASDSPChannel::getRemainSamples() const {}
+u16 JASDSPChannel::getRemainSamples() const { DECOMP_HOST(, return 0;) }

@@ -15,7 +15,7 @@ struct J2DIndInitData {
     J2DIndTexMtxInfo mIndTexMtxInfo[3];               // _0C
     J2DIndTexCoordScaleInfo mIndTexCoordScaleInfo[4]; // _60
     J2DIndTevStageInfo mIndTevStageInfo[4];           // _68
-    u8 _AC[0x90];                                     // _AC
+    u8 _AC[DECOMP_HOST(0x90, 0x7C)];                  // _AC (disc data uses 0x128 entries)
 };
 
 /**

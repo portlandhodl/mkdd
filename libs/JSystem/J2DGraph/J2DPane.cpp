@@ -448,7 +448,7 @@ void J2DPane::rotate(f32 f1)
 f32 J2DPane::getRotate() const
 {
     // UNUSED FUNCTION
-}
+DECOMP_HOST(, return 0.0f;) }
 
 void J2DPane::clip(const JGeometry::TBox2f& bounds)
 {

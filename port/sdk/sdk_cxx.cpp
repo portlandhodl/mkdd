@@ -12,22 +12,75 @@ extern "C" void port_stub(const char *name);
 #include <string.h>
 
 extern "C" {
-// THP (movies)
-BOOL THPPlayerInit() { MKDD_STUB("THPPlayerInit"); return FALSE; }
-void THPPlayerQuit() {}
-BOOL THPPlayerOpen(const char *, BOOL) { return FALSE; }
-BOOL THPPlayerClose() { return FALSE; }
-BOOL THPPlayerPlay() { return FALSE; }
-void THPPlayerStop() {}
-BOOL THPPlayerPause() { return FALSE; }
-BOOL THPPlayerPrepare(s32, u8, s32) { return FALSE; }
-BOOL THPPlayerSetBuffer(u8 *) { return FALSE; }
+// THP (movies): no decoder yet. The player opens the file to learn its frame
+// count and "plays" blank frames at the display rate, so movie scenes run their
+// natural length and end the way they do on hardware.
+static struct {
+    BOOL open, playing;
+    u32 totalFrames;
+    s32 frame;
+    u32 lastRetrace;
+} sThp;
+}
+#include <dolphin/dvd.h>
+#include <dolphin/vi.h>
+extern "C" {
+
+BOOL THPPlayerInit() { memset(&sThp, 0, sizeof sThp); return TRUE; }
+void THPPlayerQuit() { sThp.open = FALSE; }
+
+BOOL THPPlayerOpen(const char *fileName, BOOL)
+{
+    DVDFileInfo fi;
+    u8 hdr[0x40] __attribute__((aligned(32)));
+    if (!DVDOpen(fileName, &fi))
+        return FALSE;
+    DVDReadPrio(&fi, hdr, sizeof hdr, 0, 2);
+    DVDClose(&fi);
+    if (memcmp(hdr, "THP", 3) != 0)
+        return FALSE;
+    sThp.totalFrames = (u32)hdr[0x14] << 24 | (u32)hdr[0x15] << 16 | (u32)hdr[0x16] << 8 | hdr[0x17];
+    sThp.open = TRUE;
+    sThp.frame = -1;
+    MKDD_STUB("THPPlayerOpen (no decoder: blank frames)");
+    return TRUE;
+}
+
+BOOL THPPlayerClose() { BOOL o = sThp.open; sThp.open = FALSE; return o; }
+BOOL THPPlayerPlay() { sThp.playing = sThp.open; sThp.lastRetrace = VIGetRetraceCount(); return sThp.open; }
+void THPPlayerStop() { sThp.playing = FALSE; sThp.frame = -1; }
+BOOL THPPlayerPause() { sThp.playing = FALSE; return sThp.open; }
+BOOL THPPlayerPrepare(s32 offset, u8, s32) { sThp.frame = offset - 1; return sThp.open; }
+BOOL THPPlayerSetBuffer(u8 *) { return sThp.open; }
 u32 THPPlayerCalcNeedMemory() { return 32; }
-BOOL THPPlayerGetVideoInfo(THPVideoInfo *) { return FALSE; }
-BOOL THPPlayerSetVolume(s32, s32) { return FALSE; }
-s32 THPPlayerDrawCurrentFrame(GXRenderModeObj *, u32, u32, u32, u32) { return -1; }
-u32 THPPlayerGetTotalFrame() { return 0; }
-s32 THPPlayerGetState() { return 0; }
+
+BOOL THPPlayerGetVideoInfo(THPVideoInfo *info)
+{
+    info->xSize = 640;
+    info->ySize = 448;
+    info->videoType = 0;
+    return sThp.open;
+}
+
+BOOL THPPlayerSetVolume(s32, s32) { return sThp.open; }
+
+// advance at 29.97 fps (every second retrace) while playing; returns the frame shown
+s32 THPPlayerDrawCurrentFrame(GXRenderModeObj *, u32, u32, u32, u32)
+{
+    if (!sThp.open)
+        return -1;
+    if (sThp.playing) {
+        u32 now = VIGetRetraceCount();
+        while (now - sThp.lastRetrace >= 2 && sThp.frame + 1 < (s32)sThp.totalFrames) {
+            sThp.frame++;
+            sThp.lastRetrace += 2;
+        }
+    }
+    return sThp.frame;
+}
+
+u32 THPPlayerGetTotalFrame() { return sThp.totalFrames; }
+s32 THPPlayerGetState() { return sThp.playing ? 2 : 1; }
 void THPPlayerPostDrawDone() {}
 
 // Logitech wheel: no device

@@ -305,7 +305,7 @@ bool J2DManager::isGoalAnmEnd(int status) {
 
 bool J2DManager::isMiniGameAnmEnd(int status) {
     // UNUSED
-}
+DECOMP_HOST(, return false;) }
 
 int J2DManager::getGoalAnmFrame(int status) {
     return mGoal->getAnmFrame(status);

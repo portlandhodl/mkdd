@@ -156,7 +156,7 @@ TChannel *getDSPHandle(int index) {
 
 TChannel *getDSPHandleNc(int) {
     // UNUSED
-}
+DECOMP_HOST(, return nullptr;) }
 
 void setFilterTable(s16 *dst, s16 *src, u32 n) {
     for (int  i = 0; i < n; i++) {
@@ -198,11 +198,11 @@ void initBuffer() {
 
 Fxline &getFXHandle(u8) {
     // UNUSED
-}
+DECOMP_HOST(, return FX_BUF[0];) }
 
 Fxline &getFXHandleNc(u8) {
     // UNUSED
-}
+DECOMP_HOST(, return FX_BUF[0];) }
 
 bool setFXLine(u8 p1, s16 *buffer, FxlineConfig_ *config) {
     Fxline *fxLine = FX_BUF + p1;
@@ -292,11 +292,11 @@ bool TChannel::isFinish() const {
 
 u16 TChannel::getBlockCounter() const {
     // UNUSED
-}
+DECOMP_HOST(, return 0;) }
 
 u16 TChannel::getRemainSamples() const {
     // UNUSED
-}
+DECOMP_HOST(, return 0;) }
 
 void TChannel::setWaveInfo(const JASWaveInfo &waveInfo, u32 p2, u32 p3) {
     _118 = p2;

@@ -24,30 +24,84 @@ SDK_CXX_FLAGS = ["-std=gnu++03", "-fsigned-char", "-fshort-wchar", "-fno-excepti
                  "-include", "port/include/mkdd_port.h", "-fms-extensions", "-fms-compatibility",
                  "-fdelayed-template-parsing", "-Wno-error=extraneous-template-head", "-w"]
 
+def rewrite_long_chars(text):
+    """MWCC packs 5-8 character constants ('T_tx1') into a 64-bit value, first
+    character most significant; clang keeps only 4. Replace them with the value.
+    Strings and comments are left alone."""
+    out, i, n, changed = [], 0, len(text), False
+    while i < n:
+        c = text[i]
+        if text.startswith("//", i):
+            j = text.find("\n", i); j = n if j < 0 else j
+            out.append(text[i:j]); i = j
+        elif text.startswith("/*", i):
+            j = text.find("*/", i + 2); j = n if j < 0 else j + 2
+            out.append(text[i:j]); i = j
+        elif c == '"':
+            j = i + 1
+            while j < n and text[j] != '"':
+                j += 2 if text[j] == "\\" else 1
+            out.append(text[i:j + 1]); i = j + 1
+        elif c == "'":
+            j = i + 1
+            while j < n and text[j] != "'":
+                j += 2 if text[j] == "\\" else 1
+            body = text[i + 1:j]
+            if 5 <= len(body) <= 8 and "\\" not in body:
+                v = 0
+                for ch in body.encode("latin-1"):
+                    v = v << 8 | ch
+                out.append(f"((long long)0x{v:X}LL)"); changed = True
+            else:
+                out.append(text[i:j + 1])
+            i = j + 1
+        else:
+            j = i
+            while j < n and text[j] not in "/\"'":
+                j += 1
+            if j == i:
+                j = i + 1
+            out.append(text[i:j]); i = j
+    return "".join(out), changed
+
 def stale(src, obj, dep):
     if not os.path.exists(obj) or not os.path.exists(dep):
         return True
     t = os.path.getmtime(obj)
+    if os.path.getmtime(src) > t:
+        return True
     deps = open(dep).read().replace("\\\n", " ").split(":", 1)[1].split()
     return any(not os.path.exists(os.path.join(ROOT, d)) or os.path.getmtime(os.path.join(ROOT, d)) > t for d in deps)
 
 def job(kind, src, outdir, opt):
     rel = os.path.relpath(src, ROOT)
+    orig_src = src
     obj = os.path.join(outdir, rel + ".o")
     dep = obj + ".d"
-    if not stale(src, obj, dep):
-        return rel, obj, None
     os.makedirs(os.path.dirname(obj), exist_ok=True)
     if kind == "game":
         flags = [f for f in scan.FLAGS if f not in ("-fsyntax-only",)]
-        cmd = [CLANGXX, *flags, "-fshort-wchar", opt, "-fno-delete-null-pointer-checks", "-fno-strict-aliasing", "-g1"]
+        cmd = [CLANGXX, *flags, "-fshort-wchar", "-fno-strict-return", opt, "-fno-delete-null-pointer-checks", "-fno-strict-aliasing", "-g1"]
+        text, changed = rewrite_long_chars(open(src, encoding="latin-1").read())
+        if changed:
+            rw = os.path.join(ROOT, "build", "port", "rewrite", rel)
+            os.makedirs(os.path.dirname(rw), exist_ok=True)
+            open(rw, "w", encoding="latin-1").write(text)
+            cmd += ["-iquote", os.path.dirname(src)]
+            src = rw
     elif kind == "conv":
         cmd = [EMXX, "-std=c++17", opt, "-g1"]
     elif kind == "sdkcxx":
         cmd = [CLANGXX, "--target=wasm32-unknown-emscripten", *SDK_CXX_FLAGS, opt, "-g1"]
     else:
         cmd = [EMCC, *SDK_FLAGS, opt, "-g1"]
-    r = subprocess.run([*cmd, "-MMD", "-MF", dep, "-c", "-o", obj, src], cwd=ROOT, capture_output=True, text=True)
+    full = [*cmd, "-MMD", "-MF", dep, "-c", "-o", obj, src]
+    cmdfile = obj + ".cmd"
+    if not stale(orig_src, obj, dep) and os.path.exists(cmdfile) and open(cmdfile).read() == " ".join(full):
+        return rel, obj, None
+    r = subprocess.run(full, cwd=ROOT, capture_output=True, text=True)
+    if r.returncode == 0:
+        open(cmdfile, "w").write(" ".join(full))
     return rel, obj if r.returncode == 0 else None, r.stderr if r.returncode else None
 
 LINK_COMMON = [

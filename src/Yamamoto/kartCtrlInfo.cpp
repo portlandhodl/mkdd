@@ -259,12 +259,12 @@ void KartCtrl::GetBodyVel(int kartIndex, JGeometry::TVec3f *vecBodyVel) {
 // FIX: Add return statements for the following two functions:
 bool KartCtrl::GetLeftFTirePos(int kartIndex, Vec *vec) {
     getKartBody(kartIndex);
-    GetTirePos(kartIndex, 1, vec);
+    DECOMP_HOST(GetTirePos(kartIndex, 1, vec), return GetTirePos(kartIndex, 1, vec));
 }
 
 bool KartCtrl::GetRightFTirePos(int kartIndex, Vec *vec) {
     getKartBody(kartIndex);
-    GetTirePos(kartIndex, 0, vec);
+    DECOMP_HOST(GetTirePos(kartIndex, 0, vec), return GetTirePos(kartIndex, 0, vec));
 }
 
 bool KartCtrl::GetLeftTirePos(int kartIndex, Vec *vec) {

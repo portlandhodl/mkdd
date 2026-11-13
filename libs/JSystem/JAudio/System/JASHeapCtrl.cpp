@@ -239,7 +239,7 @@ void JASSolidHeap::freeAll() {
 
 u32 JASSolidHeap::getRemain() {
 
-}
+DECOMP_HOST(, return 0;) }
 
 JASGenericMemPool::JASGenericMemPool() {
     mRunner = NULL;

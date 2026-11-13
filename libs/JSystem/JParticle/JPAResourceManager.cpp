@@ -45,12 +45,12 @@ JPAResource *JPAResourceManager::getResource(u16 idx) const
 bool JPAResourceManager::checkUserIndexDuplication(u16) const
 {
     // UNUSED, but exists in TP
-}
+DECOMP_HOST(, return false;) }
 
 const ResTIMG *JPAResourceManager::swapTexture(const ResTIMG *, const char *)
 {
     // UNUSED
-}
+DECOMP_HOST(, return nullptr;) }
 
 void JPAResourceManager::registRes(JPAResource *res)
 {
@@ -76,4 +76,4 @@ void JPAResourceManager::registTexDupCheck(const u8 *, JKRHeap *)
 u32 JPAResourceManager::getResUserWork(u16) const
 {
     // UNUSED
-}
+DECOMP_HOST(, return 0;) }

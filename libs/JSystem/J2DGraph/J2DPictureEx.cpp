@@ -1415,7 +1415,7 @@ const J2DAnmTransform* J2DPictureEx::animationPane(const J2DAnmTransform* animat
         }
     }
 
-    J2DPane::animationPane(animation);
+    DECOMP_HOST(J2DPane::animationPane(animation), return J2DPane::animationPane(animation));
 }
 
 u8 J2DPictureEx::getUsableTlut(u8 id)

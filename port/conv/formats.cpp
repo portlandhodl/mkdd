@@ -15,7 +15,7 @@ extern const FormatEntry kFormats[] = {
     {"btp", convJ3DAnim}, {"bpk", convJ3DAnim}, {"bla", convJ3DAnim}, {"blk", convJ3DAnim},
     {"bls", convJ3DAnim}, {"bva", convJ3DAnim},
     {"bas", convBAS},
-    {"blo", convBLO}, {"bti", convBTI}, {"bmg", convBMG},
+    {"blo", convBLO}, {"bti", convBTI}, {"bmg", convBMG}, {"bmc", convBMC},
     {"bol", convBOL}, {"bco", convBCO},
     {"set", convGameParam}, {"ikp", convGameParam}, {"lbd", convGameParam}, {"kel", convGameParam},
     {"pel", convGameParam}, {"iop", convGameParam}, {"dat", convGameParam}, {"snp", convGameParam},

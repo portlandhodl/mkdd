@@ -29,7 +29,7 @@ void ZCaptureMgr::reset() {
 
 bool ZCaptureMgr::captureAll() {
     // UNUSED
-}
+DECOMP_HOST(, return false;) }
 
 void ZCaptureMgr::capture(u32 viewNo) {
 #line 66
@@ -53,7 +53,7 @@ void ZCaptureMgr::setInactive(u32) {
 
 bool ZCaptureMgr::isActive(u32) {
     // UNUSED
-}
+DECOMP_HOST(, return false;) }
 
 void ZCaptureMgr::setPosition(u32 id, u32 viewNo, s16 x, s16 y) {
 #line 121
@@ -112,7 +112,7 @@ void ZCaptureScreen::setInactive(u32) {
 
 bool ZCaptureScreen::isActive(u32) {
     // UNUSED
-}
+DECOMP_HOST(, return false;) }
 
 void ZCaptureScreen::setPosition(u32 id, s16 x, s16 y) {
 #line 235

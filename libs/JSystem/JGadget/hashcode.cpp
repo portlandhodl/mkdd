@@ -3,7 +3,7 @@
 u32 JGadget::getHashCode(const char *, u32) 
 {
     // UNUSED
-}
+DECOMP_HOST(, return 0;) }
 
 u32 JGadget::getHashCode(const char *data)
 {

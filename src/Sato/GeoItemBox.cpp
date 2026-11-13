@@ -201,7 +201,7 @@ void GeoItemBox::createShadowModel(JKRSolidHeap *heap, u32 p2) {
 
 const char *GeoItemBox::getBmdFilePtr() {
     // UNUSED
-}
+DECOMP_HOST(, return nullptr;) }
 
 const char *GeoItemBox::getBmdName() {
     const char *ret = "/Item/itembox_normal.bmd";

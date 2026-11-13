@@ -321,9 +321,9 @@ f32 JPABaseParticle::getCalcCurrentPositionZ(const JPABaseEmitter* emitter) cons
 f32 JPABaseParticle::getWidth(const JPABaseEmitter* emitter) const
 {
     // UNUSED FUNCTION
-}
+DECOMP_HOST(, return 0.0f;) }
 
 f32 JPABaseParticle::getHeight(const JPABaseEmitter* emitter) const
 {
     // UNUSED FUNCTION
-}
+DECOMP_HOST(, return 0.0f;) }
