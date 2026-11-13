@@ -19,6 +19,7 @@ public:
     void update_damage(float (*)[4], DriverModel *);
     void calcString(const JGeometry::TVec3f &);
     void calcScaleMtx(float (*)[4]);
+    ExStringNodeManager *getStringNodeMgr() const { return mNodeMgr; }
 
     Mtx mRotMtx;                     // 0x40
     u8 m70;                          // 0x70

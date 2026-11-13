@@ -311,8 +311,8 @@ void FootCtrl::update_damage(float (*mtx)[4], const LumbarCtrl &lumbar, EFootCtr
     JGeometry::TVec3f side;
     JGeometry::TVec3f dir;
     JGeometry::TVec3f local;
-    last = lumbar.mNodeMgr->getNodeObj((u8)(mParam->m58 - 1))->mPos;
-    top = lumbar.mNodeMgr->getNodeObj(0)->mPos;
+    last = lumbar.getStringNodeMgr()->getNodeObj((u8)(mParam->m58 - 1))->mPos;
+    top = lumbar.getStringNodeMgr()->getNodeObj(0)->mPos;
     d.sub(last, top);
     d.scale(lumbar.mScale.x);
     end.add(top, d);
@@ -322,7 +322,7 @@ void FootCtrl::update_damage(float (*mtx)[4], const LumbarCtrl &lumbar, EFootCtr
         referNum = sSkirtReferNum;
     else
         referNum = param->m2d;
-    refer = lumbar.mNodeMgr->getNodeObj(referNum)->mPos;
+    refer = lumbar.getStringNodeMgr()->getNodeObj(referNum)->mPos;
     d.sub(refer, top);
     d.scale(lumbar.mScale.x);
     refer.add(top, d);
@@ -356,7 +356,7 @@ void FootCtrl::update_damage(float (*mtx)[4], const LumbarCtrl &lumbar, EFootCtr
         JGeometry::TVec3f y;
         JGeometry::TVec3f z;
         JGeometry::TVec3f xdir;
-        skirt = lumbar.mNodeMgr->getNodeObj(sSkirtReferNum)->mPos;
+        skirt = lumbar.getStringNodeMgr()->getNodeObj(sSkirtReferNum)->mPos;
         sd.sub(end, skirt);
         stVecNormalize(sd);
         ObjUtility::getKartXdir(mKartNo, &xdir);

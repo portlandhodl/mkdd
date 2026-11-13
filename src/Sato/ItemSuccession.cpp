@@ -331,8 +331,10 @@ void ItemJuggle::doMoveJuggleEquip(const JGeometry::TVec3f &pos, Mtx mtx, JGeome
     _3c.x = v.x;
     _3c.z = v.z;
     if (mObj->mSuccessionParent->mJuggleFirst)
+    {
         mObj->mVel.y += _2c.z;
-    _3c.y += mObj->mVel.y;
+        _3c.y += mObj->mVel.y;
+    }
 
     _48 = _3c;
     _48.scale(scale);
@@ -370,6 +372,30 @@ __declspec(weak) f32 ItemObjSuc::getRotAxisRatio()
     return sJuggleRotAxisRatio;
 }
 
+static inline void stMakeRotMtx(Mtx m, s16 x, s16 y, s16 z)
+{
+    f32 cz = JMASCos(z);
+    f32 sy = JMASSin(y);
+    f32 sz = JMASSin(z);
+    f32 cx = JMASCos(x);
+    f32 cy = JMASCos(y);
+    f32 sx = JMASSin(x);
+    f32 cxcz = cx * cz;
+    f32 cxsz = cx * sz;
+    m[0][0] = cy * cz;
+    m[1][0] = cy * sz;
+    m[2][0] = -sy;
+    f32 sxsy = sx * sy;
+    f32 sxsz = sx * sz;
+    m[0][1] = sxsy * cz - cxsz;
+    m[1][1] = sxsy * sz + cxcz;
+    m[2][1] = sx * cy;
+    f32 sxcz = sx * cz;
+    m[0][2] = cxcz * sy + sxsz;
+    m[1][2] = cxsz * sy - sxcz;
+    m[2][2] = cx * cy;
+}
+
 void ItemBuild::ParamInit(const JGeometry::TVec3<s16> &rot)
 {
     mCount = 0;
@@ -394,27 +420,7 @@ void ItemBuild::ParamInit(const JGeometry::TVec3<s16> &rot)
 
     if (mObj->mSuccessionItemLink.getList() != nullptr)
     {
-        s16 ry = rot.y;
-        s16 rx = rot.x;
-        s16 rz = rot.z;
-
-        f32 cy = JMASCos(ry);
-        f32 cz = JMASCos(rz);
-        f32 sz = JMASSin(rz);
-        f32 cx = JMASCos(rx);
-        f32 sx = JMASSin(rx);
-        f32 sy = JMASSin(ry);
-
-        Mtx &mtx = mObj->_210;
-        mtx[0][0] = cy * cz;
-        mtx[1][0] = cy * sz;
-        mtx[2][0] = -sy;
-        mtx[0][1] = sx * sy * cz - cx * sz;
-        mtx[1][1] = sx * sy * sz + cx * cz;
-        mtx[2][1] = sx * cy;
-        mtx[0][2] = cx * cz * sy + sx * sz;
-        mtx[1][2] = cx * sz * sy - sx * cz;
-        mtx[2][2] = cx * cy;
+        stMakeRotMtx(mObj->_210, rot.x, rot.y, rot.z);
 
         f32 gravUp = mObj->mSuccessionParent->mJuggleGravityUp;
         f32 rnd = mObj->getItemRnd()->get_ufloat_1();
@@ -915,10 +921,10 @@ void ItemObjSuc::doDivested()
             {
                 mJuggleFirst = 1;
                 mTransferFlags &= ~0x40;
-                doEquip();
             }
         }
     }
+    doEquip();
 
     int num = 0;
     for (JSULink<ItemObj> *link = _1a4.getFirst(); link != nullptr; link = link->getNext())
