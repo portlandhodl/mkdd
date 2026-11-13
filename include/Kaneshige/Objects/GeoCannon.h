@@ -53,7 +53,11 @@ public:
 
     //virtual ~GeoCannon() {}                                           // 0x801c05d4
 
+#ifdef __MWERKS__
     virtual GeoCannonSupervisor *getSupervisor() { return sSupervisor; }
+#else
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     virtual const char *getBmdFileName() { return "/Objects/Cannon1.bmd"; } // 0x801c065c
     static GeoCannonSupervisor *getSupervisor() { return sSupervisor; }
     

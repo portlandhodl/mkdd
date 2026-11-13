@@ -34,7 +34,11 @@ public:
     virtual void calc(); // 0x802cdb4c
 
 
+#ifdef __MWERKS__
     virtual THanabiSupervisor *getSupervisor() { return sSupervisor; }
+#else
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     // ??? GeographyObj::getSupervisor() is a virtual function which this class inherits from (via TMapObjHioNode)
     // and thus this overrides the function in the vtable
     // but is this even valid in C++?

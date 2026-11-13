@@ -67,6 +67,8 @@ enum VideoMode
 // is this even a class?
 class KartLocale {
 private:
+    friend class Race2D;
+
     static Country msCountry;
     static Region msRegion;
     static DatingMode msDatingMode;

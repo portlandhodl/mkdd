@@ -15,7 +15,7 @@
 #include "JSystem/JUtility/JUTNameTab.h"
 #include "JSystem/JUtility/TColor.h"
 #include "JSystem/J2D/J2DGrafContext.h"
-#include "JSystem/J2D/J2DMaterialfactory.h"
+#include "JSystem/J2D/J2DMaterialFactory.h"
 #include "JSystem/J3D/J3DTypes.h"
 #include "types.h"
 

@@ -88,6 +88,9 @@ public:
     virtual void update();                            // 0x8029FAF0
     virtual void doKartColCallBack(int);              // 0x8029FE3C
     virtual TPoihanaSupervisor *getSupervisor() { return sSupervisor; } // 0x8029F67C
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     virtual void getKartThrowDirPow(JGeometry::TVec3f *, f32 *, int); // 0x802A1D84
     virtual void getThrowDir(JGeometry::TVec3f *, s16);               // 0x802A1E10
     void thunderDown();

@@ -44,7 +44,11 @@ public:
     // Inline
     virtual ~TMapObjPool(); // 0x802c2134
     virtual const char *getBmdFileName() { return "/Objects/Pool.bmd"; } // 0x802c2b00
+#ifdef __MWERKS__
     virtual TPoolSupervisor *getSupervisor() { return sSupervisor; }
+#else
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
 
     static TPoolSupervisor *getSupervisor() { return sSupervisor; }
 private: // TODO

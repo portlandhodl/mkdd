@@ -115,7 +115,11 @@ public:
     //virtual ~GeoWater() {}                                             // 0x801c4e94
     virtual const char *getBmdFileName() { return "/Objects/sea1_spc.bmd"; } // 0x801c4f1c
     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; }    // 0x801c4f28
+#ifdef __MWERKS__
     virtual GeoWaterSupervisor *getSupervisor() { return sSupervisor; }
+#else
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     static GeoWaterSupervisor *getSupervisor() { return sSupervisor; }
  
     friend class GeoWaterSupervisor;

@@ -47,6 +47,9 @@ public:
     virtual void doKartColCallBack(int);
     virtual u32 getSoundID() const { return 0x10056; }
     virtual TPakkunSupervisor *getSupervisor() { return sSupervisor; }
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
 
     void changeDamageProc();
     u8 checkHeadDamage();

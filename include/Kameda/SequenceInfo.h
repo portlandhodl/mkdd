@@ -318,7 +318,9 @@ private:
     int _2b8[8];               // 2B8
     int _2d8[8];               // 2D8
     int _2f8[8];               // 2F8
+#ifdef __MWERKS__
     union {
+#endif
         struct {
             ECharID _0[2];     // 00
             EKartID _8;        // 08
@@ -328,7 +330,9 @@ private:
             KartGamePad *_18;  // 18
             // Size: 0x1c
         } _318[2];             // 318
+#ifdef __MWERKS__
     };
+#endif
 
 public:
     int _350;                  // 350 (number of [human] players?)

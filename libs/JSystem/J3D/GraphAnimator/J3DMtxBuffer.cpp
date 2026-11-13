@@ -141,6 +141,58 @@ int J3DMtxBuffer::createDoubleDrawMtx(J3DModelData* pModelData, u32 mtxNum)
 
 int J3DMtxBuffer::createBumpMtxArray(J3DModelData* i_modelData, u32 mtxNum)
 {
+#ifndef __MWERKS__
+    if (i_modelData->getModelDataType() == 0) {
+        u32 bumpMtxNum = 0;
+        u32 materialNum = i_modelData->getMaterialNum();
+        u32 bumpMatNum = 0;
+        for (u16 i = 0; i < materialNum; i++) {
+            J3DMaterial* material = i_modelData->getMaterialNodePointer(i);
+            if (material->getNBTScale()->mHasScale == 1) {
+                bumpMtxNum += material->getShape()->countBumpMtxNum();
+                bumpMatNum++;
+            }
+        }
+
+        if ((u16)bumpMtxNum != 0 && mtxNum != 0) {
+            for (int i = 0; i < 2; i++) {
+                mBumpMatrices[i] = new Mtx33**[(u16)bumpMatNum];
+            }
+        }
+
+        for (int i = 0; i < 2; i++) {
+            u32 num = i_modelData->getMaterialNum();
+            int offset = 0;
+            for (u16 j = 0; j < num; j++) {
+                J3DMaterial* material = i_modelData->getMaterialNodePointer(j);
+                if (material->getNBTScale()->mHasScale == 1) {
+                    mBumpMatrices[i][offset] = new Mtx33*[mtxNum];
+                    material->getShape()->setBumpMtxOffset(offset);
+                    offset++;
+                }
+            }
+        }
+
+        for (int i = 0; i < 2; i++) {
+            u32 num = i_modelData->getMaterialNum();
+            int offset = 0;
+            for (u16 j = 0; j < num; j++) {
+                J3DMaterial* material = i_modelData->getMaterialNodePointer(j);
+                if (material->getNBTScale()->mHasScale == 1) {
+                    for (u32 k = 0; k < mtxNum; k++) {
+                        mBumpMatrices[i][offset][k] = new (0x20) Mtx33[i_modelData->getDrawMtxNum()];
+                    }
+                    offset++;
+                }
+            }
+        }
+
+        if ((u16)bumpMatNum != 0) {
+            i_modelData->setBumpFlag(1);
+        }
+    }
+    return 0;
+#else
     // Typed sibling code differs only in the first loop's register assignment
     // (r24/r28 instead of r28/r29), so retain the exact target implementation.
     __asm {
@@ -294,10 +346,57 @@ int J3DMtxBuffer::createBumpMtxArray(J3DModelData* i_modelData, u32 mtxNum)
     L_bump_end:
         li r3,0
     }
+#endif
 }
 
 static f32 J3DUnit01[] = {0.0f, 1.0f};
 
+#ifndef __MWERKS__
+void J3DMtxBuffer::calcWeightEnvelopeMtx()
+{
+    int max = mJointTree->getWEvlpMtxNum();
+    u16* indices = mJointTree->getWEvlpMixIndex();
+    f32* weights = mJointTree->getWEvlpMixWeight();
+
+    for (int i = 0; i < max; i++) {
+        u8* pScale = &mEnvelopeScaleFlags[i];
+        *pScale = 1;
+        MtxPtr weightAnmMtx = mWeightEnvelopeMatrices[i];
+        f32 acc[3][4] = {
+            {0.0f, 0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f, 0.0f},
+        };
+
+        int j = 0;
+        int mixNum = mJointTree->getWEvlpMixMtxNum(i);
+        do {
+            int idx = *indices++;
+            f32 weight = *weights++;
+            MtxPtr invMtx = mJointTree->getInvJointMtx((u16)idx);
+            MtxPtr worldMtx = mWorldMatrices[idx];
+
+            for (int r = 0; r < 3; r++) {
+                for (int c = 0; c < 4; c++) {
+                    f32 v = invMtx[0][c] * worldMtx[r][0] + invMtx[1][c] * worldMtx[r][1] + invMtx[2][c] * worldMtx[r][2];
+                    if (c == 3) {
+                        v += worldMtx[r][3];
+                    }
+                    acc[r][c] += v * weight;
+                }
+            }
+
+            *pScale &= mScaleFlags[idx];
+        } while (++j < mixNum);
+
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 4; c++) {
+                weightAnmMtx[r][c] = acc[r][c];
+            }
+        }
+    }
+}
+#else
 void J3DMtxBuffer::calcWeightEnvelopeMtx()
 {
     register MtxPtr weightAnmMtx;
@@ -425,6 +524,7 @@ void J3DMtxBuffer::calcWeightEnvelopeMtx()
         }
     }
 }
+#endif
 
 void J3DMtxBuffer::calcDrawMtx(u32 mdlFlag, Vec const& param_1, Mtx const& param_2)
 {

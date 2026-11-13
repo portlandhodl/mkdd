@@ -147,18 +147,20 @@ namespace ReadPrintMessage
             case 0xff:
                 switch (tagID)
                 {
-                case 0:
+                case 0: {
                     JUTColor color = getColor(bmcPtr, tagData[0]);
                     snprintf(buf, sizeof(buf), "\eCC[%02X%02X%02X%02X]\eGC[%02X%02X%02X%02X]",
                              color.r, color.g, color.b, color.a,
                              color.r, color.g, color.b, color.a);
                     break;
-                case 1:
+                }
+                case 1: {
                     u16 scalar = (u16)((tagData[0] << 8) + tagData[1]);
                     int fontX = fontSize.x * scalar / 100.0f;
                     int fontY = fontSize.y * scalar / 100.0f;
                     snprintf(buf, sizeof(buf), "\eFX[%d]\eFY[%d]", fontX, fontY);
                     break;
+                }
                 default:
 #line 240
                     JUT_ASSERT(0);

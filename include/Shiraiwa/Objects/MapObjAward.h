@@ -78,6 +78,9 @@ public:
     virtual const char *getBmdFileName() = 0;
     virtual const char *getBtpFileName() = 0;
     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     virtual u32 getJ3DModelDataTevStageNum() const { return 0x20000; }
     friend class TMapObjAwardItemBox;
     friend class TAwardCupSupervisor;

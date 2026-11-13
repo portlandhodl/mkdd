@@ -3,6 +3,29 @@
 #include "JSystem/J3D/J3DTexMtx.h"
 #include "JSystem/J3D/J3DTypes.h"
 
+#ifndef __MWERKS__
+static inline void J3DCopySRTInfo(J3DTextureSRTInfo* dstInfo, const J3DTextureSRTInfo* srcInfo)
+{
+    dstInfo->mScaleX = srcInfo->mScaleX;
+    dstInfo->mScaleY = srcInfo->mScaleY;
+    *(u32*)&dstInfo->mRotation = *(u32*)&srcInfo->mRotation;
+    dstInfo->mTranslationX = srcInfo->mTranslationX;
+    dstInfo->mTranslationY = srcInfo->mTranslationY;
+}
+
+static inline void J3DPSCopyN(void* dst, const void* src, int n)
+{
+    const f32* s = (const f32*)src;
+    f32* d = (f32*)dst;
+    for (int i = 0; i < n; i++) {
+        d[i] = s[i];
+    }
+}
+
+static inline void J3DPSCopy3(void* dst, const void* src) { J3DPSCopyN(dst, src, 3); }
+static inline void J3DPSCopy6(void* dst, const void* src) { J3DPSCopyN(dst, src, 6); }
+static inline void J3DPSCopy16(void* dst, const void* src) { J3DPSCopyN(dst, src, 16); }
+#else
 static inline void J3DCopySRTInfo(J3DTextureSRTInfo* dstInfo, const J3DTextureSRTInfo* srcInfo)
 {
     register const f32* src = &srcInfo->mScaleX;
@@ -77,6 +100,7 @@ static inline void J3DPSCopy16(register void* dst, register const void* src)
         psq_st v7, 56(dst), 0, 0
     }
 }
+#endif
 
 bool J3DTransformInfo::operator==(J3DTransformInfo& other) const
 {
@@ -157,7 +181,12 @@ void J3DTexMtxInfo::setEffectMtx(Mtx mtx)
     JMath::gekko_ps_copy12(mEffectMtx, mtx);
     register f32 zero = 0.0f;
     register f32* dst = mEffectMtx[3];
+#ifndef __MWERKS__
+    dst[0] = zero;
+    dst[1] = zero;
+#else
     asm { psq_st zero, 0(dst), 0, 0 }
+#endif
     mEffectMtx[3][2] = 0.0f;
     mEffectMtx[3][3] = 1.0f;
 }

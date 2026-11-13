@@ -286,7 +286,11 @@ public:
     void calc() { mTempo = mTransition.apply(mTempo); }
 };
 
+#ifdef __MWERKS__
 class JAISoundChild : JASPoolAllocObject<JAISoundChild>
+#else
+class JAISoundChild : public JASPoolAllocObject<JAISoundChild>
+#endif
 {
 public:
     void init();

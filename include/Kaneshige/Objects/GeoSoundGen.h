@@ -33,6 +33,9 @@ public:
     // Inline
     //virtual ~GeoSoundGen(); // 0x801d4f98
     virtual GeoSoundGenSupervisor *getSupervisor() { return sSupervisor; } // 0x801d5000
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
 private:
     friend class GeoSoundGenSupervisor;
     static GeoSoundGenSupervisor *sSupervisor; // 0x80416590

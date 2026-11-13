@@ -1,4 +1,4 @@
-#include "JSystem/JAudio/DSP.h"
+#include "JSystem/JAudio/dsp.h"
 #include "JSystem/JAudio/System/JASCalc.h"
 #include "JSystem/JAudio/System/JASCriticalSection.h"
 #include "JSystem/JAudio/System/JASDsp.h"

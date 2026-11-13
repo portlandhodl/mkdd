@@ -1927,6 +1927,15 @@ void JPEffectPerformer::deleteKartEfctTireSand(int kartNo)
     }
 }
 
+#ifndef __MWERKS__
+static inline f32 JPSquareDistance(const Vec *a, const Vec *b)
+{
+    f32 dx = a->x - b->x;
+    f32 dy = a->y - b->y;
+    f32 dz = a->z - b->z;
+    return (dx * dx + dy * dy) + dz * dz;
+}
+#else
 static inline f32 JPSquareDistance(register const Vec *a, register const Vec *b)
 {
     register f32 v0yz, v1yz, v0xy, v1xy, dyz, dxy, sqdist;
@@ -1945,6 +1954,7 @@ static inline f32 JPSquareDistance(register const Vec *a, register const Vec *b)
     // clang-format on
     return sqdist;
 }
+#endif
 
 static inline KartCam *JPGetCamera(int cameraNo)
 {

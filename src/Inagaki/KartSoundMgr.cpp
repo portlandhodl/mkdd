@@ -687,6 +687,7 @@ void KartSoundMgr::setSlip(u8 wheel, u8 attribute, u8 material, f32 slipDegree)
             seIndex = 0;
             break;
         case 0:
+        {
             slipBias = 0.1f;
             const u8 type = Parameters::getCharacterType(mKartIndex);
             if (type == 1)
@@ -698,6 +699,7 @@ void KartSoundMgr::setSlip(u8 wheel, u8 attribute, u8 material, f32 slipDegree)
                 seIndex = 1;
             }
             break;
+        }
         case 7:
             if (attribute == 1)
             {
@@ -2531,7 +2533,7 @@ void KartSoundMgr::setInvincibleBgm(u8 bit)
             mInvincibleBgmBits |= 2;
             return;
         default:
-#line 0xb5b
+#line 2907
             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
             return;
         }
@@ -2549,7 +2551,7 @@ void KartSoundMgr::setInvincibleBgm(u8 bit)
             mInvincibleBgmBits |= 2;
             return;
         default:
-#line 0xb6b
+#line 2923
             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
             return;
         }
@@ -2582,7 +2584,7 @@ void KartSoundMgr::clearInvincibleBgm(u8 bit)
             mInvincibleBgmBits = 0;
             break;
         default:
-#line 0xb87
+#line 2951
             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
             break;
         }
@@ -2624,7 +2626,7 @@ void KartSoundMgr::clearInvincibleBgm(u8 bit)
             mInvincibleBgmBits = 0;
             return;
         default:
-#line 0xba8
+#line 2984
             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
             return;
         }

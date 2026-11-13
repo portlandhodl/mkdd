@@ -730,7 +730,7 @@ void SceneOption::calc() {
     case 4:
         nextScene();
         break;
-    case 3:
+    case 3: {
         if (CardAgent::msState != 0)
             break;
         if (CardAgent::mspPrintMemoryCard->_d == 0)
@@ -744,6 +744,7 @@ void SceneOption::calc() {
             System::getDisplay()->getFader()->startFadeOut(15);
         GameAudio::Main::getAudio()->fadeOutAll(15);
         break;
+    }
     default:
 #line 1259
         JUT_ASSERT_F(0, "%s", "0");

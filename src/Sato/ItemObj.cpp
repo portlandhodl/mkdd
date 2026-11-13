@@ -1033,7 +1033,7 @@ void ItemObj::setFrameNoColKart(u8 max, bool clr)
     }
     else
     {
-#line 0x760 "ItemObj.cpp"
+#line 1888 "ItemObj.cpp"
         JUT_MINMAX_ASSERT(0, mOwnerNum, 8);
         mEquipFlags &= ~(1 << mOwnerNum);
     }
@@ -1053,7 +1053,7 @@ void ItemObj::doFrameNoColKart()
                 mEquipFlags = -1;
                 return;
             }
-#line 0x778 "ItemObj.cpp"
+#line 1912 "ItemObj.cpp"
             JUT_MINMAX_ASSERT(0, mOwnerNum, 8);
             mEquipFlags |= (1 << mOwnerNum);
         }
@@ -1064,7 +1064,7 @@ void ItemObj::doFrameNoColKart()
                 mEquipFlags = 0;
                 return;
             }
-#line 0x781 "ItemObj.cpp"
+#line 1921 "ItemObj.cpp"
             JUT_MINMAX_ASSERT(0, mOwnerNum, 8);
             mEquipFlags &= ~(1 << mOwnerNum);
         }

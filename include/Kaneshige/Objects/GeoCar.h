@@ -127,6 +127,9 @@ public:
     virtual void setRMtx();                             // 0x801bb960
     virtual u32 getSoundCarType() const { return 4; }   // 0x801bcf88
     virtual GeoCarSupervisor *getSupervisor() { return sSupervisor; } // 0x801bcf90, overide
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; }   // 0x801bcf98, overide
     virtual const Vec &getTirePosOffset(int) = 0;       // 0x0
     virtual bool isBlast() { return false; }            // 0x801ba8c0

@@ -24,11 +24,11 @@ def sources():
 
 def check(path):
     r = subprocess.run(["clang++", *FLAGS, path], cwd=ROOT, capture_output=True, text=True)
-    errs = [l for l in r.stderr.splitlines() if ": error:" in l]
+    errs = [l for l in r.stderr.splitlines() if ": error:" in l or ": fatal error:" in l]
     return path, errs
 
 def norm(msg):
-    msg = msg.split(": error: ", 1)[1]
+    msg = re.split(r": (?:fatal )?error: ", msg, maxsplit=1)[1]
     msg = re.sub(r"'[^']*'", "'X'", msg)
     return msg
 

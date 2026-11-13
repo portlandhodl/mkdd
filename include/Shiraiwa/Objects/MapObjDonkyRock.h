@@ -56,6 +56,9 @@ public:
     void doFunc_Break();
     virtual void doKartColCallBack(int);
     virtual TDonkyRockSupervisor *getSupervisor() { return sSupervisor; }
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
 
     static TDonkyRockSupervisor *sSupervisor;
     static f32 sReflectRate;

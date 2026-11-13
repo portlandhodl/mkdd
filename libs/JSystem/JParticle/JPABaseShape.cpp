@@ -1032,6 +1032,32 @@ static const f32 jpa_c25 = 25.0f;
 static const f32 jpa_c32 = 32.0f;
 
 // hand-written: the compiler schedules the GX FIFO writes differently
+#ifndef __MWERKS__
+void JPADrawLine(JPAEmitterWorkData *work, JPABaseParticle *particle)
+{
+    if (particle->checkStatus(8) == 0)
+    {
+        JGeometry::TVec3f position1;
+        JGeometry::TVec3f position2;
+        position1.set(particle->mPosition);
+        particle->getVelVec(&position2);
+        if (!position2.isZero())
+        {
+            position2.setLength(work->mGlobalPtclScl.y * (25.0f * particle->mParticleScaleY));
+            position2.sub(position1, position2);
+            GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
+            GXSetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+            GXBegin(GX_LINES, GX_VTXFMT1, 2);
+            GXPosition3f32(position1.x, position1.y, position1.z);
+            GXTexCoord2f32(0.0f, 0.0f);
+            GXPosition3f32(position2.x, position2.y, position2.z);
+            GXTexCoord2f32(0.0f, 1.0f);
+            GXSetVtxDesc(GX_VA_POS, GX_INDEX8);
+            GXSetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+        }
+    }
+}
+#else
 void JPADrawLine(JPAEmitterWorkData *work, JPABaseParticle *particle)
 {
     JGeometry::TVec3f position1;
@@ -1143,6 +1169,7 @@ void JPADrawLine(JPAEmitterWorkData *work, JPABaseParticle *particle)
     line_end:
     }
 }
+#endif
 
 static JPANode<JPABaseParticle> *getNext(JPANode<JPABaseParticle> *node) { return node->getNext(); }
 

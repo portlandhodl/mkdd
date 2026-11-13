@@ -41,6 +41,9 @@ public:
     bool isSameGroup(s16 groupId) const { return mObjData->mParam1 == groupId; } // 0x801d281c
     //virtual ~GeoTideSensor(); // 0x801d29dc
     virtual GeoTideSensorSupervisor *getSupervisor() { return sSupervisor; } // 0x801d2a44
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
 private:
     friend class GeoTideSensorSupervisor;
 

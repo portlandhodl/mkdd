@@ -83,11 +83,16 @@ public:
     f32 getMarkScale() const { return mMarkScale; }
     f32 getFootLength() const { return sFootLength; } 
 
+#ifdef __MWERKS__
     virtual GeoRabbitMarkSupervisor *getSupervisor() { return sSupervisor; }
+#else
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     static GeoRabbitMarkSupervisor *getSupervisor() { return sSupervisor; }
 
 
     friend class GeoRabbitMarkSupervisor;
+    friend class Race2D;
 private:
     static StateFuncSet<GeoRabbitMark> sTable[3]; // 0x803979d8
     static f32 sFootLength;                       // 0x80414728

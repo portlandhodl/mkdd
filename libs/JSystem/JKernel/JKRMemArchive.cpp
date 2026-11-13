@@ -229,7 +229,7 @@ u32 JKRMemArchive::fetchResource_subroutine(u8 *src, u32 srcLength, u8 *dst, u32
         return srcLength;
 
     case JKRCOMPRESSION_YAY0:
-    case JKRCOMPRESSION_YAZ0:
+    case JKRCOMPRESSION_YAZ0: {
         u32 expendedSize = JKRDecompExpandSize(src);
         srcLength = expendedSize;
         if (expendedSize > dstLength)
@@ -237,6 +237,7 @@ u32 JKRMemArchive::fetchResource_subroutine(u8 *src, u32 srcLength, u8 *dst, u32
 
         JKRDecompress(src, dst, srcLength, 0);
         return srcLength;
+    }
 
     default:
     {

@@ -293,6 +293,54 @@ void setTevKColorSel__12J2DPictureExFUc();
 void setTevKAlphaSel__12J2DPictureExFUc();
 }
 
+#ifndef __MWERKS__
+void J2DPictureEx::insertCommon(u8 index, f32 blendRatio)
+{
+    u8 texGenNum = mMaterial->mTexGenBlock.mTexGenNum;
+    mMaterial->mTevBlock->getMaxStage();
+    u8 tevStageNum = mMaterial->mTevBlock->getTevStageNum();
+    bool flag;
+    if (texGenNum <= 1) {
+        flag = tevStageNum != 1;
+    } else {
+        flag = tevStageNum != texGenNum + 1;
+    }
+
+    shiftSetBlendRatio(index, blendRatio, true, true);
+    shiftSetBlendRatio(index, blendRatio, false, true);
+
+    texGenNum++;
+    mMaterial->mTexGenBlock.mTexGenNum = texGenNum;
+
+    for (int i = texGenNum - 1; i >= index; i--) {
+        J2DTexCoordInfo& info = mMaterial->mTexGenBlock.getTexCoord((u8)i).mTexCoordInfo;
+        info.mTexGenType = GX_TG_MTX2x4;
+        info.mTexGenSrc = GX_TG_TEX0;
+        info.mTexGenMtx = i * 3 + 30;
+    }
+
+    for (int i = texGenNum - 1; i > index; i--) {
+        mMaterial->mTexGenBlock.setTexMtx((u8)i, mMaterial->mTexGenBlock.getTexMtx((u8)(i - 1)));
+    }
+
+    J2DTexMtx texMtx(j2dDefaultTexMtxInfo);
+    mMaterial->mTexGenBlock.setTexMtx(index, texMtx);
+
+    u8 stageNum;
+    if (texGenNum == 1) {
+        stageNum = 1;
+    } else {
+        stageNum = texGenNum + (flag ? 2 : 1);
+    }
+    mMaterial->mTevBlock->setTevStageNum(stageNum);
+
+    setTevOrder(texGenNum, stageNum, flag);
+    setTevStage(texGenNum, stageNum, flag);
+    setTevKColor(texGenNum);
+    setTevKColorSel(texGenNum);
+    setTevKAlphaSel(texGenNum);
+}
+#else
 asm void J2DPictureEx::insertCommon(u8 index, f32 blendRatio)
 {
     nofralloc
@@ -469,6 +517,7 @@ Lcc0:
     addi r1,r1,160
     blr
 }
+#endif
 
 bool J2DPictureEx::isInsert(u8 p1) const
 {

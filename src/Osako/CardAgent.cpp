@@ -3,7 +3,7 @@
 #include "Osako/ResetAgent.h"
 #include "Osako/SystemRecord.h"
 
-#include <JSystem/JUTility/JUTDbg.h>
+#include <JSystem/JUtility/JUTDbg.h>
 
 // TODO: documentation, inline rework
 

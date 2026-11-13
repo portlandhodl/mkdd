@@ -189,7 +189,7 @@ void SequenceApp::reset() {}
 
 void SequenceApp::loadTask(void *arg)
 {
-    Scene::SceneType scene = (Scene::SceneType)arg;
+    Scene::SceneType scene = (Scene::SceneType)(int)arg;
     SceneFactory::ptr()->loadData(scene, ptr()->mHeap);
 
     BOOL enable = OSDisableInterrupts();

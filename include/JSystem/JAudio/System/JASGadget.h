@@ -43,6 +43,11 @@ public:
     static T *sInstance;
 };
 
+#ifndef __MWERKS__
+template <class T>
+T *JASGlobalInstance<T>::sInstance;
+#endif
+
 template <class T>
 class JASPtrTable
 {

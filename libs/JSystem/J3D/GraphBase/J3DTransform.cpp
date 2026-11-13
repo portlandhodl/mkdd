@@ -20,7 +20,9 @@ const Mtx j3dDefaultMtx = {
 static f32 Unit01[2] = {0.0f, 1.0f};
 
 void __MTGQR7(register u32 v) {
+#ifdef __MWERKS__
     asm { mtspr GQR7, v }
+#endif
 }
 
 void J3DGQRSetup7(u32 r0, u32 r1, u32 r2, u32 r3) {
@@ -30,7 +32,9 @@ void J3DGQRSetup7(u32 r0, u32 r1, u32 r2, u32 r3) {
 }
 
 void __MTGQR6(register u32 v) {
+#ifdef __MWERKS__
     asm { mtspr GQR6, v }
+#endif
 }
 
 void J3DGQRSetup6(u32 r0, u32 r1, u32 r2, u32 r3) {
@@ -43,7 +47,11 @@ inline f32 J3D_sqrtf(register f32 x) {
     register f32 recip;
 
     if (x > 0.0f) {
+#ifndef __MWERKS__
+        recip = __frsqrte(x);
+#else
         asm { frsqrte recip, x }
+#endif
         return recip * x;
     }
     return x;
@@ -65,10 +73,17 @@ void J3DCalcBBoardMtx(register Mtx mtx) {
     }
 
     register f32 zero = 0.0f;
+#ifndef __MWERKS__
+    mtx[0][1] = zero;
+    mtx[0][2] = zero;
+    mtx[2][0] = zero;
+    mtx[2][1] = zero;
+#else
     asm {
         psq_st zero, 0x04(mtx), 0, 0
         psq_st zero, 0x20(mtx), 0, 0
     }
+#endif
 
     mtx[0][0] = x;
     mtx[1][0] = 0.0f;
@@ -100,7 +115,39 @@ void J3DCalcYBBoardMtx(Mtx mtx) {
     mtx[2][2] = vec.z * z;
 }
 
-#ifdef __MWERKS__  // clang-format off
+#ifndef __MWERKS__
+void J3DPSCalcInverseTranspose(Mtx src, Mtx33 dst) {
+    f32 a00 = src[0][0], a01 = src[0][1], a02 = src[0][2];
+    f32 a10 = src[1][0], a11 = src[1][1], a12 = src[1][2];
+    f32 a20 = src[2][0], a21 = src[2][1], a22 = src[2][2];
+
+    f32 c00 = a11 * a22 - a21 * a12;
+    f32 c01 = a12 * a20 - a22 * a10;
+    f32 c02 = a10 * a21 - a11 * a20;
+    f32 c10 = a21 * a02 - a01 * a22;
+    f32 c11 = a22 * a00 - a02 * a20;
+    f32 c12 = a01 * a20 - a00 * a21;
+    f32 c20 = a01 * a12 - a11 * a02;
+    f32 c21 = a02 * a10 - a12 * a00;
+    f32 c22 = a00 * a11 - a01 * a10;
+
+    f32 det = a00 * c00 + a10 * c10 + a20 * c20;
+    if (det == 0.0f) {
+        return;
+    }
+    f32 inv = 1.0f / det;
+
+    dst[0][0] = c00 * inv;
+    dst[0][1] = c01 * inv;
+    dst[0][2] = c02 * inv;
+    dst[1][0] = c10 * inv;
+    dst[1][1] = c11 * inv;
+    dst[1][2] = c12 * inv;
+    dst[2][0] = c20 * inv;
+    dst[2][1] = c21 * inv;
+    dst[2][2] = c22 * inv;
+}
+#else  // clang-format off
 asm void J3DPSCalcInverseTranspose(register Mtx src, register Mtx33 dst) {
 	psq_l    f0, 0(src), 1, 0
 	psq_l    f1, 4(src), 0, 0
@@ -154,8 +201,8 @@ lbl_8005F118:
 	li       r3, 1
 	psq_st   f8, 32(r4), 1, 0
 	blr
-#endif  // clang-format on
 }
+#endif  // clang-format on
 
 void J3DGetTranslateRotateMtx(const J3DTransformInfo& tx, Mtx dst) {
     f32 cxsz;
@@ -289,7 +336,15 @@ void J3DGetTextureMtxMayaOld(const J3DTextureSRTInfo& srt, Mtx dst) {
     dst[2][2] = 1.0f;
 }
 
-#ifdef __MWERKS__  // clang-format off
+#ifndef __MWERKS__
+void J3DScaleNrmMtx(Mtx mtx, const Vec& scl) {
+    for (int i = 0; i < 3; i++) {
+        mtx[i][0] *= scl.x;
+        mtx[i][1] *= scl.y;
+        mtx[i][2] *= scl.z;
+    }
+}
+#else  // clang-format off
 asm void J3DScaleNrmMtx(register Mtx mtx, const register Vec& scl) {
 	nofralloc;
 
@@ -322,10 +377,18 @@ asm void J3DScaleNrmMtx(register Mtx mtx, const register Vec& scl) {
 	fmuls  f4, fp1, fp3
 	stfs   f4, 40(mtx)
 	blr
-#endif  // clang-format on
 }
+#endif  // clang-format on
 
-#ifdef __MWERKS__  // clang-format off
+#ifndef __MWERKS__
+void J3DScaleNrmMtx33(Mtx33 mtx, const Vec& scale) {
+    for (int i = 0; i < 3; i++) {
+        mtx[i][0] *= scale.x;
+        mtx[i][1] *= scale.y;
+        mtx[i][2] *= scale.z;
+    }
+}
+#else  // clang-format off
 asm void J3DScaleNrmMtx33(register Mtx33 mtx, const register Vec& scale) {
 	psq_l    f0, 0(mtx), 0, 0
 	psq_l    f6, 0(scale), 0, 0
@@ -348,10 +411,23 @@ asm void J3DScaleNrmMtx33(register Mtx33 mtx, const register Vec& scale) {
 	psq_st   f4, 24(mtx), 0, 0
 	stfs     f5, 0x20(mtx)
 	blr
-#endif  // clang-format on
 }
+#endif  // clang-format on
 
-#ifdef __MWERKS__  // clang-format off
+#ifndef __MWERKS__
+void J3DMtxProjConcat(Mtx mtx1, Mtx mtx2, Mtx dst) {
+    // mtx2 is read as a 4x4 matrix
+    for (int i = 0; i < 3; i++) {
+        f32 m0 = mtx1[i][0], m1 = mtx1[i][1], m2 = mtx1[i][2], m3 = mtx1[i][3];
+        for (int j = 0; j < 4; j += 2) {
+            f32 r0 = m0 * mtx2[0][j] + m1 * mtx2[1][j] + m2 * mtx2[2][j] + m3 * mtx2[3][j];
+            f32 r1 = m0 * mtx2[0][j + 1] + m1 * mtx2[1][j + 1] + m2 * mtx2[2][j + 1] + m3 * mtx2[3][j + 1];
+            dst[i][j] = r0;
+            dst[i][j + 1] = r1;
+        }
+    }
+}
+#else  // clang-format off
 asm void J3DMtxProjConcat(register Mtx mtx1, register Mtx mtx2, register Mtx dst) {
 	psq_l    f2, 0(mtx1), 0, 0
 	psq_l    f3, 8(mtx1), 0, 0
@@ -426,8 +502,8 @@ asm void J3DMtxProjConcat(register Mtx mtx1, register Mtx mtx2, register Mtx dst
 	ps_madd  f0, f9, f13, f0
 	psq_st   f0, 40(dst), 0, 0
 	blr
-#endif  // clang-format on
 }
+#endif  // clang-format on
 
 void J3DCalcHalfAngleVec(Vec* a, Vec* b, Vec* dst) {
     Vec vec;
@@ -456,7 +532,26 @@ void J3DCalcHalfAngleMtx(Vec* a, Vec* b, Mtx dst) {
     dst[1][2] = vec.x - vec.y;
 }
 
-#ifdef __MWERKS__  // clang-format off
+#ifndef __MWERKS__
+void J3DPSMtxArrayConcat(Mtx mA, Mtx mB, Mtx mAB, u32 count) {
+    for (; count != 0; count--) {
+        f32 r[3][4];
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 4; j++) {
+                r[i][j] = mA[i][0] * mB[0][j] + mA[i][1] * mB[1][j] + mA[i][2] * mB[2][j];
+            }
+            r[i][3] += mA[i][3];
+        }
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 4; j++) {
+                mAB[i][j] = r[i][j];
+            }
+        }
+        mB += 3;
+        mAB += 3;
+    }
+}
+#else  // clang-format off
 asm void J3DPSMtxArrayConcat(register Mtx mA, register Mtx mB, register Mtx mAB, register u32 count) {
 #define FP0 fp0
 #define FP1 fp1

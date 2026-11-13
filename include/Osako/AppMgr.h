@@ -47,6 +47,10 @@ public:
     static void restartCurrentApp() { msRequest |= REQUEST_RESTART; }
 
 private:
+    friend class NetGameMgr;
+    friend class SceneCourseSelect;
+    friend class SceneTitle;
+
     static KartAppEnum msGameApp;
     static KartAppEnum msNextGameApp;
     static KartAppEnum msNextNextGameApp;

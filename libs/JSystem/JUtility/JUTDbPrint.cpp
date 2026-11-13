@@ -120,7 +120,7 @@ void JUTReport(int x, int y, const char *fmt, ...)
     va_start(vl, fmt);
     char buf[256];
     enter_(x, y, 1, buf, vsnprintf(buf, sizeof(buf), fmt, vl));
-    va_end();
+    va_end(vl);
 }
 
 void JUTReport(int x, int y, int duration, const char *fmt, ...)

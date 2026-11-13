@@ -124,10 +124,12 @@ public:
     void getPointDir(JGeometry::TVec3f *);
     void setParameters();
 
-    virtual TBalloonSupervisor *getSupervisor() { return sSupervisor; }
 #ifdef __MWERKS__
-    static TBalloonSupervisor *getSupervisor() { return sSupervisor; }
+    virtual TBalloonSupervisor *getSupervisor() { return sSupervisor; }
+#else
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
 #endif
+    static TBalloonSupervisor *getSupervisor() { return sSupervisor; }
     // void sOffset;
     // void sTotalLength;
     // void sAdjustRatio;

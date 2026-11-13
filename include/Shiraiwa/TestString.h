@@ -85,6 +85,9 @@ public:
     virtual void reset();
     virtual void calc();
     virtual TTestStrSupervisor *getSupervisor() { return sSupervisor; }
+#ifndef __MWERKS__
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
 
     void load(J3DModelData *);
     void attack(const JGeometry::TVec3f &);

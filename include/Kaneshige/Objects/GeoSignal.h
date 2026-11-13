@@ -54,7 +54,11 @@ public:
     //virtual ~GeoSignal() {}                                         // 0x801be918, overide
     virtual const char *getBmdFileName() { return "/Objects/Signal1.bmd"; }      // 0x801be9a0, overide
     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; } // 0x801be9ac, overide
+#ifdef __MWERKS__
     virtual GeoSignalSupervisor *getSupervisor() { return sSupervisor; }
+#else
+    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
+#endif
     static GeoSignalSupervisor *getSupervisor() { return sSupervisor; }
 private:
     friend class GeoSignalSupervisor;
