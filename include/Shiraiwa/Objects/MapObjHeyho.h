@@ -105,9 +105,6 @@ public:
     void doFunc_Die();
     void hitCheck(TMapObjHeyho *);
     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
-#ifndef __MWERKS__
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
 
     static StateObserver::StateFuncSet<TMapObjHeyho> sTable[7];
     static TAnmInfo sAnmInfos[1];

@@ -1,4 +1,4 @@
-#include "dolphin/mtx.h"
+#include "Dolphin/mtx.h"
 #include "JSystem/JParticle/JPABlock.h"
 #include "JSystem/JParticle/JPAEmitter.h"
 #include "JSystem/JParticle/JPAResource.h"
@@ -167,7 +167,7 @@ int JPABaseEmitter::getCurrentCreateNumber() const { return mManager->pWd->mCrea
 int JPABaseEmitter::getDrawCount() const
 {
     // UNUSED FUNCTION
-DECOMP_HOST(, return 0;) }
+}
 
 void JPABaseEmitter::loadTexture(u8, _GXTexMapID)
 {

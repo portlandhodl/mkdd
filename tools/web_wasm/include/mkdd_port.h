@@ -49,6 +49,23 @@ static inline double __fsel(double c, double a, double b) { return c >= 0.0 ? a 
 static inline int __abs(int x) { return x < 0 ? -x : x; }
 static inline void *__memcpy(void *d, const void *s, unsigned long n) { return __builtin_memcpy(d, s, n); }
 
+/* Big-endian loads for data the decomp reads through u16/u32 casts
+ * (colour structs, display lists, sequence data); see patches/. */
+static inline unsigned short port_be16(const void *p)
+{
+    const unsigned char *b = (const unsigned char *)p;
+    return (unsigned short)(b[0] << 8 | b[1]);
+}
+
+static inline unsigned int port_be32(const void *p)
+{
+    const unsigned char *b = (const unsigned char *)p;
+    return (unsigned int)b[0] << 24 | (unsigned int)b[1] << 16 | (unsigned int)b[2] << 8 | b[3];
+}
+
+/* Widescreen hack: 3D perspective aspect multiplier (sdk/vi_pad.c; patches/*-widescreen). */
+extern float port_wide_aspect;
+
 #ifdef __cplusplus
 }
 #endif

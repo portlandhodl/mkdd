@@ -14,7 +14,6 @@
 class CrsArea;
 class JASAudioReseter;
 class JAISoundHandles;
-class Race2D;
 
 namespace GameAudio {
 
@@ -144,8 +143,6 @@ public:
     };
 
 private:
-    friend class ::Race2D;
-
     static Main *msBasic;
 
     CustomMgr *mMgr;              // 00

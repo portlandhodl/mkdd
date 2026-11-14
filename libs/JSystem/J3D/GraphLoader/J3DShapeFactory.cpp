@@ -125,15 +125,6 @@ void J3DShapeFactory::allocVcdVatCmdBuffer(u32 count)
 
 int J3DShapeFactory::calcSize(int shapeNo, u32 flag)
 {
-#ifndef __MWERKS__
-    u32 mtxGroupNum = mInitData[mInitDataIndices[shapeNo]].mMtxGroupNum;
-    int size = 0x68 + mtxGroupNum * 4 + mtxGroupNum * 4;
-    for (u32 i = 0; i < mtxGroupNum; i++) {
-        size += calcSizeShapeMtx(flag, shapeNo, i);
-        size += 0xc;
-    }
-    return size;
-#else
     __asm {
         slwi r0,r4,1
         mr r26,r3
@@ -164,7 +155,6 @@ int J3DShapeFactory::calcSize(int shapeNo, u32 flag)
         blt L_calcSize_body
         mr r3,r31
     }
-#endif
 }
 
 int J3DShapeFactory::calcSizeVcdVatCmdBuffer(u32 count)

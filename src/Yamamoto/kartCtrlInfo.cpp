@@ -7,7 +7,7 @@
 #include "Yamamoto/kartBody.h"
 #include "Yamamoto/kartCtrl.h"
 
-#include "JSystem/JAudio/JASFakeMatch2.h"
+#include "Jsystem/JAudio/JASFakeMatch2.h"
 #include "Yamamoto/kartParams.h"
 #include "kartEnums.h"
 
@@ -259,12 +259,12 @@ void KartCtrl::GetBodyVel(int kartIndex, JGeometry::TVec3f *vecBodyVel) {
 // FIX: Add return statements for the following two functions:
 bool KartCtrl::GetLeftFTirePos(int kartIndex, Vec *vec) {
     getKartBody(kartIndex);
-    DECOMP_HOST(GetTirePos(kartIndex, 1, vec), return GetTirePos(kartIndex, 1, vec));
+    GetTirePos(kartIndex, 1, vec);
 }
 
 bool KartCtrl::GetRightFTirePos(int kartIndex, Vec *vec) {
     getKartBody(kartIndex);
-    DECOMP_HOST(GetTirePos(kartIndex, 0, vec), return GetTirePos(kartIndex, 0, vec));
+    GetTirePos(kartIndex, 0, vec);
 }
 
 bool KartCtrl::GetLeftTirePos(int kartIndex, Vec *vec) {

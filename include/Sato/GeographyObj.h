@@ -242,13 +242,7 @@ public:
     virtual void createBoundsSphere(J3DModelData *);                                                // 58
     virtual GeoAnmTableEntry *getAnmTbl() { return nullptr; }                                       // 5C
     virtual u16 getSizeAnmTbl() { return 0; }                                                       // 60
-#ifdef __MWERKS__
     virtual GeoObjSupervisor *getSupervisor() { return nullptr; }                                   // 64
-#else
-    // Subclasses declare a static getSupervisor() alongside the virtual one, which only MWCC accepts
-    GeoObjSupervisor *getSupervisor() { return getSupervisorVirtual(); }
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return nullptr; }
-#endif
     virtual void getItemThrowDirPow(JGeometry::TVec3f *, f32 *, const ItemObj &);                   // 68
     virtual void getKartThrowDirPow(JGeometry::TVec3f *, f32 *, int);                               // 6C
     virtual void makeSharedDL() {                                                                   // 70

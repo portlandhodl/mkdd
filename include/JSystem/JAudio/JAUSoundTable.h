@@ -129,7 +129,7 @@ struct JAUSoundTableGroup
         {
             return 0xff;
         }
-        return DECOMP_HOST(mTypeIds[index * 4], *(u32 *)(mTypeIds + index * 4) >> 24);
+        return mTypeIds[index * 4];
     }
 
     u32 getItemOffset(int index) const

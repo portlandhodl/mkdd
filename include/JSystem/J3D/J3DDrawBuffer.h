@@ -10,12 +10,6 @@ struct J3DDrawBuffer;
 struct J3DCallBackPacket;
 struct J3DTexture;
 
-#ifndef __MWERKS__
-inline f32 J3DCalcZValue(MtxPtr m, Vec v)
-{
-    return m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3];
-}
-#else
 inline f32 J3DCalcZValue(register MtxPtr m, register Vec v)
 {
     register f32 temp_f4;
@@ -37,9 +31,7 @@ inline f32 J3DCalcZValue(register MtxPtr m, register Vec v)
 
     return out;
 }
-#endif
 
-#ifdef __MWERKS__
 inline u32 J3DCalcTexHash(register J3DTexture *texture)
 {
     register u32 hash;
@@ -55,7 +47,6 @@ inline u32 J3DCalcTexHash(register J3DTexture *texture)
 
     return hash;
 }
-#endif
 
 #pragma push
 #pragma optimize_for_size off

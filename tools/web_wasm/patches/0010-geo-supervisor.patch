@@ -1,0 +1,364 @@
+GeographyObj::getSupervisor(). Many map objects declare both a virtual
+getSupervisor() override with a covariant return type and a static
+getSupervisor() of the same name, which MWCC accepts and clang rejects.
+On the host the virtual slot is getSupervisorVirtual(), and the base
+class's non-virtual getSupervisor() forwards to it, so callers and the
+static accessors keep working. GeoRabbitMark.h also befriends Race2D and
+MapObjPoihana.h declares TPathWalkNode::update() with its real return
+type (s16), which the definition uses.
+
+--- a/include/Sato/GeographyObj.h
++++ b/include/Sato/GeographyObj.h
+@@ -242,7 +242,13 @@
+     virtual void createBoundsSphere(J3DModelData *);                                                // 58
+     virtual GeoAnmTableEntry *getAnmTbl() { return nullptr; }                                       // 5C
+     virtual u16 getSizeAnmTbl() { return 0; }                                                       // 60
++#ifdef __MWERKS__
+     virtual GeoObjSupervisor *getSupervisor() { return nullptr; }                                   // 64
++#else
++    // Subclasses declare a static getSupervisor() alongside the virtual one, which only MWCC accepts
++    GeoObjSupervisor *getSupervisor() { return getSupervisorVirtual(); }
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return nullptr; }
++#endif
+     virtual void getItemThrowDirPow(JGeometry::TVec3f *, f32 *, const ItemObj &);                   // 68
+     virtual void getKartThrowDirPow(JGeometry::TVec3f *, f32 *, int);                               // 6C
+     virtual void makeSharedDL() {                                                                   // 70
+--- a/include/Kaneshige/Objects/GeoCannon.h
++++ b/include/Kaneshige/Objects/GeoCannon.h
+@@ -53,7 +53,11 @@
+ 
+     //virtual ~GeoCannon() {}                                           // 0x801c05d4
+ 
++#ifdef __MWERKS__
+     virtual GeoCannonSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     virtual const char *getBmdFileName() { return "/Objects/Cannon1.bmd"; } // 0x801c065c
+     static GeoCannonSupervisor *getSupervisor() { return sSupervisor; }
+     
+--- a/include/Kaneshige/Objects/GeoCar.h
++++ b/include/Kaneshige/Objects/GeoCar.h
+@@ -127,6 +127,9 @@
+     virtual void setRMtx();                             // 0x801bb960
+     virtual u32 getSoundCarType() const { return 4; }   // 0x801bcf88
+     virtual GeoCarSupervisor *getSupervisor() { return sSupervisor; } // 0x801bcf90, overide
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; }   // 0x801bcf98, overide
+     virtual const Vec &getTirePosOffset(int) = 0;       // 0x0
+     virtual bool isBlast() { return false; }            // 0x801ba8c0
+--- a/include/Kaneshige/Objects/GeoPuller.h
++++ b/include/Kaneshige/Objects/GeoPuller.h
+@@ -36,7 +36,11 @@
+     bool isSameID(u32 id) const { return mObjData->mParam1 == (s16)id; } // 0x801d3d40
+     virtual ~GeoPuller() {} // 0x801d4170
+ 
++#ifdef __MWERKS__
+     virtual GeoPullerSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     static GeoPullerSupervisor *getSupervisor() { return sSupervisor; }
+ 
+     friend class GeoPullerSupervisor;
+--- a/include/Kaneshige/Objects/GeoRabbitMark.h
++++ b/include/Kaneshige/Objects/GeoRabbitMark.h
+@@ -83,11 +83,16 @@
+     f32 getMarkScale() const { return mMarkScale; }
+     f32 getFootLength() const { return sFootLength; } 
+ 
++#ifdef __MWERKS__
+     virtual GeoRabbitMarkSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     static GeoRabbitMarkSupervisor *getSupervisor() { return sSupervisor; }
+ 
+ 
+     friend class GeoRabbitMarkSupervisor;
++    friend class Race2D;
+ private:
+     static StateFuncSet<GeoRabbitMark> sTable[3]; // 0x803979d8
+     static f32 sFootLength;                       // 0x80414728
+--- a/include/Kaneshige/Objects/GeoShimmer.h
++++ b/include/Kaneshige/Objects/GeoShimmer.h
+@@ -34,7 +34,11 @@
+     // Inline
+     bool isShimmer() const { return mObjData->mParam1 != 0; } // 0x801d4784
+     virtual ~GeoShimmer() {}
++#ifdef __MWERKS__
+     virtual GeoShimmerSupervisor *getSupervisor() { return sSupervisor;  }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     static GeoShimmerSupervisor *getSupervisor() { return sSupervisor;  }
+ 
+     friend class GeoShimmerSupervisor;
+--- a/include/Kaneshige/Objects/GeoSignal.h
++++ b/include/Kaneshige/Objects/GeoSignal.h
+@@ -54,7 +54,11 @@
+     //virtual ~GeoSignal() {}                                         // 0x801be918, overide
+     virtual const char *getBmdFileName() { return "/Objects/Signal1.bmd"; }      // 0x801be9a0, overide
+     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; } // 0x801be9ac, overide
++#ifdef __MWERKS__
+     virtual GeoSignalSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     static GeoSignalSupervisor *getSupervisor() { return sSupervisor; }
+ private:
+     friend class GeoSignalSupervisor;
+--- a/include/Kaneshige/Objects/GeoSoundGen.h
++++ b/include/Kaneshige/Objects/GeoSoundGen.h
+@@ -33,6 +33,9 @@
+     // Inline
+     //virtual ~GeoSoundGen(); // 0x801d4f98
+     virtual GeoSoundGenSupervisor *getSupervisor() { return sSupervisor; } // 0x801d5000
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ private:
+     friend class GeoSoundGenSupervisor;
+     static GeoSoundGenSupervisor *sSupervisor; // 0x80416590
+--- a/include/Kaneshige/Objects/GeoSplash.h
++++ b/include/Kaneshige/Objects/GeoSplash.h
+@@ -42,7 +42,11 @@
+     void initClassCreateNum() { sSupervisorCreateNum = 0; } // 0x801d2190
+     int getSplashID() const { return mObjData->mParam2; }
+ 
++#ifdef __MWERKS__
+     virtual GeoSplashSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return (GeoObjSupervisor *)sSupervisor; }
++#endif
+     static GeoSplashSupervisor *getSupervisor() { return sSupervisor; }
+ 
+     friend class GeoSplashSupervisor;
+--- a/include/Kaneshige/Objects/GeoTideSensor.h
++++ b/include/Kaneshige/Objects/GeoTideSensor.h
+@@ -41,6 +41,9 @@
+     bool isSameGroup(s16 groupId) const { return mObjData->mParam1 == groupId; } // 0x801d281c
+     //virtual ~GeoTideSensor(); // 0x801d29dc
+     virtual GeoTideSensorSupervisor *getSupervisor() { return sSupervisor; } // 0x801d2a44
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ private:
+     friend class GeoTideSensorSupervisor;
+ 
+--- a/include/Kaneshige/Objects/GeoVision.h
++++ b/include/Kaneshige/Objects/GeoVision.h
+@@ -54,6 +54,9 @@
+     //virtufal ~GeoVision() {} 
+     virtual const char * getBmdFileName() { return "/Objects/Wl_Screen1.bmd"; }
+     virtual GeoVisionSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; }
+ 
+     friend class GeoVisionSupervisor;
+--- a/include/Kaneshige/Objects/GeoWater.h
++++ b/include/Kaneshige/Objects/GeoWater.h
+@@ -115,7 +115,11 @@
+     //virtual ~GeoWater() {}                                             // 0x801c4e94
+     virtual const char *getBmdFileName() { return "/Objects/sea1_spc.bmd"; } // 0x801c4f1c
+     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; }    // 0x801c4f28
++#ifdef __MWERKS__
+     virtual GeoWaterSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     static GeoWaterSupervisor *getSupervisor() { return sSupervisor; }
+  
+     friend class GeoWaterSupervisor;
+--- a/include/Shiraiwa/Balloon.h
++++ b/include/Shiraiwa/Balloon.h
+@@ -124,10 +124,12 @@
+     void getPointDir(JGeometry::TVec3f *);
+     void setParameters();
+ 
++#ifdef __MWERKS__
+     virtual TBalloonSupervisor *getSupervisor() { return sSupervisor; }
+-#ifdef __MWERKS__
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     static TBalloonSupervisor *getSupervisor() { return sSupervisor; }
+-#endif
+     // void sOffset;
+     // void sTotalLength;
+     // void sAdjustRatio;
+--- a/include/Shiraiwa/LensFlare.h
++++ b/include/Shiraiwa/LensFlare.h
+@@ -144,7 +144,11 @@
+     void getBufferZ(u32);
+ 
+     // Inline
++#ifdef __MWERKS__
+     virtual TLensFlareSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     static TLensFlareSupervisor *getSupervisor() { return sSupervisor; }
+ 
+ private:
+--- a/include/Shiraiwa/Objects/DistSnow.h
++++ b/include/Shiraiwa/Objects/DistSnow.h
+@@ -54,6 +54,9 @@
+     virtual void reset();
+     virtual void calc();
+     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     void draw(u32);
+     void setupGX();
+--- a/include/Shiraiwa/Objects/MapObjAward.h
++++ b/include/Shiraiwa/Objects/MapObjAward.h
+@@ -78,6 +78,9 @@
+     virtual const char *getBmdFileName() = 0;
+     virtual const char *getBtpFileName() = 0;
+     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     virtual u32 getJ3DModelDataTevStageNum() const { return 0x20000; }
+     friend class TMapObjAwardItemBox;
+     friend class TAwardCupSupervisor;
+--- a/include/Shiraiwa/Objects/MapObjAwardItemBox.h
++++ b/include/Shiraiwa/Objects/MapObjAwardItemBox.h
+@@ -54,6 +54,9 @@
+ 
+     // Inline
+     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; } // 0x802cb998
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     virtual ~TMapObjAwardItemBox(); // 0x802cb9a0
+     void MoveExec(); // 0x802cbed4
+     void InitExec(); // 0x802cbe68
+--- a/include/Shiraiwa/Objects/MapObjDonkyRock.h
++++ b/include/Shiraiwa/Objects/MapObjDonkyRock.h
+@@ -56,6 +56,9 @@
+     void doFunc_Break();
+     virtual void doKartColCallBack(int);
+     virtual TDonkyRockSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     static TDonkyRockSupervisor *sSupervisor;
+     static f32 sReflectRate;
+--- a/include/Shiraiwa/Objects/MapObjHanabi.h
++++ b/include/Shiraiwa/Objects/MapObjHanabi.h
+@@ -34,7 +34,11 @@
+     virtual void calc(); // 0x802cdb4c
+ 
+ 
++#ifdef __MWERKS__
+     virtual THanabiSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     // ??? GeographyObj::getSupervisor() is a virtual function which this class inherits from (via TMapObjHioNode)
+     // and thus this overrides the function in the vtable
+     // but is this even valid in C++?
+--- a/include/Shiraiwa/Objects/MapObjHeyho.h
++++ b/include/Shiraiwa/Objects/MapObjHeyho.h
+@@ -105,6 +105,9 @@
+     void doFunc_Die();
+     void hitCheck(TMapObjHeyho *);
+     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     static StateObserver::StateFuncSet<TMapObjHeyho> sTable[7];
+     static TAnmInfo sAnmInfos[1];
+--- a/include/Shiraiwa/Objects/MapObjPakkun.h
++++ b/include/Shiraiwa/Objects/MapObjPakkun.h
+@@ -47,6 +47,9 @@
+     virtual void doKartColCallBack(int);
+     virtual u32 getSoundID() const { return 0x10056; }
+     virtual TPakkunSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     void changeDamageProc();
+     u8 checkHeadDamage();
+--- a/include/Shiraiwa/Objects/MapObjPoihana.h
++++ b/include/Shiraiwa/Objects/MapObjPoihana.h
+@@ -44,7 +44,7 @@
+     void init(JGeometry::TVec3f *, JGeometry::TVec3f *, JGeometry::TPos3f *);
+     void setParameters(f32, f32, f32, f32, f32);
+     void reset();
+-    void update();
++    s16 update();
+     void forceTurn(const JGeometry::TVec3f &);
+ 
+     TPathWalkNode *_04; // 0x04
+@@ -88,6 +88,9 @@
+     virtual void update();                            // 0x8029FAF0
+     virtual void doKartColCallBack(int);              // 0x8029FE3C
+     virtual TPoihanaSupervisor *getSupervisor() { return sSupervisor; } // 0x8029F67C
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+     virtual void getKartThrowDirPow(JGeometry::TVec3f *, f32 *, int); // 0x802A1D84
+     virtual void getThrowDir(JGeometry::TVec3f *, s16);               // 0x802A1E10
+     void thunderDown();
+--- a/include/Shiraiwa/Objects/MapObjPool.h
++++ b/include/Shiraiwa/Objects/MapObjPool.h
+@@ -44,7 +44,11 @@
+     // Inline
+     virtual ~TMapObjPool(); // 0x802c2134
+     virtual const char *getBmdFileName() { return "/Objects/Pool.bmd"; } // 0x802c2b00
++#ifdef __MWERKS__
+     virtual TPoolSupervisor *getSupervisor() { return sSupervisor; }
++#else
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     static TPoolSupervisor *getSupervisor() { return sSupervisor; }
+ private: // TODO
+--- a/include/Shiraiwa/Objects/MapObjSnowRock.h
++++ b/include/Shiraiwa/Objects/MapObjSnowRock.h
+@@ -39,6 +39,9 @@
+     virtual void reset();
+     virtual void calc();
+     virtual TSnowRockSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     void setAttacked(const JGeometry::TVec3f &, f32);
+     void initFunc_Stand();
+--- a/include/Shiraiwa/TestString.h
++++ b/include/Shiraiwa/TestString.h
+@@ -85,6 +85,9 @@
+     virtual void reset();
+     virtual void calc();
+     virtual TTestStrSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     void load(J3DModelData *);
+     void attack(const JGeometry::TVec3f &);
+--- a/src/Shiraiwa/MapObjSanbo.cpp
++++ b/src/Shiraiwa/MapObjSanbo.cpp
+@@ -50,6 +50,9 @@
+     virtual void InitExec();
+     virtual void doKartColCallBack(int);
+     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
++#ifndef __MWERKS__
++    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
++#endif
+ 
+     void checkItemHitting();
+     void moveColOffset();

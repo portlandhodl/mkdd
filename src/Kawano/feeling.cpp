@@ -47,7 +47,7 @@ FeelingMgr *FeelingMgr::mspFeelingMgr;
 
 void *FeelingOne::getAnmFile(int)
 {
-DECOMP_HOST(, return nullptr;) }
+}
 
 void FeelingOne::reset()
 {

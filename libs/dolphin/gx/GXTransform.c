@@ -46,11 +46,6 @@ static void WriteProjPS(const register f32 src[6], register volatile void* dst)
 		psq_st ps_1,  0(dst), 0, 0
 		psq_st ps_2,  0(dst), 0, 0
 	}
-#else
-	int i;
-	for (i = 0; i < 6; i++) {
-		port_gx_wf32(src[i]);
-	}
 #endif
 }
 
@@ -66,11 +61,6 @@ static void Copy6Floats(const register f32 src[6], register f32 dst[6])
 		psq_st ps_0,  0(dst), 0, 0
 		psq_st ps_1,  8(dst), 0, 0
 		psq_st ps_2, 16(dst), 0, 0
-	}
-#else
-	int i;
-	for (i = 0; i < 6; i++) {
-		dst[i] = src[i];
 	}
 #endif
 }
@@ -144,11 +134,6 @@ void WriteMTXPS4x3(register volatile void* dst, register const Mtx src)
 		psq_st ps_4, 0(dst),  0, 0
 		psq_st ps_5, 0(dst),  0, 0
 	}
-#else
-	int i;
-	for (i = 0; i < 12; i++) {
-		port_gx_wf32(((const f32*)src)[i]);
-	}
 #endif
 }
 
@@ -171,13 +156,6 @@ void WriteMTXPS3x3from3x4(register volatile void* dst, register const f32* src)
 		stfs   ps_3, 0(dst)
 		psq_st ps_4, 0(dst),  0, 0
 		stfs   ps_5, 0(dst)
-	}
-#else
-	int i;
-	for (i = 0; i < 12; i++) {
-		if ((i & 3) != 3) {
-			port_gx_wf32(((const f32*)src)[i]);
-		}
 	}
 #endif
 }
@@ -202,13 +180,6 @@ void WriteMTXPS3x3(register volatile void* dst, register const Mtx src)
 		psq_st ps_4, 0(dst),  0, 0
 		stfs   ps_5, 0(dst)
 	}
-#else
-	int i;
-	for (i = 0; i < 12; i++) {
-		if ((i & 3) != 3) {
-			port_gx_wf32(((const f32*)src)[i]);
-		}
-	}
 #endif
 }
 
@@ -227,11 +198,6 @@ void WriteMTXPS4x2(register volatile void* dst, register const Mtx src)
 		psq_st ps_1, 0(dst),  0, 0
 		psq_st ps_2, 0(dst),  0, 0
 		psq_st ps_3, 0(dst),  0, 0
-	}
-#else
-	int i;
-	for (i = 0; i < 8; i++) {
-		port_gx_wf32(((const f32*)src)[i]);
 	}
 #endif
 }
@@ -445,22 +411,22 @@ void __GXSetMatrixIndex(GXAttr index)
 {
 	if (index < GX_VA_TEX4MTXIDX) {
 		u32 data;
-		DECOMP_HOST(GXWGFifo.s8 = GX_LOAD_CP_REG, port_gx_w8((u8)(GX_LOAD_CP_REG)));
-		DECOMP_HOST(GXWGFifo.s8 = GX_CP_REG_MTXIDXA, port_gx_w8((u8)(GX_CP_REG_MTXIDXA)));
+		GXWGFifo.s8 = GX_LOAD_CP_REG;
+		GXWGFifo.s8 = GX_CP_REG_MTXIDXA;
 		data = gx->matIdxA;
-		DECOMP_HOST(GXWGFifo.s32 = data, port_gx_w32((u32)(data)));
-		DECOMP_HOST(GXWGFifo.s8 = GX_LOAD_XF_REG, port_gx_w8((u8)(GX_LOAD_XF_REG)));
-		DECOMP_HOST(GXWGFifo.s32 = GX_XF_REG_MATRIXINDEX0, port_gx_w32((u32)(GX_XF_REG_MATRIXINDEX0)));
-		DECOMP_HOST(GXWGFifo.s32 = data, port_gx_w32((u32)(data)));
+		GXWGFifo.s32 = data;
+		GXWGFifo.s8 = GX_LOAD_XF_REG;
+		GXWGFifo.s32 = GX_XF_REG_MATRIXINDEX0;
+		GXWGFifo.s32 = data;
 	} else {
 		u32 data;
-		DECOMP_HOST(GXWGFifo.s8 = GX_LOAD_CP_REG, port_gx_w8((u8)(GX_LOAD_CP_REG)));
-		DECOMP_HOST(GXWGFifo.s8 = GX_CP_REG_MTXIDXB, port_gx_w8((u8)(GX_CP_REG_MTXIDXB)));
+		GXWGFifo.s8 = GX_LOAD_CP_REG;
+		GXWGFifo.s8 = GX_CP_REG_MTXIDXB;
 		data = gx->matIdxB;
-		DECOMP_HOST(GXWGFifo.s32 = data, port_gx_w32((u32)(data)));
-		DECOMP_HOST(GXWGFifo.s8 = GX_LOAD_XF_REG, port_gx_w8((u8)(GX_LOAD_XF_REG)));
-		DECOMP_HOST(GXWGFifo.s32 = GX_XF_REG_MATRIXINDEX1, port_gx_w32((u32)(GX_XF_REG_MATRIXINDEX1)));
-		DECOMP_HOST(GXWGFifo.s32 = data, port_gx_w32((u32)(data)));
+		GXWGFifo.s32 = data;
+		GXWGFifo.s8 = GX_LOAD_XF_REG;
+		GXWGFifo.s32 = GX_XF_REG_MATRIXINDEX1;
+		GXWGFifo.s32 = data;
 	}
 
 	gx->bpSentNot = GX_TRUE;

@@ -2,10 +2,6 @@
 #include <dolphin/os.h>
 #include <dolphin/hw_regs.h>
 #include <dolphin/base/PPCArch.h>
-#ifndef __MWERKS__
-#include "port_hw.h"
-void GXSetProjectionv(const f32* proj);
-#endif
 
 static GXFifoObj FifoObj;
 static GXData gxData;
@@ -61,8 +57,6 @@ ASM BOOL IsWriteGatherBufferEmpty(void)
 	mfspr r3, WPAR;
 	andi. r3, r3, 1;
 	blr;
-#else
-	return TRUE;
 #endif
 }
 
@@ -196,10 +190,10 @@ GXFifoObj* GXInit(void* base, u32 size)
 
 	GXSetMisc(GX_MT_XF_FLUSH, 0);
 
-	__piReg  = DECOMP_HOST((void*)OSPhysicalToUncached(GX_PI_ADDR), (void*)port_hw_pi);
-	__cpReg  = DECOMP_HOST((void*)OSPhysicalToUncached(GX_CP_ADDR), (void*)port_hw_cp);
-	__peReg  = DECOMP_HOST((void*)OSPhysicalToUncached(GX_PE_ADDR), (void*)port_hw_pe);
-	__memReg = DECOMP_HOST((void*)OSPhysicalToUncached(GX_MEM_ADDR), (void*)port_hw_mem);
+	__piReg  = (void*)OSPhysicalToUncached(GX_PI_ADDR);
+	__cpReg  = (void*)OSPhysicalToUncached(GX_CP_ADDR);
+	__peReg  = (void*)OSPhysicalToUncached(GX_PE_ADDR);
+	__memReg = (void*)OSPhysicalToUncached(GX_MEM_ADDR);
 
 	__GXFifoInit();
 

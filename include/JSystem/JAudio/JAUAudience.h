@@ -25,16 +25,16 @@ struct JAUAudibleParam {
             u16 f1;
         } half;
         struct {
-            DECOMP_HOST(u8 b0_0 : 4;, u8 b1_2_7 : 6;)
-            DECOMP_HOST(u8 b0_4 : 1;, u8 b1_1 : 1;)
-            DECOMP_HOST(u8 b0_5 : 1;, u8 b1_0 : 1;)
-            DECOMP_HOST(u8 b0_6 : 1;, u8 b0_7 : 1;)
-            DECOMP_HOST(u8 b0_7 : 1;, u8 b0_6 : 1;)
-            DECOMP_HOST(u8 b1_0 : 1;, u8 b0_5 : 1;)
-            DECOMP_HOST(u8 b1_1 : 1;, u8 b0_4 : 1;)
-            DECOMP_HOST(u8 b1_2_7 : 6;, u8 b0_0 : 4;)
-            DECOMP_HOST(u8 b2;, u8 b3;)
-            DECOMP_HOST(u8 b3;, u8 b2;)
+            u8 b0_0 : 4;
+            u8 b0_4 : 1;
+            u8 b0_5 : 1;
+            u8 b0_6 : 1;
+            u8 b0_7 : 1;
+            u8 b1_0 : 1;
+            u8 b1_1 : 1;
+            u8 b1_2_7 : 6;
+            u8 b2;
+            u8 b3;
         } bytes;
         u32 raw;
     } _00;
@@ -139,7 +139,7 @@ public:
 class JAUAudience_withSetting : public JAIAudience {
 public:
     JAUAudience_withSetting()
-#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && DECOMP_MWERKS
+#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
     ;
 #else
     {
@@ -328,7 +328,7 @@ public:
 
     f32 calcPitch_(JAUAudibleChannel *channel, const Audible *audible, int index) {
         JAUAudibleParam audParam = audible->getAudibleParam();
-        if ((DECOMP_HOST(*(u8*)&audParam._00.raw, (u8)(audParam._00.half.f0 >> 8)) >> 4) & 0xf) { // probably fake
+        if ((*(u8*)&audParam._00.raw >> 4) & 0xf) { // probably fake
             f32 dopplerPwr = calcPitchDoppler_(channel->_20, state[index]._30, audible->absPos_.velocity_, audible->getAudibleParam().getDopplerPower());
             
             if (channel->_30 > 0.0f) {
@@ -351,7 +351,7 @@ public:
     }
 
     void mixChannelOut(const JASSoundParams &params, JAIAudible *pAudible, int index)
-#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && DECOMP_MWERKS
+#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
     ;
 #else
     {
@@ -474,7 +474,7 @@ public:
         delete audible;
     }
     JAIAudible *newAudible(const JGeometry::TVec3f &pos, JAISoundID soundID, const JGeometry::TVec3f *p3, u32 channels)
-#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && DECOMP_MWERKS
+#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
     ;
 #else
     {

@@ -123,7 +123,7 @@ int J3DModelLoader::calcLoadBinaryDisplayListSize(const void* stream, u32 flags)
             break;
         case J3DFBT_MaterialV21:
             break;
-        case J3DFBT_Material: {
+        case J3DFBT_Material:
             u32 flags2 = J3DMLF_21 | J3DMLF_Material_PE_Full | J3DMLF_Material_Color_LightOn;
             flags2 |= (u32)flags & (J3DMLF_Material_UseIndirect | J3DMLF_26);
             mMaterialBlock = (const J3DMaterialBlock*)nextBlock;
@@ -136,7 +136,6 @@ int J3DModelLoader::calcLoadBinaryDisplayListSize(const void* stream, u32 flags)
                 size += calcSizePatchedMaterial((const J3DMaterialBlock*)nextBlock, flags2);
             }
             break;
-        }
         case J3DFBT_Envelope:
             size += calcSizeEnvelope((const J3DEnvelopeBlock*)nextBlock);
             break;

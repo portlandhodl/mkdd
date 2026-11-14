@@ -100,7 +100,7 @@ bool Password::pack(EKartID kartId, ECharID driverId, ECharID backId, ECourseID 
 
 bool Password::unpack(EKartID *, ECharID *, ECharID *, ECourseID *, RaceTime *, RaceTime *) {
 
-DECOMP_HOST(, return false;) }
+}
 
 void Password::crypt(u16 rnd)
 {
@@ -137,7 +137,7 @@ void Password::encode()
 
 char Password::searchPasswordTable(char c) {
     //return scaPasswordTable[c];
-DECOMP_HOST(, return 0;) }
+}
 
 void Password::decode() {
 

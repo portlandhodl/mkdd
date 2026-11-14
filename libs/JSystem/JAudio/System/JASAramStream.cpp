@@ -288,7 +288,7 @@ bool JASAramStream::headerLoad(u32 p1, int p2) {
         return false;
     }
 
-    Header *header = (Header*)sReadBuffer; DECOMP_HOST(, port_ast_header(header);)
+    Header *header = (Header*)sReadBuffer;
     JUT_ASSERT(header->tag == 'STRM');
     JUT_ASSERT(header->format <= 1);
     JUT_ASSERT(header->bits == 16);
@@ -369,7 +369,7 @@ bool JASAramStream::load() {
         sFatalErrorFlag = true;
         return false;
     }
-    BlockHeader *bhead = (BlockHeader*)sReadBuffer; DECOMP_HOST(, port_ast_block(bhead);)
+    BlockHeader *bhead = (BlockHeader*)sReadBuffer;
     JUT_ASSERT(bhead->tag == 'BLCK');
     if (mCancelled != 0) {
         return false;

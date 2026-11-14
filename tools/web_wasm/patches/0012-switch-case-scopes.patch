@@ -1,0 +1,251 @@
+Declarations with initialisers directly under a case label. C++ forbids
+jumping past them into a later label; MWCC allows it, clang does not.
+Each such case body gets its own braces. KartSoundMgr.cpp also writes its
+`#line` numbers in decimal, as clang requires.
+
+--- a/libs/JSystem/J3D/GraphLoader/J3DModelLoaderCalcSize.cpp
++++ b/libs/JSystem/J3D/GraphLoader/J3DModelLoaderCalcSize.cpp
+@@ -123,7 +123,7 @@
+             break;
+         case J3DFBT_MaterialV21:
+             break;
+-        case J3DFBT_Material:
++        case J3DFBT_Material: {
+             u32 flags2 = J3DMLF_21 | J3DMLF_Material_PE_Full | J3DMLF_Material_Color_LightOn;
+             flags2 |= (u32)flags & (J3DMLF_Material_UseIndirect | J3DMLF_26);
+             mMaterialBlock = (const J3DMaterialBlock*)nextBlock;
+@@ -136,6 +136,7 @@
+                 size += calcSizePatchedMaterial((const J3DMaterialBlock*)nextBlock, flags2);
+             }
+             break;
++        }
+         case J3DFBT_Envelope:
+             size += calcSizeEnvelope((const J3DEnvelopeBlock*)nextBlock);
+             break;
+--- a/libs/JSystem/JKernel/JKRAramArchive.cpp
++++ b/libs/JSystem/JKernel/JKRAramArchive.cpp
+@@ -294,7 +294,7 @@
+         *pBuf = buffer;
+         return size;
+     case JKRCOMPRESSION_YAY0:
+-    case JKRCOMPRESSION_YAZ0:
++    case JKRCOMPRESSION_YAZ0: {
+         u8 decompBuf[64];
+         u8 *bufptr = (u8 *)ALIGN_NEXT((u32)decompBuf, 32);
+         JKRAramToMainRam(srcAram, bufptr, sizeof(decompBuf) / 2, EXPAND_SWITCH_DEFAULT, 0, nullptr, -1, nullptr);
+@@ -307,6 +307,7 @@
+         JKRAramToMainRam(srcAram, buffer, alignedSize, EXPAND_SWITCH_DECOMPRESS, expandSize, heap, -1, &resSize);
+         *pBuf = buffer;
+         return resSize;
++    }
+     default:
+ #line 713
+         JUT_PANIC("??? bad sequence\n");
+--- a/libs/JSystem/JKernel/JKRMemArchive.cpp
++++ b/libs/JSystem/JKernel/JKRMemArchive.cpp
+@@ -229,7 +229,7 @@
+         return srcLength;
+ 
+     case JKRCOMPRESSION_YAY0:
+-    case JKRCOMPRESSION_YAZ0:
++    case JKRCOMPRESSION_YAZ0: {
+         u32 expendedSize = JKRDecompExpandSize(src);
+         srcLength = expendedSize;
+         if (expendedSize > dstLength)
+@@ -237,6 +237,7 @@
+ 
+         JKRDecompress(src, dst, srcLength, 0);
+         return srcLength;
++    }
+ 
+     default:
+     {
+--- a/libs/JSystem/JUtility/JUTResFont.cpp
++++ b/libs/JSystem/JUtility/JUTResFont.cpp
+@@ -155,14 +155,14 @@
+         int magic = data->mMagic;
+         switch (magic)
+         {
+-        case 'INF1':
++        case 'INF1': {
+             mInfoBlock = (ResFONT::InfoBlock *)data;
+             u32 u = mInfoBlock->mFontType;
+ #line 244
+             JUT_ASSERT(u < suAboutEncoding_);
+             mIsLeadByte = (IsLeadByte *)&saoAboutEncoding_[u];
+             break;
+-
++        }
+         case 'WID1':
+             mWidthBlocks[widthNum] = (ResFONT::WidthBlock *)data;
+             widthNum++;
+--- a/src/Inagaki/KartSoundMgr.cpp
++++ b/src/Inagaki/KartSoundMgr.cpp
+@@ -687,6 +687,7 @@
+             seIndex = 0;
+             break;
+         case 0:
++        {
+             slipBias = 0.1f;
+             const u8 type = Parameters::getCharacterType(mKartIndex);
+             if (type == 1)
+@@ -698,6 +699,7 @@
+                 seIndex = 1;
+             }
+             break;
++        }
+         case 7:
+             if (attribute == 1)
+             {
+@@ -2531,7 +2533,7 @@
+             mInvincibleBgmBits |= 2;
+             return;
+         default:
+-#line 0xb5b
++#line 2907
+             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+             return;
+         }
+@@ -2549,7 +2551,7 @@
+             mInvincibleBgmBits |= 2;
+             return;
+         default:
+-#line 0xb6b
++#line 2923
+             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+             return;
+         }
+@@ -2582,7 +2584,7 @@
+             mInvincibleBgmBits = 0;
+             break;
+         default:
+-#line 0xb87
++#line 2951
+             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+             break;
+         }
+@@ -2624,7 +2626,7 @@
+             mInvincibleBgmBits = 0;
+             return;
+         default:
+-#line 0xba8
++#line 2984
+             JUT_WARNING_F(false, "%s", "KartSoundMgr::startInvincibleBgm : 不明なBITです。\n");
+             return;
+         }
+--- a/src/Kameda/PreRace2D.cpp
++++ b/src/Kameda/PreRace2D.cpp
+@@ -205,7 +205,7 @@
+         return;
+ 
+     switch (mWipeType) {
+-    case 0:
++    case 0: {
+         if (mCounter < 180) {
+             mStatus = 0;
+             if (mCounter == 179)
+@@ -240,6 +240,7 @@
+         mScreen->animation();
+         mCounter++;
+         break;
++    }
+     case 1: {
+         int counter = mCounter;
+         if (counter == 0)
+--- a/src/Kameda/ReadPrintMessage.cpp
++++ b/src/Kameda/ReadPrintMessage.cpp
+@@ -147,18 +147,20 @@
+             case 0xff:
+                 switch (tagID)
+                 {
+-                case 0:
++                case 0: {
+                     JUTColor color = getColor(bmcPtr, tagData[0]);
+                     snprintf(buf, sizeof(buf), "\eCC[%02X%02X%02X%02X]\eGC[%02X%02X%02X%02X]",
+                              color.r, color.g, color.b, color.a,
+                              color.r, color.g, color.b, color.a);
+                     break;
+-                case 1:
++                }
++                case 1: {
+                     u16 scalar = (u16)((tagData[0] << 8) + tagData[1]);
+                     int fontX = fontSize.x * scalar / 100.0f;
+                     int fontY = fontSize.y * scalar / 100.0f;
+                     snprintf(buf, sizeof(buf), "\eFX[%d]\eFY[%d]", fontX, fontY);
+                     break;
++                }
+                 default:
+ #line 240
+                     JUT_ASSERT(0);
+--- a/src/Kameda/SceneOption.cpp
++++ b/src/Kameda/SceneOption.cpp
+@@ -730,7 +730,7 @@
+     case 4:
+         nextScene();
+         break;
+-    case 3:
++    case 3: {
+         if (CardAgent::msState != 0)
+             break;
+         if (CardAgent::mspPrintMemoryCard->_d == 0)
+@@ -744,6 +744,7 @@
+             System::getDisplay()->getFader()->startFadeOut(15);
+         GameAudio::Main::getAudio()->fadeOutAll(15);
+         break;
++    }
+     default:
+ #line 1259
+         JUT_ASSERT_F(0, "%s", "0");
+--- a/src/Yamamoto/KartCrash.cpp
++++ b/src/Yamamoto/KartCrash.cpp
+@@ -370,7 +370,7 @@
+     KartBody* body = mBody;
+     JGeometry::TVec3f stack_8;
+     switch (body->_588) {
+-        case 0:
++        case 0: {
+             DoTornadeCenter();
+             body->_594 = 0;
+             body->mVel.y = 14.0f * body->getCrash()->_4->getThrowPow();
+@@ -398,6 +398,7 @@
+                 body->_588 = 1;
+             }
+             return;
++        }
+         case 1:
+             GetKartCtrl()->ChaseFnumber(&body->mWg.y, 0.0f, 0.05f);
+             if (body->_594 < 1) {
+@@ -470,7 +471,7 @@
+ void KartCrash::DoSpinCrashCrl() {
+     KartBody* body = mBody;
+     switch (body->_588) {
+-        case 0:
++        case 0: {
+             f32 cnvge_4ac = body->_4ac;
+ 
+             if (cnvge_4ac > 10.0f) {
+@@ -495,6 +496,7 @@
+                 body->getStrat()->MovingSpinClear();
+             }
+             return;
++        }
+         default:
+             body->getStrat()->MovingSpinClear();
+     }
+@@ -542,7 +544,7 @@
+ void KartCrash::DoHalfSpinCrashCrl() {
+     KartBody* body = mBody;
+     switch (body->_588) {
+-        case 0:
++        case 0: {
+             f32 cnvge_4ac = body->_4ac;
+ 
+             if (cnvge_4ac > 5.0f) {
+@@ -568,6 +570,7 @@
+                 body->mTireAngle = 0;
+             }
+             return;
++        }
+         default:
+             body->getStrat()->MovingHalfSpinClear();
+     }

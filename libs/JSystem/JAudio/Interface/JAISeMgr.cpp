@@ -464,7 +464,5 @@ int JAISeMgr::getNumAudibleSe() const
     }
     return sum;
 }
-#ifdef __MWERKS__
 template <> DECL_WEAK JAISoundInfo *JASGlobalInstance<JAISoundInfo>::sInstance;
-#endif
 #include "JSystem/JAudio/JASFakeMatch2.h"

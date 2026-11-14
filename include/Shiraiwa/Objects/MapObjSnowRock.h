@@ -39,9 +39,6 @@ public:
     virtual void reset();
     virtual void calc();
     virtual TSnowRockSupervisor *getSupervisor() { return sSupervisor; }
-#ifndef __MWERKS__
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
 
     void setAttacked(const JGeometry::TVec3f &, f32);
     void initFunc_Stand();

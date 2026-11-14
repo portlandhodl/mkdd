@@ -28,25 +28,6 @@ void J3DCalcHalfAngleVec(Vec*, Vec*, Vec*);
 void J3DCalcHalfAngleMtx(Vec*, Vec*, f32 (*)[4]);
 void J3DPSMtxArrayConcat(f32 (*)[4], f32 (*)[4], f32 (*)[4], unsigned long);
 
-#ifndef __MWERKS__
-inline void J3DPSMtx33Copy(const Mtx33 src, Mtx33 dst)
-{
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            dst[i][j] = src[i][j];
-        }
-    }
-}
-
-inline void J3DPSMtx33CopyFrom34(const Mtx src, Mtx33 dst)
-{
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            dst[i][j] = src[i][j];
-        }
-    }
-}
-#else
 // clang-format off
 /**
  * @fabricated
@@ -98,6 +79,5 @@ inline void J3DPSMtx33CopyFrom34
     }
 }
 // clang-format on
-#endif
 
 #endif

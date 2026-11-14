@@ -294,7 +294,7 @@ u32 JKRAramArchive::fetchResource_subroutine(u32 srcAram, u32 size, JKRHeap *hea
         *pBuf = buffer;
         return size;
     case JKRCOMPRESSION_YAY0:
-    case JKRCOMPRESSION_YAZ0: {
+    case JKRCOMPRESSION_YAZ0:
         u8 decompBuf[64];
         u8 *bufptr = (u8 *)ALIGN_NEXT((u32)decompBuf, 32);
         JKRAramToMainRam(srcAram, bufptr, sizeof(decompBuf) / 2, EXPAND_SWITCH_DEFAULT, 0, nullptr, -1, nullptr);
@@ -307,7 +307,6 @@ u32 JKRAramArchive::fetchResource_subroutine(u32 srcAram, u32 size, JKRHeap *hea
         JKRAramToMainRam(srcAram, buffer, alignedSize, EXPAND_SWITCH_DECOMPRESS, expandSize, heap, -1, &resSize);
         *pBuf = buffer;
         return resSize;
-    }
     default:
 #line 713
         JUT_PANIC("??? bad sequence\n");

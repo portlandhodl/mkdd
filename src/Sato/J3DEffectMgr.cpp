@@ -54,9 +54,9 @@ const char *BrkEfctEffectName[3] = { "star", "dark", "frez" };
 #include "JSystem/JAudio/JASFakeMatch.h"
 #include "JSystem/JAudio/JASFakeMatch2.h"
 
-DECOMP_INLINE PermissionCounter::PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
+inline PermissionCounter::PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
 
-DECOMP_INLINE PermissionCounter::~PermissionCounter() {}
+inline PermissionCounter::~PermissionCounter() {}
 
 int GetJ3DEfctNumAtMiniGameBomb()
 {

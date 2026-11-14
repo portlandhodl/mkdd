@@ -15,7 +15,7 @@
 #include "JSystem/JUtility/JUTNameTab.h"
 #include "JSystem/JUtility/TColor.h"
 #include "JSystem/J2D/J2DGrafContext.h"
-#include "JSystem/J2D/J2DMaterialFactory.h"
+#include "JSystem/J2D/J2DMaterialfactory.h"
 #include "JSystem/J3D/J3DTypes.h"
 #include "types.h"
 
@@ -62,7 +62,7 @@ bool J2DScreen::set(const char* name, u32 flags, JKRArchive* archive)
     return false;
 }
 
-bool J2DScreen::set(JSURandomInputStream* stream, u32 flags) { DECOMP_HOST(private_set(stream, flags, nullptr), return private_set(stream, flags, nullptr)); }
+bool J2DScreen::set(JSURandomInputStream* stream, u32 flags) { private_set(stream, flags, nullptr); }
 
 bool J2DScreen::setPriority(const char *path, u32 flags, JKRArchive *archive) {
     if (archive == nullptr) {
@@ -365,7 +365,7 @@ bool J2DScreen::createMaterial(JSURandomInputStream* input, u32 flags, JKRArchiv
             factory.create(&mMaterials[i], i, flags, mTexRes, mFontRes, archive);
         }
         if (flags & 0x1f0000) {
-            u32 nameTabIdx = DECOMP_HOST(READU32_BE(blockbuf, 0x14), *(u32 *)(blockbuf + 0x14));
+            u32 nameTabIdx = READU32_BE(blockbuf, 0x14);
             ResNTAB* nameTab = (ResNTAB*)(blockbuf + nameTabIdx);
             u16 entry = nameTab->mEntryNum;
             u16 offset = nameTab->mEntries[entry-1].mOffs;

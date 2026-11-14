@@ -135,13 +135,9 @@ JAUSectionHeap *JAUNewSectionHeap(JKRSolidHeap *heap, bool p2);
 JAUSectionHeap *JAUNewSectionHeap(bool);
 
 // TODO: probably move this to a different file(JASFakeMatch?)
-#ifdef __MWERKS__
 #define createJASInstance(TYPE) \
     template <> \
     DECL_WEAK TYPE *JASGlobalInstance<TYPE>::sInstance
-#else
-#define createJASInstance(TYPE) typedef TYPE JASGlobalInstance_##TYPE
-#endif
 
 createJASInstance(JAUSectionHeap);
 createJASInstance(JAUSoundNameTable);

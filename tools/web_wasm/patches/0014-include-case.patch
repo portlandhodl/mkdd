@@ -1,0 +1,68 @@
+Include paths whose letter case does not match the file on disk
+(Dolphin/ vs dolphin/, KartCtrl.h vs kartCtrl.h, JAUdio vs JAudio, ...).
+MWCC runs on a case-insensitive view of the tree; the host compiler sees
+the real, case-sensitive file system.
+
+--- a/include/JSystem/J3D/J3DMtxCalc.h
++++ b/include/JSystem/J3D/J3DMtxCalc.h
+@@ -1,7 +1,7 @@
+ #ifndef _JSYSTEM_J3D_J3DMTXCALC_H
+ #define _JSYSTEM_J3D_J3DMTXCALC_H
+ 
+-#include "Dolphin/mtx.h"
++#include "dolphin/mtx.h"
+ #include "JSystem/J3D/J3DJoint.h"
+ #include "JSystem/J3D/J3DSys.h"
+ #include "JSystem/J3D/J3DTypes.h"
+--- a/src/Kameda/Race2D.cpp
++++ b/src/Kameda/Race2D.cpp
+@@ -5229,4 +5229,4 @@
+     }
+ }
+ 
+-#include "JSystem/JAUdio/JASFakeMatch2.h"
++#include "JSystem/JAudio/JASFakeMatch2.h"
+--- a/src/Osako/CardAgent.cpp
++++ b/src/Osako/CardAgent.cpp
+@@ -3,7 +3,7 @@
+ #include "Osako/ResetAgent.h"
+ #include "Osako/SystemRecord.h"
+ 
+-#include <JSystem/JUTility/JUTDbg.h>
++#include <JSystem/JUtility/JUTDbg.h>
+ 
+ // TODO: documentation, inline rework
+ 
+--- a/src/Osako/shadowMgr.cpp
++++ b/src/Osako/shadowMgr.cpp
+@@ -1,8 +1,8 @@
+ #include "Osako/shadowMgr.h"
+ #include "JSystem/JUtility/JUTAssert.h"
+ #include "JSystem/J3D/J3DColorBlock.h"
+-#include "Dolphin/os.h"
+-#include "Dolphin/gx.h"
++#include "dolphin/os.h"
++#include "dolphin/gx.h"
+ 
+ ShadowManager* ShadowManager::mspShadowManager = nullptr;
+ 
+--- a/src/Yamamoto/KartChecker.cpp
++++ b/src/Yamamoto/KartChecker.cpp
+@@ -1,5 +1,5 @@
+ #include "Yamamoto/KartCheck.h"
+-#include "Yamamoto/KartCtrl.h"
++#include "Yamamoto/kartCtrl.h"
+ #include "Kaneshige/RaceMgr.h"
+ #include "JSystem/JAudio/JASFakeMatch2.h"
+ 
+--- a/src/Yamamoto/KartRescue.cpp
++++ b/src/Yamamoto/KartRescue.cpp
+@@ -2,7 +2,7 @@
+ #include "Kameda/WipeManager.h"
+ #include "Kaneshige/Course/Course.h"
+ #include "Kaneshige/RaceMgr.h"
+-#include "Yamamoto/KartCtrl.h"
++#include "Yamamoto/kartCtrl.h"
+ #include "Yamamoto/kartBody.h"
+ #include "Yamamoto/kartParams.h"
+ #include "Kaneshige/KartChecker.h"

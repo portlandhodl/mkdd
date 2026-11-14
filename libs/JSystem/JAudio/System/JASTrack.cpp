@@ -550,9 +550,9 @@ void JASTrack::mute(bool mute) {
 void JASTrack::setOscTable(u32 osc_no, const JASOscillator::Point *table) {
 #line 781
     JUT_ASSERT(osc_no < OSC_NUM);
-    mOscParam[osc_no].mTable = DECOMP_HOST(table, (const JASOscillator::Point *)port_osc_table(table));
+    mOscParam[osc_no].mTable = table;
     if (osc_no != 0) {
-        mOscParam[osc_no].rel_table = DECOMP_HOST(table, (const JASOscillator::Point *)port_osc_table(table));
+        mOscParam[osc_no].rel_table = table;
     }
 }
 
@@ -569,7 +569,7 @@ void JASTrack::setOscAdsr(s16 p1, s16 p2, s16 p3, s16 p4, u16 directRelease) {
 
 void JASTrack::setFIR(const s16 *FIR) {
     for (int i = 0; i < 8; i++) {
-        mFIR[i] = DECOMP_HOST(FIR[i], (s16)DECOMP_BE16(&FIR[i]));
+        mFIR[i] = FIR[i];
     }
     mFilterMode &= JASDsp::FILTER_MODE_IIR;
     mFilterMode |= 8;

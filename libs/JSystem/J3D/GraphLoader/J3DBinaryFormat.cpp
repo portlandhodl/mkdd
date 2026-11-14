@@ -390,60 +390,6 @@ void J3DAnmTevRegKey_SaveData::write_InSaver(u8** out)
     (void)n;
 }
 
-#ifndef __MWERKS__
-template<> long* J3DSaverList<long>::search(long& value);
-template<> J3DSaverLink<long>::J3DSaverLink(long value);
-template<> void J3DSaverList<long>::append(J3DSaverLink<long>* link);
-template<> J3DNBTScaleInfo* J3DSaverList<J3DNBTScaleInfo>::search(J3DNBTScaleInfo& value);
-template<> J3DSaverLink<J3DNBTScaleInfo>::J3DSaverLink(J3DNBTScaleInfo value);
-template<> void J3DSaverList<J3DNBTScaleInfo>::append(J3DSaverLink<J3DNBTScaleInfo>* link);
-template<> J3DZMode* J3DSaverList<J3DZMode>::search(J3DZMode& value);
-template<> J3DSaverLink<J3DZMode>::J3DSaverLink(J3DZMode value);
-template<> void J3DSaverList<J3DZMode>::append(J3DSaverLink<J3DZMode>* link);
-template<> J3DFogInfo* J3DSaverList<J3DFogInfo>::search(J3DFogInfo& value);
-template<> J3DSaverLink<J3DFogInfo>::J3DSaverLink(J3DFogInfo value);
-template<> void J3DSaverList<J3DFogInfo>::append(J3DSaverLink<J3DFogInfo>* link);
-template<> J3DBlend* J3DSaverList<J3DBlend>::search(J3DBlend& value);
-template<> J3DSaverLink<J3DBlend>::J3DSaverLink(J3DBlend value);
-template<> void J3DSaverList<J3DBlend>::append(J3DSaverLink<J3DBlend>* link);
-template<> J3DAlphaComp* J3DSaverList<J3DAlphaComp>::search(J3DAlphaComp& value);
-template<> J3DSaverLink<J3DAlphaComp>::J3DSaverLink(J3DAlphaComp value);
-template<> void J3DSaverList<J3DAlphaComp>::append(J3DSaverLink<J3DAlphaComp>* link);
-template<> J3DTevSwapModeTable* J3DSaverList<J3DTevSwapModeTable>::search(J3DTevSwapModeTable& value);
-template<> J3DSaverLink<J3DTevSwapModeTable>::J3DSaverLink(J3DTevSwapModeTable value);
-template<> void J3DSaverList<J3DTevSwapModeTable>::append(J3DSaverLink<J3DTevSwapModeTable>* link);
-template<> J3DTevStage* J3DSaverList<J3DTevStage>::search(J3DTevStage& value);
-template<> J3DSaverLink<J3DTevStage>::J3DSaverLink(J3DTevStage value);
-template<> void J3DSaverList<J3DTevStage>::append(J3DSaverLink<J3DTevStage>* link);
-template<> J3DGXColorS10* J3DSaverList<J3DGXColorS10>::search(J3DGXColorS10& value);
-template<> J3DSaverLink<J3DGXColorS10>::J3DSaverLink(J3DGXColorS10 value);
-template<> void J3DSaverList<J3DGXColorS10>::append(J3DSaverLink<J3DGXColorS10>* link);
-template<> J3DTevOrderInfo* J3DSaverList<J3DTevOrderInfo>::search(J3DTevOrderInfo& value);
-template<> J3DSaverLink<J3DTevOrderInfo>::J3DSaverLink(J3DTevOrderInfo value);
-template<> void J3DSaverList<J3DTevOrderInfo>::append(J3DSaverLink<J3DTevOrderInfo>* link);
-template<> J3DTexMtxInfo* J3DSaverList<J3DTexMtxInfo>::search(J3DTexMtxInfo& value);
-template<> J3DSaverLink<J3DTexMtxInfo>::J3DSaverLink(J3DTexMtxInfo value);
-template<> void J3DSaverList<J3DTexMtxInfo>::append(J3DSaverLink<J3DTexMtxInfo>* link);
-template<> J3DTexCoord* J3DSaverList<J3DTexCoord>::search(J3DTexCoord& value);
-template<> J3DSaverLink<J3DTexCoord>::J3DSaverLink(J3DTexCoord value);
-template<> void J3DSaverList<J3DTexCoord>::append(J3DSaverLink<J3DTexCoord>* link);
-template<> Ul* J3DSaverList<Ul>::search(Ul& value);
-template<> J3DSaverLink<Ul>::J3DSaverLink(Ul value);
-template<> void J3DSaverList<Ul>::append(J3DSaverLink<Ul>* link);
-template<> J3DLightInfo* J3DSaverList<J3DLightInfo>::search(J3DLightInfo& value);
-template<> J3DSaverLink<J3DLightInfo>::J3DSaverLink(J3DLightInfo value);
-template<> void J3DSaverList<J3DLightInfo>::append(J3DSaverLink<J3DLightInfo>* link);
-template<> Us* J3DSaverList<Us>::search(Us& value);
-template<> J3DSaverLink<Us>::J3DSaverLink(Us value);
-template<> void J3DSaverList<Us>::append(J3DSaverLink<Us>* link);
-template<> Uc* J3DSaverList<Uc>::search(Uc& value);
-template<> J3DSaverLink<Uc>::J3DSaverLink(Uc value);
-template<> void J3DSaverList<Uc>::append(J3DSaverLink<Uc>* link);
-template<> J3DGXColor* J3DSaverList<J3DGXColor>::search(J3DGXColor& value);
-template<> J3DSaverLink<J3DGXColor>::J3DSaverLink(J3DGXColor value);
-template<> void J3DSaverList<J3DGXColor>::append(J3DSaverLink<J3DGXColor>* link);
-#endif
-
 template<> J3DSaverList<long>::J3DSaverList()
 {
     mHead = nullptr;

@@ -1,0 +1,155 @@
+Dolphin SDK headers on the host: low-memory globals placed with
+`: address` (MWCC only) become externs defined by the SDK layer, the
+cached/uncached bases are 0 (physical address == host address), the GX
+write-gather pipe and GX_WRITE_* macros append to the host FIFO
+(tools/web_wasm/include/port_gxfifo.h), section placement uses
+DECL_SECTION, VIConfigure gets the forward declaration C needs, and
+math.h stops defining the clangd placeholders for __fabs & co. (the real
+host versions are in mkdd_port.h).
+
+--- a/include/dolphin/os.h
++++ b/include/dolphin/os.h
+@@ -14,17 +14,26 @@
+ #define OS_UNCACHED_REGION_PREFIX 0xC000
+ #define OS_PHYSICAL_MASK 0x3FFF
+ 
++#ifdef __MWERKS__
+ #define OS_BASE_CACHED (OS_CACHED_REGION_PREFIX << 16)
+ #define OS_BASE_UNCACHED (OS_UNCACHED_REGION_PREFIX << 16)
++#else
++// host port: physical address == host address; low memory is reserved below GLOBAL_BASE
++#define OS_BASE_CACHED 0
++#define OS_BASE_UNCACHED 0
++#endif
+ 
+ #ifdef __MWERKS__
+ #define AT_ADDRESS(xyz) : (xyz)
+-#else
+-#define AT_ADDRESS
+-#endif
+ volatile int __OSTVMode AT_ADDRESS(OS_BASE_CACHED | 0xCC);
+ u32 __OSBusClock AT_ADDRESS(OS_BASE_CACHED | 0x00F8);  // sync with OSLoMem.h
+ u32 __OSCoreClock AT_ADDRESS(OS_BASE_CACHED | 0x00FC); // sync with OSLoMem.h
++#else
++#define AT_ADDRESS(xyz)
++extern volatile int __OSTVMode;
++extern u32 __OSBusClock;
++extern u32 __OSCoreClock;
++#endif
+ #define OS_BUS_CLOCK (u32) __OSBusClock
+ #define OS_CORE_CLOCK __OSCoreClock
+ #define OS_TIMER_CLOCK (OS_BUS_CLOCK / 4)
+--- a/include/dolphin/vi.h
++++ b/include/dolphin/vi.h
+@@ -149,7 +149,7 @@
+ void *VIGetNextFrameBuffer();
+ void VIWaitForRetrace(void);
+ 
+-void VIConfigure(const struct _GXRenderModeObj *rm);
++struct _GXRenderModeObj; void VIConfigure(const struct _GXRenderModeObj *rm);
+ void VIConfigurePan(u16 PanPosX, u16 PanPosY, u16 PanSizeX, u16 PanSizeY);
+ void VISetNextFrameBuffer(void *fb);
+ void *VIGetCurrentFrameBuffer();
+--- a/include/dolphin/os/init/__start.h
++++ b/include/dolphin/os/init/__start.h
+@@ -30,17 +30,17 @@
+ extern void __OSCacheInit(void);
+ extern void __OSPSInit(void);
+ 
+-__declspec(section ".init") extern void __check_pad3(void);
+-__declspec(section ".init") extern void __set_debug_bba(void);
+-__declspec(section ".init") extern u8 __get_debug_bba(void);
+-__declspec(section ".init") extern void __start(void);
+-__declspec(section ".init") extern void __init_registers(void);
+-__declspec(section ".init") extern void __init_data(void);
+-__declspec(section ".init") extern void __init_hardware(void);
+-__declspec(section ".init") extern void __flush_cache(void *address, unsigned int size);
++DECL_SECTION(".init") extern void __check_pad3(void);
++DECL_SECTION(".init") extern void __set_debug_bba(void);
++DECL_SECTION(".init") extern u8 __get_debug_bba(void);
++DECL_SECTION(".init") extern void __start(void);
++DECL_SECTION(".init") extern void __init_registers(void);
++DECL_SECTION(".init") extern void __init_data(void);
++DECL_SECTION(".init") extern void __init_hardware(void);
++DECL_SECTION(".init") extern void __flush_cache(void *address, unsigned int size);
+ 
+-__declspec(section ".init") extern char _stack_addr[];
+-__declspec(section ".init") extern char _SDA_BASE_[];
+-__declspec(section ".init") extern char _SDA2_BASE_[];
++DECL_SECTION(".init") extern char _stack_addr[];
++DECL_SECTION(".init") extern char _SDA_BASE_[];
++DECL_SECTION(".init") extern char _SDA2_BASE_[];
+ 
+ #endif // _DOLPHIN__START
+\ No newline at end of file
+--- a/include/dolphin/gx/GXVert.h
++++ b/include/dolphin/gx/GXVert.h
+@@ -24,8 +24,12 @@
+ 
+ #ifdef __MWERKS__
+ /*volatile*/ PPCWGPipe GXWGFifo : GXFIFO_ADDR;
++#elif defined(__cplusplus)
++}
++#include "port_gxfifo.h" // host port: write-gather pipe stores append to a host FIFO
++extern "C" {
+ #else
+-#define GXWGFifo (*(volatile PPCWGPipe*)GXFIFO_ADDR)
++#include "port_gxfifo.h"
+ #endif
+ 
+ static inline void GXPosition2f32(const f32 x, const f32 y)
+--- a/include/dolphin/gx/GXPriv.h
++++ b/include/dolphin/gx/GXPriv.h
+@@ -32,10 +32,10 @@
+ 
+ #define GX_FIFO_ADDR 0xCC008000
+ 
+-#define GX_WRITE_U8(v) GXWGFifo.u8 = (u8)(v)
+-#define GX_WRITE_U16(v) GXWGFifo.u16 = (u16)(v)
+-#define GX_WRITE_U32(v) GXWGFifo.u32 = (u32)v
+-#define GX_WRITE_F32(v) (GXWGFifo.f32 = (f32)(v))
++#define GX_WRITE_U8(v) port_gx_w8((u8)(v))
++#define GX_WRITE_U16(v) port_gx_w16((u16)(v))
++#define GX_WRITE_U32(v) port_gx_w32((u32)v)
++#define GX_WRITE_F32(v) port_gx_wf32((f32)(v))
+ 
+ #define GX_BITFIELD(field, pos, size, value) \
+   (__rlwimi((field), (value), 31 - (pos) - (size) + 1, (pos), (pos) + (size) - 1))
+@@ -52,18 +52,18 @@
+ #define GX_SET_TRUNC(reg, x, st, end) GX_BITFIELD_TRUNC((reg), (st), ((end) - (st) + 1), (x))
+ 
+ #define GX_BP_LOAD_REG(data) \
+-  GXWGFifo.s8 = GX_LOAD_BP_REG; \
+-  GXWGFifo.s32 = (data);
++  port_gx_w8((u8)GX_LOAD_BP_REG); \
++  port_gx_w32((u32)(data));
+ #define GX_CP_LOAD_REG(addr, data) \
+-  GXWGFifo.s8 = GX_LOAD_CP_REG; \
+-  GXWGFifo.s8 = (addr); \
+-  GXWGFifo.s32 = (data);
++  port_gx_w8((u8)GX_LOAD_CP_REG); \
++  port_gx_w8((u8)(addr)); \
++  port_gx_w32((u32)(data));
+ #define GX_XF_LOAD_REG_HDR(addr) \
+-  GXWGFifo.s8 = GX_LOAD_XF_REG; \
+-  GXWGFifo.s32 = (addr);
++  port_gx_w8((u8)GX_LOAD_XF_REG); \
++  port_gx_w32((u32)(addr));
+ #define GX_XF_LOAD_REG(addr, data) \
+   GX_XF_LOAD_REG_HDR(addr); \
+-  GXWGFifo.s32 = (data);
++  port_gx_w32((u32)(data));
+ #define GX_XF_LOAD_REGS(size, addr) \
+   { \
+     u32 cmd = (size) << 16 | addr; \
+--- a/libs/PowerPC_EABI_Support/include/math.h
++++ b/libs/PowerPC_EABI_Support/include/math.h
+@@ -9,7 +9,7 @@
+ extern "C" {
+ #endif // ifdef __cplusplus
+ 
+-#ifndef __MWERKS__
++#if !defined(__MWERKS__) && !defined(MKDD_PORT) // host port: real versions in port/include/mkdd_port.h
+ // Get clangd to shut up about __fabs being undefined.
+ #define __fabs(x)    (x)
+ #define __fabsf(x)   (x)

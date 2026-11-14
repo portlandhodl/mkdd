@@ -1,5 +1,5 @@
 #include "Yamamoto/KartCheck.h"
-#include "Yamamoto/kartCtrl.h"
+#include "Yamamoto/KartCtrl.h"
 #include "Kaneshige/RaceMgr.h"
 #include "JSystem/JAudio/JASFakeMatch2.h"
 

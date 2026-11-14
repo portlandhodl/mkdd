@@ -60,7 +60,7 @@ s32 JKRSolidHeap::adjustSize()
     {
         lock();
         u32 thisSize = (u32)mStartAddress - (u32)this;
-        u32 newSize = ALIGN_NEXT(mSolidHead - (u8 *)mStartAddress, 0x20);
+        u32 newSize = ALIGN_NEXT(mSolidHead - mStartAddress, 0x20);
         if (parent->resize(this, thisSize + newSize) != -1)
         {
             mFreeSize = 0;

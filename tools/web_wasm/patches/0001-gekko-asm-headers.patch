@@ -1,0 +1,383 @@
+Plain C++ versions of inline functions that the decomp writes in Gekko
+assembly or paired-single intrinsics (psq_l/ps_madd/fres/frsqrte...).
+clang for wasm32 cannot compile PowerPC asm, so each asm body gets a
+`#ifndef __MWERKS__` twin computing the same result in scalar code.
+
+--- a/include/JSystem/J2D/J2DAnimation.h
++++ b/include/JSystem/J2D/J2DAnimation.h
+@@ -494,6 +494,25 @@
+     return JMAHermiteInterpolation(f1, *f2, *f3, *f4, *f5, *f6, *f7);
+ }
+ 
++#ifndef __MWERKS__
++template <>
++inline f32 J2DHermiteInterpolation<s16>(f32 pp1, s16 *pp2, s16 *pp3, s16 *pp4, s16 *pp5, s16 *pp6, s16 *pp7)
++{
++    f32 ff2 = *pp2, ff7 = *pp3, fout = *pp4, ff0 = *pp5, ff6 = *pp6;
++    f32 ff5 = ff0 - ff2;
++    f32 ff3 = (pp1 - ff2) / ff5;
++    f32 ff4 = ff6 - ff7;
++    ff0 = (f32)*pp7 * ff5 + ff7;
++    f32 ff2sq = ff3 * ff3;
++    ff4 = -(ff5 * fout - ff4);
++    ff0 = ff0 - ff6 - ff4;
++    ff0 = ff2sq * ff0;
++    fout = ff5 * fout + ff0;
++    fout = fout * ff3 + ff7;
++    fout = ff4 * ff2sq + fout;
++    return fout - ff0;
++}
++#else
+ template <>
+ inline f32 J2DHermiteInterpolation<s16>(register f32 pp1, register s16 *pp2, register s16 *pp3, register s16 *pp4, register s16 *pp5,
+                                         register s16 *pp6, register s16 *pp7)
+@@ -540,5 +559,6 @@
+     // clang-format on
+     return fout;
+ }
+-
+ #endif
++
++#endif
+--- a/include/JSystem/J3D/J3DAnmBase.h
++++ b/include/JSystem/J3D/J3DAnmBase.h
+@@ -22,6 +22,25 @@
+     return JMAHermiteInterpolation(f1, *f2, *f3, *f4, *f5, *f6, *f7);
+ }
+ 
++#ifndef __MWERKS__
++template <>
++inline f32 J3DHermiteInterpolation<s16>(f32 pp1, s16 *pp2, s16 *pp3, s16 *pp4, s16 *pp5, s16 *pp6, s16 *pp7)
++{
++    f32 ff2 = *pp2, ff7 = *pp3, fout = *pp4, ff0 = *pp5, ff6 = *pp6;
++    f32 ff5 = ff0 - ff2;
++    f32 ff3 = (pp1 - ff2) / ff5;
++    f32 ff4 = ff6 - ff7;
++    ff0 = (f32)*pp7 * ff5 + ff7;
++    f32 ff2sq = ff3 * ff3;
++    ff4 = -(ff5 * fout - ff4);
++    ff0 = ff0 - ff6 - ff4;
++    ff0 = ff2sq * ff0;
++    fout = ff5 * fout + ff0;
++    fout = fout * ff3 + ff7;
++    fout = ff4 * ff2sq + fout;
++    return fout - ff0;
++}
++#else
+ template <>
+ inline f32 J3DHermiteInterpolation<s16>(register f32 pp1, register s16 *pp2, register s16 *pp3, register s16 *pp4, register s16 *pp5,
+                                         register s16 *pp6, register s16 *pp7)
+@@ -68,6 +87,7 @@
+     // clang-format on
+     return fout;
+ }
++#endif
+ 
+ /**
+  * @fabricated
+--- a/include/JSystem/J3D/J3DDrawBuffer.h
++++ b/include/JSystem/J3D/J3DDrawBuffer.h
+@@ -10,6 +10,12 @@
+ struct J3DCallBackPacket;
+ struct J3DTexture;
+ 
++#ifndef __MWERKS__
++inline f32 J3DCalcZValue(MtxPtr m, Vec v)
++{
++    return m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3];
++}
++#else
+ inline f32 J3DCalcZValue(register MtxPtr m, register Vec v)
+ {
+     register f32 temp_f4;
+@@ -31,7 +37,9 @@
+ 
+     return out;
+ }
++#endif
+ 
++#ifdef __MWERKS__
+ inline u32 J3DCalcTexHash(register J3DTexture *texture)
+ {
+     register u32 hash;
+@@ -47,6 +55,7 @@
+ 
+     return hash;
+ }
++#endif
+ 
+ #pragma push
+ #pragma optimize_for_size off
+--- a/include/JSystem/J3D/J3DMtxBuffer.h
++++ b/include/JSystem/J3D/J3DMtxBuffer.h
+@@ -62,6 +62,15 @@
+     Mtx33*** getBumpMtxPtrPtr() const { return mBumpMatrices[1]; }
+     Mtx33* getBumpMtxPtr(int idx) const { return mBumpMatrices[1][idx][mCurrentViewNumber]; }
+ 
++#ifndef __MWERKS__
++    void setNrmMtx(int idx, Mtx mtx)
++    {
++        f32 *dst = (f32 *)mNormMatrices[1][mCurrentViewNumber][idx];
++        for (int r = 0; r < 3; r++)
++            for (int c = 0; c < 3; c++)
++                dst[r * 3 + c] = mtx[r][c];
++    }
++#else
+     void setNrmMtx(int idx, Mtx mtx)
+     {
+         register const void* source = mtx;
+@@ -81,6 +90,7 @@
+             stfs f0, 32(destination)
+         }
+     }
++#endif
+ 
+     void swapDrawMtx()
+     {
+--- a/include/JSystem/J3D/J3DTransform.h
++++ b/include/JSystem/J3D/J3DTransform.h
+@@ -28,6 +28,25 @@
+ void J3DCalcHalfAngleMtx(Vec*, Vec*, f32 (*)[4]);
+ void J3DPSMtxArrayConcat(f32 (*)[4], f32 (*)[4], f32 (*)[4], unsigned long);
+ 
++#ifndef __MWERKS__
++inline void J3DPSMtx33Copy(const Mtx33 src, Mtx33 dst)
++{
++    for (int i = 0; i < 3; i++) {
++        for (int j = 0; j < 3; j++) {
++            dst[i][j] = src[i][j];
++        }
++    }
++}
++
++inline void J3DPSMtx33CopyFrom34(const Mtx src, Mtx33 dst)
++{
++    for (int i = 0; i < 3; i++) {
++        for (int j = 0; j < 3; j++) {
++            dst[i][j] = src[i][j];
++        }
++    }
++}
++#else
+ // clang-format off
+ /**
+  * @fabricated
+@@ -79,5 +98,6 @@
+     }
+ }
+ // clang-format on
++#endif
+ 
+ #endif
+--- a/include/JSystem/JGeometry/Vec.h
++++ b/include/JSystem/JGeometry/Vec.h
+@@ -17,6 +17,8 @@
+             stfs z, 8(dst)
+             // clang-format on
+         }
++#else
++        dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];
+ #endif
+     }
+ 
+@@ -32,6 +34,8 @@
+             // clang-format on
+         }
+         dst[2] = -src[2];
++#else
++        dst[0] = -src[0]; dst[1] = -src[1]; dst[2] = -src[2];
+ #endif
+     }
+ 
+@@ -48,6 +52,8 @@
+             // clang-format on
+         }
+         dst[2] = vec1[2] * vec2[2];
++#else
++        dst[0] = vec1[0] * vec2[0]; dst[1] = vec1[1] * vec2[1]; dst[2] = vec1[2] * vec2[2];
+ #endif
+     }
+ 
+@@ -460,6 +466,7 @@
+     typedef TVec4<s16> TVec4s;
+ 
+ 
++#ifdef __MWERKS__
+ #pragma use_lmw_stmw off
+     template <> inline void TVec3<f32>::div(f32 divisor, const TVec3<f32> &operand) { scale(TUtilf::invert(divisor), operand); }
+ #pragma use_lmw_stmw on
+@@ -470,6 +477,9 @@
+ #ifndef JGEOM_NO_TVEC3_SET
+     template <> template <> inline void TVec3f::set(f32 X, f32 Y, f32 Z) { x = X; y = Y; z = Z; }
+ #endif
++#else
++    inline void TVec3<f32>::div(f32 divisor, const TVec3<f32> &operand) { scale(TUtilf::invert(divisor), operand); }
++#endif
+ }
+ 
+ #endif
+--- a/include/JSystem/JMath/Inline.h
++++ b/include/JSystem/JMath/Inline.h
+@@ -5,6 +5,40 @@
+ #include "types.h"
+ 
+ namespace JMathInlineVEC {
++#ifndef __MWERKS__
++inline void PSVECAdd(const Vec* vec1, const Vec* vec2, Vec* dst)
++{
++	dst->x = vec1->x + vec2->x;
++	dst->y = vec1->y + vec2->y;
++	dst->z = vec1->z + vec2->z;
++}
++inline void PSVECSubtract(const Vec* vec1, const Vec* vec2, Vec* dst)
++{
++	dst->x = vec1->x - vec2->x;
++	dst->y = vec1->y - vec2->y;
++	dst->z = vec1->z - vec2->z;
++}
++inline void PSVECScale(const Vec* src, Vec* dst, f32 scalar)
++{
++	dst->x = src->x * scalar;
++	dst->y = src->y * scalar;
++	dst->z = src->z * scalar;
++}
++inline void PSVECScaleAdd(const Vec* vec1, const Vec* vec2, Vec* dst, f32 scale)
++{
++	dst->x = vec1->x * scale + vec2->x;
++	dst->y = vec1->y * scale + vec2->y;
++	dst->z = vec1->z * scale + vec2->z;
++}
++inline f32 PSVECDotProduct(const Vec* vec1, const Vec* vec2)
++{
++	return vec1->x * vec2->x + vec1->y * vec2->y + vec1->z * vec2->z;
++}
++inline f32 PSVECSquareMag(const Vec* src)
++{
++	return src->x * src->x + src->y * src->y + src->z * src->z;
++}
++#else
+ inline void PSVECAdd(register const Vec* vec1, register const Vec* vec2, register Vec* dst)
+ {
+ 	register f32 v1xy, v2xy, d1xy, v1z, v2z, d1z;
+@@ -101,6 +135,7 @@
+ 	// clang-format on
+ 	return ret;
+ }
++#endif
+ } // namespace JMathInlineVEC
+ 
+ #endif
+--- a/include/JSystem/JMath/JMath.h
++++ b/include/JSystem/JMath/JMath.h
+@@ -12,6 +12,15 @@
+ 
+ namespace JMath
+ {
++#ifndef __MWERKS__
++    inline void gekko_ps_copy12(void *pDest, const void *pSrc)
++    {
++        const f32 *src = (const f32 *)pSrc;
++        f32 *dst = (f32 *)pDest;
++        for (int i = 0; i < 12; i++)
++            dst[i] = src[i];
++    }
++#else
+     inline void gekko_ps_copy12(register void *pDest, register const void *pSrc)
+     {
+         register f32 rxxyx;
+@@ -38,6 +47,7 @@
+             // clang-format on
+         }
+     }
++#endif
+ 
+     template <typename T>
+     struct TAngleConstant_
+@@ -260,6 +270,30 @@
+ inline f32 JMASCos(s16 v) { return JMACosShort(v); }
+ inline f32 JMASSin(s16 v) { return JMASinShort(v); }
+ 
++#ifndef __MWERKS__
++inline f32 JMAHermiteInterpolation(f32 p1, f32 p2, f32 p3, f32 p4, f32 p5, f32 p6, f32 p7)
++{
++    f32 ff31 = p1 - p2;
++    f32 ff29 = ff31 / (p5 - p2);
++    f32 ff28 = ff29 * ff29;
++    f32 ff25 = ff29 + ff29;
++    f32 ff27 = ff28 - ff29;
++    f32 ff30 = p3 - p6;
++    f32 ff26 = ff25 * ff27 - ff28;
++    ff25 = p4 * ff27 + p4;
++    ff26 = ff26 * ff30 + p3;
++    ff25 = p7 * ff27 + ff25;
++    ff25 = ff29 * p4 - ff25;
++    return -(ff31 * ff25 - ff26);
++}
++
++inline f32 JMAFastSqrt(f32 x)
++{
++    if (x > 0.0f)
++        return (f32)sqrt(x);
++    return x;
++}
++#else
+ inline f32 JMAHermiteInterpolation(register f32 p1, register f32 p2, register f32 p3, register f32 p4, register f32 p5, register f32 p6,
+                                    register f32 p7)
+ {
+@@ -302,6 +336,7 @@
+     }
+     return x;
+ }
++#endif
+ 
+ void JMAEulerToQuat(s16, s16, s16, Quaternion *);
+ void JMAQuatLerp(const Quaternion *, const Quaternion *, f32, Quaternion *);
+--- a/include/dolphin/os/OSFastCast.h
++++ b/include/dolphin/os/OSFastCast.h
+@@ -45,6 +45,17 @@
+ // clang-format off
+ 
+ 
++#ifndef __MWERKS__
++/* Gekko quantized stores clamp to the target range and truncate toward zero. */
++static inline s16 __OSf32tos16(f32 inF)
++{
++    if (inF >= 32767.0f)
++        return 32767;
++    if (inF <= -32768.0f)
++        return -32768;
++    return (s16)inF;
++}
++#else
+ static inline s16 __OSf32tos16(register f32 inF)
+ {
+ 	register s16 out;
+@@ -59,9 +70,20 @@
+ 
+   return out;
+ }
++#endif
+ 
+ static inline void OSf32tos16(f32 *f, s16 *out) { *out = __OSf32tos16(*f); }
+ 
++#ifndef __MWERKS__
++static inline u8 __OSf32tou8(f32 inF)
++{
++    if (inF >= 255.0f)
++        return 255;
++    if (inF <= 0.0f)
++        return 0;
++    return (u8)inF;
++}
++#else
+ static inline u8 __OSf32tou8(register f32 inF)
+ {
+   register u8 out;
+@@ -76,6 +98,7 @@
+ 
+   return out;
+ }
++#endif
+ 
+ static inline void OSf32tou8(f32 *f, u8 *out) { *out = __OSf32tou8(*f); }
+ 

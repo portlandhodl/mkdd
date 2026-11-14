@@ -1,0 +1,417 @@
+Functions that fall off the end without returning a value. Many are
+UNUSED stubs; others call a function whose result MWCC leaves in r3, so
+the original code "returns" it by accident. clang treats flowing off the
+end as undefined behaviour and may trap or drop code (wasm), so the host
+build returns the intended value (or a zero value for unused stubs).
+This also fixes declarations whose return type disagrees with the
+definition or caller (ObjUtility::getPtrMainLocaleArc, the driver.cpp
+CheckAndLoadAnimSoundAvailable redeclaration, main returning int) and
+include paths whose letter case only works on case-insensitive disks.
+
+--- a/include/Sato/ObjUtility.h
++++ b/include/Sato/ObjUtility.h
+@@ -11,7 +11,7 @@
+ {
+     void *getPtrMainArc(char *);                                                            // 0x8025dc08
+     void *getPtrCourseArc(char *);                                                          // 0x8025dc30
+-    void getPtrMainLocaleArc(char *);                                                       // 0x8025dc58
++    void *getPtrMainLocaleArc(char *);                                                      // 0x8025dc58
+     void setRMtx(MtxPtr, const JGeometry::TVec3f &, const JGeometry::TVec3f &);                // 0x8025dc80
+     void executeShakeCamera(const JGeometry::TVec3f &, f32, f32, f32);                      // 0x8025dcf4
+     Mtx &getKartBodyMtx(int);                                                               // 0x8025de7c
+--- a/libs/JSystem/J2DGraph/J2DBloSaver.cpp
++++ b/libs/JSystem/J2DGraph/J2DBloSaver.cpp
+@@ -44,6 +44,7 @@
+ 
+ const char* J2DBloSaver::CTextureNameConnect::get(const ResTIMG* tex) {
+     // UNUSED
++    return nullptr;
+ }
+ 
+ J2DBloSaver::CTextureNameConnect::TNC::TNC(const ResTIMG* tex, const char* name) {
+--- a/libs/JSystem/J2DGraph/J2DPane.cpp
++++ b/libs/JSystem/J2DGraph/J2DPane.cpp
+@@ -448,6 +448,7 @@
+ f32 J2DPane::getRotate() const
+ {
+     // UNUSED FUNCTION
++    return 0.0f;
+ }
+ 
+ void J2DPane::clip(const JGeometry::TBox2f& bounds)
+--- a/libs/JSystem/J2DGraph/J2DTextBoxEx.cpp
++++ b/libs/JSystem/J2DGraph/J2DTextBoxEx.cpp
+@@ -342,7 +342,7 @@
+         return false;
+     }
+ 
+-    setBlackWhite(black, currWhite);
++    return setBlackWhite(black, currWhite);
+ }
+ 
+ bool J2DTextBoxEx::setWhite(JUTColor white)
+@@ -354,7 +354,7 @@
+         return false;
+     }
+ 
+-    setBlackWhite(currBlack, white);
++    return setBlackWhite(currBlack, white);
+ }
+ 
+ bool J2DTextBoxEx::setBlackWhite(JUTColor black, JUTColor white)
+@@ -529,5 +529,5 @@
+             hide();
+         }
+     }
+-    J2DPane::animationPane(anm);
+-}
++    return J2DPane::animationPane(anm);
++}
+--- a/libs/JSystem/JAudio/System/JASDSPChannel.cpp
++++ b/libs/JSystem/JAudio/System/JASDSPChannel.cpp
+@@ -226,12 +226,12 @@
+     return &sDspChannels[index];
+ }
+ 
+-int JASDSPChannel::getNumUse() {}
+-
+-int JASDSPChannel::getNumFree() {}
+-
+-int JASDSPChannel::getNumBreak() {}
+-
+-u16 JASDSPChannel::getBlockCounter() const {}
+-
+-u16 JASDSPChannel::getRemainSamples() const {}
++int JASDSPChannel::getNumUse() { return 0; }
++
++int JASDSPChannel::getNumFree() { return 0; }
++
++int JASDSPChannel::getNumBreak() { return 0; }
++
++u16 JASDSPChannel::getBlockCounter() const { return 0; }
++
++u16 JASDSPChannel::getRemainSamples() const { return 0; }
+--- a/libs/JSystem/JAudio/System/JASDSPInterface.cpp
++++ b/libs/JSystem/JAudio/System/JASDSPInterface.cpp
+@@ -1,4 +1,4 @@
+-#include "JSystem/JAudio/DSP.h"
++#include "JSystem/JAudio/dsp.h"
+ #include "JSystem/JAudio/System/JASCalc.h"
+ #include "JSystem/JAudio/System/JASCriticalSection.h"
+ #include "JSystem/JAudio/System/JASDsp.h"
+@@ -156,6 +156,7 @@
+ 
+ TChannel *getDSPHandleNc(int) {
+     // UNUSED
++    return nullptr;
+ }
+ 
+ void setFilterTable(s16 *dst, s16 *src, u32 n) {
+@@ -198,10 +199,12 @@
+ 
+ Fxline &getFXHandle(u8) {
+     // UNUSED
++    return FX_BUF[0];
+ }
+ 
+ Fxline &getFXHandleNc(u8) {
+     // UNUSED
++    return FX_BUF[0];
+ }
+ 
+ bool setFXLine(u8 p1, s16 *buffer, FxlineConfig_ *config) {
+@@ -292,10 +295,12 @@
+ 
+ u16 TChannel::getBlockCounter() const {
+     // UNUSED
++    return 0;
+ }
+ 
+ u16 TChannel::getRemainSamples() const {
+     // UNUSED
++    return 0;
+ }
+ 
+ void TChannel::setWaveInfo(const JASWaveInfo &waveInfo, u32 p2, u32 p3) {
+--- a/libs/JSystem/JAudio/System/JASHeapCtrl.cpp
++++ b/libs/JSystem/JAudio/System/JASHeapCtrl.cpp
+@@ -239,6 +239,7 @@
+ 
+ u32 JASSolidHeap::getRemain() {
+ 
++    return 0;
+ }
+ 
+ JASGenericMemPool::JASGenericMemPool() {
+--- a/libs/JSystem/JAudio/Utility/JAUStreamFileTable.cpp
++++ b/libs/JSystem/JAudio/Utility/JAUStreamFileTable.cpp
+@@ -41,6 +41,7 @@
+         return NULL;
+ 
+     JUT_ASSERT(entry >= 0)
++    return NULL;
+ }
+ 
+ s32 JAUStreamDataMgr_StreamFileTable::getStreamFileEntry(JAISoundID soundID)
+--- a/libs/JSystem/JGadget/hashcode.cpp
++++ b/libs/JSystem/JGadget/hashcode.cpp
+@@ -3,6 +3,7 @@
+ u32 JGadget::getHashCode(const char *, u32) 
+ {
+     // UNUSED
++    return 0;
+ }
+ 
+ u32 JGadget::getHashCode(const char *data)
+--- a/libs/JSystem/JParticle/JPAEmitter.cpp
++++ b/libs/JSystem/JParticle/JPAEmitter.cpp
+@@ -1,4 +1,4 @@
+-#include "Dolphin/mtx.h"
++#include "dolphin/mtx.h"
+ #include "JSystem/JParticle/JPABlock.h"
+ #include "JSystem/JParticle/JPAEmitter.h"
+ #include "JSystem/JParticle/JPAResource.h"
+@@ -167,6 +167,7 @@
+ int JPABaseEmitter::getDrawCount() const
+ {
+     // UNUSED FUNCTION
++    return 0;
+ }
+ 
+ void JPABaseEmitter::loadTexture(u8, _GXTexMapID)
+--- a/libs/JSystem/JParticle/JPAParticle.cpp
++++ b/libs/JSystem/JParticle/JPAParticle.cpp
+@@ -1,4 +1,4 @@
+-#include "Dolphin/mtx.h"
++#include "dolphin/mtx.h"
+ #include "JSystem/JParticle/JPABlock.h"
+ #include "JSystem/JParticle/JPAEmitter.h"
+ #include "JSystem/JParticle/JPAResource.h"
+@@ -321,9 +321,11 @@
+ f32 JPABaseParticle::getWidth(const JPABaseEmitter* emitter) const
+ {
+     // UNUSED FUNCTION
++    return 0.0f;
+ }
+ 
+ f32 JPABaseParticle::getHeight(const JPABaseEmitter* emitter) const
+ {
+     // UNUSED FUNCTION
+-}
++    return 0.0f;
++}
+--- a/libs/JSystem/JParticle/JPAResourceManager.cpp
++++ b/libs/JSystem/JParticle/JPAResourceManager.cpp
+@@ -45,11 +45,13 @@
+ bool JPAResourceManager::checkUserIndexDuplication(u16) const
+ {
+     // UNUSED, but exists in TP
++    return false;
+ }
+ 
+ const ResTIMG *JPAResourceManager::swapTexture(const ResTIMG *, const char *)
+ {
+     // UNUSED
++    return nullptr;
+ }
+ 
+ void JPAResourceManager::registRes(JPAResource *res)
+@@ -76,4 +78,5 @@
+ u32 JPAResourceManager::getResUserWork(u16) const
+ {
+     // UNUSED
++    return 0;
+ }
+--- a/src/Kameda/J2DManager.cpp
++++ b/src/Kameda/J2DManager.cpp
+@@ -305,6 +305,7 @@
+ 
+ bool J2DManager::isMiniGameAnmEnd(int status) {
+     // UNUSED
++    return false;
+ }
+ 
+ int J2DManager::getGoalAnmFrame(int status) {
+--- a/src/Kaneshige/LightMgr.cpp
++++ b/src/Kaneshige/LightMgr.cpp
+@@ -128,6 +128,7 @@
+ RaceSceneLight *LightMgr::searchRaceSceneLight(u32 viewNo) {
+     // UNUSED, should call another unused function
+     // getTagName__14RaceSceneLightFUl
++    return nullptr;
+ }
+ 
+ RaceKartLight *LightMgr::searchRaceKartLight(u32 viewNo, int kartNo) {
+--- a/src/Kaneshige/RaceMgr.cpp
++++ b/src/Kaneshige/RaceMgr.cpp
+@@ -1655,6 +1655,7 @@
+ bool RaceMgr::Console::isZoom()
+ {
+     RCMGetKartChecker(0);
++    return false;
+ }
+ 
+ bool RaceMgr::robRivalOfBalloon(int playerIdx, int rivalIdx)
+--- a/src/Kawano/driver.cpp
++++ b/src/Kawano/driver.cpp
+@@ -80,7 +80,7 @@
+     void *GetPtr(int);
+     void *GetSoundPtr(int);
+     bool CheckAndLoadAnimAvailable(int, int);
+-    bool CheckAndLoadAnimSoundAvailable(int, int);
++    void CheckAndLoadAnimSoundAvailable(int, int);
+     int CheckRenew();
+     int CheckRenewSound();
+     void Check();
+--- a/src/Kawano/driverMgr.cpp
++++ b/src/Kawano/driverMgr.cpp
+@@ -472,6 +472,7 @@
+ 
+ bool DriverManager::IsAllARAMDMAFinished() {
+     // UNUSED
++    return false;
+ }
+ 
+ void DriverManager::CheckARAMDMA(f64, int) {
+--- a/src/Kawano/feeling.cpp
++++ b/src/Kawano/feeling.cpp
+@@ -47,6 +47,7 @@
+ 
+ void *FeelingOne::getAnmFile(int)
+ {
++    return nullptr;
+ }
+ 
+ void FeelingOne::reset()
+--- a/src/Osako/main.cpp
++++ b/src/Osako/main.cpp
+@@ -1,6 +1,10 @@
+ #include "Osako/system.h"
+ 
++#ifdef __MWERKS__
+ void main(int argc, char **argv)
++#else
++int main(int argc, char **argv)
++#endif
+ {
+     System::init();
+     System::run();
+--- a/src/Osako/password.cpp
++++ b/src/Osako/password.cpp
+@@ -100,6 +100,7 @@
+ 
+ bool Password::unpack(EKartID *, ECharID *, ECharID *, ECourseID *, RaceTime *, RaceTime *) {
+ 
++    return false;
+ }
+ 
+ void Password::crypt(u16 rnd)
+@@ -137,6 +138,7 @@
+ 
+ char Password::searchPasswordTable(char c) {
+     //return scaPasswordTable[c];
++    return 0;
+ }
+ 
+ void Password::decode() {
+--- a/src/Sato/GeoItemBox.cpp
++++ b/src/Sato/GeoItemBox.cpp
+@@ -201,6 +201,7 @@
+ 
+ const char *GeoItemBox::getBmdFilePtr() {
+     // UNUSED
++    return nullptr;
+ }
+ 
+ const char *GeoItemBox::getBmdName() {
+--- a/src/Sato/GeoRFlower.cpp
++++ b/src/Sato/GeoRFlower.cpp
+@@ -23,6 +23,7 @@
+     // UNUSED
+     //static const char *cBmdName = "/Objects/RFlower.bmd";
+     //return cBmdName;
++    return nullptr;
+ }
+ 
+ void GeoRFlower::calc() {}
+--- a/src/Sato/ItemObjMgr.cpp
++++ b/src/Sato/ItemObjMgr.cpp
+@@ -810,6 +810,7 @@
+ bool ItemObjMgr::IsItemAvailable(int) { 
+     // UNUSED
+     // SIZE: 0x48
++    return false;
+ }
+ 
+ ItemObj *ItemObjMgr::getKartEquipItem(int kart_index, u8 driver_index)
+@@ -826,6 +827,7 @@
+ {
+     // UNUSED
+     // SIZE: 0x18
++    return false;
+ }
+ 
+ int ItemObjMgr::getStockItem(int kart_index, u8 driver_index)
+--- a/src/Sato/ObjUtility.cpp
++++ b/src/Sato/ObjUtility.cpp
+@@ -25,7 +25,7 @@
+ 
+ void *ObjUtility::getPtrCourseArc(char *path) { return ResMgr::getPtr(ResMgr::mcArcCourse, path); }
+ 
+-void ObjUtility::getPtrMainLocaleArc(char *path) { ResMgr::getPtr(ResMgr::mcArcMRAMLoc, path); }
++void *ObjUtility::getPtrMainLocaleArc(char *path) { return ResMgr::getPtr(ResMgr::mcArcMRAMLoc, path); }
+ 
+ void ObjUtility::setRMtx(MtxPtr mtx, const JGeometry::TVec3f &vec1, const JGeometry::TVec3f &vec2)
+ {
+--- a/src/Shiraiwa/ZCaptureMgr.cpp
++++ b/src/Shiraiwa/ZCaptureMgr.cpp
+@@ -29,6 +29,7 @@
+ 
+ bool ZCaptureMgr::captureAll() {
+     // UNUSED
++    return false;
+ }
+ 
+ void ZCaptureMgr::capture(u32 viewNo) {
+@@ -53,6 +54,7 @@
+ 
+ bool ZCaptureMgr::isActive(u32) {
+     // UNUSED
++    return false;
+ }
+ 
+ void ZCaptureMgr::setPosition(u32 id, u32 viewNo, s16 x, s16 y) {
+@@ -112,6 +114,7 @@
+ 
+ bool ZCaptureScreen::isActive(u32) {
+     // UNUSED
++    return false;
+ }
+ 
+ void ZCaptureScreen::setPosition(u32 id, s16 x, s16 y) {
+--- a/src/Yamamoto/kartCtrlInfo.cpp
++++ b/src/Yamamoto/kartCtrlInfo.cpp
+@@ -7,7 +7,7 @@
+ #include "Yamamoto/kartBody.h"
+ #include "Yamamoto/kartCtrl.h"
+ 
+-#include "Jsystem/JAudio/JASFakeMatch2.h"
++#include "JSystem/JAudio/JASFakeMatch2.h"
+ #include "Yamamoto/kartParams.h"
+ #include "kartEnums.h"
+ 
+@@ -259,12 +259,12 @@
+ // FIX: Add return statements for the following two functions:
+ bool KartCtrl::GetLeftFTirePos(int kartIndex, Vec *vec) {
+     getKartBody(kartIndex);
+-    GetTirePos(kartIndex, 1, vec);
++    return GetTirePos(kartIndex, 1, vec);
+ }
+ 
+ bool KartCtrl::GetRightFTirePos(int kartIndex, Vec *vec) {
+     getKartBody(kartIndex);
+-    GetTirePos(kartIndex, 0, vec);
++    return GetTirePos(kartIndex, 0, vec);
+ }
+ 
+ bool KartCtrl::GetLeftTirePos(int kartIndex, Vec *vec) {

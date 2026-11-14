@@ -1655,7 +1655,7 @@ void RaceMgr::Console::clearZBuffer()
 bool RaceMgr::Console::isZoom()
 {
     RCMGetKartChecker(0);
-DECOMP_HOST(, return false;) }
+}
 
 bool RaceMgr::robRivalOfBalloon(int playerIdx, int rivalIdx)
 {

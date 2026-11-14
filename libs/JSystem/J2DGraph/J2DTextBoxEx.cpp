@@ -342,7 +342,7 @@ bool J2DTextBoxEx::setBlack(JUTColor black)
         return false;
     }
 
-    DECOMP_HOST(setBlackWhite(black, currWhite), return setBlackWhite(black, currWhite));
+    setBlackWhite(black, currWhite);
 }
 
 bool J2DTextBoxEx::setWhite(JUTColor white)
@@ -354,7 +354,7 @@ bool J2DTextBoxEx::setWhite(JUTColor white)
         return false;
     }
 
-    DECOMP_HOST(setBlackWhite(currBlack, white), return setBlackWhite(currBlack, white));
+    setBlackWhite(currBlack, white);
 }
 
 bool J2DTextBoxEx::setBlackWhite(JUTColor black, JUTColor white)
@@ -529,5 +529,5 @@ const J2DAnmTransform* J2DTextBoxEx::animationPane(const J2DAnmTransform* anm)
             hide();
         }
     }
-    DECOMP_HOST(J2DPane::animationPane(anm), return J2DPane::animationPane(anm));
+    J2DPane::animationPane(anm);
 }

@@ -50,9 +50,6 @@ public:
     virtual void InitExec();
     virtual void doKartColCallBack(int);
     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
-#ifndef __MWERKS__
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
 
     void checkItemHitting();
     void moveColOffset();

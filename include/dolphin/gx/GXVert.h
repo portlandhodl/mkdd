@@ -24,12 +24,8 @@ typedef union {
 
 #ifdef __MWERKS__
 /*volatile*/ PPCWGPipe GXWGFifo : GXFIFO_ADDR;
-#elif defined(__cplusplus)
-}
-#include "port_gxfifo.h" // host port: write-gather pipe stores append to a host FIFO
-extern "C" {
 #else
-#include "port_gxfifo.h"
+#define GXWGFifo (*(volatile PPCWGPipe*)GXFIFO_ADDR)
 #endif
 
 static inline void GXPosition2f32(const f32 x, const f32 y)

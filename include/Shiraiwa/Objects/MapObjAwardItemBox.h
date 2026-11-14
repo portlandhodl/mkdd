@@ -54,9 +54,6 @@ public:
 
     // Inline
     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; } // 0x802cb998
-#ifndef __MWERKS__
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
     virtual ~TMapObjAwardItemBox(); // 0x802cb9a0
     void MoveExec(); // 0x802cbed4
     void InitExec(); // 0x802cbe68

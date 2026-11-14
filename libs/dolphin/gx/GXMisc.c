@@ -3,11 +3,6 @@
 #include <dolphin/gx/GXPriv.h>
 #include <dolphin/os.h>
 #include <dolphin/hw_regs.h>
-#ifndef __MWERKS__
-#include "port_hw.h"
-#undef __PIRegs
-#define __PIRegs port_hw_pi
-#endif
 
 static GXDrawSyncCallback TokenCB;
 static GXDrawDoneCallback DrawDoneCB;
@@ -118,9 +113,6 @@ void GXSetDrawSync(u16 token)
 	GX_BP_LOAD_REG(reg);
 
 	GXFlush();
-#ifndef __MWERKS__
-	port_gx_idle_sync(token | 0x48000000);
-#endif
 	OSRestoreInterrupts(interrupts);
 	gx->bpSentNot = GX_FALSE;
 }
@@ -141,9 +133,6 @@ void GXSetDrawDone(void)
 
 	GXFlush();
 	DrawDone = GX_FALSE;
-#ifndef __MWERKS__
-	port_gx_idle_sync(reg);
-#endif
 	OSRestoreInterrupts(interrupts);
 }
 
@@ -249,56 +238,38 @@ void GXPokeZMode(GXBool doCompare, GXCompare func, GXBool doUpdate)
 
 void GXPeekARGB(u16 x, u16 y, u32* color)
 {
-#ifdef __MWERKS__
 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
 	GX_SET_REG(addr, x, 20, 29);
 	GX_SET_REG(addr, y, 10, 19);
 	GX_SET_REG(addr, 0, 8, 9);
 	*color = *(u32*)addr;
-#else
-	// host port: there is no EFB to address
-	*color = 0;
-#endif
 }
 
 void GXPokeARGB(u16 x, u16 y, u32 color)
 {
-#ifdef __MWERKS__
 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
 	GX_SET_REG(addr, x, 20, 29);
 	GX_SET_REG(addr, y, 10, 19);
 	GX_SET_REG(addr, 0, 8, 9);
 	*(u32*)addr = color;
-#else
-	// host port: there is no EFB to address
-#endif
 }
 
 void GXPeekZ(u16 x, u16 y, u32* z)
 {
-#ifdef __MWERKS__
 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
 	GX_SET_REG(addr, x, 20, 29);
 	GX_SET_REG(addr, y, 10, 19);
 	GX_SET_REG(addr, 1, 8, 9);
 	*z = *(u32*)addr;
-#else
-	// host port: there is no EFB to address
-	*z = 0;
-#endif
 }
 
 void GXPokeZ(u16 x, u16 y, u32 z)
 {
-#ifdef __MWERKS__
 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
 	GX_SET_REG(addr, x, 20, 29);
 	GX_SET_REG(addr, y, 10, 19);
 	GX_SET_REG(addr, 1, 8, 9);
 	*(u32*)addr = z;
-#else
-	// host port: there is no EFB to address
-#endif
 }
 
 GXDrawSyncCallback GXSetDrawSyncCallback(GXDrawSyncCallback callback)

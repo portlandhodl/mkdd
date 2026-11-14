@@ -575,7 +575,7 @@ void J3DFifoLoadNrmMtxImm3x3(Mtx33 mtx, u32 idx)
 }
 
 #undef GX_WRITE_U32
-#define GX_WRITE_U32(v) DECOMP_HOST(((volatile PPCWGPipe*)GXFIFO_ADDR)->u32 = (u32)(v), GXWGFifo.u32 = (u32)(v))
+#define GX_WRITE_U32(v) ((volatile PPCWGPipe*)GXFIFO_ADDR)->u32 = (u32)(v)
 
 void J3DFifoLoadNrmMtxToTexMtx(Mtx mtx, u32 idx)
 {

@@ -1,4 +1,4 @@
-#include "JSystem/JAudio/JAUAudience.h"
+#include "JSystem/JAUdio/JAUAudience.h"
 #include "JSystem/JAudio/System/JASHeapCtrl.h"
 #include "JSystem/JUtility/JUTAssert.h"
 #include "JSystem/JAudio/JASFakeMatch.h"
@@ -10,14 +10,12 @@ typedef JAUAudible<4> TAudible4;
 typedef JAUAudible<2> TAudible2;
 typedef JAUAudible<1> TAudible1;
 
-#ifdef __MWERKS__
 JASMemPool<TDopplerAudible4> JASPoolAllocObject<TDopplerAudible4>::memPool_;
 JASMemPool<TDopplerAudible2> JASPoolAllocObject<TDopplerAudible2>::memPool_;
 JASMemPool<TDopplerAudible1> JASPoolAllocObject<TDopplerAudible1>::memPool_;
 JASMemPool<TAudible4> JASPoolAllocObject<TAudible4>::memPool_;
 JASMemPool<TAudible2> JASPoolAllocObject<TAudible2>::memPool_;
 JASMemPool<TAudible1> JASPoolAllocObject<TAudible1>::memPool_;
-#endif
 
 // sdata2 ordering is incorrect, probably requires an exact match in testInstanciate...
 

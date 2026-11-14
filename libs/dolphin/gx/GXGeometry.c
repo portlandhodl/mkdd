@@ -52,11 +52,11 @@ void __GXSendFlushPrim(void)
   u16 vNum = gx->vNum;
   u32 sz = (vNum * gx->vLim);
 
-  DECOMP_HOST((*(volatile u8*)GXFIFO_ADDR) = 0x98, port_gx_w8(0x98));
-  DECOMP_HOST((*(volatile u16*)GXFIFO_ADDR) = vNum, port_gx_w16(vNum));
+  (*(volatile u8*)GXFIFO_ADDR) = 0x98;
+  (*(volatile u16*)GXFIFO_ADDR) = vNum;
 
   for (i = 0; i < sz; i += 4) {
-    DECOMP_HOST((*(volatile u32*)GXFIFO_ADDR) = 0, port_gx_w32(0));
+    (*(volatile u32*)GXFIFO_ADDR) = 0;
   }
 
   gx->bpSentNot = GX_TRUE;

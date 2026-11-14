@@ -25,38 +25,11 @@
 #define DECL_SECTION(x) __declspec(section x)
 #define DECL_WEAK __declspec(weak)
 #define DONT_INLINE __attribute__((never_inline))
-// inline definitions placed in a .cpp to control weak emission; the host build needs them out of line
-#define DECOMP_INLINE inline
-#define DECOMP_MWERKS 1
-// big-endian data read through typed loads (left big-endian in the host port)
-#define DECOMP_BE16(p) (*(u16 *)(p))
-#define DECOMP_BE32(p) (*(u32 *)(p))
-// choose the original expression, or a host-port replacement
-#define DECOMP_HOST(orig, host) orig
 #else
 #define DECL_SECTION(x)
 #define DECL_WEAK __attribute__((weak))
 #define DONT_INLINE __attribute__((noinline))
-#define DECOMP_INLINE
-#define DECOMP_MWERKS 0
-#define DECOMP_BE16(p) ((u16)(((const u8 *)(p))[0] << 8 | ((const u8 *)(p))[1]))
-#define DECOMP_BE32(p) ((u32)((const u8 *)(p))[0] << 24 | (u32)((const u8 *)(p))[1] << 16 | (u32)((const u8 *)(p))[2] << 8 | ((const u8 *)(p))[3])
-#define DECOMP_HOST(orig, host) host
 #endif
-// 3D perspective aspect ratio: the host port's widescreen option widens it (port_wide_aspect,
-// 1 = the original 4:3, 4/3 = anamorphic 16:9)
-#if DECOMP_MWERKS
-#define DECOMP_WIDE(aspect) (aspect)
-#else
-#ifdef __cplusplus
-extern "C" float port_wide_aspect;
-#else
-extern float port_wide_aspect;
-#endif
-#define DECOMP_WIDE(aspect) ((aspect) * port_wide_aspect)
-#endif
-// integer division that PowerPC's divw/divwu tolerate by zero (wasm traps)
-#define DECOMP_IDIV(a, b) DECOMP_HOST((a) / (b), ((b) == 0 ? 0 : (a) / (b)))
 
 // Align X to the previous N bytes (N must be power of two)
 #define ALIGN_PREV(X, N) ((X) & ~((N)-1))

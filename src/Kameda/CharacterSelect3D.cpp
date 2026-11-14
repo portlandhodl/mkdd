@@ -1105,7 +1105,7 @@ void CharacterSelect3D::draw(int player, f32 aspect)
     Mtx44 projMtx;
     Mtx tmp;
 
-    C_MTXPerspective(projMtx, param->mFovy, DECOMP_WIDE(aspect), 10.0f, 200000.0f);
+    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
     GXSetProjection(projMtx, GX_PERSPECTIVE);
 
     Vec eye = JGeometry::TVec3f(param->mEye);
@@ -1199,7 +1199,7 @@ void CharacterSelect3D::draw(int player, f32 aspect, JGeometry::TVec3f eye, JGeo
 
     Mtx44 projMtx;
     Mtx tmp;
-    C_MTXPerspective(projMtx, param->mFovy, DECOMP_WIDE(aspect), 10.0f, 200000.0f);
+    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
     GXSetProjection(projMtx, GX_PERSPECTIVE);
 
     Vec up = {0.0f, 1.0f, 0.0f};

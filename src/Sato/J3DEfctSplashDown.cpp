@@ -11,11 +11,6 @@
 #include "Sato/ObjUtility.h"
 #include "Sato/stMath.h"
 
-#ifndef __MWERKS__
-template<>
-void JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >::makeRotate(const JGeometry::TVec3f &, f32);
-#endif
-
 J3DAnmTransform *J3DEfctSplashDown::sBckAnmTrans[1];
 J3DMtxCalc *J3DEfctSplashDown::sBckMtxCalc[1];
 J3DAnmTextureSRTKey *J3DEfctSplashDown::sTexSRTKey;
@@ -121,9 +116,6 @@ void J3DEfctSplashDown::calc() {
     mModel.setBaseTRMtx(*getRotMtx()->toMtx());
 }
 
-#ifndef __MWERKS__
-template<>
-#endif
 __declspec(weak) void JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >::makeRotate(
     const JGeometry::TVec3f &rVec, f32 angle) {
     zeroTrans();

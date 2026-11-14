@@ -23,7 +23,7 @@ const char *GeoRFlower::getBmdFileName() {
     // UNUSED
     //static const char *cBmdName = "/Objects/RFlower.bmd";
     //return cBmdName;
-DECOMP_HOST(, return nullptr;) }
+}
 
 void GeoRFlower::calc() {}
 

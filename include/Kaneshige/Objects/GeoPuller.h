@@ -36,11 +36,7 @@ public:
     bool isSameID(u32 id) const { return mObjData->mParam1 == (s16)id; } // 0x801d3d40
     virtual ~GeoPuller() {} // 0x801d4170
 
-#ifdef __MWERKS__
     virtual GeoPullerSupervisor *getSupervisor() { return sSupervisor; }
-#else
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
     static GeoPullerSupervisor *getSupervisor() { return sSupervisor; }
 
     friend class GeoPullerSupervisor;

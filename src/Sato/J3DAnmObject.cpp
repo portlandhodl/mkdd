@@ -85,11 +85,6 @@ void J3DAnmObjMaterial::setupTexPatternAnmData(J3DAnmTexPattern **anm, J3DModelD
     modelData->getMaterialTable().entryTexNoAnimator(*anm);
 }
 
-#ifndef __MWERKS__
-template<>
-void J3DAnmObjMaterial::setMaterialAnmTev<J3DAnmTevRegKey>(J3DAnmTevRegKey **, J3DModelData *);
-#endif
-
 void J3DAnmObjMaterial::setupTevRegAnmData(J3DAnmTevRegKey **anm, J3DModelData *modelData, void *data) {
     *anm = (J3DAnmTevRegKey *)J3DAnmLoaderDataBase::load(data, J3DLOADER_UNK_FLAG0);
     (*anm)->searchUpdateMaterialID(modelData);

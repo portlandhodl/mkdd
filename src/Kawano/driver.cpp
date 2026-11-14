@@ -80,7 +80,7 @@ public:
     void *GetPtr(int);
     void *GetSoundPtr(int);
     bool CheckAndLoadAnimAvailable(int, int);
-    void CheckAndLoadAnimSoundAvailable(int, int);
+    bool CheckAndLoadAnimSoundAvailable(int, int);
     int CheckRenew();
     int CheckRenewSound();
     void Check();

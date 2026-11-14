@@ -1,0 +1,96 @@
+Byte order in audio code. Sequence data, sound tables, oscillator tables
+and FIR coefficients stay big-endian in memory on the host, so reads
+assemble the big-endian value (port_be16/port_be32) and oscillator tables
+are replaced by a host-order copy (port_osc_table). Stream (.ast) headers
+read raw from the disc are swapped in place (port_ast_header/block, in
+tools/web_wasm/sdk/dsp_mixer.cpp).
+
+--- a/include/JSystem/JAudio/System/JASSeqReader.h
++++ b/include/JSystem/JAudio/System/JASSeqReader.h
+@@ -28,28 +28,28 @@
+ 
+     u32 get24(u32 offset) const
+     {
+-        return (*(u32 *)((u8 *)mBase + offset - 1)) & 0xffffff;
++        return port_be32((u8 *)mBase + offset - 1) & 0xffffff;
+     }
+ 
+     void *getBase() { return mBase; }
+     void *getAddr(u32 offset) { return (u8 *)mBase + offset; }
+     u8 getByte(u32 offset) const { return *(mBase + offset); }
+-    u16 get16(u32 offset) const { return *(u16 *)((u8 *)mBase + offset); }
+-    u32 get32(u32 offset) const { return *(u32 *)((u8 *)mBase + offset); }
++    u16 get16(u32 offset) const { return port_be16((u8 *)mBase + offset); }
++    u32 get32(u32 offset) const { return port_be32((u8 *)mBase + offset); }
+     u8 *getCur() { return mReadPtr; }
+     u8 readByte() { return *mReadPtr++; }
+     u32 read16()
+     {
+         u16 *tmp = (u16 *)mReadPtr;
+         mReadPtr += 2;
+-        return *tmp;
++        return port_be16(tmp);
+     }
+     u32 read24()
+     {
+         mReadPtr--;
+         u32 *tmp = (u32 *)mReadPtr;
+         mReadPtr += 4;
+-        return *tmp & 0x00ffffff;
++        return port_be32(tmp) & 0x00ffffff;
+     }
+     u16 getLoopCount() const { 
+          if (mCommandNo == 0) 
+--- a/include/JSystem/JAudio/JAUSoundTable.h
++++ b/include/JSystem/JAudio/JAUSoundTable.h
+@@ -129,7 +129,7 @@
+         {
+             return 0xff;
+         }
+-        return mTypeIds[index * 4];
++        return *(u32 *)(mTypeIds + index * 4) >> 24;
+     }
+ 
+     u32 getItemOffset(int index) const
+--- a/libs/JSystem/JAudio/System/JASTrack.cpp
++++ b/libs/JSystem/JAudio/System/JASTrack.cpp
+@@ -550,9 +550,9 @@
+ void JASTrack::setOscTable(u32 osc_no, const JASOscillator::Point *table) {
+ #line 781
+     JUT_ASSERT(osc_no < OSC_NUM);
+-    mOscParam[osc_no].mTable = table;
++    mOscParam[osc_no].mTable = (const JASOscillator::Point *)port_osc_table(table);
+     if (osc_no != 0) {
+-        mOscParam[osc_no].rel_table = table;
++        mOscParam[osc_no].rel_table = (const JASOscillator::Point *)port_osc_table(table);
+     }
+ }
+ 
+@@ -569,7 +569,7 @@
+ 
+ void JASTrack::setFIR(const s16 *FIR) {
+     for (int i = 0; i < 8; i++) {
+-        mFIR[i] = FIR[i];
++        mFIR[i] = (s16)port_be16(&FIR[i]);
+     }
+     mFilterMode &= JASDsp::FILTER_MODE_IIR;
+     mFilterMode |= 8;
+--- a/libs/JSystem/JAudio/System/JASAramStream.cpp
++++ b/libs/JSystem/JAudio/System/JASAramStream.cpp
+@@ -289,6 +289,8 @@
+     }
+ 
+     Header *header = (Header*)sReadBuffer;
++
++    port_ast_header(header);
+     JUT_ASSERT(header->tag == 'STRM');
+     JUT_ASSERT(header->format <= 1);
+     JUT_ASSERT(header->bits == 16);
+@@ -370,6 +372,7 @@
+         return false;
+     }
+     BlockHeader *bhead = (BlockHeader*)sReadBuffer;
++    port_ast_block(bhead);
+     JUT_ASSERT(bhead->tag == 'BLCK');
+     if (mCancelled != 0) {
+         return false;

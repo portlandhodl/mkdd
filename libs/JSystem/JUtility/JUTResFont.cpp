@@ -155,14 +155,14 @@ void JUTResFont::setBlock()
         int magic = data->mMagic;
         switch (magic)
         {
-        case 'INF1': {
+        case 'INF1':
             mInfoBlock = (ResFONT::InfoBlock *)data;
             u32 u = mInfoBlock->mFontType;
 #line 244
             JUT_ASSERT(u < suAboutEncoding_);
             mIsLeadByte = (IsLeadByte *)&saoAboutEncoding_[u];
             break;
-        }
+
         case 'WID1':
             mWidthBlocks[widthNum] = (ResFONT::WidthBlock *)data;
             widthNum++;

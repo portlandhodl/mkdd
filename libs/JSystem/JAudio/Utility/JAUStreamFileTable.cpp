@@ -41,7 +41,7 @@ const char *JAUStreamFileTable::getFilePath_fromEntry(s32 entry) const
         return NULL;
 
     JUT_ASSERT(entry >= 0)
-DECOMP_HOST(, return NULL;) }
+}
 
 s32 JAUStreamDataMgr_StreamFileTable::getStreamFileEntry(JAISoundID soundID)
 {

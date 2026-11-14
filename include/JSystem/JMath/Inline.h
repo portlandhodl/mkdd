@@ -5,40 +5,6 @@
 #include "types.h"
 
 namespace JMathInlineVEC {
-#ifndef __MWERKS__
-inline void PSVECAdd(const Vec* vec1, const Vec* vec2, Vec* dst)
-{
-	dst->x = vec1->x + vec2->x;
-	dst->y = vec1->y + vec2->y;
-	dst->z = vec1->z + vec2->z;
-}
-inline void PSVECSubtract(const Vec* vec1, const Vec* vec2, Vec* dst)
-{
-	dst->x = vec1->x - vec2->x;
-	dst->y = vec1->y - vec2->y;
-	dst->z = vec1->z - vec2->z;
-}
-inline void PSVECScale(const Vec* src, Vec* dst, f32 scalar)
-{
-	dst->x = src->x * scalar;
-	dst->y = src->y * scalar;
-	dst->z = src->z * scalar;
-}
-inline void PSVECScaleAdd(const Vec* vec1, const Vec* vec2, Vec* dst, f32 scale)
-{
-	dst->x = vec1->x * scale + vec2->x;
-	dst->y = vec1->y * scale + vec2->y;
-	dst->z = vec1->z * scale + vec2->z;
-}
-inline f32 PSVECDotProduct(const Vec* vec1, const Vec* vec2)
-{
-	return vec1->x * vec2->x + vec1->y * vec2->y + vec1->z * vec2->z;
-}
-inline f32 PSVECSquareMag(const Vec* src)
-{
-	return src->x * src->x + src->y * src->y + src->z * src->z;
-}
-#else
 inline void PSVECAdd(register const Vec* vec1, register const Vec* vec2, register Vec* dst)
 {
 	register f32 v1xy, v2xy, d1xy, v1z, v2z, d1z;
@@ -135,7 +101,6 @@ inline f32 PSVECSquareMag(register const Vec* src)
 	// clang-format on
 	return ret;
 }
-#endif
 } // namespace JMathInlineVEC
 
 #endif

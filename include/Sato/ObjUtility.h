@@ -11,7 +11,7 @@ namespace ObjUtility
 {
     void *getPtrMainArc(char *);                                                            // 0x8025dc08
     void *getPtrCourseArc(char *);                                                          // 0x8025dc30
-    void *getPtrMainLocaleArc(char *);                                                      // 0x8025dc58
+    void getPtrMainLocaleArc(char *);                                                       // 0x8025dc58
     void setRMtx(MtxPtr, const JGeometry::TVec3f &, const JGeometry::TVec3f &);                // 0x8025dc80
     void executeShakeCamera(const JGeometry::TVec3f &, f32, f32, f32);                      // 0x8025dcf4
     Mtx &getKartBodyMtx(int);                                                               // 0x8025de7c

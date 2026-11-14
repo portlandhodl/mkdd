@@ -59,8 +59,6 @@ public:
 
     static Kart2DCommon *ptr() { return mspKart2DCommon; }
 private:
-    friend class Race2D;
-
     static Kart2DCommon *mspKart2DCommon; // 0x80416a70
     ResTIMG *mNumberTex[11];              // 0 to 9, also why are there 11?
     ResTIMG *mFontData[26];               // chars A to Z

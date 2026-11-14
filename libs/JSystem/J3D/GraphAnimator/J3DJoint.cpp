@@ -37,11 +37,7 @@ inline s32 checkScaleOne(const Vec& vec)
 namespace JMath {
 inline f32 fastReciprocal(register f32 value)
 {
-#ifndef __MWERKS__
-    value = __fres(value);
-#else
     __asm { fres value, value }
-#endif
     return value;
 }
 }
@@ -148,7 +144,7 @@ inline void J3DMtxCalcAnimation<J3DMtxCalcAnimationAdaptorDefault<J3DMtxCalcCalc
     PSMTXCopy(mtx, J3DSys::mCurrentMtx);
 }
 
-DECOMP_INLINE J3DMtxCalcAnmBase::~J3DMtxCalcAnmBase() { }
+inline J3DMtxCalcAnmBase::~J3DMtxCalcAnmBase() { }
 
 J3DMtxCalcAnmBase* J3DNewMtxCalcAnm(u32 type, J3DAnmTransform* animation)
 {

@@ -6,7 +6,7 @@
 #include "types.h"
 #include <dolphin/gx.h>
 
-#define GXCOLOR_AS_U32(color)   DECOMP_BE32(&(color))
+#define GXCOLOR_AS_U32(color)   (*((u32*)&(color)))
 #define RGBA_TO_U32(r, g, b, a) (((u8)(r) << 24) | ((u8)(g) << 16) | ((u8)(b) << 8) | ((u8)(a)))
 #define TCOLOR_WHITE JUtility::TColor(0xFF, 0xFF, 0xFF, 0xFF)
 #define TCOLOR_BLACK JUtility::TColor(0, 0, 0, 0)
@@ -37,7 +37,7 @@ namespace JUtility
         }
 
         operator u32() const { return toUInt32(); }
-        u32 toUInt32() const { return DECOMP_BE32(&r); }
+        u32 toUInt32() const { return *(u32 *)&r; }
 
         void set(u8 cR, u8 cG, u8 cB, u8 cA)
         {
@@ -47,7 +47,7 @@ namespace JUtility
             a = cA;
         }
 
-        void set(u32 u32Color) { DECOMP_HOST(*(u32 *)&r = u32Color, (r = (u8)(u32Color >> 24), g = (u8)(u32Color >> 16), b = (u8)(u32Color >> 8), a = (u8)u32Color)); }
+        void set(u32 u32Color) { *(u32 *)&r = u32Color; }
 
         void set(GXColor gxColor) { *(GXColor *)&r = gxColor; }
         //void set(TColor color) { *this = color; }

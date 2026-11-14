@@ -205,7 +205,7 @@ void PreRace2D::calc()
         return;
 
     switch (mWipeType) {
-    case 0: {
+    case 0:
         if (mCounter < 180) {
             mStatus = 0;
             if (mCounter == 179)
@@ -240,7 +240,6 @@ void PreRace2D::calc()
         mScreen->animation();
         mCounter++;
         break;
-    }
     case 1: {
         int counter = mCounter;
         if (counter == 0)

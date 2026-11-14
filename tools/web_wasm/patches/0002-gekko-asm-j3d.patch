@@ -1,0 +1,513 @@
+Scalar replacements for the hand-written Gekko assembly in J3D (matrix
+concatenation, inverse transpose, envelope matrices, bump matrix arrays,
+paired-single copies, GQR setup). The asm only exists to reproduce the
+original register allocation; the host versions compute the same values.
+J3DJoint.cpp also defines ~J3DMtxCalcAnmBase out of line: MWCC emits the
+`inline` definition placed in the .cpp as a weak symbol, clang drops it.
+
+--- a/libs/JSystem/J3D/GraphAnimator/J3DJoint.cpp
++++ b/libs/JSystem/J3D/GraphAnimator/J3DJoint.cpp
+@@ -37,7 +37,11 @@
+ namespace JMath {
+ inline f32 fastReciprocal(register f32 value)
+ {
++#ifndef __MWERKS__
++    value = __fres(value);
++#else
+     __asm { fres value, value }
++#endif
+     return value;
+ }
+ }
+@@ -144,7 +148,7 @@
+     PSMTXCopy(mtx, J3DSys::mCurrentMtx);
+ }
+ 
+-inline J3DMtxCalcAnmBase::~J3DMtxCalcAnmBase() { }
++J3DMtxCalcAnmBase::~J3DMtxCalcAnmBase() { }
+ 
+ J3DMtxCalcAnmBase* J3DNewMtxCalcAnm(u32 type, J3DAnmTransform* animation)
+ {
+--- a/libs/JSystem/J3D/GraphAnimator/J3DMtxBuffer.cpp
++++ b/libs/JSystem/J3D/GraphAnimator/J3DMtxBuffer.cpp
+@@ -141,6 +141,58 @@
+ 
+ int J3DMtxBuffer::createBumpMtxArray(J3DModelData* i_modelData, u32 mtxNum)
+ {
++#ifndef __MWERKS__
++    if (i_modelData->getModelDataType() == 0) {
++        u32 bumpMtxNum = 0;
++        u32 materialNum = i_modelData->getMaterialNum();
++        u32 bumpMatNum = 0;
++        for (u16 i = 0; i < materialNum; i++) {
++            J3DMaterial* material = i_modelData->getMaterialNodePointer(i);
++            if (material->getNBTScale()->mHasScale == 1) {
++                bumpMtxNum += material->getShape()->countBumpMtxNum();
++                bumpMatNum++;
++            }
++        }
++
++        if ((u16)bumpMtxNum != 0 && mtxNum != 0) {
++            for (int i = 0; i < 2; i++) {
++                mBumpMatrices[i] = new Mtx33**[(u16)bumpMatNum];
++            }
++        }
++
++        for (int i = 0; i < 2; i++) {
++            u32 num = i_modelData->getMaterialNum();
++            int offset = 0;
++            for (u16 j = 0; j < num; j++) {
++                J3DMaterial* material = i_modelData->getMaterialNodePointer(j);
++                if (material->getNBTScale()->mHasScale == 1) {
++                    mBumpMatrices[i][offset] = new Mtx33*[mtxNum];
++                    material->getShape()->setBumpMtxOffset(offset);
++                    offset++;
++                }
++            }
++        }
++
++        for (int i = 0; i < 2; i++) {
++            u32 num = i_modelData->getMaterialNum();
++            int offset = 0;
++            for (u16 j = 0; j < num; j++) {
++                J3DMaterial* material = i_modelData->getMaterialNodePointer(j);
++                if (material->getNBTScale()->mHasScale == 1) {
++                    for (u32 k = 0; k < mtxNum; k++) {
++                        mBumpMatrices[i][offset][k] = new (0x20) Mtx33[i_modelData->getDrawMtxNum()];
++                    }
++                    offset++;
++                }
++            }
++        }
++
++        if ((u16)bumpMatNum != 0) {
++            i_modelData->setBumpFlag(1);
++        }
++    }
++    return 0;
++#else
+     // Typed sibling code differs only in the first loop's register assignment
+     // (r24/r28 instead of r28/r29), so retain the exact target implementation.
+     __asm {
+@@ -294,10 +346,57 @@
+     L_bump_end:
+         li r3,0
+     }
++#endif
+ }
+ 
+ static f32 J3DUnit01[] = {0.0f, 1.0f};
+ 
++#ifndef __MWERKS__
++void J3DMtxBuffer::calcWeightEnvelopeMtx()
++{
++    int max = mJointTree->getWEvlpMtxNum();
++    u16* indices = mJointTree->getWEvlpMixIndex();
++    f32* weights = mJointTree->getWEvlpMixWeight();
++
++    for (int i = 0; i < max; i++) {
++        u8* pScale = &mEnvelopeScaleFlags[i];
++        *pScale = 1;
++        MtxPtr weightAnmMtx = mWeightEnvelopeMatrices[i];
++        f32 acc[3][4] = {
++            {0.0f, 0.0f, 0.0f, 0.0f},
++            {0.0f, 0.0f, 0.0f, 0.0f},
++            {0.0f, 0.0f, 0.0f, 0.0f},
++        };
++
++        int j = 0;
++        int mixNum = mJointTree->getWEvlpMixMtxNum(i);
++        do {
++            int idx = *indices++;
++            f32 weight = *weights++;
++            MtxPtr invMtx = mJointTree->getInvJointMtx((u16)idx);
++            MtxPtr worldMtx = mWorldMatrices[idx];
++
++            for (int r = 0; r < 3; r++) {
++                for (int c = 0; c < 4; c++) {
++                    f32 v = invMtx[0][c] * worldMtx[r][0] + invMtx[1][c] * worldMtx[r][1] + invMtx[2][c] * worldMtx[r][2];
++                    if (c == 3) {
++                        v += worldMtx[r][3];
++                    }
++                    acc[r][c] += v * weight;
++                }
++            }
++
++            *pScale &= mScaleFlags[idx];
++        } while (++j < mixNum);
++
++        for (int r = 0; r < 3; r++) {
++            for (int c = 0; c < 4; c++) {
++                weightAnmMtx[r][c] = acc[r][c];
++            }
++        }
++    }
++}
++#else
+ void J3DMtxBuffer::calcWeightEnvelopeMtx()
+ {
+     register MtxPtr weightAnmMtx;
+@@ -425,6 +524,7 @@
+         }
+     }
+ }
++#endif
+ 
+ void J3DMtxBuffer::calcDrawMtx(u32 mdlFlag, Vec const& param_1, Mtx const& param_2)
+ {
+--- a/libs/JSystem/J3D/GraphBase/J3DStruct.cpp
++++ b/libs/JSystem/J3D/GraphBase/J3DStruct.cpp
+@@ -3,6 +3,29 @@
+ #include "JSystem/J3D/J3DTexMtx.h"
+ #include "JSystem/J3D/J3DTypes.h"
+ 
++#ifndef __MWERKS__
++static inline void J3DCopySRTInfo(J3DTextureSRTInfo* dstInfo, const J3DTextureSRTInfo* srcInfo)
++{
++    dstInfo->mScaleX = srcInfo->mScaleX;
++    dstInfo->mScaleY = srcInfo->mScaleY;
++    *(u32*)&dstInfo->mRotation = *(u32*)&srcInfo->mRotation;
++    dstInfo->mTranslationX = srcInfo->mTranslationX;
++    dstInfo->mTranslationY = srcInfo->mTranslationY;
++}
++
++static inline void J3DPSCopyN(void* dst, const void* src, int n)
++{
++    const f32* s = (const f32*)src;
++    f32* d = (f32*)dst;
++    for (int i = 0; i < n; i++) {
++        d[i] = s[i];
++    }
++}
++
++static inline void J3DPSCopy3(void* dst, const void* src) { J3DPSCopyN(dst, src, 3); }
++static inline void J3DPSCopy6(void* dst, const void* src) { J3DPSCopyN(dst, src, 6); }
++static inline void J3DPSCopy16(void* dst, const void* src) { J3DPSCopyN(dst, src, 16); }
++#else
+ static inline void J3DCopySRTInfo(J3DTextureSRTInfo* dstInfo, const J3DTextureSRTInfo* srcInfo)
+ {
+     register const f32* src = &srcInfo->mScaleX;
+@@ -77,6 +100,7 @@
+         psq_st v7, 56(dst), 0, 0
+     }
+ }
++#endif
+ 
+ bool J3DTransformInfo::operator==(J3DTransformInfo& other) const
+ {
+@@ -157,7 +181,12 @@
+     JMath::gekko_ps_copy12(mEffectMtx, mtx);
+     register f32 zero = 0.0f;
+     register f32* dst = mEffectMtx[3];
++#ifndef __MWERKS__
++    dst[0] = zero;
++    dst[1] = zero;
++#else
+     asm { psq_st zero, 0(dst), 0, 0 }
++#endif
+     mEffectMtx[3][2] = 0.0f;
+     mEffectMtx[3][3] = 1.0f;
+ }
+--- a/libs/JSystem/J3D/GraphBase/J3DTransform.cpp
++++ b/libs/JSystem/J3D/GraphBase/J3DTransform.cpp
+@@ -20,7 +20,9 @@
+ static f32 Unit01[2] = {0.0f, 1.0f};
+ 
+ void __MTGQR7(register u32 v) {
++#ifdef __MWERKS__
+     asm { mtspr GQR7, v }
++#endif
+ }
+ 
+ void J3DGQRSetup7(u32 r0, u32 r1, u32 r2, u32 r3) {
+@@ -30,7 +32,9 @@
+ }
+ 
+ void __MTGQR6(register u32 v) {
++#ifdef __MWERKS__
+     asm { mtspr GQR6, v }
++#endif
+ }
+ 
+ void J3DGQRSetup6(u32 r0, u32 r1, u32 r2, u32 r3) {
+@@ -43,7 +47,11 @@
+     register f32 recip;
+ 
+     if (x > 0.0f) {
++#ifndef __MWERKS__
++        recip = __frsqrte(x);
++#else
+         asm { frsqrte recip, x }
++#endif
+         return recip * x;
+     }
+     return x;
+@@ -65,10 +73,17 @@
+     }
+ 
+     register f32 zero = 0.0f;
++#ifndef __MWERKS__
++    mtx[0][1] = zero;
++    mtx[0][2] = zero;
++    mtx[2][0] = zero;
++    mtx[2][1] = zero;
++#else
+     asm {
+         psq_st zero, 0x04(mtx), 0, 0
+         psq_st zero, 0x20(mtx), 0, 0
+     }
++#endif
+ 
+     mtx[0][0] = x;
+     mtx[1][0] = 0.0f;
+@@ -100,7 +115,39 @@
+     mtx[2][2] = vec.z * z;
+ }
+ 
+-#ifdef __MWERKS__  // clang-format off
++#ifndef __MWERKS__
++void J3DPSCalcInverseTranspose(Mtx src, Mtx33 dst) {
++    f32 a00 = src[0][0], a01 = src[0][1], a02 = src[0][2];
++    f32 a10 = src[1][0], a11 = src[1][1], a12 = src[1][2];
++    f32 a20 = src[2][0], a21 = src[2][1], a22 = src[2][2];
++
++    f32 c00 = a11 * a22 - a21 * a12;
++    f32 c01 = a12 * a20 - a22 * a10;
++    f32 c02 = a10 * a21 - a11 * a20;
++    f32 c10 = a21 * a02 - a01 * a22;
++    f32 c11 = a22 * a00 - a02 * a20;
++    f32 c12 = a01 * a20 - a00 * a21;
++    f32 c20 = a01 * a12 - a11 * a02;
++    f32 c21 = a02 * a10 - a12 * a00;
++    f32 c22 = a00 * a11 - a01 * a10;
++
++    f32 det = a00 * c00 + a10 * c10 + a20 * c20;
++    if (det == 0.0f) {
++        return;
++    }
++    f32 inv = 1.0f / det;
++
++    dst[0][0] = c00 * inv;
++    dst[0][1] = c01 * inv;
++    dst[0][2] = c02 * inv;
++    dst[1][0] = c10 * inv;
++    dst[1][1] = c11 * inv;
++    dst[1][2] = c12 * inv;
++    dst[2][0] = c20 * inv;
++    dst[2][1] = c21 * inv;
++    dst[2][2] = c22 * inv;
++}
++#else  // clang-format off
+ asm void J3DPSCalcInverseTranspose(register Mtx src, register Mtx33 dst) {
+ 	psq_l    f0, 0(src), 1, 0
+ 	psq_l    f1, 4(src), 0, 0
+@@ -154,8 +201,8 @@
+ 	li       r3, 1
+ 	psq_st   f8, 32(r4), 1, 0
+ 	blr
++}
+ #endif  // clang-format on
+-}
+ 
+ void J3DGetTranslateRotateMtx(const J3DTransformInfo& tx, Mtx dst) {
+     f32 cxsz;
+@@ -289,7 +336,15 @@
+     dst[2][2] = 1.0f;
+ }
+ 
+-#ifdef __MWERKS__  // clang-format off
++#ifndef __MWERKS__
++void J3DScaleNrmMtx(Mtx mtx, const Vec& scl) {
++    for (int i = 0; i < 3; i++) {
++        mtx[i][0] *= scl.x;
++        mtx[i][1] *= scl.y;
++        mtx[i][2] *= scl.z;
++    }
++}
++#else  // clang-format off
+ asm void J3DScaleNrmMtx(register Mtx mtx, const register Vec& scl) {
+ 	nofralloc;
+ 
+@@ -322,10 +377,18 @@
+ 	fmuls  f4, fp1, fp3
+ 	stfs   f4, 40(mtx)
+ 	blr
++}
+ #endif  // clang-format on
+-}
+-
+-#ifdef __MWERKS__  // clang-format off
++
++#ifndef __MWERKS__
++void J3DScaleNrmMtx33(Mtx33 mtx, const Vec& scale) {
++    for (int i = 0; i < 3; i++) {
++        mtx[i][0] *= scale.x;
++        mtx[i][1] *= scale.y;
++        mtx[i][2] *= scale.z;
++    }
++}
++#else  // clang-format off
+ asm void J3DScaleNrmMtx33(register Mtx33 mtx, const register Vec& scale) {
+ 	psq_l    f0, 0(mtx), 0, 0
+ 	psq_l    f6, 0(scale), 0, 0
+@@ -348,10 +411,23 @@
+ 	psq_st   f4, 24(mtx), 0, 0
+ 	stfs     f5, 0x20(mtx)
+ 	blr
++}
+ #endif  // clang-format on
+-}
+-
+-#ifdef __MWERKS__  // clang-format off
++
++#ifndef __MWERKS__
++void J3DMtxProjConcat(Mtx mtx1, Mtx mtx2, Mtx dst) {
++    // mtx2 is read as a 4x4 matrix
++    for (int i = 0; i < 3; i++) {
++        f32 m0 = mtx1[i][0], m1 = mtx1[i][1], m2 = mtx1[i][2], m3 = mtx1[i][3];
++        for (int j = 0; j < 4; j += 2) {
++            f32 r0 = m0 * mtx2[0][j] + m1 * mtx2[1][j] + m2 * mtx2[2][j] + m3 * mtx2[3][j];
++            f32 r1 = m0 * mtx2[0][j + 1] + m1 * mtx2[1][j + 1] + m2 * mtx2[2][j + 1] + m3 * mtx2[3][j + 1];
++            dst[i][j] = r0;
++            dst[i][j + 1] = r1;
++        }
++    }
++}
++#else  // clang-format off
+ asm void J3DMtxProjConcat(register Mtx mtx1, register Mtx mtx2, register Mtx dst) {
+ 	psq_l    f2, 0(mtx1), 0, 0
+ 	psq_l    f3, 8(mtx1), 0, 0
+@@ -426,8 +502,8 @@
+ 	ps_madd  f0, f9, f13, f0
+ 	psq_st   f0, 40(dst), 0, 0
+ 	blr
++}
+ #endif  // clang-format on
+-}
+ 
+ void J3DCalcHalfAngleVec(Vec* a, Vec* b, Vec* dst) {
+     Vec vec;
+@@ -456,7 +532,26 @@
+     dst[1][2] = vec.x - vec.y;
+ }
+ 
+-#ifdef __MWERKS__  // clang-format off
++#ifndef __MWERKS__
++void J3DPSMtxArrayConcat(Mtx mA, Mtx mB, Mtx mAB, u32 count) {
++    for (; count != 0; count--) {
++        f32 r[3][4];
++        for (int i = 0; i < 3; i++) {
++            for (int j = 0; j < 4; j++) {
++                r[i][j] = mA[i][0] * mB[0][j] + mA[i][1] * mB[1][j] + mA[i][2] * mB[2][j];
++            }
++            r[i][3] += mA[i][3];
++        }
++        for (int i = 0; i < 3; i++) {
++            for (int j = 0; j < 4; j++) {
++                mAB[i][j] = r[i][j];
++            }
++        }
++        mB += 3;
++        mAB += 3;
++    }
++}
++#else  // clang-format off
+ asm void J3DPSMtxArrayConcat(register Mtx mA, register Mtx mB, register Mtx mAB, register u32 count) {
+ #define FP0 fp0
+ #define FP1 fp1
+--- a/libs/JSystem/J3D/GraphLoader/J3DJointFactory.cpp
++++ b/libs/JSystem/J3D/GraphLoader/J3DJointFactory.cpp
+@@ -4,12 +4,18 @@
+ 
+ static inline void copyVecPod(register const f32* src, register f32* dst)
+ {
++#ifndef __MWERKS__
++    dst[0] = src[0];
++    dst[1] = src[1];
++    dst[2] = src[2];
++#else
+     __asm {
+         psq_l f0, 0(src), 0, 0
+         psq_st f0, 0(dst), 0, 0
+         lfs f0, 8(src)
+         stfs f0, 8(dst)
+     }
++#endif
+ }
+ 
+ J3DJointFactory::J3DJointFactory(const J3DJointBlock& block)
+@@ -32,14 +38,23 @@
+     {
+         register J3DJoint* j = joint;
+         register const f32* p = (const f32*)&mInitData[mIndexMap[jointIndex]];
++#ifndef __MWERKS__
++        j->mRadius = mInitData[mIndexMap[jointIndex]].mRadius;
++#else
+         __asm {
+             lfs f0, 36(p)
+             stfs f0, 56(j)
+         }
++#endif
+     }
+     {
+         register J3DJoint* j = joint;
+         register const f32* p = &mInitData[mIndexMap[jointIndex]].mMin.x;
++#ifndef __MWERKS__
++        j->mMin.x = p[0];
++        j->mMin.y = p[1];
++        j->mMin.z = p[2];
++#else
+         __asm {
+             lfs f0, 0(p)
+             stfs f0, 60(j)
+@@ -48,10 +63,16 @@
+             lfs f0, 8(p)
+             stfs f0, 68(j)
+         }
++#endif
+     }
+     {
+         register J3DJoint* j = joint;
+         register const f32* p = &mInitData[mIndexMap[jointIndex]].mMax.x;
++#ifndef __MWERKS__
++        j->mMax.x = p[0];
++        j->mMax.y = p[1];
++        j->mMax.z = p[2];
++#else
+         __asm {
+             lfs f0, 0(p)
+             stfs f0, 72(j)
+@@ -60,6 +81,7 @@
+             lfs f0, 8(p)
+             stfs f0, 80(j)
+         }
++#endif
+     }
+     joint->mMtxCalc = nullptr;
+     if (joint->mIgnoreParentScaling == 0xFF) {
+--- a/libs/JSystem/J3D/GraphLoader/J3DShapeFactory.cpp
++++ b/libs/JSystem/J3D/GraphLoader/J3DShapeFactory.cpp
+@@ -125,6 +125,15 @@
+ 
+ int J3DShapeFactory::calcSize(int shapeNo, u32 flag)
+ {
++#ifndef __MWERKS__
++    u32 mtxGroupNum = mInitData[mInitDataIndices[shapeNo]].mMtxGroupNum;
++    int size = 0x68 + mtxGroupNum * 4 + mtxGroupNum * 4;
++    for (u32 i = 0; i < mtxGroupNum; i++) {
++        size += calcSizeShapeMtx(flag, shapeNo, i);
++        size += 0xc;
++    }
++    return size;
++#else
+     __asm {
+         slwi r0,r4,1
+         mr r26,r3
+@@ -155,6 +164,7 @@
+         blt L_calcSize_body
+         mr r3,r31
+     }
++#endif
+ }
+ 
+ int J3DShapeFactory::calcSizeVcdVatCmdBuffer(u32 count)

@@ -42,11 +42,7 @@ public:
     void initClassCreateNum() { sSupervisorCreateNum = 0; } // 0x801d2190
     int getSplashID() const { return mObjData->mParam2; }
 
-#ifdef __MWERKS__
     virtual GeoSplashSupervisor *getSupervisor() { return sSupervisor; }
-#else
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return (GeoObjSupervisor *)sSupervisor; }
-#endif
     static GeoSplashSupervisor *getSupervisor() { return sSupervisor; }
 
     friend class GeoSplashSupervisor;

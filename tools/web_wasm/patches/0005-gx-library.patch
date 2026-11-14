@@ -1,0 +1,461 @@
+The real GX library runs on the host and feeds the emulated GPU. FIFO
+stores go through port_gx_w8/16/32/f32 instead of volatile writes to
+0xCC008000, register blocks point at the host hardware-register mirrors
+(port_hw.h), the paired-single matrix/light uploads are scalar loops,
+draw sync/done tokens are delivered synchronously, EFB peeks/pokes are
+no-ops, colours are packed big-endian explicitly (host is little-endian)
+and the FIFO read/link helpers are made non-static for the SDK layer.
+J3DGD.cpp redefines GX_WRITE_U32 through GXWGFifo for the same reason.
+
+--- a/libs/dolphin/gx/GXDraw.c
++++ b/libs/dolphin/gx/GXDraw.c
+@@ -7,8 +7,16 @@
+ extern f32 sinf(f32);
+ extern f32 sqrtf(f32);
+ 
++#ifdef __MWERKS__
+ #define GXPosition3f32(a, b, c) do { GXWGFifo.f32 = (a); GXWGFifo.f32 = (b); GXWGFifo.f32 = (c); } while (0)
+ #define GXNormal3f32(a, b, c) do { GXWGFifo.f32 = (a); GXWGFifo.f32 = (b); GXWGFifo.f32 = (c); } while (0)
++#else
++// host port: the GXVert.h inlines store to a dummy pipe in C; send the vertex data to the FIFO
++#define GXPosition3f32(a, b, c) do { port_gx_wf32(a); port_gx_wf32(b); port_gx_wf32(c); } while (0)
++#define GXNormal3f32(a, b, c) do { port_gx_wf32(a); port_gx_wf32(b); port_gx_wf32(c); } while (0)
++#define GXTexCoord2f32(u, v) do { port_gx_wf32(u); port_gx_wf32(v); } while (0)
++#define GXTexCoord2s8(u, v) do { port_gx_w8((u8)(u)); port_gx_w8((u8)(v)); } while (0)
++#endif
+ 
+ static GXVtxDescList vcd[27];
+ static GXVtxAttrFmtList vat[27];
+--- a/libs/dolphin/gx/GXFifo.c
++++ b/libs/dolphin/gx/GXFifo.c
+@@ -185,11 +185,13 @@
+   GXFlush();
+   pFifo->base = OSPhysicalToCached(GX_GET_PI_REG(3));
+   pFifo->end = OSPhysicalToCached(GX_GET_PI_REG(4));
++#ifdef __MWERKS__
+   pFifo->writePtr = OSPhysicalToCached(GX_GET_PI_REG(5) & ~0x4000000);
++#endif
+   if (CPGPLinked != 0) {
+     u32 reg = GX_GET_CP_REG(29) << 16;
+     u32 reg2 = GX_GET_CP_REG(28) | reg;
+-    pFifo->readPtr = (void*)(reg2 + -0x80000000);
++    pFifo->readPtr = (void*)(reg2 + OS_BASE_CACHED);
+     reg = GX_GET_CP_REG(25) << 16;
+     pFifo->rwDistance = (((u32)GX_GET_CP_REG(24) | reg));
+   } else {
+@@ -257,12 +259,14 @@
+ {
+   GXFifoObjPriv* pFifo = (GXFifoObjPriv*)obj;
+ 
++#ifdef __MWERKS__
+   if (obj == CPUFifo) {
+     pFifo->writePtr = OSPhysicalToCached(GX_GET_PI_REG(5) & ~0x4000000);
+   }
++#endif
+   if (obj == GPFifo) {
+     u32 reg = GX_GET_CP_REG(29) << 16;
+-    pFifo->readPtr = (void*)((GX_GET_CP_REG(28) | reg) + -0x80000000);
++    pFifo->readPtr = (void*)((GX_GET_CP_REG(28) | reg) + OS_BASE_CACHED);
+     reg = GX_GET_CP_REG(25) << 16;
+     pFifo->rwDistance = (GX_GET_CP_REG(24) | reg);
+   } else {
+@@ -334,19 +338,19 @@
+   GPFifo = NULL;
+ }
+ 
+-static void __GXFifoReadEnable(void)
++void __GXFifoReadEnable(void)
+ {
+   GX_SET_REG(gx->cpEnable, GX_TRUE, 31, 31);
+   GX_SET_CP_REG(1, gx->cpEnable);
+ }
+ 
+-static void __GXFifoReadDisable(void)
++void __GXFifoReadDisable(void)
+ {
+   GX_SET_REG(gx->cpEnable, GX_FALSE, 31, 31);
+   GX_SET_CP_REG(1, gx->cpEnable);
+ }
+ 
+-static void __GXFifoLink(u8 link)
++void __GXFifoLink(u8 link)
+ {
+   u32 b;
+   if (link) {
+@@ -358,14 +362,14 @@
+   GX_SET_CP_REG(1, gx->cpEnable);
+ }
+ 
+-static void __GXWriteFifoIntEnable(u32 p1, u32 p2)
++void __GXWriteFifoIntEnable(u32 p1, u32 p2)
+ {
+   GX_SET_REG(gx->cpEnable, p1, 29, 29);
+   GX_SET_REG(gx->cpEnable, (u8)p2, 28, 28);
+   GX_SET_CP_REG(1, gx->cpEnable);
+ }
+ 
+-static void __GXWriteFifoIntReset(u32 p1, u32 p2)
++void __GXWriteFifoIntReset(u32 p1, u32 p2)
+ {
+   GX_SET_REG(gx->cpClr, p1, 31, 31);
+   GX_SET_REG(gx->cpClr, (u8)p2, 30, 30);
+--- a/libs/dolphin/gx/GXGeometry.c
++++ b/libs/dolphin/gx/GXGeometry.c
+@@ -52,11 +52,11 @@
+   u16 vNum = gx->vNum;
+   u32 sz = (vNum * gx->vLim);
+ 
+-  (*(volatile u8*)GXFIFO_ADDR) = 0x98;
+-  (*(volatile u16*)GXFIFO_ADDR) = vNum;
++  port_gx_w8(0x98);
++  port_gx_w16(vNum);
+ 
+   for (i = 0; i < sz; i += 4) {
+-    (*(volatile u32*)GXFIFO_ADDR) = 0;
++    port_gx_w32(0);
+   }
+ 
+   gx->bpSentNot = GX_TRUE;
+--- a/libs/dolphin/gx/GXInit.c
++++ b/libs/dolphin/gx/GXInit.c
+@@ -2,6 +2,10 @@
+ #include <dolphin/os.h>
+ #include <dolphin/hw_regs.h>
+ #include <dolphin/base/PPCArch.h>
++#ifndef __MWERKS__
++#include "port_hw.h"
++void GXSetProjectionv(const f32* proj);
++#endif
+ 
+ static GXFifoObj FifoObj;
+ static GXData gxData;
+@@ -57,6 +61,8 @@
+ 	mfspr r3, WPAR;
+ 	andi. r3, r3, 1;
+ 	blr;
++#else
++	return TRUE;
+ #endif
+ }
+ 
+@@ -190,10 +196,10 @@
+ 
+ 	GXSetMisc(GX_MT_XF_FLUSH, 0);
+ 
+-	__piReg  = (void*)OSPhysicalToUncached(GX_PI_ADDR);
+-	__cpReg  = (void*)OSPhysicalToUncached(GX_CP_ADDR);
+-	__peReg  = (void*)OSPhysicalToUncached(GX_PE_ADDR);
+-	__memReg = (void*)OSPhysicalToUncached(GX_MEM_ADDR);
++	__piReg  = (void*)port_hw_pi;
++	__cpReg  = (void*)port_hw_cp;
++	__peReg  = (void*)port_hw_pe;
++	__memReg = (void*)port_hw_mem;
+ 
+ 	__GXFifoInit();
+ 
+--- a/libs/dolphin/gx/GXLight.c
++++ b/libs/dolphin/gx/GXLight.c
+@@ -225,7 +225,7 @@
+ void GXInitLightColor(GXLightObj* obj, GXColor color)
+ {
+ 	GXLightObjPriv* pObj = (GXLightObjPriv*)obj;
+-	pObj->color          = (*(u32*)&color);
++	pObj->color          = port_be32(&color);
+ }
+ 
+ void GXGetLightColor(const GXLightObj* obj, GXColor* color)
+@@ -261,6 +261,16 @@
+ 		psq_st  pz_dx, 0(dest), 0, 0
+ 		psq_st  dy_dz, 0(dest), 0, 0
+ 	}
++#else
++	const u32* words = (const u32*)lt_obj;
++	int i;
++	port_gx_w32(0);
++	port_gx_w32(0);
++	port_gx_w32(0);
++	port_gx_w32(words[3]);
++	for (i = 4; i < 16; i++) {
++		port_gx_w32(words[i]);
++	}
+ #endif // clang-format on
+ }
+ 
+@@ -310,12 +320,12 @@
+ 	switch (channel) {
+ 	case GX_COLOR0:
+ 		rgb     = gx->ambColor[GX_COLOR0];
+-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
++		reg     = GX_SET_TRUNC(port_be32(&color) & ~0xff, rgb, 24, 31);
+ 		colorID = GX_COLOR0;
+ 		break;
+ 	case GX_COLOR1:
+ 		rgb     = gx->ambColor[GX_COLOR1];
+-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
++		reg     = GX_SET_TRUNC(port_be32(&color) & ~0xff, rgb, 24, 31);
+ 		colorID = GX_COLOR1;
+ 		break;
+ 	case GX_ALPHA0:
+@@ -329,11 +339,11 @@
+ 		colorID = GX_COLOR1;
+ 		break;
+ 	case GX_COLOR0A0:
+-		reg     = (*(u32*)&color);
++		reg     = port_be32(&color);
+ 		colorID = GX_COLOR0;
+ 		break;
+ 	case GX_COLOR1A1:
+-		reg     = (*(u32*)&color);
++		reg     = port_be32(&color);
+ 		colorID = GX_COLOR1;
+ 		break;
+ 	default:
+@@ -354,12 +364,12 @@
+ 	switch (channel) {
+ 	case GX_COLOR0:
+ 		rgb     = gx->matColor[GX_COLOR0];
+-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
++		reg     = GX_SET_TRUNC(port_be32(&color) & ~0xff, rgb, 24, 31);
+ 		colorID = GX_COLOR0;
+ 		break;
+ 	case GX_COLOR1:
+ 		rgb     = gx->matColor[GX_COLOR1];
+-		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
++		reg     = GX_SET_TRUNC(port_be32(&color) & ~0xff, rgb, 24, 31);
+ 		colorID = GX_COLOR1;
+ 		break;
+ 	case GX_ALPHA0:
+@@ -373,11 +383,11 @@
+ 		colorID = GX_COLOR1;
+ 		break;
+ 	case GX_COLOR0A0:
+-		reg     = (*(u32*)&color);
++		reg     = port_be32(&color);
+ 		colorID = GX_COLOR0;
+ 		break;
+ 	case GX_COLOR1A1:
+-		reg     = (*(u32*)&color);
++		reg     = port_be32(&color);
+ 		colorID = GX_COLOR1;
+ 		break;
+ 	default:
+--- a/libs/dolphin/gx/GXMisc.c
++++ b/libs/dolphin/gx/GXMisc.c
+@@ -3,6 +3,11 @@
+ #include <dolphin/gx/GXPriv.h>
+ #include <dolphin/os.h>
+ #include <dolphin/hw_regs.h>
++#ifndef __MWERKS__
++#include "port_hw.h"
++#undef __PIRegs
++#define __PIRegs port_hw_pi
++#endif
+ 
+ static GXDrawSyncCallback TokenCB;
+ static GXDrawDoneCallback DrawDoneCB;
+@@ -113,6 +118,9 @@
+ 	GX_BP_LOAD_REG(reg);
+ 
+ 	GXFlush();
++#ifndef __MWERKS__
++	port_gx_idle_sync(token | 0x48000000);
++#endif
+ 	OSRestoreInterrupts(interrupts);
+ 	gx->bpSentNot = GX_FALSE;
+ }
+@@ -133,6 +141,9 @@
+ 
+ 	GXFlush();
+ 	DrawDone = GX_FALSE;
++#ifndef __MWERKS__
++	port_gx_idle_sync(reg);
++#endif
+ 	OSRestoreInterrupts(interrupts);
+ }
+ 
+@@ -238,38 +249,56 @@
+ 
+ void GXPeekARGB(u16 x, u16 y, u32* color)
+ {
++#ifdef __MWERKS__
+ 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
+ 	GX_SET_REG(addr, x, 20, 29);
+ 	GX_SET_REG(addr, y, 10, 19);
+ 	GX_SET_REG(addr, 0, 8, 9);
+ 	*color = *(u32*)addr;
++#else
++	// host port: there is no EFB to address
++	*color = 0;
++#endif
+ }
+ 
+ void GXPokeARGB(u16 x, u16 y, u32 color)
+ {
++#ifdef __MWERKS__
+ 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
+ 	GX_SET_REG(addr, x, 20, 29);
+ 	GX_SET_REG(addr, y, 10, 19);
+ 	GX_SET_REG(addr, 0, 8, 9);
+ 	*(u32*)addr = color;
++#else
++	// host port: there is no EFB to address
++#endif
+ }
+ 
+ void GXPeekZ(u16 x, u16 y, u32* z)
+ {
++#ifdef __MWERKS__
+ 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
+ 	GX_SET_REG(addr, x, 20, 29);
+ 	GX_SET_REG(addr, y, 10, 19);
+ 	GX_SET_REG(addr, 1, 8, 9);
+ 	*z = *(u32*)addr;
++#else
++	// host port: there is no EFB to address
++	*z = 0;
++#endif
+ }
+ 
+ void GXPokeZ(u16 x, u16 y, u32 z)
+ {
++#ifdef __MWERKS__
+ 	u32 addr = (u32)OSPhysicalToUncached(0x08000000);
+ 	GX_SET_REG(addr, x, 20, 29);
+ 	GX_SET_REG(addr, y, 10, 19);
+ 	GX_SET_REG(addr, 1, 8, 9);
+ 	*(u32*)addr = z;
++#else
++	// host port: there is no EFB to address
++#endif
+ }
+ 
+ GXDrawSyncCallback GXSetDrawSyncCallback(GXDrawSyncCallback callback)
+--- a/libs/dolphin/gx/GXTransform.c
++++ b/libs/dolphin/gx/GXTransform.c
+@@ -46,6 +46,11 @@
+ 		psq_st ps_1,  0(dst), 0, 0
+ 		psq_st ps_2,  0(dst), 0, 0
+ 	}
++#else
++	int i;
++	for (i = 0; i < 6; i++) {
++		port_gx_wf32(src[i]);
++	}
+ #endif
+ }
+ 
+@@ -61,6 +66,11 @@
+ 		psq_st ps_0,  0(dst), 0, 0
+ 		psq_st ps_1,  8(dst), 0, 0
+ 		psq_st ps_2, 16(dst), 0, 0
++	}
++#else
++	int i;
++	for (i = 0; i < 6; i++) {
++		dst[i] = src[i];
+ 	}
+ #endif
+ }
+@@ -134,6 +144,11 @@
+ 		psq_st ps_4, 0(dst),  0, 0
+ 		psq_st ps_5, 0(dst),  0, 0
+ 	}
++#else
++	int i;
++	for (i = 0; i < 12; i++) {
++		port_gx_wf32(((const f32*)src)[i]);
++	}
+ #endif
+ }
+ 
+@@ -157,6 +172,13 @@
+ 		psq_st ps_4, 0(dst),  0, 0
+ 		stfs   ps_5, 0(dst)
+ 	}
++#else
++	int i;
++	for (i = 0; i < 12; i++) {
++		if ((i & 3) != 3) {
++			port_gx_wf32(((const f32*)src)[i]);
++		}
++	}
+ #endif
+ }
+ 
+@@ -180,6 +202,13 @@
+ 		psq_st ps_4, 0(dst),  0, 0
+ 		stfs   ps_5, 0(dst)
+ 	}
++#else
++	int i;
++	for (i = 0; i < 12; i++) {
++		if ((i & 3) != 3) {
++			port_gx_wf32(((const f32*)src)[i]);
++		}
++	}
+ #endif
+ }
+ 
+@@ -198,6 +227,11 @@
+ 		psq_st ps_1, 0(dst),  0, 0
+ 		psq_st ps_2, 0(dst),  0, 0
+ 		psq_st ps_3, 0(dst),  0, 0
++	}
++#else
++	int i;
++	for (i = 0; i < 8; i++) {
++		port_gx_wf32(((const f32*)src)[i]);
+ 	}
+ #endif
+ }
+@@ -411,23 +445,23 @@
+ {
+ 	if (index < GX_VA_TEX4MTXIDX) {
+ 		u32 data;
+-		GXWGFifo.s8 = GX_LOAD_CP_REG;
+-		GXWGFifo.s8 = GX_CP_REG_MTXIDXA;
++		port_gx_w8((u8)(GX_LOAD_CP_REG));
++		port_gx_w8((u8)(GX_CP_REG_MTXIDXA));
+ 		data = gx->matIdxA;
+-		GXWGFifo.s32 = data;
+-		GXWGFifo.s8 = GX_LOAD_XF_REG;
+-		GXWGFifo.s32 = GX_XF_REG_MATRIXINDEX0;
+-		GXWGFifo.s32 = data;
++		port_gx_w32((u32)(data));
++		port_gx_w8((u8)(GX_LOAD_XF_REG));
++		port_gx_w32((u32)(GX_XF_REG_MATRIXINDEX0));
++		port_gx_w32((u32)(data));
+ 	} else {
+ 		u32 data;
+-		GXWGFifo.s8 = GX_LOAD_CP_REG;
+-		GXWGFifo.s8 = GX_CP_REG_MTXIDXB;
++		port_gx_w8((u8)(GX_LOAD_CP_REG));
++		port_gx_w8((u8)(GX_CP_REG_MTXIDXB));
+ 		data = gx->matIdxB;
+-		GXWGFifo.s32 = data;
+-		GXWGFifo.s8 = GX_LOAD_XF_REG;
+-		GXWGFifo.s32 = GX_XF_REG_MATRIXINDEX1;
+-		GXWGFifo.s32 = data;
+-	}
+-
+-	gx->bpSentNot = GX_TRUE;
+-}
++		port_gx_w32((u32)(data));
++		port_gx_w8((u8)(GX_LOAD_XF_REG));
++		port_gx_w32((u32)(GX_XF_REG_MATRIXINDEX1));
++		port_gx_w32((u32)(data));
++	}
++
++	gx->bpSentNot = GX_TRUE;
++}
+--- a/libs/JSystem/J3D/GraphBase/J3DGD.cpp
++++ b/libs/JSystem/J3D/GraphBase/J3DGD.cpp
+@@ -575,7 +575,7 @@
+ }
+ 
+ #undef GX_WRITE_U32
+-#define GX_WRITE_U32(v) ((volatile PPCWGPipe*)GXFIFO_ADDR)->u32 = (u32)(v)
++#define GX_WRITE_U32(v) GXWGFifo.u32 = (u32)(v)
+ 
+ void J3DFifoLoadNrmMtxToTexMtx(Mtx mtx, u32 idx)
+ {

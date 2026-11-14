@@ -1,0 +1,250 @@
+JAudio template statics and bases that only MWCC accepts as written.
+JASGlobalInstance<T>::sInstance and JASPoolAllocObject<T>::memPool_ are
+defined generically in the headers instead of through explicit weak
+specialisations scattered over .cpp files (clang rejects specialising a
+static member after use), private bases that are used as public become
+public, JASTrack keeps its MoveParam_ union by dropping the constructor a
+union member may not have in C++03, the JASMemPool lock temporaries get a
+dependent typedef, and JASCalc stops using casts as lvalues.
+JAUAudience.cpp also fixes an include path case.
+
+--- a/include/JSystem/JAudio/Interface/JAISe.h
++++ b/include/JSystem/JAudio/Interface/JAISe.h
+@@ -9,7 +9,11 @@
+ 
+ class JAISeMgr;
+ 
++#ifdef __MWERKS__
+ class JAISe : JASPoolAllocObject<JAISe>, public JSULink<JAISe>, public JAISound
++#else
++class JAISe : public JASPoolAllocObject<JAISe>, public JSULink<JAISe>, public JAISound
++#endif
+ {
+ public:
+     class TInner
+--- a/include/JSystem/JAudio/JAUSectionHeap.h
++++ b/include/JSystem/JAudio/JAUSectionHeap.h
+@@ -135,9 +135,13 @@
+ JAUSectionHeap *JAUNewSectionHeap(bool);
+ 
+ // TODO: probably move this to a different file(JASFakeMatch?)
++#ifdef __MWERKS__
+ #define createJASInstance(TYPE) \
+     template <> \
+     DECL_WEAK TYPE *JASGlobalInstance<TYPE>::sInstance
++#else
++#define createJASInstance(TYPE) typedef TYPE JASGlobalInstance_##TYPE
++#endif
+ 
+ createJASInstance(JAUSectionHeap);
+ createJASInstance(JAUSoundNameTable);
+--- a/include/JSystem/JAudio/System/JASGadget.h
++++ b/include/JSystem/JAudio/System/JASGadget.h
+@@ -42,6 +42,11 @@
+ 
+     static T *sInstance;
+ };
++
++#ifndef __MWERKS__
++template <class T>
++T *JASGlobalInstance<T>::sInstance;
++#endif
+ 
+ template <class T>
+ class JASPtrTable
+--- a/include/JSystem/JAudio/System/JASHeapCtrl.h
++++ b/include/JSystem/JAudio/System/JASHeapCtrl.h
+@@ -42,33 +42,34 @@
+     ~JASMemPool<T>() {}
+ 
+     typedef JASMemPool<T> JASMemPoolT;
++    typedef typename JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock TLock;
+ 
+     int getTotalMemCount() const {
+-        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
++        TLock(*this);
+         return JASGenericMemPool::getTotalMemCount();
+     }
+ 
+     int getFreeMemCount() const {
+-        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
++        TLock(*this);
+         return JASGenericMemPool::getFreeMemCount();
+     }
+ 
+     void newMemPool(int count) {
+-        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
++        TLock(*this);
+         JASGenericMemPool::newMemPool(sizeof(T), count);
+     }
+ 
+     void free(void *p, u32 n) {
+ #line 187
+         JUT_ASSERT(n == sizeof(T));
+-        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
++        TLock(*this);
+         JASGenericMemPool::free(p, n);
+     }
+ 
+     T *alloc(u32 n)
+     {
+         JUT_ASSERT(n == sizeof(T));
+-        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
++        TLock(*this);
+         return (T*)JASGenericMemPool::alloc(n); // evil cast fixes stuff
+     }
+ };
+@@ -299,4 +300,11 @@
+     static JASMemPool_MultiThreaded<T> memPool_;
+ };
+ 
++#ifndef __MWERKS__
++template <typename T>
++JASMemPool<T> JASPoolAllocObject<T>::memPool_;
++template <typename T>
++JASMemPool_MultiThreaded<T> JASPoolAllocObject_MultiThreaded<T>::memPool_;
+ #endif
++
++#endif
+--- a/include/JSystem/JAudio/System/JASTrack.h
++++ b/include/JSystem/JAudio/System/JASTrack.h
+@@ -50,7 +50,9 @@
+ 
+     struct MoveParam_
+     {
++#ifdef __MWERKS__
+         MoveParam_() : mValue(0.0f), mTarget(0.0f), mCount(0) {}
++#endif
+         f32 mValue;  // 00
+         f32 mTarget; // 04
+         u32 mCount;  // 08
+@@ -218,21 +220,17 @@
+     JASSeqCtrl mSeqCtrl;               // 000
+     JASTrackPort mTrackPort;           // 05c
+     JASRegisterParam mRegisterParam;   // 080
+-#ifndef __clang__
+     union {
+         struct {
+-#endif
+             MoveParam_ volume;
+             MoveParam_ pitch;
+             MoveParam_ fxmix;
+             MoveParam_ pan;
+             MoveParam_ dolby;
+             MoveParam_ distFilter;
+-#ifndef __clang__
+         } params;
+         MoveParam_ array[6];
+     } mMove;          // 09c, volume, pitch, fxmix, pan, dolby, distFilter
+-#endif
+     JASOscillator::Data mOscParam[2];  // 0e4
+     JASOscillator::Point mOscPoint[4]; // 114
+     JASTrack *mParent;                 // 12c
+--- a/libs/JSystem/JAudio/Interface/JAIAudience.cpp
++++ b/libs/JSystem/JAudio/Interface/JAIAudience.cpp
+@@ -10,11 +10,13 @@
+ 
+ // TODO: move this mess to the header(s) they belong in
+ 
++#ifdef __MWERKS__
+ DECL_WEAK JAIStreamMgr *JASGlobalInstance<JAIStreamMgr>::sInstance;
+ DECL_WEAK JAISeqMgr *JASGlobalInstance<JAISeqMgr>::sInstance;
+ DECL_WEAK JAISeMgr *JASGlobalInstance<JAISeMgr>::sInstance;
+ DECL_WEAK JAISoundStarter *JASGlobalInstance<JAISoundStarter>::sInstance;
+ DECL_WEAK JASDefaultBankTable *JASGlobalInstance<JASDefaultBankTable>::sInstance;
++#endif
+ 
+ #ifdef DEBUG
+ #pragma sym on
+--- a/libs/JSystem/JAudio/Interface/JAISeMgr.cpp
++++ b/libs/JSystem/JAudio/Interface/JAISeMgr.cpp
+@@ -464,5 +464,7 @@
+     }
+     return sum;
+ }
++#ifdef __MWERKS__
+ template <> DECL_WEAK JAISoundInfo *JASGlobalInstance<JAISoundInfo>::sInstance;
++#endif
+ #include "JSystem/JAudio/JASFakeMatch2.h"
+--- a/libs/JSystem/JAudio/Interface/JAIStream.cpp
++++ b/libs/JSystem/JAudio/Interface/JAIStream.cpp
+@@ -9,7 +9,9 @@
+ #include "JSystem/JAudio/System/JASAudioThread.h"
+ 
+ // Move this shit to correct header + sym on shit
++#ifdef __MWERKS__
+ DECL_WEAK JASAudioThread* JASGlobalInstance<JASAudioThread>::sInstance;
++#endif
+ 
+ static void JAIStream_JASAramStreamCallback_(u32 type, JASAramStream *aramStream, void *stream)
+ {
+--- a/libs/JSystem/JAudio/System/JASCalc.cpp
++++ b/libs/JSystem/JAudio/System/JASCalc.cpp
+@@ -144,8 +144,13 @@
+     {
+         for (n; n != 0; n--)
+         {
++#ifndef __MWERKS__
++            *dst++ = *s1++;
++            *dst++ = *s2++;
++#else
+             *dst++ = *((s16 *)s1)++;
+             *dst++ = *((s16 *)s2)++;
++#endif
+         }
+     }
+ 
+@@ -162,10 +167,17 @@
+ 
+         for (size = size / (4 * sizeof(u32)); size != 0; size--)
+         {
++#ifndef __MWERKS__
++            copy1 = *usrc++;
++            copy2 = *usrc++;
++            copy3 = *usrc++;
++            copy4 = *usrc++;
++#else
+             copy1 = *((u32 *)usrc)++;
+             copy2 = *((u32 *)usrc)++;
+             copy3 = *((u32 *)usrc)++;
+             copy4 = *((u32 *)usrc)++;
++#endif
+ 
+             *udest++ = copy1;
+             *udest++ = copy2;
+--- a/libs/JSystem/JAudio/Utility/JAUAudience.cpp
++++ b/libs/JSystem/JAudio/Utility/JAUAudience.cpp
+@@ -1,4 +1,4 @@
+-#include "JSystem/JAUdio/JAUAudience.h"
++#include "JSystem/JAudio/JAUAudience.h"
+ #include "JSystem/JAudio/System/JASHeapCtrl.h"
+ #include "JSystem/JUtility/JUTAssert.h"
+ #include "JSystem/JAudio/JASFakeMatch.h"
+@@ -10,12 +10,14 @@
+ typedef JAUAudible<2> TAudible2;
+ typedef JAUAudible<1> TAudible1;
+ 
++#ifdef __MWERKS__
+ JASMemPool<TDopplerAudible4> JASPoolAllocObject<TDopplerAudible4>::memPool_;
+ JASMemPool<TDopplerAudible2> JASPoolAllocObject<TDopplerAudible2>::memPool_;
+ JASMemPool<TDopplerAudible1> JASPoolAllocObject<TDopplerAudible1>::memPool_;
+ JASMemPool<TAudible4> JASPoolAllocObject<TAudible4>::memPool_;
+ JASMemPool<TAudible2> JASPoolAllocObject<TAudible2>::memPool_;
+ JASMemPool<TAudible1> JASPoolAllocObject<TAudible1>::memPool_;
++#endif
+ 
+ // sdata2 ordering is incorrect, probably requires an exact match in testInstanciate...
+ 
+--- a/libs/JSystem/JAudio/Utility/JAUAudioMgr.cpp
++++ b/libs/JSystem/JAudio/Utility/JAUAudioMgr.cpp
+@@ -3,8 +3,10 @@
+ 
+ #include "macros.h"
+ 
++#ifdef __MWERKS__
+ template <>
+ DECL_WEAK JAUSoundInfo *JASGlobalInstance<JAUSoundInfo>::sInstance;
++#endif
+ 
+ JAUAudioMgr::JAUAudioMgr(JAUSectionHeap *) : JAUSoundInfo(true) {
+ 

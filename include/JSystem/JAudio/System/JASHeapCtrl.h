@@ -42,34 +42,33 @@ struct JASMemPool : public JASGenericMemPool
     ~JASMemPool<T>() {}
 
     typedef JASMemPool<T> JASMemPoolT;
-    typedef typename JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock TLock;
 
     int getTotalMemCount() const {
-        TLock(*this);
+        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
         return JASGenericMemPool::getTotalMemCount();
     }
 
     int getFreeMemCount() const {
-        TLock(*this);
+        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
         return JASGenericMemPool::getFreeMemCount();
     }
 
     void newMemPool(int count) {
-        TLock(*this);
+        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
         JASGenericMemPool::newMemPool(sizeof(T), count);
     }
 
     void free(void *p, u32 n) {
 #line 187
         JUT_ASSERT(n == sizeof(T));
-        TLock(*this);
+        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
         JASGenericMemPool::free(p, n);
     }
 
     T *alloc(u32 n)
     {
         JUT_ASSERT(n == sizeof(T));
-        TLock(*this);
+        JASThreadingModel::SingleThreaded<JASMemPoolT>::Lock(*this);
         return (T*)JASGenericMemPool::alloc(n); // evil cast fixes stuff
     }
 };
@@ -299,12 +298,5 @@ struct JASPoolAllocObject_MultiThreaded
 private:
     static JASMemPool_MultiThreaded<T> memPool_;
 };
-
-#ifndef __MWERKS__
-template <typename T>
-JASMemPool<T> JASPoolAllocObject<T>::memPool_;
-template <typename T>
-JASMemPool_MultiThreaded<T> JASPoolAllocObject_MultiThreaded<T>::memPool_;
-#endif
 
 #endif

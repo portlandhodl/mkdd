@@ -9,11 +9,7 @@
 
 class JAISeMgr;
 
-#ifdef __MWERKS__
 class JAISe : JASPoolAllocObject<JAISe>, public JSULink<JAISe>, public JAISound
-#else
-class JAISe : public JASPoolAllocObject<JAISe>, public JSULink<JAISe>, public JAISound
-#endif
 {
 public:
     class TInner

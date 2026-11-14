@@ -15,7 +15,7 @@ struct J2DIndInitData {
     J2DIndTexMtxInfo mIndTexMtxInfo[3];               // _0C
     J2DIndTexCoordScaleInfo mIndTexCoordScaleInfo[4]; // _60
     J2DIndTevStageInfo mIndTevStageInfo[4];           // _68
-    u8 _98[0x90];                                     // _98
+    u8 _AC[0x90];                                     // _AC
 };
 
 /**

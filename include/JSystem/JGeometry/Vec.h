@@ -17,8 +17,6 @@ namespace JGeometry {
             stfs z, 8(dst)
             // clang-format on
         }
-#else
-        dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];
 #endif
     }
 
@@ -34,8 +32,6 @@ namespace JGeometry {
             // clang-format on
         }
         dst[2] = -src[2];
-#else
-        dst[0] = -src[0]; dst[1] = -src[1]; dst[2] = -src[2];
 #endif
     }
 
@@ -52,8 +48,6 @@ namespace JGeometry {
             // clang-format on
         }
         dst[2] = vec1[2] * vec2[2];
-#else
-        dst[0] = vec1[0] * vec2[0]; dst[1] = vec1[1] * vec2[1]; dst[2] = vec1[2] * vec2[2];
 #endif
     }
 
@@ -466,7 +460,6 @@ namespace JGeometry {
     typedef TVec4<s16> TVec4s;
 
 
-#ifdef __MWERKS__
 #pragma use_lmw_stmw off
     template <> inline void TVec3<f32>::div(f32 divisor, const TVec3<f32> &operand) { scale(TUtilf::invert(divisor), operand); }
 #pragma use_lmw_stmw on
@@ -476,9 +469,6 @@ namespace JGeometry {
     template <> template <> inline TVec3f::TVec3(f32 X, f32 Y, f32 Z) { set(X, Y, Z); }
 #ifndef JGEOM_NO_TVEC3_SET
     template <> template <> inline void TVec3f::set(f32 X, f32 Y, f32 Z) { x = X; y = Y; z = Z; }
-#endif
-#else
-    inline void TVec3<f32>::div(f32 divisor, const TVec3<f32> &operand) { scale(TUtilf::invert(divisor), operand); }
 #endif
 }
 

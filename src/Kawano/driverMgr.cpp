@@ -472,7 +472,7 @@ void DriverManager::SetDriverModelPtr(DriverModel *mdl) {
 
 bool DriverManager::IsAllARAMDMAFinished() {
     // UNUSED
-DECOMP_HOST(, return false;) }
+}
 
 void DriverManager::CheckARAMDMA(f64, int) {
     // UNUSED

@@ -34,11 +34,7 @@ public:
     // Inline
     bool isShimmer() const { return mObjData->mParam1 != 0; } // 0x801d4784
     virtual ~GeoShimmer() {}
-#ifdef __MWERKS__
     virtual GeoShimmerSupervisor *getSupervisor() { return sSupervisor;  }
-#else
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
     static GeoShimmerSupervisor *getSupervisor() { return sSupervisor;  }
 
     friend class GeoShimmerSupervisor;

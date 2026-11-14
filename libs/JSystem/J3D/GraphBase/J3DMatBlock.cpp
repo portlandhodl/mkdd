@@ -59,15 +59,15 @@ static inline void GDSetCurrOffset(u32 offset)
 inline void loadMatColors(const J3DGXColor* colors)
 {
 	J3DGDWriteXFCmdHdr(0x100C, 2);
-	J3DGDWrite_u32(DECOMP_BE32(&colors[0]));
-	J3DGDWrite_u32(DECOMP_BE32(&colors[1]));
+	J3DGDWrite_u32(*(u32*)&colors[0]);
+	J3DGDWrite_u32(*(u32*)&colors[1]);
 }
 
 inline void loadAmbColors(const J3DGXColor* colors)
 {
 	J3DGDWriteXFCmdHdr(0x100A, 2);
-	J3DGDWrite_u32(DECOMP_BE32(&colors[0]));
-	J3DGDWrite_u32(DECOMP_BE32(&colors[1]));
+	J3DGDWrite_u32(*(u32*)&colors[0]);
+	J3DGDWrite_u32(*(u32*)&colors[1]);
 }
 
 static inline J3DGXColor& assignGXColor(J3DGXColor& dst, const GXColor color)

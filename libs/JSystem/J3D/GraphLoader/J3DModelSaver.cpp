@@ -253,12 +253,6 @@ template<> J3DSaverList<J3DMaterialInitData>::J3DSaverList()
     mCount = 0;
 }
 
-#ifndef __MWERKS__
-template<> J3DMaterialInitData* J3DSaverList<J3DMaterialInitData>::search(J3DMaterialInitData& value);
-template<> J3DSaverLink<J3DMaterialInitData>::J3DSaverLink(J3DMaterialInitData value);
-template<> void J3DSaverList<J3DMaterialInitData>::append(J3DSaverLink<J3DMaterialInitData>* link);
-#endif
-
 template<> void J3DSaverList<J3DMaterialInitData>::uniqueAppend(J3DMaterialInitData value)
 {
     if (search(value) == nullptr) {

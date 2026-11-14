@@ -54,9 +54,6 @@ public:
     virtual void reset();
     virtual void calc();
     virtual GeoObjSupervisor *getSupervisor() { return sSupervisor; }
-#ifndef __MWERKS__
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
 
     void draw(u32);
     void setupGX();

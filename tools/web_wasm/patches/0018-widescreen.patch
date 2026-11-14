@@ -1,0 +1,133 @@
+Widescreen hack (Graphics panel option). The 3D perspective aspect ratio
+is multiplied by port_wide_aspect (tools/web_wasm/sdk/vi_pad.c): 1 keeps
+the original 4:3 projection, 4/3 renders anamorphic 16:9 that the WebGL
+backend presents at 16:9. Covers the race cameras (including their 3.0
+clamp), System::getPerspAspect* and the character-select previews.
+
+--- a/src/Osako/system.cpp
++++ b/src/Osako/system.cpp
+@@ -470,8 +470,8 @@
+     f32 getOrthoT() { return SystemData::scOrtho.Y; }
+     f32 getOrthoB() { return SystemData::scOrtho.H; }
+ 
+-    f32 getPerspAspect() { return SystemData::scAspect; }
+-    f32 getPerspAspectDiv2() { return SystemData::scAspectDiv2; }
+-    f32 getPerspAspectDiv4() { return SystemData::scAspect; }
+-    f32 getPerspAspectSub() { return SystemData::scAspectSub; }
++    f32 getPerspAspect() { return SystemData::scAspect * port_wide_aspect; }
++    f32 getPerspAspectDiv2() { return SystemData::scAspectDiv2 * port_wide_aspect; }
++    f32 getPerspAspectDiv4() { return SystemData::scAspect * port_wide_aspect; }
++    f32 getPerspAspectSub() { return SystemData::scAspectSub * port_wide_aspect; }
+ }
+--- a/src/Yamamoto/kartCamStrat.cpp
++++ b/src/Yamamoto/kartCamStrat.cpp
+@@ -276,10 +276,10 @@
+         mgr->hideConsole(idx);
+     }
+     if (mWidth != 0.0f && mHeight != 0.0f) {
+-        mAspect = mWidth / mHeight;
+-    }
+-    if (mAspect > 3.0f) {
+-        mAspect = 3.0f;
++        mAspect = (mWidth / mHeight) * port_wide_aspect;
++    }
++    if (mAspect > 3.0f * port_wide_aspect) {
++        mAspect = 3.0f * port_wide_aspect;
+     }
+     if (mAspect < 0.1f) {
+         mAspect = 0.1f;
+@@ -335,10 +335,10 @@
+         mgr->hideConsole(idx);
+     }
+     if (mWidth != 0.0f && mHeight != 0.0f) {
+-        mAspect = mWidth / mHeight;
+-    }
+-    if (mAspect > 3.0f) {
+-        mAspect = 3.0f;
++        mAspect = (mWidth / mHeight) * port_wide_aspect;
++    }
++    if (mAspect > 3.0f * port_wide_aspect) {
++        mAspect = 3.0f * port_wide_aspect;
+     }
+     if (mAspect < 0.1f) {
+         mAspect = 0.1f;
+@@ -394,10 +394,10 @@
+         mgr->hideConsole(idx);
+     }
+     if (mWidth != 0.0f && mHeight != 0.0f) {
+-        mAspect = mWidth / mHeight;
+-    }
+-    if (mAspect > 3.0f) {
+-        mAspect = 3.0f;
++        mAspect = (mWidth / mHeight) * port_wide_aspect;
++    }
++    if (mAspect > 3.0f * port_wide_aspect) {
++        mAspect = 3.0f * port_wide_aspect;
+     }
+     if (mAspect < 0.1f) {
+         mAspect = 0.1f;
+@@ -453,10 +453,10 @@
+         mgr->hideConsole(idx);
+     }
+     if (mWidth != 0.0f && mHeight != 0.0f) {
+-        mAspect = mWidth / mHeight;
+-    }
+-    if (mAspect > 3.0f) {
+-        mAspect = 3.0f;
++        mAspect = (mWidth / mHeight) * port_wide_aspect;
++    }
++    if (mAspect > 3.0f * port_wide_aspect) {
++        mAspect = 3.0f * port_wide_aspect;
+     }
+     if (mAspect < 0.1f) {
+         mAspect = 0.1f;
+@@ -486,10 +486,10 @@
+         mgr->hideConsole(idx);
+     }
+     if (mWidth != 0.0f && mHeight != 0.0f) {
+-        mAspect = mWidth / mHeight;
+-    }
+-    if (mAspect > 3.0f) {
+-        mAspect = 3.0f;
++        mAspect = (mWidth / mHeight) * port_wide_aspect;
++    }
++    if (mAspect > 3.0f * port_wide_aspect) {
++        mAspect = 3.0f * port_wide_aspect;
+     }
+     if (mAspect < 0.1f) {
+         mAspect = 0.1f;
+@@ -517,10 +517,10 @@
+         mgr->hideConsole(idx);
+     }
+     if (mWidth != 0.0f && mHeight != 0.0f) {
+-        mAspect = mWidth / mHeight;
+-    }
+-    if (mAspect > 3.0f) {
+-        mAspect = 3.0f;
++        mAspect = (mWidth / mHeight) * port_wide_aspect;
++    }
++    if (mAspect > 3.0f * port_wide_aspect) {
++        mAspect = 3.0f * port_wide_aspect;
+     }
+     if (mAspect < 0.1f) {
+         mAspect = 0.1f;
+--- a/src/Kameda/CharacterSelect3D.cpp
++++ b/src/Kameda/CharacterSelect3D.cpp
+@@ -1105,7 +1105,7 @@
+     Mtx44 projMtx;
+     Mtx tmp;
+ 
+-    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
++    C_MTXPerspective(projMtx, param->mFovy, aspect * port_wide_aspect, 10.0f, 200000.0f);
+     GXSetProjection(projMtx, GX_PERSPECTIVE);
+ 
+     Vec eye = JGeometry::TVec3f(param->mEye);
+@@ -1199,7 +1199,7 @@
+ 
+     Mtx44 projMtx;
+     Mtx tmp;
+-    C_MTXPerspective(projMtx, param->mFovy, aspect, 10.0f, 200000.0f);
++    C_MTXPerspective(projMtx, param->mFovy, aspect * port_wide_aspect, 10.0f, 200000.0f);
+     GXSetProjection(projMtx, GX_PERSPECTIVE);
+ 
+     Vec up = {0.0f, 1.0f, 0.0f};

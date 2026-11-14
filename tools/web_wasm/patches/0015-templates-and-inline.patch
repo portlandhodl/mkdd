@@ -1,0 +1,181 @@
+Template specialisations and inline definitions whose emission MWCC and
+clang decide differently. Explicit specialisations used before their
+definition are declared first (J3DSaverList/J3DSaverLink, setMaterialAnmTev,
+TPosition3::makeRotate), stParticle.cpp instantiates TRotation3::setRotate
+for the units that only see its declaration, and `inline` definitions that
+the decomp places in a .cpp so MWCC emits them weak lose the `inline` so
+clang emits them at all (J3DTexNoAnm, PermissionCounter, getKartHitList).
+
+--- a/include/JSystem/J3D/J3DMaterialAnm.h
++++ b/include/JSystem/J3D/J3DMaterialAnm.h
+@@ -35,7 +35,7 @@
+ struct J3DTexNoAnm {
+     J3DTexNoAnm();
+ 
+-    inline virtual void calc(u16*) const; // _08 (weak)
++    virtual void calc(u16*) const; // _08 (weak)
+ 
+     void operator=(J3DTexNoAnm const& other)
+     {
+@@ -44,7 +44,7 @@
+         mAnmFlag = other.mAnmFlag;
+     }
+ 
+-    inline ~J3DTexNoAnm();
++    ~J3DTexNoAnm();
+ 
+     void setAnmFlag(bool flag) { mAnmFlag = flag; }
+     bool getAnmFlag() const { return mAnmFlag; }
+--- a/libs/JSystem/J3D/GraphLoader/J3DBinaryFormat.cpp
++++ b/libs/JSystem/J3D/GraphLoader/J3DBinaryFormat.cpp
+@@ -390,6 +390,60 @@
+     (void)n;
+ }
+ 
++#ifndef __MWERKS__
++template<> long* J3DSaverList<long>::search(long& value);
++template<> J3DSaverLink<long>::J3DSaverLink(long value);
++template<> void J3DSaverList<long>::append(J3DSaverLink<long>* link);
++template<> J3DNBTScaleInfo* J3DSaverList<J3DNBTScaleInfo>::search(J3DNBTScaleInfo& value);
++template<> J3DSaverLink<J3DNBTScaleInfo>::J3DSaverLink(J3DNBTScaleInfo value);
++template<> void J3DSaverList<J3DNBTScaleInfo>::append(J3DSaverLink<J3DNBTScaleInfo>* link);
++template<> J3DZMode* J3DSaverList<J3DZMode>::search(J3DZMode& value);
++template<> J3DSaverLink<J3DZMode>::J3DSaverLink(J3DZMode value);
++template<> void J3DSaverList<J3DZMode>::append(J3DSaverLink<J3DZMode>* link);
++template<> J3DFogInfo* J3DSaverList<J3DFogInfo>::search(J3DFogInfo& value);
++template<> J3DSaverLink<J3DFogInfo>::J3DSaverLink(J3DFogInfo value);
++template<> void J3DSaverList<J3DFogInfo>::append(J3DSaverLink<J3DFogInfo>* link);
++template<> J3DBlend* J3DSaverList<J3DBlend>::search(J3DBlend& value);
++template<> J3DSaverLink<J3DBlend>::J3DSaverLink(J3DBlend value);
++template<> void J3DSaverList<J3DBlend>::append(J3DSaverLink<J3DBlend>* link);
++template<> J3DAlphaComp* J3DSaverList<J3DAlphaComp>::search(J3DAlphaComp& value);
++template<> J3DSaverLink<J3DAlphaComp>::J3DSaverLink(J3DAlphaComp value);
++template<> void J3DSaverList<J3DAlphaComp>::append(J3DSaverLink<J3DAlphaComp>* link);
++template<> J3DTevSwapModeTable* J3DSaverList<J3DTevSwapModeTable>::search(J3DTevSwapModeTable& value);
++template<> J3DSaverLink<J3DTevSwapModeTable>::J3DSaverLink(J3DTevSwapModeTable value);
++template<> void J3DSaverList<J3DTevSwapModeTable>::append(J3DSaverLink<J3DTevSwapModeTable>* link);
++template<> J3DTevStage* J3DSaverList<J3DTevStage>::search(J3DTevStage& value);
++template<> J3DSaverLink<J3DTevStage>::J3DSaverLink(J3DTevStage value);
++template<> void J3DSaverList<J3DTevStage>::append(J3DSaverLink<J3DTevStage>* link);
++template<> J3DGXColorS10* J3DSaverList<J3DGXColorS10>::search(J3DGXColorS10& value);
++template<> J3DSaverLink<J3DGXColorS10>::J3DSaverLink(J3DGXColorS10 value);
++template<> void J3DSaverList<J3DGXColorS10>::append(J3DSaverLink<J3DGXColorS10>* link);
++template<> J3DTevOrderInfo* J3DSaverList<J3DTevOrderInfo>::search(J3DTevOrderInfo& value);
++template<> J3DSaverLink<J3DTevOrderInfo>::J3DSaverLink(J3DTevOrderInfo value);
++template<> void J3DSaverList<J3DTevOrderInfo>::append(J3DSaverLink<J3DTevOrderInfo>* link);
++template<> J3DTexMtxInfo* J3DSaverList<J3DTexMtxInfo>::search(J3DTexMtxInfo& value);
++template<> J3DSaverLink<J3DTexMtxInfo>::J3DSaverLink(J3DTexMtxInfo value);
++template<> void J3DSaverList<J3DTexMtxInfo>::append(J3DSaverLink<J3DTexMtxInfo>* link);
++template<> J3DTexCoord* J3DSaverList<J3DTexCoord>::search(J3DTexCoord& value);
++template<> J3DSaverLink<J3DTexCoord>::J3DSaverLink(J3DTexCoord value);
++template<> void J3DSaverList<J3DTexCoord>::append(J3DSaverLink<J3DTexCoord>* link);
++template<> Ul* J3DSaverList<Ul>::search(Ul& value);
++template<> J3DSaverLink<Ul>::J3DSaverLink(Ul value);
++template<> void J3DSaverList<Ul>::append(J3DSaverLink<Ul>* link);
++template<> J3DLightInfo* J3DSaverList<J3DLightInfo>::search(J3DLightInfo& value);
++template<> J3DSaverLink<J3DLightInfo>::J3DSaverLink(J3DLightInfo value);
++template<> void J3DSaverList<J3DLightInfo>::append(J3DSaverLink<J3DLightInfo>* link);
++template<> Us* J3DSaverList<Us>::search(Us& value);
++template<> J3DSaverLink<Us>::J3DSaverLink(Us value);
++template<> void J3DSaverList<Us>::append(J3DSaverLink<Us>* link);
++template<> Uc* J3DSaverList<Uc>::search(Uc& value);
++template<> J3DSaverLink<Uc>::J3DSaverLink(Uc value);
++template<> void J3DSaverList<Uc>::append(J3DSaverLink<Uc>* link);
++template<> J3DGXColor* J3DSaverList<J3DGXColor>::search(J3DGXColor& value);
++template<> J3DSaverLink<J3DGXColor>::J3DSaverLink(J3DGXColor value);
++template<> void J3DSaverList<J3DGXColor>::append(J3DSaverLink<J3DGXColor>* link);
++#endif
++
+ template<> J3DSaverList<long>::J3DSaverList()
+ {
+     mHead = nullptr;
+--- a/libs/JSystem/J3D/GraphLoader/J3DModelSaver.cpp
++++ b/libs/JSystem/J3D/GraphLoader/J3DModelSaver.cpp
+@@ -253,6 +253,12 @@
+     mCount = 0;
+ }
+ 
++#ifndef __MWERKS__
++template<> J3DMaterialInitData* J3DSaverList<J3DMaterialInitData>::search(J3DMaterialInitData& value);
++template<> J3DSaverLink<J3DMaterialInitData>::J3DSaverLink(J3DMaterialInitData value);
++template<> void J3DSaverList<J3DMaterialInitData>::append(J3DSaverLink<J3DMaterialInitData>* link);
++#endif
++
+ template<> void J3DSaverList<J3DMaterialInitData>::uniqueAppend(J3DMaterialInitData value)
+ {
+     if (search(value) == nullptr) {
+--- a/src/Sato/J3DAnmObject.cpp
++++ b/src/Sato/J3DAnmObject.cpp
+@@ -85,6 +85,11 @@
+     modelData->getMaterialTable().entryTexNoAnimator(*anm);
+ }
+ 
++#ifndef __MWERKS__
++template<>
++void J3DAnmObjMaterial::setMaterialAnmTev<J3DAnmTevRegKey>(J3DAnmTevRegKey **, J3DModelData *);
++#endif
++
+ void J3DAnmObjMaterial::setupTevRegAnmData(J3DAnmTevRegKey **anm, J3DModelData *modelData, void *data) {
+     *anm = (J3DAnmTevRegKey *)J3DAnmLoaderDataBase::load(data, J3DLOADER_UNK_FLAG0);
+     (*anm)->searchUpdateMaterialID(modelData);
+--- a/src/Sato/J3DEfctSplashDown.cpp
++++ b/src/Sato/J3DEfctSplashDown.cpp
+@@ -10,6 +10,11 @@
+ #include "Sato/JPEffectPerformer.h"
+ #include "Sato/ObjUtility.h"
+ #include "Sato/stMath.h"
++
++#ifndef __MWERKS__
++template<>
++void JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >::makeRotate(const JGeometry::TVec3f &, f32);
++#endif
+ 
+ J3DAnmTransform *J3DEfctSplashDown::sBckAnmTrans[1];
+ J3DMtxCalc *J3DEfctSplashDown::sBckMtxCalc[1];
+@@ -116,6 +121,9 @@
+     mModel.setBaseTRMtx(*getRotMtx()->toMtx());
+ }
+ 
++#ifndef __MWERKS__
++template<>
++#endif
+ __declspec(weak) void JGeometry::TPosition3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >::makeRotate(
+     const JGeometry::TVec3f &rVec, f32 angle) {
+     zeroTrans();
+--- a/src/Sato/J3DEffectMgr.cpp
++++ b/src/Sato/J3DEffectMgr.cpp
+@@ -54,9 +54,9 @@
+ #include "JSystem/JAudio/JASFakeMatch.h"
+ #include "JSystem/JAudio/JASFakeMatch2.h"
+ 
+-inline PermissionCounter::PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
+-
+-inline PermissionCounter::~PermissionCounter() {}
++PermissionCounter::PermissionCounter() : mCount(0), mPermission(0x14), mLink(this) {}
++
++PermissionCounter::~PermissionCounter() {}
+ 
+ int GetJ3DEfctNumAtMiniGameBomb()
+ {
+--- a/src/Sato/stParticle.cpp
++++ b/src/Sato/stParticle.cpp
+@@ -913,3 +913,8 @@
+ }
+ 
+ #include "JSystem/JAudio/JASFakeMatch2.h"
++
++#ifndef __MWERKS__
++// host build: other units call setRotate through its declaration only
++template void JGeometry::TRotation3<JGeometry::TMatrix34<JGeometry::SMatrix34C<f32> > >::setRotate(const TVec3f &, f32);
++#endif
+--- a/src/Yamamoto/kartCtrlStrat.cpp
++++ b/src/Yamamoto/kartCtrlStrat.cpp
+@@ -1356,7 +1356,7 @@
+     return false;
+ }
+ 
+-inline ItemObjMgr::KartHitList *ItemObjMgr::getKartHitList(int idx) { return &mHitList[idx]; }
++ItemObjMgr::KartHitList *ItemObjMgr::getKartHitList(int idx) { return &mHitList[idx]; }
+ 
+ void KartGame::DoActionMgr() {
+     KartBody *body = mBody;

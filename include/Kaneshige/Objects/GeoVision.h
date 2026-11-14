@@ -54,9 +54,6 @@ public:
     //virtufal ~GeoVision() {} 
     virtual const char * getBmdFileName() { return "/Objects/Wl_Screen1.bmd"; }
     virtual GeoVisionSupervisor *getSupervisor() { return sSupervisor; }
-#ifndef __MWERKS__
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
     virtual void initClassCreateNum() { sSupervisorCreateNum = 0; }
 
     friend class GeoVisionSupervisor;

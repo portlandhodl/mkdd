@@ -28,28 +28,28 @@ public:
 
     u32 get24(u32 offset) const
     {
-        return DECOMP_BE32((u8 *)mBase + offset - 1) & 0xffffff;
+        return (*(u32 *)((u8 *)mBase + offset - 1)) & 0xffffff;
     }
 
     void *getBase() { return mBase; }
     void *getAddr(u32 offset) { return (u8 *)mBase + offset; }
     u8 getByte(u32 offset) const { return *(mBase + offset); }
-    u16 get16(u32 offset) const { return DECOMP_BE16((u8 *)mBase + offset); }
-    u32 get32(u32 offset) const { return DECOMP_BE32((u8 *)mBase + offset); }
+    u16 get16(u32 offset) const { return *(u16 *)((u8 *)mBase + offset); }
+    u32 get32(u32 offset) const { return *(u32 *)((u8 *)mBase + offset); }
     u8 *getCur() { return mReadPtr; }
     u8 readByte() { return *mReadPtr++; }
     u32 read16()
     {
         u16 *tmp = (u16 *)mReadPtr;
         mReadPtr += 2;
-        return DECOMP_BE16(tmp);
+        return *tmp;
     }
     u32 read24()
     {
         mReadPtr--;
         u32 *tmp = (u32 *)mReadPtr;
         mReadPtr += 4;
-        return DECOMP_BE32(tmp) & 0x00ffffff;
+        return *tmp & 0x00ffffff;
     }
     u16 getLoopCount() const { 
          if (mCommandNo == 0) 

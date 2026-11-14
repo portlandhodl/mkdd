@@ -63,15 +63,15 @@ public:
         u32 mFullId;
         struct
         {
-            u8 DECOMP_HOST(mSectionId, b3); // overlays mFullId: host order reverses the members
-            u8 DECOMP_HOST(mGroupId, b2);
-            u8 DECOMP_HOST(b2, mGroupId);
-            u8 DECOMP_HOST(b3, mSectionId);
+            u8 mSectionId;
+            u8 mGroupId;
+            u8 b2;
+            u8 b3;
         } mBytes;
         struct
         {
-            u16 DECOMP_HOST(mSoundType, mShortId);
-            u16 DECOMP_HOST(mShortId, mSoundType);
+            u16 mSoundType;
+            u16 mShortId;
         } mAdvancedId; // Debug doesn't have an inline for referencing the short ID so I assume
                        // it's similar to this
     } mId;
@@ -286,11 +286,7 @@ public:
     void calc() { mTempo = mTransition.apply(mTempo); }
 };
 
-#ifdef __MWERKS__
 class JAISoundChild : JASPoolAllocObject<JAISoundChild>
-#else
-class JAISoundChild : public JASPoolAllocObject<JAISoundChild>
-#endif
 {
 public:
     void init();

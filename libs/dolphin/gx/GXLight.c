@@ -225,7 +225,7 @@ void GXInitSpecularDirHA(GXLightObj* obj, f32 nX, f32 nY, f32 nZ, f32 hX, f32 hY
 void GXInitLightColor(GXLightObj* obj, GXColor color)
 {
 	GXLightObjPriv* pObj = (GXLightObjPriv*)obj;
-	pObj->color          = DECOMP_BE32(&color);
+	pObj->color          = (*(u32*)&color);
 }
 
 void GXGetLightColor(const GXLightObj* obj, GXColor* color)
@@ -260,16 +260,6 @@ static inline void PushLight(const register GXLightObjPriv* lt_obj, register voi
 		psq_st  px_py, 0(dest), 0, 0
 		psq_st  pz_dx, 0(dest), 0, 0
 		psq_st  dy_dz, 0(dest), 0, 0
-	}
-#else
-	const u32* words = (const u32*)lt_obj;
-	int i;
-	port_gx_w32(0);
-	port_gx_w32(0);
-	port_gx_w32(0);
-	port_gx_w32(words[3]);
-	for (i = 4; i < 16; i++) {
-		port_gx_w32(words[i]);
 	}
 #endif // clang-format on
 }
@@ -320,12 +310,12 @@ void GXSetChanAmbColor(GXChannelID channel, GXColor color)
 	switch (channel) {
 	case GX_COLOR0:
 		rgb     = gx->ambColor[GX_COLOR0];
-		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1:
 		rgb     = gx->ambColor[GX_COLOR1];
-		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR1;
 		break;
 	case GX_ALPHA0:
@@ -339,11 +329,11 @@ void GXSetChanAmbColor(GXChannelID channel, GXColor color)
 		colorID = GX_COLOR1;
 		break;
 	case GX_COLOR0A0:
-		reg     = DECOMP_BE32(&color);
+		reg     = (*(u32*)&color);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1A1:
-		reg     = DECOMP_BE32(&color);
+		reg     = (*(u32*)&color);
 		colorID = GX_COLOR1;
 		break;
 	default:
@@ -364,12 +354,12 @@ void GXSetChanMatColor(GXChannelID channel, GXColor color)
 	switch (channel) {
 	case GX_COLOR0:
 		rgb     = gx->matColor[GX_COLOR0];
-		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1:
 		rgb     = gx->matColor[GX_COLOR1];
-		reg     = GX_SET_TRUNC(DECOMP_BE32(&color) & ~0xff, rgb, 24, 31);
+		reg     = GX_SET_TRUNC((*(u32*)&color) & ~0xff, rgb, 24, 31);
 		colorID = GX_COLOR1;
 		break;
 	case GX_ALPHA0:
@@ -383,11 +373,11 @@ void GXSetChanMatColor(GXChannelID channel, GXColor color)
 		colorID = GX_COLOR1;
 		break;
 	case GX_COLOR0A0:
-		reg     = DECOMP_BE32(&color);
+		reg     = (*(u32*)&color);
 		colorID = GX_COLOR0;
 		break;
 	case GX_COLOR1A1:
-		reg     = DECOMP_BE32(&color);
+		reg     = (*(u32*)&color);
 		colorID = GX_COLOR1;
 		break;
 	default:

@@ -30,17 +30,17 @@ extern void OSResetSystem(BOOL reset, u32 resetCode, BOOL forceMenu);
 extern void __OSCacheInit(void);
 extern void __OSPSInit(void);
 
-DECL_SECTION(".init") extern void __check_pad3(void);
-DECL_SECTION(".init") extern void __set_debug_bba(void);
-DECL_SECTION(".init") extern u8 __get_debug_bba(void);
-DECL_SECTION(".init") extern void __start(void);
-DECL_SECTION(".init") extern void __init_registers(void);
-DECL_SECTION(".init") extern void __init_data(void);
-DECL_SECTION(".init") extern void __init_hardware(void);
-DECL_SECTION(".init") extern void __flush_cache(void *address, unsigned int size);
+__declspec(section ".init") extern void __check_pad3(void);
+__declspec(section ".init") extern void __set_debug_bba(void);
+__declspec(section ".init") extern u8 __get_debug_bba(void);
+__declspec(section ".init") extern void __start(void);
+__declspec(section ".init") extern void __init_registers(void);
+__declspec(section ".init") extern void __init_data(void);
+__declspec(section ".init") extern void __init_hardware(void);
+__declspec(section ".init") extern void __flush_cache(void *address, unsigned int size);
 
-DECL_SECTION(".init") extern char _stack_addr[];
-DECL_SECTION(".init") extern char _SDA_BASE_[];
-DECL_SECTION(".init") extern char _SDA2_BASE_[];
+__declspec(section ".init") extern char _stack_addr[];
+__declspec(section ".init") extern char _SDA_BASE_[];
+__declspec(section ".init") extern char _SDA2_BASE_[];
 
 #endif // _DOLPHIN__START

@@ -1,0 +1,128 @@
+Smaller C/C++ differences between MWCC and clang: __declspec(section)
+spelled through DECL_SECTION, pointer arithmetic between different
+pointer types (JKRSolidHeap), va_end with its argument, the JKRFile
+assert macro's argument list, a pointer-to-enum cast through int
+(SequenceApp), `#line` numbers in decimal (ItemObj), and an anonymous
+union around a struct array that clang's C++03 mode rejects
+(SequenceInfo).
+
+--- a/include/Kameda/SequenceInfo.h
++++ b/include/Kameda/SequenceInfo.h
+@@ -318,7 +318,9 @@
+     int _2b8[8];               // 2B8
+     int _2d8[8];               // 2D8
+     int _2f8[8];               // 2F8
++#ifdef __MWERKS__
+     union {
++#endif
+         struct {
+             ECharID _0[2];     // 00
+             EKartID _8;        // 08
+@@ -328,7 +330,9 @@
+             KartGamePad *_18;  // 18
+             // Size: 0x1c
+         } _318[2];             // 318
++#ifdef __MWERKS__
+     };
++#endif
+ 
+ public:
+     int _350;                  // 350 (number of [human] players?)
+--- a/libs/JSystem/J2DGraph/J2DTevs.cpp
++++ b/libs/JSystem/J2DGraph/J2DTevs.cpp
+@@ -75,7 +75,7 @@
+     1, // scale exp
+ };
+ 
+-__declspec(section ".rodata") J2DTevStageInfo j2dDefaultTevStageInfo = {
++DECL_SECTION(".rodata") J2DTevStageInfo j2dDefaultTevStageInfo = {
+     4, 10, 15, 15, 0, 0, 0, 0, 1, 0, // Color
+     5, 7,  7,  0,  0, 0, 0, 1, 0,    // Alpha
+ };
+@@ -154,10 +154,10 @@
+     0,
+ };
+ const GXColor j2dDefaultTevKColor                        = { 0xFF, 0xFF, 0xFF, 0xFF };
+-__declspec(section ".sdata2") J2DTevSwapModeInfo j2dDefaultTevSwapMode = { 0, 0 };
+-__declspec(section ".sdata2") J2DTevSwapModeTableInfo j2dDefaultTevSwapModeTable = { 0, 1, 2, 3 };
++DECL_SECTION(".sdata2") J2DTevSwapModeInfo j2dDefaultTevSwapMode = { 0, 0 };
++DECL_SECTION(".sdata2") J2DTevSwapModeTableInfo j2dDefaultTevSwapModeTable = { 0, 1, 2, 3 };
+ const J2DBlendInfo j2dDefaultBlendInfo                   = { 1, 4, 5, 5 };
+ const u8 j2dDefaultDither                                = 0;
+-__declspec(section ".sdata2") J2DColorChanInfo j2dDefaultColorChanInfo = { 0, 3 };
++DECL_SECTION(".sdata2") J2DColorChanInfo j2dDefaultColorChanInfo = { 0, 3 };
+ const u8 j2dDefaultTevSwapTable                          = 0x1B;
+ const u16 j2dDefaultAlphaCmp                             = 0xE7;
+--- a/libs/JSystem/JKernel/JKRFile.cpp
++++ b/libs/JSystem/JKernel/JKRFile.cpp
+@@ -5,7 +5,7 @@
+ // not sure if this matches, doesn't exist in mkdd
+ void JKRFile::read(void* address, s32 length, s32 offset) {
+ #line 34
+-    JUT_ASSERT(34, (length & 0x1f));
++    JUT_ASSERT((length & 0x1f) == 0);
+     while (writeData(address, length, offset) != length) {
+         VIWaitForRetrace();
+     }
+--- a/libs/JSystem/JKernel/JKRSolidHeap.cpp
++++ b/libs/JSystem/JKernel/JKRSolidHeap.cpp
+@@ -60,7 +60,7 @@
+     {
+         lock();
+         u32 thisSize = (u32)mStartAddress - (u32)this;
+-        u32 newSize = ALIGN_NEXT(mSolidHead - mStartAddress, 0x20);
++        u32 newSize = ALIGN_NEXT(mSolidHead - (u8 *)mStartAddress, 0x20);
+         if (parent->resize(this, thisSize + newSize) != -1)
+         {
+             mFreeSize = 0;
+--- a/libs/JSystem/JUtility/JUTDbPrint.cpp
++++ b/libs/JSystem/JUtility/JUTDbPrint.cpp
+@@ -120,7 +120,7 @@
+     va_start(vl, fmt);
+     char buf[256];
+     enter_(x, y, 1, buf, vsnprintf(buf, sizeof(buf), fmt, vl));
+-    va_end();
++    va_end(vl);
+ }
+ 
+ void JUTReport(int x, int y, int duration, const char *fmt, ...)
+--- a/src/Osako/SequenceApp.cpp
++++ b/src/Osako/SequenceApp.cpp
+@@ -189,7 +189,7 @@
+ 
+ void SequenceApp::loadTask(void *arg)
+ {
+-    Scene::SceneType scene = (Scene::SceneType)arg;
++    Scene::SceneType scene = (Scene::SceneType)(int)arg;
+     SceneFactory::ptr()->loadData(scene, ptr()->mHeap);
+ 
+     BOOL enable = OSDisableInterrupts();
+--- a/src/Sato/ItemObj.cpp
++++ b/src/Sato/ItemObj.cpp
+@@ -1033,7 +1033,7 @@
+     }
+     else
+     {
+-#line 0x760 "ItemObj.cpp"
++#line 1888 "ItemObj.cpp"
+         JUT_MINMAX_ASSERT(0, mOwnerNum, 8);
+         mEquipFlags &= ~(1 << mOwnerNum);
+     }
+@@ -1053,7 +1053,7 @@
+                 mEquipFlags = -1;
+                 return;
+             }
+-#line 0x778 "ItemObj.cpp"
++#line 1912 "ItemObj.cpp"
+             JUT_MINMAX_ASSERT(0, mOwnerNum, 8);
+             mEquipFlags |= (1 << mOwnerNum);
+         }
+@@ -1064,7 +1064,7 @@
+                 mEquipFlags = 0;
+                 return;
+             }
+-#line 0x781 "ItemObj.cpp"
++#line 1921 "ItemObj.cpp"
+             JUT_MINMAX_ASSERT(0, mOwnerNum, 8);
+             mEquipFlags &= ~(1 << mOwnerNum);
+         }

@@ -1,0 +1,285 @@
+Scalar replacements for Gekko assembly outside J3D: JMath vector helpers,
+the JPA line drawer, J2DPictureEx::insertCommon, the Sato fsel/frsqrte
+helpers and JPSquareDistance. J2DPictureEx::animationPane also returns
+the value it computes (the decomp falls off the end, which MWCC tolerates
+because r3 already holds it; clang treats it as undefined behaviour).
+
+--- a/libs/JSystem/JMath/JMath.cpp
++++ b/libs/JSystem/JMath/JMath.cpp
+@@ -24,6 +24,9 @@
+ {
+     register f32 pxy, pzw, qxy, qzw;
+     register f32 dp;
++#ifndef __MWERKS__
++    dp = (p->x * q->x + p->z * q->z) + (p->y * q->y + p->w * q->w);
++#else
+     __asm // compute dot product
+     {
+         // clang-format off
+@@ -38,6 +41,7 @@
+         ps_sum0     dp, dp, dp, dp
+         // clang-format on
+     }
++#endif
+ 
+     if (dp < 0.0)
+     {
+@@ -57,6 +61,13 @@
+ void JMAFastVECNormalize(register const Vec *src, register Vec *dst)
+ {
+     register f32 vxy, rxy, vz, length;
++#ifndef __MWERKS__
++    f32 sq = src->x * src->x + src->z * src->z + src->y * src->y;
++    length = __frsqrte(sq);
++    dst->x = src->x * length;
++    dst->y = src->y * length;
++    dst->z = src->z * length;
++#else
+     __asm {
+         // clang-format off
+         psq_l vxy, 0(src), 0, 0
+@@ -71,11 +82,17 @@
+         stfs vz, dst->z
+         // clang-format on
+     }
++#endif
+ }
+ 
+ void JMAVECScaleAdd(register const Vec *vec1, register const Vec *vec2, register Vec *dst, register f32 scale)
+ {
+     register f32 v1xy, v2xy, rxy, v1z, v2z, rz;
++#ifndef __MWERKS__
++    dst->x = vec1->x * scale + vec2->x;
++    dst->y = vec1->y * scale + vec2->y;
++    dst->z = vec1->z * scale + vec2->z;
++#else
+     // clang-format off
+     __asm {
+         // load vector XY of vector 1
+@@ -96,11 +113,17 @@
+         psq_st rz,  8(dst), 1, 0
+     }
+     // clang-format on
++#endif
+ }
+ 
+ void JMAVECLerp(register const Vec *vec1, register const Vec *vec2, register Vec *dst, register f32 t)
+ {
+     register f32 v1xy, v2xy, v1z, v2z;
++#ifndef __MWERKS__
++    dst->x = (vec2->x - vec1->x) * t + vec1->x;
++    dst->y = (vec2->y - vec1->y) * t + vec1->y;
++    dst->z = (vec2->z - vec1->z) * t + vec1->z;
++#else
+     // clang-format off
+     __asm {
+         // load XY components of both vectors
+@@ -124,6 +147,7 @@
+         stfs v2z, 8(dst)
+     }
+     // clang-format on
++#endif
+ 
+     /*dst->x = (vec2->x - vec1->x) * t + vec1->x;
+     dst->y = (vec2->y - vec1->y) * t + vec1->y;
+@@ -143,6 +167,14 @@
+ {    
+     register f32 scale, x, y, z;
+     register f32 normal = 1.0f;
++#ifndef __MWERKS__
++    for (int i = 0; i < 3; i++) {
++        dst[i][0] = src[i][0] * xScale;
++        dst[i][1] = src[i][1] * yScale;
++        dst[i][2] = src[i][2] * zScale;
++        dst[i][3] = src[i][3] * normal;
++    }
++#else
+     // clang-format off
+     __asm {
+         // scale first 2 components
+@@ -170,6 +202,7 @@
+         psq_st z, 0x28(dst), 0, 0
+     }
+     // clang-format on
++#endif
+ 
+     /*
+     dst[0][0] = src[0][0] * xScale;
+--- a/libs/JSystem/JParticle/JPABaseShape.cpp
++++ b/libs/JSystem/JParticle/JPABaseShape.cpp
+@@ -1032,6 +1032,32 @@
+ static const f32 jpa_c32 = 32.0f;
+ 
+ // hand-written: the compiler schedules the GX FIFO writes differently
++#ifndef __MWERKS__
++void JPADrawLine(JPAEmitterWorkData *work, JPABaseParticle *particle)
++{
++    if (particle->checkStatus(8) == 0)
++    {
++        JGeometry::TVec3f position1;
++        JGeometry::TVec3f position2;
++        position1.set(particle->mPosition);
++        particle->getVelVec(&position2);
++        if (!position2.isZero())
++        {
++            position2.setLength(work->mGlobalPtclScl.y * (25.0f * particle->mParticleScaleY));
++            position2.sub(position1, position2);
++            GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
++            GXSetVtxDesc(GX_VA_TEX0, GX_DIRECT);
++            GXBegin(GX_LINES, GX_VTXFMT1, 2);
++            GXPosition3f32(position1.x, position1.y, position1.z);
++            GXTexCoord2f32(0.0f, 0.0f);
++            GXPosition3f32(position2.x, position2.y, position2.z);
++            GXTexCoord2f32(0.0f, 1.0f);
++            GXSetVtxDesc(GX_VA_POS, GX_INDEX8);
++            GXSetVtxDesc(GX_VA_TEX0, GX_INDEX8);
++        }
++    }
++}
++#else
+ void JPADrawLine(JPAEmitterWorkData *work, JPABaseParticle *particle)
+ {
+     JGeometry::TVec3f position1;
+@@ -1143,6 +1169,7 @@
+     line_end:
+     }
+ }
++#endif
+ 
+ static JPANode<JPABaseParticle> *getNext(JPANode<JPABaseParticle> *node) { return node->getNext(); }
+ 
+--- a/libs/JSystem/J2DGraph/J2DPictureEx.cpp
++++ b/libs/JSystem/J2DGraph/J2DPictureEx.cpp
+@@ -293,6 +293,54 @@
+ void setTevKAlphaSel__12J2DPictureExFUc();
+ }
+ 
++#ifndef __MWERKS__
++void J2DPictureEx::insertCommon(u8 index, f32 blendRatio)
++{
++    u8 texGenNum = mMaterial->mTexGenBlock.mTexGenNum;
++    mMaterial->mTevBlock->getMaxStage();
++    u8 tevStageNum = mMaterial->mTevBlock->getTevStageNum();
++    bool flag;
++    if (texGenNum <= 1) {
++        flag = tevStageNum != 1;
++    } else {
++        flag = tevStageNum != texGenNum + 1;
++    }
++
++    shiftSetBlendRatio(index, blendRatio, true, true);
++    shiftSetBlendRatio(index, blendRatio, false, true);
++
++    texGenNum++;
++    mMaterial->mTexGenBlock.mTexGenNum = texGenNum;
++
++    for (int i = texGenNum - 1; i >= index; i--) {
++        J2DTexCoordInfo& info = mMaterial->mTexGenBlock.getTexCoord((u8)i).mTexCoordInfo;
++        info.mTexGenType = GX_TG_MTX2x4;
++        info.mTexGenSrc = GX_TG_TEX0;
++        info.mTexGenMtx = i * 3 + 30;
++    }
++
++    for (int i = texGenNum - 1; i > index; i--) {
++        mMaterial->mTexGenBlock.setTexMtx((u8)i, mMaterial->mTexGenBlock.getTexMtx((u8)(i - 1)));
++    }
++
++    J2DTexMtx texMtx(j2dDefaultTexMtxInfo);
++    mMaterial->mTexGenBlock.setTexMtx(index, texMtx);
++
++    u8 stageNum;
++    if (texGenNum == 1) {
++        stageNum = 1;
++    } else {
++        stageNum = texGenNum + (flag ? 2 : 1);
++    }
++    mMaterial->mTevBlock->setTevStageNum(stageNum);
++
++    setTevOrder(texGenNum, stageNum, flag);
++    setTevStage(texGenNum, stageNum, flag);
++    setTevKColor(texGenNum);
++    setTevKColorSel(texGenNum);
++    setTevKAlphaSel(texGenNum);
++}
++#else
+ asm void J2DPictureEx::insertCommon(u8 index, f32 blendRatio)
+ {
+     nofralloc
+@@ -469,6 +517,7 @@
+     addi r1,r1,160
+     blr
+ }
++#endif
+ 
+ bool J2DPictureEx::isInsert(u8 p1) const
+ {
+@@ -1366,7 +1415,7 @@
+         }
+     }
+ 
+-    J2DPane::animationPane(animation);
++    return J2DPane::animationPane(animation);
+ }
+ 
+ u8 J2DPictureEx::getUsableTlut(u8 id)
+--- a/src/Sato/RivalSpeedCtrl.cpp
++++ b/src/Sato/RivalSpeedCtrl.cpp
+@@ -89,11 +89,18 @@
+     return (mask ^ v) - mask;
+ }
+ 
++#ifndef __MWERKS__
++inline f32 stFsel(f32 c, f32 a, f32 b)
++{
++    return c >= 0.0f ? a : b;
++}
++#else
+ inline f32 stFsel(register f32 c, register f32 a, register f32 b)
+ {
+     asm { fsel c, c, a, b }
+     return c;
+ }
++#endif
+ 
+ inline f32 stConverge(f32 cur, f32 target, f32 up, f32 down)
+ {
+--- a/src/Sato/stMath.cpp
++++ b/src/Sato/stMath.cpp
+@@ -58,7 +58,11 @@
+ 
+     if (x > 0.0f)
+     {
++#ifndef __MWERKS__
++        recip = __frsqrte(x);
++#else
+         __asm { frsqrte recip, x }
++#endif
+         return recip * x;
+     }
+     return x;
+--- a/src/Sato/JPEffectPerformer.cpp
++++ b/src/Sato/JPEffectPerformer.cpp
+@@ -1927,6 +1927,15 @@
+     }
+ }
+ 
++#ifndef __MWERKS__
++static inline f32 JPSquareDistance(const Vec *a, const Vec *b)
++{
++    f32 dx = a->x - b->x;
++    f32 dy = a->y - b->y;
++    f32 dz = a->z - b->z;
++    return (dx * dx + dy * dy) + dz * dz;
++}
++#else
+ static inline f32 JPSquareDistance(register const Vec *a, register const Vec *b)
+ {
+     register f32 v0yz, v1yz, v0xy, v1xy, dyz, dxy, sqdist;
+@@ -1945,6 +1954,7 @@
+     // clang-format on
+     return sqdist;
+ }
++#endif
+ 
+ static inline KartCam *JPGetCamera(int cameraNo)
+ {

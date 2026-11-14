@@ -2,7 +2,7 @@
 #include "Kameda/WipeManager.h"
 #include "Kaneshige/Course/Course.h"
 #include "Kaneshige/RaceMgr.h"
-#include "Yamamoto/kartCtrl.h"
+#include "Yamamoto/KartCtrl.h"
 #include "Yamamoto/kartBody.h"
 #include "Yamamoto/kartParams.h"
 #include "Kaneshige/KartChecker.h"

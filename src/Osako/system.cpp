@@ -470,8 +470,8 @@ namespace System {
     f32 getOrthoT() { return SystemData::scOrtho.Y; }
     f32 getOrthoB() { return SystemData::scOrtho.H; }
 
-    f32 getPerspAspect() { return DECOMP_WIDE(SystemData::scAspect); }
-    f32 getPerspAspectDiv2() { return DECOMP_WIDE(SystemData::scAspectDiv2); }
-    f32 getPerspAspectDiv4() { return DECOMP_WIDE(SystemData::scAspect); }
-    f32 getPerspAspectSub() { return DECOMP_WIDE(SystemData::scAspectSub); }
+    f32 getPerspAspect() { return SystemData::scAspect; }
+    f32 getPerspAspectDiv2() { return SystemData::scAspectDiv2; }
+    f32 getPerspAspectDiv4() { return SystemData::scAspect; }
+    f32 getPerspAspectSub() { return SystemData::scAspectSub; }
 }

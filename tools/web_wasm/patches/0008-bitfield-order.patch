@@ -1,0 +1,131 @@
+Unions that overlay bytes or bitfields on a wider integer. GCC/clang on a
+little-endian target allocate bitfields and bytes from the least
+significant end, MWCC on PowerPC from the most significant end, so the
+member order is reversed for the host to keep each name on the same bits
+of the integer. GameAudio::Main::isActive reads the named bit instead of
+masking the packed byte. JAUAudience.h also keeps the inline bodies when
+JAUAUDIENCE_EXTERN_DEFINITIONS is set, since the out-of-line copies are
+an MWCC weak-emission trick.
+
+--- a/include/JSystem/JAudio/Interface/JAISound.h
++++ b/include/JSystem/JAudio/Interface/JAISound.h
+@@ -63,15 +63,15 @@
+         u32 mFullId;
+         struct
+         {
++            u8 b3; // overlays mFullId: host order reverses the members
++            u8 b2;
++            u8 mGroupId;
+             u8 mSectionId;
+-            u8 mGroupId;
+-            u8 b2;
+-            u8 b3;
+         } mBytes;
+         struct
+         {
++            u16 mShortId;
+             u16 mSoundType;
+-            u16 mShortId;
+         } mAdvancedId; // Debug doesn't have an inline for referencing the short ID so I assume
+                        // it's similar to this
+     } mId;
+@@ -286,7 +286,11 @@
+     void calc() { mTempo = mTransition.apply(mTempo); }
+ };
+ 
++#ifdef __MWERKS__
+ class JAISoundChild : JASPoolAllocObject<JAISoundChild>
++#else
++class JAISoundChild : public JASPoolAllocObject<JAISoundChild>
++#endif
+ {
+ public:
+     void init();
+--- a/include/JSystem/JAudio/JAUAudience.h
++++ b/include/JSystem/JAudio/JAUAudience.h
+@@ -25,16 +25,16 @@
+             u16 f1;
+         } half;
+         struct {
++            u8 b1_2_7 : 6;
++            u8 b1_1 : 1;
++            u8 b1_0 : 1;
++            u8 b0_7 : 1;
++            u8 b0_6 : 1;
++            u8 b0_5 : 1;
++            u8 b0_4 : 1;
+             u8 b0_0 : 4;
+-            u8 b0_4 : 1;
+-            u8 b0_5 : 1;
+-            u8 b0_6 : 1;
+-            u8 b0_7 : 1;
+-            u8 b1_0 : 1;
+-            u8 b1_1 : 1;
+-            u8 b1_2_7 : 6;
++            u8 b3;
+             u8 b2;
+-            u8 b3;
+         } bytes;
+         u32 raw;
+     } _00;
+@@ -139,7 +139,7 @@
+ class JAUAudience_withSetting : public JAIAudience {
+ public:
+     JAUAudience_withSetting()
+-#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
++#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && defined(__MWERKS__)
+     ;
+ #else
+     {
+@@ -328,7 +328,7 @@
+ 
+     f32 calcPitch_(JAUAudibleChannel *channel, const Audible *audible, int index) {
+         JAUAudibleParam audParam = audible->getAudibleParam();
+-        if ((*(u8*)&audParam._00.raw >> 4) & 0xf) { // probably fake
++        if (((u8)(audParam._00.half.f0 >> 8) >> 4) & 0xf) { // probably fake
+             f32 dopplerPwr = calcPitchDoppler_(channel->_20, state[index]._30, audible->absPos_.velocity_, audible->getAudibleParam().getDopplerPower());
+             
+             if (channel->_30 > 0.0f) {
+@@ -351,7 +351,7 @@
+     }
+ 
+     void mixChannelOut(const JASSoundParams &params, JAIAudible *pAudible, int index)
+-#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
++#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && defined(__MWERKS__)
+     ;
+ #else
+     {
+@@ -474,7 +474,7 @@
+         delete audible;
+     }
+     JAIAudible *newAudible(const JGeometry::TVec3f &pos, JAISoundID soundID, const JGeometry::TVec3f *p3, u32 channels)
+-#ifdef JAUAUDIENCE_EXTERN_DEFINITIONS
++#if defined(JAUAUDIENCE_EXTERN_DEFINITIONS) && defined(__MWERKS__)
+     ;
+ #else
+     {
+--- a/include/JSystem/JAudio/System/JASChannel.h
++++ b/include/JSystem/JAudio/System/JASChannel.h
+@@ -76,9 +76,9 @@
+         u16 whole;
+         struct
+         {
++            u8 lower1 : 4;
++            u8 lower0 : 4;
+             u8 upper;
+-            u8 lower0 : 4;
+-            u8 lower1 : 4;
+         } parts;
+     };
+ 
+--- a/src/Inagaki/GameAudioMain.cpp
++++ b/src/Inagaki/GameAudioMain.cpp
+@@ -174,7 +174,7 @@
+ }
+ 
+ bool Main::isActive() {
+-    return mState.pack & 0x10;
++    return mState.bits.active;
+ }
+ 
+ void Main::initRaceSound() {

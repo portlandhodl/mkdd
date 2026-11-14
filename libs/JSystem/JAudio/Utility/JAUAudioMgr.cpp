@@ -3,10 +3,8 @@
 
 #include "macros.h"
 
-#ifdef __MWERKS__
 template <>
 DECL_WEAK JAUSoundInfo *JASGlobalInstance<JAUSoundInfo>::sInstance;
-#endif
 
 JAUAudioMgr::JAUAudioMgr(JAUSectionHeap *) : JAUSoundInfo(true) {
 

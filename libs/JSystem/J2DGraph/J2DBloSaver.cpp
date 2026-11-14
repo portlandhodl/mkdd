@@ -44,7 +44,7 @@ void J2DBloSaver::CTextureNameConnect::clear()
 
 const char* J2DBloSaver::CTextureNameConnect::get(const ResTIMG* tex) {
     // UNUSED
-DECOMP_HOST(, return nullptr;) }
+}
 
 J2DBloSaver::CTextureNameConnect::TNC::TNC(const ResTIMG* tex, const char* name) {
     mTexture = tex;

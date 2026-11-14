@@ -144,11 +144,7 @@ public:
     void getBufferZ(u32);
 
     // Inline
-#ifdef __MWERKS__
     virtual TLensFlareSupervisor *getSupervisor() { return sSupervisor; }
-#else
-    virtual GeoObjSupervisor *getSupervisorVirtual() { return sSupervisor; }
-#endif
     static TLensFlareSupervisor *getSupervisor() { return sSupervisor; }
 
 private:

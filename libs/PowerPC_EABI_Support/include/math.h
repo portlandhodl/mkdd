@@ -9,7 +9,7 @@
 extern "C" {
 #endif // ifdef __cplusplus
 
-#if !defined(__MWERKS__) && !defined(MKDD_PORT) // host port: real versions in port/include/mkdd_port.h
+#ifndef __MWERKS__
 // Get clangd to shut up about __fabs being undefined.
 #define __fabs(x)    (x)
 #define __fabsf(x)   (x)

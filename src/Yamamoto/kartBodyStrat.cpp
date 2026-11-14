@@ -1117,8 +1117,8 @@ f32 KartStrat::DoDashCrl(f32 speed) {
     return speed;
 }
 
-f32 KartStrat::DoStarCrl(f32 speed) {
-    DECOMP_HOST(f32 ret, f32 ret = speed);
+f32 KartStrat::DoStarCrl(f32) {
+    f32 ret;
     if ((mBody->mCarStatus & 0x40000) == 0)
         return ret;
     if ((mBody->mCarStatus & 0x8000) != 0)

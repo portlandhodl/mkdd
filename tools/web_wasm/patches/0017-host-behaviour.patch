@@ -1,0 +1,48 @@
+Code whose PowerPC behaviour depends on things the host does not
+reproduce. KartStrat::DoStarCrl returns an uninitialised local, which on
+PowerPC still holds the speed argument from f1, so the host initialises
+it with the argument. KartItem calls getNowTandemDriverNum through a cast
+function pointer type (an invalid bitcast that traps in wasm); the host
+calls it directly and converts the result. JPAVolumeSphere divides by
+(count - 1), which PowerPC's divw tolerates for zero and wasm traps on.
+
+--- a/src/Yamamoto/kartBodyStrat.cpp
++++ b/src/Yamamoto/kartBodyStrat.cpp
+@@ -1117,8 +1117,8 @@
+     return speed;
+ }
+ 
+-f32 KartStrat::DoStarCrl(f32) {
+-    f32 ret;
++f32 KartStrat::DoStarCrl(f32 speed) {
++    f32 ret = speed;
+     if ((mBody->mCarStatus & 0x40000) == 0)
+         return ret;
+     if ((mBody->mCarStatus & 0x8000) != 0)
+--- a/src/Yamamoto/KartItemStrat.cpp
++++ b/src/Yamamoto/KartItemStrat.cpp
+@@ -14,7 +14,7 @@
+ #include "Yamamoto/KartDamage.h"
+ 
+ // The original call sites see getNowTandemDriverNum returning int (no zero-extension of the result)
+-#define GET_NOW_TANDEM_DRIVER_NUM(idx) ((int (*)(int))ItemObjMgr::getNowTandemDriverNum)(idx)
++#define GET_NOW_TANDEM_DRIVER_NUM(idx) ((int)ItemObjMgr::getNowTandemDriverNum(idx))
+ 
+ void KartItem::Init(int idx)
+ {
+--- a/libs/JSystem/JParticle/JPADynamicsBlock.cpp
++++ b/libs/JSystem/JParticle/JPADynamicsBlock.cpp
+@@ -68,8 +68,11 @@
+     s16 theta; // r4
+     if (workData->mEmitter->checkDynFlag(JPADYN_FixedInterval)) {
+ 
+-        u16 preTheta = (workData->mVolumeAngleNum << 16) / (workData->mVolumeAngleMax - 1);
+-        phi          = u16((workData->mVolumeX << 15) / (workData->mDivNumber - 1) + 0x4000);
++        // PowerPC divw yields 0 for a zero divisor; wasm traps
++        int angleDiv = workData->mVolumeAngleMax - 1;
++        int divDiv   = workData->mDivNumber - 1;
++        u16 preTheta = angleDiv == 0 ? 0 : (workData->mVolumeAngleNum << 16) / angleDiv;
++        phi          = u16((divDiv == 0 ? 0 : (workData->mVolumeX << 15) / divDiv) + 0x4000);
+         theta        = f32(preTheta) * workData->mVolumeSweep + 32768.0f;
+         workData->mVolumeAngleNum++;
+         if (workData->mVolumeAngleNum == workData->mVolumeAngleMax) {

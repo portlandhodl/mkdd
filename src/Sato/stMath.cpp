@@ -58,11 +58,7 @@ float stspeedy_sqrtf(register float x)
 
     if (x > 0.0f)
     {
-#ifndef __MWERKS__
-        recip = __frsqrte(x);
-#else
         __asm { frsqrte recip, x }
-#endif
         return recip * x;
     }
     return x;

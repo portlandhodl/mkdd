@@ -370,7 +370,7 @@ void KartCrash::DotornadeCrashCrl() {
     KartBody* body = mBody;
     JGeometry::TVec3f stack_8;
     switch (body->_588) {
-        case 0: {
+        case 0:
             DoTornadeCenter();
             body->_594 = 0;
             body->mVel.y = 14.0f * body->getCrash()->_4->getThrowPow();
@@ -398,7 +398,6 @@ void KartCrash::DotornadeCrashCrl() {
                 body->_588 = 1;
             }
             return;
-        }
         case 1:
             GetKartCtrl()->ChaseFnumber(&body->mWg.y, 0.0f, 0.05f);
             if (body->_594 < 1) {
@@ -471,7 +470,7 @@ void KartCrash::MakeSpin(ItemObj *itemObj) {
 void KartCrash::DoSpinCrashCrl() {
     KartBody* body = mBody;
     switch (body->_588) {
-        case 0: {
+        case 0:
             f32 cnvge_4ac = body->_4ac;
 
             if (cnvge_4ac > 10.0f) {
@@ -496,7 +495,6 @@ void KartCrash::DoSpinCrashCrl() {
                 body->getStrat()->MovingSpinClear();
             }
             return;
-        }
         default:
             body->getStrat()->MovingSpinClear();
     }
@@ -544,7 +542,7 @@ void KartCrash::MakeHalfSpin(ItemObj *itemObj) {
 void KartCrash::DoHalfSpinCrashCrl() {
     KartBody* body = mBody;
     switch (body->_588) {
-        case 0: {
+        case 0:
             f32 cnvge_4ac = body->_4ac;
 
             if (cnvge_4ac > 5.0f) {
@@ -570,7 +568,6 @@ void KartCrash::DoHalfSpinCrashCrl() {
                 body->mTireAngle = 0;
             }
             return;
-        }
         default:
             body->getStrat()->MovingHalfSpinClear();
     }
