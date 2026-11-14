@@ -8,7 +8,9 @@
 // must match the room's), relaying of WebRTC SDP/ICE between members, heartbeats,
 // cleanup and basic rate/size limits. Game traffic goes peer-to-peer over WebRTC
 // data channels; this server only sees lobby messages. Optionally serves a static directory
-// (STATIC_DIR) so one process hosts the page as well. See ../README.md for the env.
+// (STATIC_DIR) so one process hosts the page as well. Room events (create, join, leave, start,
+// end, refused starts) are logged to stdout with room codes, member ids and names (QUIET=1: off).
+// See ../README.md for the env.
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -47,6 +49,7 @@ export function loadConfig(env = process.env) {
     heartbeatMs: envInt(env, 'HEARTBEAT_MS', 10_000),
     roomIdleMs: envInt(env, 'ROOM_IDLE_MS', 6 * 3600_000),
     trustProxy: env.TRUST_PROXY === '1',
+    quiet: env.QUIET === '1',
   };
 }
 
@@ -98,7 +101,29 @@ function smallJson(v) {
 }
 const cleanTag = (s, n) => String(s ?? '').replace(/[^\x21-\x7e]/g, '').slice(0, n);
 
-export function createServer(cfg = loadConfig()) {
+// A member's own report of whether it can race: { disc, idle } (a disc image is chosen; the
+// game has not been started solo), and during a session its boot progress { boot, why }.
+// Members that never sent one (older pages) count as able.
+function cleanStatus(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const s = {};
+  if (typeof v.disc === 'boolean') s.disc = v.disc;
+  if (typeof v.idle === 'boolean') s.idle = v.idle;
+  if (v.boot !== undefined) s.boot = cleanTag(v.boot, 16);
+  if (v.why !== undefined) s.why = String(v.why).replace(/[\u0000-\u001f\u007f<>]/g, '').slice(0, 120);
+  return s;
+}
+export function cannotRace(status) {
+  if (!status) return '';
+  if (status.disc === false) return 'no disc image chosen';
+  if (status.idle === false) return 'game already running, needs a page reload';
+  return '';
+}
+
+// opts.log(line): room events (default: none; the command line logs to stdout)
+export function createServer(cfg = loadConfig(), opts = {}) {
+  const logLine = opts.log || (() => {});
+  const who = (c) => `#${c.id} ${JSON.stringify(c.name)}`;
   const rooms = new Map(); // code -> room
   const ipConns = new Map();
   const ipRooms = new Map(); // ip -> [timestamps]
@@ -143,7 +168,7 @@ export function createServer(cfg = loadConfig()) {
     return {
       t: 'room', code: room.code, host: room.host.id, state: room.state, settings: room.settings, maxMembers: cfg.maxMembers,
       gameId: room.gameId, build: room.build,
-      members: room.members.map((m) => ({ id: m.id, name: m.name, slot: m.slot, ready: m.ready, profile: m.profile })),
+      members: room.members.map((m) => ({ id: m.id, name: m.name, slot: m.slot, ready: m.ready, profile: m.profile, status: m.status })),
     };
   }
   function broadcast(room, msg, except) {
@@ -163,6 +188,7 @@ export function createServer(cfg = loadConfig()) {
     room.members = room.members.filter((m) => m !== c);
     c.ready = false;
     touch(room);
+    logLine(`room ${room.code}: ${who(c)} ${reason}${room.members.length ? `, ${room.members.length} left` : ', room closed'}`);
     if (!room.members.length) {
       rooms.delete(room.code);
       return;
@@ -172,6 +198,7 @@ export function createServer(cfg = loadConfig()) {
       // the longest-standing member (lowest id) becomes host, also during a session
       room.host = room.members[0];
       broadcast(room, { t: 'host-changed', host: room.host.id, reason });
+      logLine(`room ${room.code}: ${who(room.host)} is the host now`);
     }
     broadcast(room, roomView(room));
   }
@@ -187,6 +214,7 @@ export function createServer(cfg = loadConfig()) {
       c.build = cleanTag(m.build, 80);
       c.hello = true;
       if (m.proto !== PROTO) return error(c, 'proto', `protocol ${m.proto} is not supported (server speaks ${PROTO}); reload the page`);
+      logLine(`${who(c)} connected (${c.gameId || 'no disc'})`);
       send(c, { t: 'welcome', id: c.id, proto: PROTO, iceServers: iceServers(cfg, c.id) });
     },
     name(c, m) {
@@ -208,31 +236,52 @@ export function createServer(cfg = loadConfig()) {
       c.room = room;
       c.slot = 0;
       c.ready = false;
+      logLine(`room ${room.code}: created by ${who(c)} (${c.gameId}, ${c.build})`);
       send(c, roomView(room));
     },
     join(c, m) {
-      const room = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
-      if (!room) return error(c, 'no-room', 'no room with that code', 'join');
+      const wanted = String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const room = rooms.get(wanted);
+      const refuse = (code, msg) => { logLine(`room ${wanted}: ${who(c)} refused: ${msg}`); return error(c, code, msg, 'join'); };
+      if (!room) return refuse('no-room', 'no room with that code');
       if (room.members.includes(c)) return send(c, roomView(room));
-      if (room.state !== 'lobby') return error(c, 'started', 'that session has already started', 'join');
-      if (room.members.length >= cfg.maxMembers) return error(c, 'full', `room is full (${cfg.maxMembers} players)`, 'join');
+      if (room.state !== 'lobby') return refuse('started', 'that session has already started');
+      if (room.members.length >= cfg.maxMembers) return refuse('full', `room is full (${cfg.maxMembers} players)`);
       if (c.gameId !== room.gameId)
-        return error(c, 'version', `disc mismatch: room plays ${room.gameId}, you chose ${c.gameId || 'no disc'}`, 'join');
+        return refuse('version', `disc mismatch: room plays ${room.gameId}, you chose ${c.gameId || 'no disc'}`);
       if (c.build !== room.build)
-        return error(c, 'version', `build mismatch: room runs ${room.build}, you run ${c.build}; everyone needs the same mkdd.wasm`, 'join');
+        return refuse('version', `build mismatch: room runs ${room.build}, you run ${c.build}; everyone needs the same mkdd.wasm`);
       leave(c, 'left');
       c.room = room;
       c.slot = freePort(room);
       c.ready = false;
       room.members.push(c);
       touch(room);
+      logLine(`room ${room.code}: ${who(c)} joined, ${room.members.length} members`);
       broadcast(room, roomView(room));
     },
     leave(c) { leave(c, 'left'); },
     ready(c, m) {
       if (!c.room || c.room.state !== 'lobby') return;
+      const why = cannotRace(c.status);
+      if (m.ready && why) {
+        error(c, 'ready', `you cannot be ready: ${why}`, 'ready');
+        m = { ready: false };
+      }
       c.ready = !!m.ready;
       broadcast(c.room, roomView(c.room));
+    },
+    // the member's own state: { disc, idle } in the lobby, { boot, why } during a session
+    status(c, m) {
+      const st = cleanStatus(m.status);
+      if (st === undefined) return error(c, 'status', 'status must be an object', 'status');
+      if (JSON.stringify(st) === JSON.stringify(c.status)) return;
+      c.status = st;
+      const room = c.room;
+      if (!room) return;
+      if (room.state === 'lobby' && cannotRace(st)) c.ready = false;
+      if (room.state === 'playing' && st.boot === 'failed') logLine(`room ${room.code}: ${who(c)} could not start the game: ${st.why || '?'}`);
+      broadcast(room, roomView(room));
     },
     settings(c, m) {
       const room = c.room;
@@ -288,16 +337,22 @@ export function createServer(cfg = loadConfig()) {
       if (room.state !== 'lobby') return;
       const players = room.members.filter((x) => x.slot >= 0);
       if (!players.length) return error(c, 'start', 'nobody is in a player slot', 'start');
+      const refuse = (msg) => { logLine(`room ${room.code}: start refused: ${msg}`); return error(c, 'start', msg, 'start'); };
+      const blocked = room.members.filter((x) => cannotRace(x.status));
+      if (blocked.length) return refuse(`cannot race: ${blocked.map((x) => `${x === c ? 'you' : x.name} (${cannotRace(x.status)})`).join(', ')}`);
       const notReady = room.members.filter((x) => x !== c && !x.ready);
-      if (notReady.length) return error(c, 'start', `not ready: ${notReady.map((x) => x.name).join(', ')}`, 'start');
+      if (notReady.length) return refuse(`not ready: ${notReady.map((x) => x.name).join(', ')}`);
       room.state = 'playing';
       touch(room);
+      logLine(`room ${room.code}: session started by ${who(c)}: ${room.members.map((x) => `${who(x)} slot ${x.slot}`).join(', ')}; ` +
+              `settings ${JSON.stringify(room.settings)}`);
       broadcast(room, roomView(room));
     },
     // the host ends the session: back to the lobby (everyone reloads the game)
     end(c) {
       const room = c.room;
       if (!room || room.host !== c) return;
+      if (room.state === 'playing') logLine(`room ${room.code}: session ended by ${who(c)}`);
       room.state = 'lobby';
       for (const x of room.members) x.ready = false;
       broadcast(room, { t: 'ended' });
@@ -306,10 +361,10 @@ export function createServer(cfg = loadConfig()) {
     kick(c, m) {
       const room = c.room;
       if (!room || room.host !== c) return;
-      const who = room.members.find((x) => x.id === m.id && x !== c);
-      if (!who) return;
-      error(who, 'kicked', 'the host removed you from the room');
-      leave(who, 'kicked');
+      const target = room.members.find((x) => x.id === m.id && x !== c);
+      if (!target) return;
+      error(target, 'kicked', 'the host removed you from the room');
+      leave(target, 'kicked');
     },
     ping(c, m) { send(c, { t: 'pong', ts: m.ts }); },
   };
@@ -317,7 +372,7 @@ export function createServer(cfg = loadConfig()) {
   wss.on('connection', (ws, ip) => {
     ipConns.set(ip, (ipConns.get(ip) || 0) + 1);
     const c = { id: nextId++, ws, ip, name: 'Player', gameId: '', build: '', room: null, slot: -1, ready: false, profile: {},
-                tokens: cfg.msgBurst, lastFill: Date.now() };
+                status: undefined, tokens: cfg.msgBurst, lastFill: Date.now() };
     const alive = () => { ws.mkddDead = false; };
     ws.on('pong', alive);
     ws.on('message', (data, isBinary) => {
@@ -355,6 +410,7 @@ export function createServer(cfg = loadConfig()) {
     const now = Date.now();
     for (const room of rooms.values()) {
       if (now - room.lastActive > cfg.roomIdleMs) {
+        logLine(`room ${room.code}: expired after ${Math.round(cfg.roomIdleMs / 60000)} min idle`);
         for (const m of [...room.members]) { error(m, 'expired', 'room expired'); leave(m, 'expired'); }
         rooms.delete(room.code);
       }
@@ -375,7 +431,8 @@ export function createServer(cfg = loadConfig()) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const srv = createServer();
+  const cfg = loadConfig();
+  const srv = createServer(cfg, { log: cfg.quiet ? null : (line) => console.log(`${new Date().toISOString()} ${line}`) });
   const addr = await srv.listen();
   const where = `${addr.address}:${addr.port}`;
   console.log(`mkdd netplay server on ws://${where}/ws` + (srv.cfg.staticDir ? `, serving ${srv.cfg.staticDir} at http://${where}/` : ''));

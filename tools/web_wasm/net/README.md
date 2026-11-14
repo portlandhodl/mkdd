@@ -43,6 +43,11 @@ sets it.
 | `MAX_MSG_BYTES`, `MSG_RATE`, `MSG_BURST` | 64 KiB, 60/s, 200 | per-connection message limits |
 | `HEARTBEAT_MS`, `ROOM_IDLE_MS` | 10 s, 6 h | dead-socket check, idle room expiry |
 | `TRUST_PROXY` | - | `1`: use `X-Forwarded-For` for the per-IP limits (behind a reverse proxy) |
+| `QUIET` | - | `1`: do not log room events |
+
+The server logs room events to stdout: connections (name, game ID), room created / joined /
+left / host changes, starts (members, slots, settings), refused joins and starts with the
+reason, a member that could not boot into the race, ended sessions. No addresses are logged.
 
 ## How to play with a friend (phase 1: race together, no items)
 
@@ -68,11 +73,17 @@ STATIC_DIR=build/web_wasm/web HOST=0.0.0.0 PORT=8095 node tools/web_wasm/net/ser
 ```
 
 Both players open `http://192.168.1.20:8095/` (the page finds the lobby on its own
-origin), choose their own disc image, open Multiplayer, type a name and Connect.
+origin), choose their own disc image, open Multiplayer, type a name and Connect. Do not press
+Play first: a game that already runs solo cannot switch to the online race, so the panel
+refuses to create or join a room until the page is reloaded ("Reload to play online" does
+that and rejoins the room). In a room the solo Play / Start buttons are gone; only the
+host's GO starts the game, on every window at once.
 One presses Create room and reads out the 6-letter code; the other types it and
 Joins. Everyone picks Driver, Partner and Kart; the host picks Course, Class, Laps
 and Mirror (and slots = grid positions). Non-hosts tick Ready, the host presses
-Start. Both games boot straight into the race (about 10-20 s to load the course),
+Start (GO stays disabled, with the reason as its tooltip and below it, until every member is
+connected, ready, has a disc and an idle game). The drawer closes on every window, the boot
+lights show, and both games boot straight into the race (about 10-20 s to load the course),
 wait for each other at the Lakitu, and the countdown ends on the same host-clock
 moment everywhere. Keys: X accelerate, arrows steer, Z brake, Q/W drift; a gamepad
 works too. The overlay (top left) shows ping, the race phase and, per other player,
@@ -108,17 +119,25 @@ run coturn and set `TURN_URLS` with credentials (`TURN_SECRET` for coturn's
 
 Client to server: `hello {name, gameId, build, proto}`, `create`, `join {code}`,
 `leave`, `name {name}`, `ready {ready}`, `profile {profile}` (own choice, any JSON
-object up to 2 KB, e.g. `{char1, char2, kart}`), `settings {game, slots}` (host:
+object up to 2 KB, e.g. `{char1, char2, kart}`), `status {status}` (own state: `{disc,
+idle}` = a disc image is chosen / the game was not started solo; during a session `{boot,
+why}` = `booting`, the game's `netPhase`, or `failed` with the reason), `settings {game, slots}` (host:
 `game` is any JSON object up to 2 KB, e.g. `{course, cc, laps, mirror}`; `slots`
-maps member id to slot 0..7 or -1), `start` (host, everyone else ready), `end`
+maps member id to slot 0..7 or -1), `start` (host, everyone else ready, nobody's status has `disc` or `idle` false), `end`
 (host), `kick {id}` (host), `signal {to, data}` (SDP/ICE relay), `ping {ts}`.
 
 Server to client: `welcome {id, proto, iceServers}`, `room {code, host, state
 (lobby|playing), settings, maxMembers, gameId, build, members[{id, name, slot,
-ready, profile}]}`, `peer-left {id, reason}`, `host-changed {host, reason}` (the
+ready, profile, status}]}`, `peer-left {id, reason}`, `host-changed {host, reason}` (the
 longest-standing member takes over, also during a session), `ended`, `signal
 {from, data}`, `pong`, `error {code, msg, re}`. Every joiner's game ID and build
-fingerprint (64-bit hash of `mkdd.wasm`) must equal the room's.
+fingerprint (64-bit hash of `mkdd.wasm`) must equal the room's. `ready` is refused (error,
+member stays not ready) while the member's status says it cannot race.
+
+A member whose page cannot boot at the session start (older page, game already running)
+reports `status {boot: 'failed', why}`: it shows why with a "Reload to play online" button,
+the others are told who could not join, and the host can end the session (`end`); everyone
+then reloads into the same room (`?netroom=`, retried while the room is still in a session).
 
 ## Transport (net.js `Mesh`)
 
@@ -193,7 +212,7 @@ MKDD_ISO=/path/GM4E01.iso node tools/web_wasm/net/test/e2e-race.mjs
 NET_LAG=50 NET_JITTER=10 NET_LOSS=0.05 MKDD_ISO=... node tools/web_wasm/net/test/e2e-race.mjs
 ```
 
-`e2e-race.mjs` (same server and Chrome ports, output in `build/web_wasm/net-race`)
+`e2e-race.mjs` (same server and Chrome ports as `e2e.mjs`, output in `build/web_wasm/net-race`)
 does the same lobby steps without `netnoboot`: both pages boot the game into one
 online race on Luigi Circuit. An in-page bot drives each player's own kart with
 KeyboardEvents toward the course ahead (the karts steer into each other for the
@@ -205,3 +224,19 @@ summarised in `summary.json`. Debug exports used by it: `Module.netStats`,
 online path without a page: `MKDD_NET_ONLINE=1 MKDD_NET_SESSION='<session JSON>'`
 (the other members count as lost; `MKDD_NET_TRACE=N` prints the local kart's
 position every N frames).
+
+```sh
+MKDD_ISO=/path/GM4E01.iso node tools/web_wasm/net/test/e2e-start.mjs
+```
+
+`e2e-start.mjs` (server 18630, Chrome 19630/19631, output and screenshots in
+`build/web_wasm/net-start`) starts a session the way a player does, with mouse clicks and
+typing: connecting without a disc, pressing Play before joining (refused, "Reload to play
+online" rejoins), GO with a guest not ready (disabled with the reason, a forced start is
+refused and explained), a member whose game runs (blocks GO, cannot be Ready), a member that
+cannot boot at the start (both sides told, the host ends the session, both reload into the
+room), then the real start (drawer closes, countdown and boot lights, keyboard focus on the
+game, both games load the race) and the server's room log.
+
+All three e2e tests take `MKDD_WWW`, `MKDD_NET_PORT`, `MKDD_NET_DEBUG_PORT` (Chrome debug
+port, and +1) and `MKDD_NET_OUT`.

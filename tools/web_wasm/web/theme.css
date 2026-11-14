@@ -372,6 +372,14 @@ select[disabled], input[disabled] { opacity: .55; cursor: not-allowed; }
 #mp .mpgrid > label { display: grid; gap: 4px; font: 800 11px var(--ui); color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
 #mp .mpgrid > span.muted { font: 800 11px var(--ui); color: var(--yellow); text-transform: uppercase; letter-spacing: .14em; width: 100%; margin-bottom: -4px; }
 #mp .note { margin-top: 14px; font-size: 13px; padding: 10px 12px; border-radius: 12px; background: rgba(8, 5, 25, .4); border-left: 4px solid var(--violet); color: var(--muted); }
+#mpAlert { margin-top: 12px; padding: 12px 14px; border-radius: 14px; font-size: 14px; line-height: 1.4; color: #fff;
+  background: linear-gradient(180deg, rgba(255, 198, 26, .22), rgba(255, 198, 26, .08)), rgba(8, 5, 25, .5); border: 2px solid var(--yellow);
+  animation: pop .35s cubic-bezier(.3, 1.6, .5, 1); }
+#mpAlertButtons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+#mpAlertButtons:empty { display: none; }
+#mpAlertButtons button:first-child, #netMsgButtons button:first-child { --c: var(--green); --cd: var(--green-d); }
+#mpMembers tr.blocked { border-color: var(--red); box-shadow: inset 4px 0 0 var(--red), 0 0 0 1px rgba(238, 59, 59, .5); }
+#mpMembers tr.blocked td:nth-child(3) { color: #ffd0d0; }
 #mpServer { width: 100%; }
 #mp .mpgrid:first-child > label:first-child { flex: 1 1 220px; }
 #mpCode { font: 800 20px var(--mono); letter-spacing: .3em; text-transform: uppercase; width: 8.5ch; text-align: center; padding: 6px 4px; }
@@ -417,7 +425,7 @@ select[disabled], input[disabled] { opacity: .55; cursor: not-allowed; }
 #mpMembers td:nth-child(1) select option { background: #170f3d; font: 600 14px var(--ui); }
 #mpMembers td:nth-child(2) { grid-area: name; font: 400 19px/1.1 var(--display); letter-spacing: .02em; overflow-wrap: anywhere; }
 #mpMembers tr.host td:nth-child(2)::after { content: " \1F3C6"; font-size: 15px; }
-#mpMembers td:nth-child(3) { grid-area: prof; font-size: 12.5px; color: var(--muted); }
+#mpMembers td:nth-child(3) { grid-area: prof; font-size: 12.5px; color: var(--muted); white-space: pre-line; }
 #mpMembers td:nth-child(4), #mpMembers td:nth-child(5) { grid-area: meta; display: inline-block; }
 #mpMembers td:nth-child(4):not(:empty), #mpMembers td:nth-child(5):not(:empty) { font: 800 11px var(--mono); color: #d8ffe0; background: #0c0a1c; border: 1px solid #2c255e;
   padding: 3px 8px; border-radius: 8px; justify-self: start; }

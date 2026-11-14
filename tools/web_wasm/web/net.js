@@ -99,6 +99,8 @@
     setReady(ready) { this.send({ t: 'ready', ready }); }
     setName(name) { this.send({ t: 'name', name }); }
     setProfile(profile) { this.send({ t: 'profile', profile }); }
+    // own state for the room: { disc, idle } (can race), { boot, why } during a session
+    setStatus(status) { this.send({ t: 'status', status }); }
     // host: { game: {...settings}, slots: {memberId: slot} }
     setSettings(s) { this.send({ t: 'settings', ...s }); }
     start() { this.send({ t: 'start' }); }
@@ -273,7 +275,9 @@
       this.frozen = false;
       for (const p of [...this.peers.values()]) if (p.left) this.removePeer(p);
       this.emit('end');
-      if (this.lobby.room) this.syncRoom(this.lobby.room);
+      // (the room view saying 'lobby' comes after 'ended': the last one still says 'playing',
+      // which would start the session again)
+      if (this.lobby.room) this.syncRoom({ ...this.lobby.room, state: 'lobby' });
     }
 
     peerChanged(p) {

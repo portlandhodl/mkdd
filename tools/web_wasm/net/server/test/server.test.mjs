@@ -4,9 +4,11 @@ import { WebSocket } from 'ws';
 import { createServer, loadConfig, PROTO } from '../server.mjs';
 
 let srv, url;
+const events = [];
 before(async () => {
   srv = createServer(loadConfig({ PORT: '0', HOST: '127.0.0.1', STUN_URLS: 'stun:stun.example:3478', TURN_URLS: 'turn:turn.example:3478',
-                                  TURN_SECRET: 's3cret', ROOMS_PER_MIN: '50', MAX_MSG_BYTES: '4096', MAX_MEMBERS: '4' }));
+                                  TURN_SECRET: 's3cret', ROOMS_PER_MIN: '50', MAX_MSG_BYTES: '4096', MAX_MEMBERS: '4' }),
+                     { log: (line) => events.push(line) });
   const a = await srv.listen();
   url = `ws://127.0.0.1:${a.port}/ws`;
 });
@@ -176,4 +178,49 @@ test('names are sanitised and messages need hello', async () => {
   const r = await c.type('room');
   assert.equal(r.members[0].name, 'bEvil/b' + 'y'.repeat(17));
   c.close();
+});
+
+test('member status: a member whose game runs or who has no disc cannot be ready, the start is refused; room events are logged', async () => {
+  const a = new Client(), b = new Client();
+  await a.hello('Ann'); await b.hello('Ben');
+  a.send({ t: 'create' });
+  const { code } = await a.type('room');
+  b.send({ t: 'join', code });
+  await a.type('room', (m) => m.members.length === 2);
+  b.send({ t: 'status', status: { disc: true, idle: true } });
+  const r1 = await a.type('room', (m) => m.members[1].status && m.members[1].status.idle === true);
+  assert.deepEqual(r1.members[1].status, { disc: true, idle: true });
+  b.send({ t: 'ready', ready: true });
+  await a.type('room', (m) => m.members[1].ready);
+  // Ben's game starts solo: he is no longer ready and cannot become ready again
+  b.send({ t: 'status', status: { disc: true, idle: false, junk: 'x'.repeat(50) } });
+  const r2 = await a.type('room', (m) => m.members[1].status.idle === false);
+  assert.equal(r2.members[1].ready, false);
+  assert.deepEqual(r2.members[1].status, { disc: true, idle: false });
+  b.send({ t: 'ready', ready: true });
+  assert.equal((await b.type('error')).code, 'ready');
+  a.send({ t: 'start' });
+  const e = await a.type('error', (m) => m.re === 'start');
+  assert.match(e.msg, /Ben \(game already running/);
+  b.send({ t: 'status', status: { disc: false, idle: true } });
+  await a.type('room', (m) => m.members[1].status.disc === false);
+  a.send({ t: 'start' });
+  assert.match((await a.type('error', (m) => m.re === 'start')).msg, /Ben \(no disc image chosen\)/);
+  assert.equal(srv.rooms.get(code).state, 'lobby');
+  // fixed: the start goes through; boot progress is passed on during the session
+  b.send({ t: 'status', status: { disc: true, idle: true } });
+  b.send({ t: 'ready', ready: true });
+  await a.type('room', (m) => m.members[1].ready);
+  a.send({ t: 'start' });
+  await b.type('room', (m) => m.state === 'playing');
+  b.send({ t: 'status', status: { disc: true, idle: false, boot: 'failed', why: 'no <disc>' } });
+  const r3 = await a.type('room', (m) => m.members[1].status.boot === 'failed');
+  assert.equal(r3.members[1].status.why, 'no disc');
+  a.close(); b.close();
+  await b.closed;
+  await new Promise((res) => setTimeout(res, 50));
+  const mine = events.filter((l) => l.includes(code));
+  for (const re of [/created by #\d+ "Ann"/, /#\d+ "Ben" joined, 2 members/, /start refused: cannot race: Ben \(game already running/,
+                    /session started by #\d+ "Ann": .*"Ben" slot 1/, /"Ben" could not start the game: no disc/, /room closed/])
+    assert.ok(mine.some((l) => re.test(l)), `${re} in\n${mine.join('\n')}`);
 });
