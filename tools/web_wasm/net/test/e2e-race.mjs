@@ -16,7 +16,7 @@
 //
 // Env: RACE_SECONDS (default 60), RACE_SHOTS (default "3,10,20,35,50"), NET_LAG / NET_JITTER (ms) and
 // NET_LOSS (0..1) for the simulated network, MKDD_NET_OUT (default build/web_wasm/net-race), ports
-// MKDD_NET_PORT (18610) and Chrome debug 19610/19611. Headless Chrome renders with SwiftShader:
+// MKDD_NET_PORT (18610) and MKDD_NET_DEBUG_PORT (Chrome debug, 19610 and +1). Headless Chrome renders with SwiftShader:
 // expect a low frame rate, worse with both instances on one loaded machine.
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -141,7 +141,8 @@ async function shot(peer, label) {
 const results = {};
 const check = (name, ok, detail = '') => { results[name] = ok; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${detail ? ': ' + detail : ''}`); };
 const t0 = Date.now();
-const A = await launch('alice', 19610), B = await launch('bob', 19611);
+const debugPort = Number(process.env.MKDD_NET_DEBUG_PORT || 19610);
+const A = await launch('alice', debugPort), B = await launch('bob', debugPort + 1);
 const summary = { sim: Object.fromEntries([...q].filter(([k]) => k.startsWith('net') && k !== 'netserver')), shots: [] };
 try {
   await open(A, { netname: 'Alice', nethost: '1' });

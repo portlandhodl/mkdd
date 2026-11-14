@@ -208,6 +208,7 @@
   <div class="drawer-body">
   <details id="mp" open>
     <summary>Multiplayer</summary>
+    <div id="mpAlert" role="alert" hidden><div id="mpAlertText"></div><div id="mpAlertButtons"></div></div>
     <div class="mpgrid">
       <label>Server <input id="mpServer" size="30" spellcheck="false"></label>
       <label>Your name <input id="mpName" size="14" maxlength="24"></label>
@@ -448,14 +449,17 @@
     print: t => log(t),
     printErr: t => log(t),
     onRuntimeInitialized() { Module.portReady = true; if (discFile) startBtn.disabled = false; },
-    onAbort: what => { log('ABORT: ' + what); statusEl.textContent = 'Stopped (see log).'; },
+    onAbort: what => { log('ABORT: ' + what); statusEl.textContent = 'Stopped (see log).'; for (const fn of abortHooks) try { fn(what); } catch (e) {} },
   };
 
   // net: an online session (netui.js) adds environment and an attach(Module) hook
   // that runs before callMain.
-  let gameStarted = false;
+  let gameStarted = false, soloHint = '';
+  const abortHooks = [];
   async function startGame(net) {
     if (!discFile || gameStarted) return;
+    // in a multiplayer room only the session starts the game
+    if (!net && startBtn.hidden) { log('[net] ' + soloHint); return; }
     gameStarted = true;
     startBtn.disabled = true;
     pick.disabled = true;
@@ -487,7 +491,10 @@
   // for the Multiplayer panel (netui.js)
   window.mkddPage = { startGame, loadCard, log, params, getDisc: () => discFile, started: () => gameStarted,
                       onDisc: (fn) => { const prev = setDisc; setDisc = (f) => { prev(f); fn(f); }; if (discFile) fn(discFile); },
-                      setSoloStart: (on) => { startBtn.hidden = !on; } };
+                      onAbort: (fn) => abortHooks.push(fn),
+                      // off: hide the solo Start / Play buttons, with the reason shown in their place
+                      setSoloStart: (on, hint = '') => { startBtn.hidden = !on; soloHint = on ? '' : hint; },
+                      soloHint: () => soloHint };
 </script>
 <script src="mkdd.js"></script>
 <script src="input.js"></script>

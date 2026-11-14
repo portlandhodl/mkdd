@@ -299,7 +299,7 @@
     const play = $('uiPlay');
     play.disabled = startBtn.disabled;
     play.hidden = startBtn.hidden;
-    $('uiDiscHint').textContent = startBtn.hidden ? 'You are in a multiplayer room: the host starts the race.'
+    $('uiDiscHint').textContent = startBtn.hidden ? (page.soloHint && page.soloHint()) || 'You are in a multiplayer room: the host starts the race.'
       : !(window.Module && Module.portReady) ? 'Warming up the engine…' : 'Keyboard or gamepad: see the controls below.';
   }
   setInterval(poll, 250);
@@ -369,13 +369,18 @@
       badge.hidden = !m;
       if (m) badge.textContent = m[1];
     }).observe(summary, { childList: true, characterData: true, subtree: true });
-    // the session starts when netui shows the in-game HUD: count down, wave the flags
+    // the session starts when netui shows the in-game HUD: close the drawer so the boot lights and
+    // the game are in view, give the keys back to the game, count down (unless this window cannot
+    // join the race: netui sets data-boot="fail" and shows why)
     const hud = $('netHud');
     new MutationObserver(() => {
       if (hud.hidden || hud.dataset.counted) return;
       hud.dataset.counted = '1';
       setOpen($('mpDrawer'), false);
-      countdown();
+      if (document.activeElement && document.activeElement !== body) document.activeElement.blur();
+      $('screen').focus({ preventScroll: true });
+      $('stage').scrollIntoView({ block: 'nearest', behavior: calm() ? 'auto' : 'smooth' });
+      if (hud.dataset.boot !== 'fail') countdown();
     }).observe(hud, { attributes: true, attributeFilter: ['hidden'] });
   }
   function countdown() {
