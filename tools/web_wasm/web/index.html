@@ -139,7 +139,7 @@
       return await new Promise(r => { const q = db.transaction('disc').objectStore('disc').get('image'); q.onsuccess = () => r(q.result || null); q.onerror = () => r(null); });
     } catch (e) { return null; }
   }
-  // Slot A memory card: a raw card image (see port/sdk/card.c), saved after each change.
+  // Slot A memory card: a raw card image (see tools/web_wasm/sdk/card.c), saved after each change.
   async function loadCard() {
     try {
       const db = await idb();
@@ -196,12 +196,12 @@
   if (params.has('wgltrace')) env.MKDD_WGL_TRACE = params.get('wgltrace');
   if (params.has('dff')) { env.MKDD_DFF = '/mkdd.dff'; env.MKDD_DFF_FRAMES = params.get('dff'); }
   // ?perf=1 logs frame-time accounting every 600 retraces; ?autopilot=1 lets the
-  // CPU drive player 1's kart (testing); ?pad=... is MKDD_PAD (port/sdk/vi_pad.c)
+  // CPU drive player 1's kart (testing); ?pad=... is MKDD_PAD (tools/web_wasm/sdk/vi_pad.c)
   if (params.has('perf')) env.MKDD_PERF = params.get('perf') || '1';
   if (params.has('autopilot')) env.MKDD_AUTOPILOT = '1';
   if (params.has('pad')) env.MKDD_PAD = params.get('pad');
 
-  // Graphics settings (port/gpu/webgl_internal.h WglGfx): kept in localStorage, handed to the
+  // Graphics settings (tools/web_wasm/gpu/webgl_internal.h WglGfx): kept in localStorage, handed to the
   // renderer as MKDD_GFX_* in Module.env; Module.gfxVersion tells it to re-read them.
   const GFX_KEY = 'mkdd-gfx-v1';
   const gfxDefaults = { scale: 0, msaa: 4, fxaa: 0, aniso: 16, texfilter: 0, aspect: 0, wide: 0, present: 0, deflicker: 0, warm: 1 };

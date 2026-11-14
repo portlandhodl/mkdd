@@ -7,7 +7,7 @@
 // lists, texture pixel data and palettes. The GX backend decodes those as BE.
 //
 // Self-contained: no decomp headers, no pointers stored in data, so it builds both
-// into the wasm (port/sdk/dvd.c calls it) and as a native CLI (port/conv/cli.cpp).
+// into the wasm (tools/web_wasm/sdk/dvd.c calls it) and as a native CLI (tools/web_wasm/conv/cli.cpp).
 #ifndef PORT_CONV_H
 #define PORT_CONV_H
 

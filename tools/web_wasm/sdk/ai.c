@@ -2,7 +2,7 @@
  * the DAC. Each AIInitDMA'd block is latched when the previous one finishes,
  * the DMA interrupt (AIRegisterDMACallback) fires at every block start, and a
  * finished block goes to the host: a WAV file under node (MKDD_AUDIO_WAV=path)
- * and Module.audioPush in the browser (port/web/audio.js). Block periods are
+ * and Module.audioPush in the browser (tools/web_wasm/web/audio.js). Block periods are
  * paced by wall-clock time, like the VI retrace. MKDD_NO_AUDIO=1 only drops the
  * output: the DMA, the audio thread and the DSP keep running, since sounds are
  * only released once the DSP has played them (a stopped audio thread leaves the
@@ -68,7 +68,7 @@ EM_JS(void, port_js_wav_write, (const s16 *lr, int frames), {
     if ((w.bytes / 4) % (w.rate * 2) < frames) w.header();
 });
 
-/* Browser: port/web/audio.js feeds Module.audioPush to WebAudio. */
+/* Browser: tools/web_wasm/web/audio.js feeds Module.audioPush to WebAudio. */
 EM_JS(void, port_js_audio_push, (const s16 *lr, int frames), {
     if (typeof Module !== 'undefined' && Module.audioPush)
         Module.audioPush(HEAP16.subarray(lr >> 1, (lr >> 1) + frames * 2));

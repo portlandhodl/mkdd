@@ -1,8 +1,8 @@
 /* Synthetic test for the WebGL2 GPU backend (not part of the game link).
  *
- *   port/gpu/tools/webgl_test.sh        builds build/port/webgl_test/
- *   node port/gpu/tools/webgl_test.mjs  renders it in headless Chrome and
- *                                       writes build/port/webgl_test/shot.png
+ *   tools/web_wasm/gpu/tools/webgl_test.sh        builds build/web_wasm/webgl_test/
+ *   node tools/web_wasm/gpu/tools/webgl_test.mjs  renders it in headless Chrome and
+ *                                       writes build/web_wasm/webgl_test/shot.png
  *
  * Fills GpuRegs by hand (the way the GX library would program the BP/XF
  * registers) and draws GpuVertex primitives through the backend into a 3x3 grid

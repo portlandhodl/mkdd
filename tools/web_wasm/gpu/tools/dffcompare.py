@@ -2,8 +2,8 @@
 """Render a Dolphin FIFO log (.dff) with Dolphin and with the port's WebGL2 renderer
 and compare the XFB images frame by frame.
 
-    port/gpu/tools/dffplay.sh                    # build the player once
-    python3 port/gpu/tools/dffcompare.py log.dff outdir [--backend Vulkan] [--swiftshader]
+    tools/web_wasm/gpu/tools/dffplay.sh                    # build the player once
+    python3 tools/web_wasm/gpu/tools/dffcompare.py log.dff outdir [--backend Vulkan] [--swiftshader]
 
 Writes outdir/dolphin-NN.png (Dolphin's XFB copies, before presentation),
 outdir/ours-NNNNN.ppm, outdir/cmp-NNNNN.png (ours | Dolphin | |diff| x4) and prints
@@ -13,11 +13,11 @@ Dolphin's defaults otherwise (copy filter disabled, EFB/XFB copies to texture).
 Our side runs in headless Chrome on the GPU (ANGLE/Vulkan) unless --swiftshader.
 
 Recording a log: MKDD_DFF=<file> MKDD_DFF_FRAMES=<start>:<count> (node or browser,
-?dff=start:count in the page); see port/gpu/gpu_fifolog.c.
+?dff=start:count in the page); see tools/web_wasm/gpu/gpu_fifolog.c.
 """
 import argparse, glob, os, shutil, subprocess, sys
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
 
 DOLPHIN_INI = """[Core]
 GFXBackend = {backend}
@@ -65,7 +65,7 @@ def run_ours(dff, out, swiftshader):
         env.setdefault("CHROME_FLAGS", "--use-angle=vulkan --enable-features=Vulkan --ignore-gpu-blocklist --enable-gpu")
     for f in glob.glob(os.path.join(out, "ours-*.ppm")):
         os.remove(f)
-    r = subprocess.run(["node", os.path.join(ROOT, "port/gpu/tools/dffplay.mjs"), dff, out], env=env,
+    r = subprocess.run(["node", os.path.join(ROOT, "tools/web_wasm/gpu/tools/dffplay.mjs"), dff, out], env=env,
                        capture_output=True, text=True, timeout=300)
     print(r.stdout.strip().splitlines()[0] if r.stdout.strip() else r.stderr)
 

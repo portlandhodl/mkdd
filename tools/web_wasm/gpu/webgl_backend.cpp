@@ -70,7 +70,7 @@ static uint32_t sXfbSeq;
 /* MKDD_WGL_TRACE=N (?wgltrace=N): log every batch, EFB copy and present of frame N (and
  * texcoord-scale mismatches) to the console. MKDD_WGL_PICK=x*1000+y: log every batch
  * that changes EFB pixel (x, y), or covers it without changing it (handy with the FIFO
- * log player, port/gpu/tools/dffplay.*). MKDD_WGL_DEBUG: see wgl_debug. */
+ * log player, tools/web_wasm/gpu/tools/dffplay.*). MKDD_WGL_DEBUG: see wgl_debug. */
 extern "C" int port_env(const char *name);
 static int sTraceFrame, sDebug;
 /* MKDD_DEFLICKER: apply the copy filter's vertical taps (console behaviour; Dolphin's

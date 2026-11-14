@@ -3,9 +3,9 @@
  * Two sources:
  *  - a disc image (GCM/ISO): MKDD_DISC=/path/game.iso under node, or the File
  *    the user picked in the browser (Module.discFile), read on demand;
- *  - an extracted directory (files/ and sys/, as port/tools/extract_disc.py writes).
+ *  - an extracted directory (files/ and sys/, as tools/web_wasm/tools/extract_disc.py writes).
  * Entry numbers index a table in FST order; lookups are case-insensitive as on
- * hardware. Formats port/conv knows are served as converted (host-order) copies.
+ * hardware. Formats tools/web_wasm/conv knows are served as converted (host-order) copies.
  * Reads complete immediately; async callbacks are delivered from port_poll(). */
 #include <dirent.h>
 #include <stdio.h>
@@ -25,7 +25,7 @@ typedef struct Entry {
     int next;       /* index after this entry's subtree (dirs) */
     u32 rawSize;    /* size on disc */
     u32 size;       /* as served: the converted size for converted files */
-    u8 *conv;       /* host-order copy (port/conv), loaded on first open */
+    u8 *conv;       /* host-order copy (tools/web_wasm/conv), loaded on first open */
     int convOpen;   /* open handles using conv */
     int convState;  /* 0 unknown, 1 converted, 2 served raw */
 } Entry;
@@ -376,7 +376,7 @@ static u32 raw_read(Entry *e, u32 offset, u32 length, void *dst)
 }
 
 /* Disc formats are big-endian; serve converted (host-order) copies of the
- * formats port/conv knows. Media streams are read piecewise and stay raw. */
+ * formats tools/web_wasm/conv knows. Media streams are read piecewise and stay raw. */
 static void load_converted(Entry *e)
 {
     u8 *raw;

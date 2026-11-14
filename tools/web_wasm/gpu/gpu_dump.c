@@ -19,7 +19,7 @@
 
 #define EFB_W 640
 #define EFB_H 528
-#define DEFAULT_DIR "build/port/frames"
+#define DEFAULT_DIR "build/web_wasm/frames"
 
 EM_JS(char *, gpu_js_env_str, (const char *name), {
     var n = UTF8ToString(name);

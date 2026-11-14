@@ -2,8 +2,8 @@
 """Build the WebAssembly port: game + JSystem (decomp sources) and the SDK layer.
 
     source ~/emsdk/emsdk_env.sh
-    python port/tools/build.py [--target node|web] [--jobs N] [-O2]
-Outputs build/port/<target>/mkdd.{js,wasm}. Incremental via clang depfiles.
+    python tools/web_wasm/tools/build.py [--target node|web] [--jobs N] [-O2]
+Outputs build/web_wasm/<target>/mkdd.{js,wasm}. Incremental via clang depfiles.
 """
 import argparse, concurrent.futures as cf, glob, os, shutil, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -15,13 +15,13 @@ CLANGXX = os.path.join(EMSDK, "upstream", "bin", "clang++")
 EMCC = shutil.which("emcc") or os.path.join(EMSDK, "upstream", "emscripten", "emcc")
 EMXX = shutil.which("em++") or os.path.join(EMSDK, "upstream", "emscripten", "em++")
 
-SDK_FLAGS = ["-std=gnu11", "-fsigned-char", "-fshort-wchar", "-Wno-typedef-redefinition", "-I", "include", "-I", "port/include", "-I", "port/sdk", "-I", "port/gpu",
+SDK_FLAGS = ["-std=gnu11", "-fsigned-char", "-fshort-wchar", "-Wno-typedef-redefinition", "-I", "include", "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk", "-I", "tools/web_wasm/gpu",
              "-DMKDD_PORT=1", "-DREGION_US=1", "-Wno-incompatible-library-redeclaration",
              "-fno-strict-aliasing"]
 SDK_CXX_FLAGS = ["-std=gnu++03", "-fsigned-char", "-fshort-wchar", "-fno-exceptions", "-fno-rtti", "-nostdinc", "-nostdinc++",
-                 "-I", "port/include", "-I", "port/sdk", "-I", "include", "-I", "libs/PowerPC_EABI_Support/include",
+                 "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk", "-I", "include", "-I", "libs/PowerPC_EABI_Support/include",
                  "-I", "build/MarioClub_us/include", "-DREGION_US=1", "-DDEBUG=1", "-DMKDD_PORT=1",
-                 "-include", "port/include/mkdd_port.h", "-fms-extensions", "-fms-compatibility",
+                 "-include", "tools/web_wasm/include/mkdd_port.h", "-fms-extensions", "-fms-compatibility",
                  "-fdelayed-template-parsing", "-Wno-error=extraneous-template-head", "-w"]
 
 def rewrite_long_chars(text):
@@ -84,18 +84,18 @@ def job(kind, src, outdir, opt):
         cmd = [CLANGXX, *flags, "-fshort-wchar", "-fno-strict-return", opt, "-fno-delete-null-pointer-checks", "-fno-strict-aliasing", "-g1"]
         text, changed = rewrite_long_chars(open(src, encoding="latin-1").read())
         if changed:
-            rw = os.path.join(ROOT, "build", "port", "rewrite", rel)
+            rw = os.path.join(ROOT, "build", "web_wasm", "rewrite", rel)
             os.makedirs(os.path.dirname(rw), exist_ok=True)
             open(rw, "w", encoding="latin-1").write(text)
             cmd += ["-iquote", os.path.dirname(src)]
             src = rw
     elif kind == "gpucxx":
-        cmd = [EMXX, "-std=c++17", "-fno-exceptions", "-fno-rtti", "-I", "include", "-I", "port/include", "-I", "port/sdk",
-               "-I", "port/gpu", "-DMKDD_PORT=1", "-fshort-wchar", opt, "-g1"]
+        cmd = [EMXX, "-std=c++17", "-fno-exceptions", "-fno-rtti", "-I", "include", "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk",
+               "-I", "tools/web_wasm/gpu", "-DMKDD_PORT=1", "-fshort-wchar", opt, "-g1"]
     elif kind == "conv":
         cmd = [EMXX, "-std=c++17", opt, "-g1"]
     elif kind == "gx":
-        cmd = [EMCC, *SDK_FLAGS, "-include", "port/include/mkdd_port.h", opt, "-g1"]
+        cmd = [EMCC, *SDK_FLAGS, "-include", "tools/web_wasm/include/mkdd_port.h", opt, "-g1"]
     elif kind == "sdkcxx":
         cmd = [CLANGXX, "--target=wasm32-unknown-emscripten", *SDK_CXX_FLAGS, opt, "-g1"]
     else:
@@ -130,15 +130,15 @@ def main():
     a = ap.parse_args()
     opt = f"-O{a.opt}"
     suffix = f"-{a.tag}" if a.tag else ""
-    outdir = os.path.join(ROOT, "build", "port", f"obj-O{a.opt}{suffix}")
+    outdir = os.path.join(ROOT, "build", "web_wasm", f"obj-O{a.opt}{suffix}")
     jobs = [("game", s) for s in scan.sources()]
-    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.c")))]
+    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/sdk/*.c")))]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gd/*.c")))]
     jobs += [("gx", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gx/*.c")))]
-    jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/sdk/*.cpp")))]
-    jobs += [("conv", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/conv/*.cpp"))) if not s.endswith("cli.cpp")]
-    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/gpu/*.c")))]
-    jobs += [("gpucxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "port/gpu/*.cpp")))]
+    jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/sdk/*.cpp")))]
+    jobs += [("conv", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/conv/*.cpp"))) if not s.endswith("cli.cpp")]
+    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/gpu/*.c")))]
+    jobs += [("gpucxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/gpu/*.cpp")))]
     objs, errors = [], []
     with cf.ThreadPoolExecutor(a.jobs) as ex:
         for rel, obj, err in ex.map(lambda j: job(j[0], j[1], outdir, opt), jobs):
@@ -150,14 +150,14 @@ def main():
         print(f"--- {rel}\n{err}", file=sys.stderr)
     if errors:
         sys.exit(f"{len(errors)} compile failures")
-    out = os.path.join(ROOT, "build", "port", a.target + suffix)
+    out = os.path.join(ROOT, "build", "web_wasm", a.target + suffix)
     os.makedirs(out, exist_ok=True)
     rsp = os.path.join(out, "objs.rsp")
     open(rsp, "w").write("\n".join(objs))
     cmd = [EMXX, f"@{rsp}", opt, *LINK_COMMON, *LINK_TARGET[a.target], "-o", os.path.join(out, "mkdd.js")]
     r = subprocess.run(cmd, cwd=ROOT)
     if r.returncode == 0 and a.target == "web":
-        for f in glob.glob(os.path.join(ROOT, "port", "web", "*")):
+        for f in glob.glob(os.path.join(ROOT, "tools", "web_wasm", "web", "*")):
             if os.path.isfile(f) and f.endswith((".html", ".css", ".js", ".ico", ".png")):
                 shutil.copy(f, out)
     sys.exit(r.returncode)

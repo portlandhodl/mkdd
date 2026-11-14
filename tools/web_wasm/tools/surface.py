@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Compile decomp sources to wasm32 objects and list external symbols they need.
 
-    python port/tools/surface.py [--jobs N]
-Writes build/port/obj/... and prints undefined symbols grouped by prefix.
+    python tools/web_wasm/tools/surface.py [--jobs N]
+Writes build/web_wasm/obj/... and prints undefined symbols grouped by prefix.
 """
 import argparse, collections, concurrent.futures as cf, os, re, shutil, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scan  # noqa: E402
 
 ROOT = scan.ROOT
-OBJ = os.path.join(ROOT, "build", "port", "obj")
+OBJ = os.path.join(ROOT, "build", "web_wasm", "obj")
 NM = shutil.which("llvm-nm") or shutil.which("llvm-nm-21")
 
 def compile_one(src):
@@ -42,7 +42,7 @@ def main():
     print(f"{len(objs)} objects compiled, {len(failed)} failed; {len(need)} external symbols")
     for g, syms in sorted(groups.items(), key=lambda kv: -len(kv[1])):
         print(f"{len(syms):4d} {g}: {' '.join(sorted(syms)[:12])}{' ...' if len(syms) > 12 else ''}")
-    with open(os.path.join(ROOT, "build", "port", "undefined.txt"), "w") as f:
+    with open(os.path.join(ROOT, "build", "web_wasm", "undefined.txt"), "w") as f:
         f.write("\n".join(sorted(need)) + "\n")
 
 if __name__ == "__main__":

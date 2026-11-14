@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Inventory file formats on an extracted disc, looking inside RARC archives.
 
-    python port/tools/inventory.py build/port/disc/files [--list EXT]
+    python tools/web_wasm/tools/inventory.py build/web_wasm/disc/files [--list EXT]
 Prints counts per extension with first-4-byte magics and total size.
 """
 import collections, os, struct, sys

@@ -1,4 +1,4 @@
-// Sound output for the web port: the game's audio interface (port/sdk/ai.c)
+// Sound output for the web port: the game's audio interface (tools/web_wasm/sdk/ai.c)
 // hands every finished 32 kHz stereo DMA block to Module.audioPush; this feeds
 // them to WebAudio through a small queue (AudioWorklet, or a
 // ScriptProcessorNode where worklets are unavailable). The AudioContext starts

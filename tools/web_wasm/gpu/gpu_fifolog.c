@@ -21,7 +21,7 @@
  * recorded (the copy lives in the GPU, as on the console).
  *
  * Play a log with Dolphin (dolphin-emu-nogui -e log.dff) or with our renderer
- * (port/gpu/tools/dffplay.*). With a WebGL backend the XFB of every recorded
+ * (tools/web_wasm/gpu/tools/dffplay.*). With a WebGL backend the XFB of every recorded
  * frame is also written next to the log as <file>.ours-<frame>.ppm. "[dff] XFB
  * copy N" lines in the log help pick frame numbers. */
 #include <stdio.h>

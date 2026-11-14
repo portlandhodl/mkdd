@@ -1,7 +1,7 @@
 /* Dolphin FIFO log (.dff) player for the port's GPU (front end + WebGL2 backend).
  *
- *   port/gpu/tools/dffplay.sh           builds build/port/dffplay/
- *   node port/gpu/tools/dffplay.mjs ... renders logs in headless Chrome
+ *   tools/web_wasm/gpu/tools/dffplay.sh           builds build/web_wasm/dffplay/
+ *   node tools/web_wasm/gpu/tools/dffplay.mjs ... renders logs in headless Chrome
  *
  * Plays the same logs that Dolphin's FIFO player plays (and that the game
  * writes with MKDD_DFF, see gpu_fifolog.c), so both renderers draw exactly the

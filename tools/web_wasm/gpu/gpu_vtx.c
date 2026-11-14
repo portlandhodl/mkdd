@@ -32,7 +32,7 @@ typedef struct VtxFmt {
 static VtxFmt sFmt[8];
 
 /* Nonzero when vertex arrays and indexed matrices in RAM are big-endian, as on
- * the console (the FIFO log player, port/gpu/tools/dffplay.c). */
+ * the console (the FIFO log player, tools/web_wasm/gpu/tools/dffplay.c). */
 int gpu_ram_be;
 static uint8_t sFmtValid;
 

@@ -1,6 +1,6 @@
 /* Host stand-ins for the GameCube's memory-mapped graphics registers, shared by
  * the GX library (libs/dolphin/gx, writes/reads them) and the emulated GPU
- * (port/gpu, updates status/token registers and raises interrupts). */
+ * (tools/web_wasm/gpu, updates status/token registers and raises interrupts). */
 #ifndef PORT_HW_H
 #define PORT_HW_H
 
@@ -19,7 +19,7 @@ extern u16 port_hw_mem[0x80]; /* memory interface, 0xCC004000 */
  * as hardware interrupts run between instructions. */
 void port_raise_interrupt(int interrupt);
 
-/* Always-idle GPU fallback (port/sdk/os_irq.c), off (0) now that port/gpu decodes
+/* Always-idle GPU fallback (tools/web_wasm/sdk/os_irq.c), off (0) now that tools/web_wasm/gpu decodes
  * BP 0x45/0x47/0x48 itself: while port_gx_idle_gpu is nonzero, GXSetDrawSync/
  * GXSetDrawDone hand their BP register here and the PE token/finish is reported
  * at once (port_hw_pe[7] = token, PE_TOKEN/PE_FINISH interrupts). */

@@ -90,7 +90,7 @@ void OSClearContext(OSContext *context) { (void)context; }
 void OSSetCurrentContext(OSContext *context) { (void)context; }
 
 /* ---- always-idle GPU fallback ----
- * port/gpu decodes the command stream itself and handles BP 0x45/0x47/0x48 (PE
+ * tools/web_wasm/gpu decodes the command stream itself and handles BP 0x45/0x47/0x48 (PE
  * draw done and tokens) as they arrive, so this path is off. Setting
  * port_gx_idle_gpu = 1 reports the PE token/finish at once instead. GX's PE
  * interrupt enables live in PE reg 5 (bit 0 token, bit 1 finish), as

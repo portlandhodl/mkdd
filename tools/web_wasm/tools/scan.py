@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Syntax-check decomp sources with clang for wasm32 and summarize the errors.
 
-    python port/tools/scan.py [--filter SUBSTR] [--top N] [--files]
+    python tools/web_wasm/tools/scan.py [--filter SUBSTR] [--top N] [--files]
 """
 import argparse, collections, concurrent.futures as cf, glob, os, re, subprocess
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 FLAGS = [
     "--target=wasm32-unknown-emscripten", "-fsyntax-only", "-nostdinc", "-nostdinc++",
     "-std=gnu++03", "-fsigned-char", "-w", "-ferror-limit=0", "-fno-exceptions", "-fno-rtti",
-    "-I", "port/include", "-I", "include", "-I", "libs/PowerPC_EABI_Support/include",
+    "-I", "tools/web_wasm/include", "-I", "include", "-I", "libs/PowerPC_EABI_Support/include",
     "-I", "build/MarioClub_us/include",
     "-DREGION_US=1", "-DDEBUG=1", "-DHIO_SCREENSHOT=1", "-DBUILD_VERSION=0", "-DVERSION_MarioClub_us",
-    "-DMKDD_PORT=1", "-include", "port/include/mkdd_port.h",
+    "-DMKDD_PORT=1", "-include", "tools/web_wasm/include/mkdd_port.h",
     "-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing", "-Wno-error=extraneous-template-head",
 ]
 

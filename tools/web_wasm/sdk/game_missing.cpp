@@ -57,4 +57,4 @@ bool JAISoundHandles::isActive() const
 Result2D::~Result2D() { MKDD_STUB("Result2D::~Result2D"); }
 void Result2D::getCharPos(int) { MKDD_STUB("Result2D::getCharPos"); }
 
-// The DSP microcode interface (DspBoot, DsyncFrame2, ...) is port/sdk/dsp_mixer.cpp.
+// The DSP microcode interface (DspBoot, DsyncFrame2, ...) is tools/web_wasm/sdk/dsp_mixer.cpp.

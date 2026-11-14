@@ -11,7 +11,7 @@
  * byte-order neutral.
  *
  * Persistence (whole image, after every change):
- *  - node: the file MKDD_CARD (default build/port/card/slotA.raw relative to the
+ *  - node: the file MKDD_CARD (default build/web_wasm/card/slotA.raw relative to the
  *    working directory); MKDD_CARD=none leaves slot A empty;
  *  - browser: Module.cardImage (Uint8Array) is the image to start from, and each
  *    change calls Module.cardSave(Uint8Array) (the page stores it in IndexedDB).
@@ -408,7 +408,7 @@ static void card_load(void)
 
     if (port_js_card_is_node()) {
         const char *p = port_js_card_path();
-        snprintf(sPath, sizeof sPath, "%s", p[0] ? p : "build/port/card/slotA.raw");
+        snprintf(sPath, sizeof sPath, "%s", p[0] ? p : "build/web_wasm/card/slotA.raw");
         free((void *)p);
         if (strcmp(sPath, "none") == 0) {
             OSReport("card: slot A empty (MKDD_CARD=none)\n");

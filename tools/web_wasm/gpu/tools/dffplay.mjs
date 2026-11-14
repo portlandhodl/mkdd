@@ -1,7 +1,7 @@
 // Render Dolphin FIFO logs with the port's WebGL2 backend in headless Chrome.
 //
-//   port/gpu/tools/dffplay.sh                       (build build/port/dffplay)
-//   node port/gpu/tools/dffplay.mjs <log.dff> <outdir> [first] [last]
+//   tools/web_wasm/gpu/tools/dffplay.sh                       (build build/web_wasm/dffplay)
+//   node tools/web_wasm/gpu/tools/dffplay.mjs <log.dff> <outdir> [first] [last]
 // Writes <outdir>/ours-<frame>.ppm for every XFB copy of frames first..last
 // (default: all) and <outdir>/play.log. DFFPLAY_WWW overrides the build
 // directory, CHROME_FLAGS the GPU flags (default: SwiftShader), DFFPLAY_ENV a JSON
@@ -12,8 +12,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const www = path.resolve(process.env.DFFPLAY_WWW || path.join(root, "build/port/dffplay"));
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+const www = path.resolve(process.env.DFFPLAY_WWW || path.join(root, "build/web_wasm/dffplay"));
 const [dffArg, outArg, firstArg, lastArg] = process.argv.slice(2);
 if (!dffArg || !outArg) {
   console.error("usage: node dffplay.mjs <log.dff> <outdir> [first] [last]");

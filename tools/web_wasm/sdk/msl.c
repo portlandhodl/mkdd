@@ -15,7 +15,7 @@ static FILE *host_stream(void *f)
     return f == &__files[2] ? stderr : stdout;
 }
 
-/* Game code's fprintf (renamed by port/include/mkdd_port.h) takes MSL FILE
+/* Game code's fprintf (renamed by tools/web_wasm/include/mkdd_port.h) takes MSL FILE
  * pointers; route them to the host streams. */
 int port_msl_fprintf(void *f, const char *fmt, ...)
 {

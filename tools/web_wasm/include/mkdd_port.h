@@ -59,7 +59,7 @@ static inline void *__memcpy(void *d, const void *s, unsigned long n) { return _
 #define __mkdd_declspec_section __mkdd_drop_section
 #define __mkdd_drop_section(s)
 
-/* MSL FILE objects are not host FILEs: game code's fprintf goes to port/sdk/msl.c. */
+/* MSL FILE objects are not host FILEs: game code's fprintf goes to tools/web_wasm/sdk/msl.c. */
 #define fprintf port_msl_fprintf
 
 /* Host-order copy of an oscillator table embedded in big-endian sequence data. */
@@ -68,11 +68,11 @@ extern "C"
 #endif
 const void *port_osc_table(const void *be);
 
-/* Host-order fields for .ast stream headers read raw from the disc (port/sdk/dsp_mixer.cpp). */
+/* Host-order fields for .ast stream headers read raw from the disc (tools/web_wasm/sdk/dsp_mixer.cpp). */
 void port_ast_header(void *header);
 void port_ast_block(void *blockHeader);
 
-/* Fakematches that name MWCC-mangled symbols directly; port/sdk/game_missing.cpp
+/* Fakematches that name MWCC-mangled symbols directly; tools/web_wasm/sdk/game_missing.cpp
  * fills these host-side stand-ins at startup. */
 #define __vt__11J3DTexNoAnm port_vt_J3DTexNoAnm
 #define mscaCallBackTbl__11DriverModel port_DriverModel_mscaCallBackTbl

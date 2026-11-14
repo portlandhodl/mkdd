@@ -1,15 +1,15 @@
 // Render the WebGL2 backend test page in headless Chrome (SwiftShader) and
-// screenshot it: node port/gpu/tools/webgl_test.mjs
-// Usage: node port/gpu/tools/webgl_test.mjs [scene 1|2]
-// Writes build/port/webgl_test/shot<scene>.png and log<scene>.txt.
+// screenshot it: node tools/web_wasm/gpu/tools/webgl_test.mjs
+// Usage: node tools/web_wasm/gpu/tools/webgl_test.mjs [scene 1|2]
+// Writes build/web_wasm/webgl_test/shot<scene>.png and log<scene>.txt.
 import { spawn } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scene = process.argv[2] || "1";
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const www = path.join(root, "build/port/webgl_test");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+const www = path.join(root, "build/web_wasm/webgl_test");
 const httpPort = 18_538, debugPort = 19_538;
 const server = spawn("python3", ["-m", "http.server", String(httpPort), "--bind", "127.0.0.1", "--directory", www], { stdio: "ignore" });
 const browser = spawn(process.env.CHROME_BIN || "google-chrome", [

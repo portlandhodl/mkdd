@@ -1,4 +1,4 @@
-/* Internal interface between the parts of the GPU front end (port/gpu). */
+/* Internal interface between the parts of the GPU front end (tools/web_wasm/gpu). */
 #ifndef PORT_GPU_INTERNAL_H
 #define PORT_GPU_INTERNAL_H
 

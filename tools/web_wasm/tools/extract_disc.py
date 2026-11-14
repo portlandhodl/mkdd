@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extract a GameCube disc image (GCM/ISO) into a directory tree for the port.
 
-    python port/tools/extract_disc.py orig/MarioClub_us/GM4E01.iso build/port/disc
+    python tools/web_wasm/tools/extract_disc.py orig/MarioClub_us/GM4E01.iso build/web_wasm/disc
 Writes <out>/files/... (the disc filesystem) and <out>/sys/{boot.bin,bi2.bin,main.dol}.
 """
 import os, struct, sys

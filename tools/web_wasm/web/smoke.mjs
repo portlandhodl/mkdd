@@ -1,10 +1,10 @@
 // Headless Chrome smoke test for the web port.
 //
-//   MKDD_ISO=/path/to/GM4E01.iso node port/web/smoke.mjs [seconds] [query]
+//   MKDD_ISO=/path/to/GM4E01.iso node tools/web_wasm/web/smoke.mjs [seconds] [query]
 // (MKDD_SHOTS="15,40" timed canvas captures, MKDD_KEYS="12:Enter" key presses)
-// Serves build/port/web, picks the disc image through the page's file input
+// Serves build/web_wasm/web, picks the disc image through the page's file input
 // (the file stays local), presses Start, and after `seconds` (default 40) writes
-// the page log and a screenshot to build/port/smoke/. Query defaults to "fast=1".
+// the page log and a screenshot to build/web_wasm/smoke/. Query defaults to "fast=1".
 // MKDD_SHOTS="20,35,50" also saves canvas captures at those seconds
 // (shot-<s>.png); MKDD_SMOKE_OUT overrides the output directory.
 import { spawn } from "node:child_process";
@@ -12,9 +12,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const www = path.join(root, "build/port/web");
-const out = process.env.MKDD_SMOKE_OUT ? path.resolve(process.env.MKDD_SMOKE_OUT) : path.join(root, "build/port/smoke");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const www = path.join(root, "build/web_wasm/web");
+const out = process.env.MKDD_SMOKE_OUT ? path.resolve(process.env.MKDD_SMOKE_OUT) : path.join(root, "build/web_wasm/smoke");
 const iso = process.env.MKDD_ISO;
 const seconds = Number(process.argv[2] || 40);
 const query = process.argv[3] ?? "fast=1";

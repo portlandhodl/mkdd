@@ -1,4 +1,4 @@
-/* Internal interface of the port's GameCube SDK replacement (port/sdk). */
+/* Internal interface of the port's GameCube SDK replacement (tools/web_wasm/sdk). */
 #ifndef PORT_SDK_H
 #define PORT_SDK_H
 

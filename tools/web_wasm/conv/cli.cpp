@@ -1,6 +1,6 @@
 // mkdd-conv: run the converter over an extracted disc on the host.
 //
-//   port/conv/build_cli.sh && build/port/mkdd-conv build/port/disc/files [options]
+//   tools/web_wasm/conv/build_cli.sh && build/web_wasm/mkdd-conv build/web_wasm/disc/files [options]
 //     --only EXT     only files (and archive members) with this extension
 //     --roundtrip    convert to host order and back; the result must equal the input
 //     --verbose      print every error and warning

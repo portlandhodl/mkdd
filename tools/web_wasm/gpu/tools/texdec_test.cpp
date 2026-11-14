@@ -1,10 +1,10 @@
 /* Decode every BTI (standalone, in RARC archives, and TEX1 sections of
- * BMD/BDL models) on an extracted disc with port/gpu/texdec, print a
+ * BMD/BDL models) on an extracted disc with tools/web_wasm/gpu/texdec, print a
  * per-format summary and write sample PNGs plus per-format contact sheets.
  *
- *   c++ -std=c++17 -O2 -I port/gpu port/gpu/texdec.cpp \
- *       port/gpu/tools/texdec_test.cpp -o texdec_test
- *   ./texdec_test build/port/disc/files OUTDIR [samplesPerFormat]
+ *   c++ -std=c++17 -O2 -I tools/web_wasm/gpu tools/web_wasm/gpu/texdec.cpp \
+ *       tools/web_wasm/gpu/tools/texdec_test.cpp -o texdec_test
+ *   ./texdec_test build/web_wasm/disc/files OUTDIR [samplesPerFormat]
  */
 #include "texdec.h"
 

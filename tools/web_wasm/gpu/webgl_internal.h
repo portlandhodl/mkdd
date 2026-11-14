@@ -12,7 +12,7 @@
 #define WGL_EFB_H 528
 
 /* Graphics settings (webgl_backend.cpp). The defaults are console-accurate; the page
- * (port/web/index.html) sets MKDD_GFX_* in Module.env and bumps Module.gfxVersion to
+ * (tools/web_wasm/web/index.html) sets MKDD_GFX_* in Module.env and bumps Module.gfxVersion to
  * apply changes at the next present. */
 struct WglGfx {
     int scale;      /* internal resolution in use: the EFB, EFB copies and XFB are scale x native */
@@ -23,7 +23,7 @@ struct WglGfx {
     int fxaa;       /* MKDD_GFX_FXAA: FXAA at present */
     int present;    /* MKDD_GFX_PRESENT: 0 smooth, 1 integer (pixel-exact) */
     int aspect;     /* MKDD_GFX_ASPECT: 0 4:3, 1 stretch to the canvas */
-    int widescreen; /* MKDD_GFX_WIDESCREEN: the game renders anamorphic 16:9 (port/sdk/vi_pad.c), shown at 16:9 */
+    int widescreen; /* MKDD_GFX_WIDESCREEN: the game renders anamorphic 16:9 (tools/web_wasm/sdk/vi_pad.c), shown at 16:9 */
     int deflicker;  /* MKDD_DEFLICKER: the copy filter's vertical taps */
     int shaderWarm; /* MKDD_GFX_SHADER_WARM: compile remembered TEV programs at start (default 1) */
 };
