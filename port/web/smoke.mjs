@@ -4,6 +4,8 @@
 // Serves build/port/web, picks the disc image through the page's file input
 // (the file stays local), presses Start, and after `seconds` (default 40) writes
 // the page log and a screenshot to build/port/smoke/. Query defaults to "fast=1".
+// MKDD_SHOTS="20,35,50" also saves canvas captures at those seconds
+// (shot-<s>.png); MKDD_SMOKE_OUT overrides the output directory.
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const www = path.join(root, "build/port/web");
-const out = path.join(root, "build/port/smoke");
+const out = process.env.MKDD_SMOKE_OUT ? path.resolve(process.env.MKDD_SMOKE_OUT) : path.join(root, "build/port/smoke");
 const iso = process.env.MKDD_ISO;
 const seconds = Number(process.argv[2] || 40);
 const query = process.argv[3] ?? "fast=1";
@@ -79,8 +81,17 @@ await send("DOM.setFileInputFiles", { nodeId, files: [path.resolve(iso)] });
 await waitFor(() => evaluate("!document.getElementById('start').disabled"), "start button");
 await evaluate("document.getElementById('start').click(); true");
 
+const shots = (process.env.MKDD_SHOTS || "").split(",").filter(Boolean).map(Number).sort((a, b) => a - b);
 const t0 = Date.now();
-while (Date.now() - t0 < seconds * 1000) await delay(1000);
+while (Date.now() - t0 < seconds * 1000) {
+  await delay(250);
+  while (shots.length && Date.now() - t0 >= shots[0] * 1000) {
+    const s = shots.shift();
+    const clip = await evaluate("(() => { const r = document.getElementById('screen').getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height, scale: 1 }; })()");
+    const img = await send("Page.captureScreenshot", { format: "png", clip });
+    await writeFile(path.join(out, `shot-${s}.png`), Buffer.from(img.data, "base64"));
+  }
+}
 
 const log = await evaluate("document.getElementById('log').textContent");
 await writeFile(path.join(out, "page.log"), log + "\n" + consoleLines.join("\n"));

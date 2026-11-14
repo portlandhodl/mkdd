@@ -53,6 +53,11 @@ struct XfbEntry {
 static XfbEntry sXfb[MAX_XFB];
 static uint32_t sXfbSeq;
 
+/* MKDD_WGL_TRACE=N (?wgltrace=N): log every batch, EFB copy and present of frame N (and
+ * texcoord-scale mismatches) to the console. MKDD_WGL_DEBUG: see wgl_debug. */
+extern "C" int port_env(const char *name);
+static int sTraceFrame, sDebug;
+
 void wgl_log(const char *fmt, ...)
 {
     static int count;
@@ -355,7 +360,18 @@ static void set_uniforms(const WglProgram *p, const WglSnap *s, const WglTexInfo
         for (int i = 0; i < nind && i < 4 && mapFor < 0; i++)
             if ((int)((bp[0x27] >> (i * 6 + 3)) & 7) == c) mapFor = (int)((bp[0x27] >> (i * 6)) & 7);
         uint32_t ss = bp[0x30 + c * 2], ts = bp[0x31 + c * 2];
-        if (ss && ts) {
+        if (sTraceFrame && mapFor >= 0 && ss && ts &&
+            ((float)((ss & 0xFFFF) + 1) != tsize[mapFor * 2] || (float)((ts & 0xFFFF) + 1) != tsize[mapFor * 2 + 1])) {
+            static int nmis;
+            if (nmis < 60) {
+                nmis++;
+                int base = mapFor < 4 ? 0x80 + mapFor : 0xA0 + (mapFor - 4);
+                fprintf(stderr, "[wgl] su mismatch frame %u coord %d map %d: su %ux%u tex %gx%g img0=%06x img3=%06x tref=%06x\n", wgl_frame, c,
+                        mapFor, (ss & 0xFFFF) + 1, (ts & 0xFFFF) + 1, tsize[mapFor * 2], tsize[mapFor * 2 + 1], bp[base + 8],
+                        bp[base + 0x14], bp[0x28]);
+            }
+        }
+        if (ss && ts && !(sDebug & 1)) {
             su[c * 2] = (float)((ss & 0xFFFF) + 1);
             su[c * 2 + 1] = (float)((ts & 0xFFFF) + 1);
         } else if (mapFor >= 0) {
@@ -463,6 +479,9 @@ static void flush(void)
     for (int m = 0; m < 8; m++)
         if (p->usedMaps & (1u << m)) wgl_tex_bind(s, m, &tex[m]);
 
+    if (sDebug & 16)
+        for (int m = 0; m < 8; m++)
+            if (tex[m].isCopy) return;
     glUseProgram(p->prog);
     set_uniforms(p, s, tex);
 
@@ -505,6 +524,27 @@ static void flush(void)
     GLenum mode = sStagePrim == GPU_LINES ? GL_LINES : sStagePrim == GPU_POINTS ? GL_POINTS : GL_TRIANGLES;
     glDrawArrays(mode, first, (GLsizei)count);
     wgl_stats_cur.drawCalls++;
+
+    if (sTraceFrame && (int)wgl_frame == sTraceFrame) {
+        const GpuVertex *v0 = sStage;
+        fprintf(stderr, "[wgl] n=%u prim=%d gen=%06x tref=%06x %06x c0=%06x a0=%06x maps=%x z=%x cm=%x ss0=%06x ts0=%06x"
+                " t0=(%.3f %.3f %.3f) c=(%.2f %.2f %.2f %.2f) sc=%x %x\n",
+                count, sStagePrim, bp[0], bp[0x28], bp[0x29], bp[0xC0], bp[0xC1], p->usedMaps, zm, cm0, bp[0x30], bp[0x31],
+                v0->tex[0][0], v0->tex[0][1], v0->tex[0][2], v0->color[0][0], v0->color[0][1], v0->color[0][2],
+                v0->color[0][3], bp[0x20], bp[0x21]);
+        int nst = (int)((bp[0] >> 10) & 15) + 1;
+        fprintf(stderr, "[wgl]    tev");
+        for (int st = 0; st < nst; st++) fprintf(stderr, " [%06x %06x ind%06x]", bp[0xC0 + st * 2], bp[0xC1 + st * 2], bp[0x10 + st]);
+        fprintf(stderr, "\n[wgl]    ksel %06x %06x %06x %06x  creg %06x %06x %06x %06x %06x %06x  kon %06x %06x %06x %06x\n", bp[0xF6],
+                bp[0xF7], bp[0xF8], bp[0xF9], s->creg[0], s->creg[1], s->creg[2], s->creg[3], s->creg[4], s->creg[5], s->konst[0],
+                s->konst[1], s->konst[2], s->konst[3]);
+        for (int m = 0; m < 8; m++)
+            if (p->usedMaps & (1u << m)) {
+                int base = m < 4 ? 0x80 + m : 0xA0 + (m - 4);
+                fprintf(stderr, "[wgl]    map%d tex=%u %dx%d lv=%d mode0=%06x mode1=%06x img0=%06x img3=%06x\n", m, tex[m].tex,
+                        tex[m].w, tex[m].h, tex[m].levels, bp[base], bp[base + 4], bp[base + 8], bp[base + 0x14]);
+            }
+    }
 
     if (twoPass) {
         /* Destination alpha: write the constant alpha in a second, alpha-only pass. */
@@ -656,15 +696,29 @@ static void run_copy(GLuint dstTex, int dx, int dy, int w, int h, const uint32_t
     wgl_tex_restore_samplers();
 }
 
-static XfbEntry *xfb_for_copy(uint32_t addr, uint32_t stride, int *row, int *col)
+/* The XFB image a copy lands in. A copy whose source starts at the top of the
+ * EFB begins a new image at its destination address (games often keep their
+ * XFBs back to back in RAM, so the next XFB lies inside the previous one's
+ * 576-row range); a copy of lower EFB rows continues the image it falls in
+ * (e.g. a frame copied in two halves). */
+static XfbEntry *xfb_for_copy(uint32_t addr, uint32_t stride, int srcY, int *row, int *col)
 {
     for (int i = 0; i < MAX_XFB; i++) {
         XfbEntry *e = &sXfb[i];
-        if (!e->tex || e->stride != stride || !stride) continue;
-        if (addr >= e->addr && addr < e->addr + stride * 576) {
-            *row = (int)((addr - e->addr) / stride);
-            *col = (int)(((addr - e->addr) % stride) / 2);
+        if (e->tex && e->stride == stride && e->addr == addr) {
+            *row = *col = 0;
             return e;
+        }
+    }
+    if (srcY > 0) {
+        for (int i = 0; i < MAX_XFB; i++) {
+            XfbEntry *e = &sXfb[i];
+            if (!e->tex || e->stride != stride || !stride) continue;
+            if (addr > e->addr && addr < e->addr + stride * 576) {
+                *row = (int)((addr - e->addr) / stride);
+                *col = (int)(((addr - e->addr) % stride) / 2);
+                return e;
+            }
         }
     }
     XfbEntry *e = &sXfb[0];
@@ -707,7 +761,7 @@ static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
     if (sw > 0 && sh > 0) {
         if (toXfb) {
             int row, col;
-            XfbEntry *e = xfb_for_copy(addr, stride, &row, &col);
+            XfbEntry *e = xfb_for_copy(addr, stride, sy, &row, &col);
             int w = sw, h = sh;
             if (col + w > 640) w = 640 - col;
             if (row + h > 576) h = 576 - row;
@@ -718,6 +772,8 @@ static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
                 if (row + h > e->h) e->h = row + h;
             }
             e->lastUsed = ++sXfbSeq;
+            if (sTraceFrame && (int)wgl_frame == sTraceFrame)
+                fprintf(stderr, "[wgl] xfb copy addr=%08x stride=%u row=%d src=%d,%d %dx%d entry=%08x\n", addr, stride, row, sx, sy, sw, sh, e->addr);
             wgl_stats_cur.xfbCopies++;
         } else {
             int half = (int)((exec >> 9) & 1);
@@ -725,6 +781,9 @@ static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
             CopyFormat cf = copy_format(exec, (bp[0x43] & 7) == 3);
             GLuint t = wgl_tex_copy_target(addr, cf.gxFmt, w, h);
             run_copy(t, 0, 0, w, h, bp, sx, sy, sw, sh, half, 0, &cf);
+            if (sTraceFrame && (int)wgl_frame == sTraceFrame)
+                fprintf(stderr, "[wgl] copy tex=%u addr=%08x fmt=%x %dx%d src=%d,%d %dx%d half=%d pix=%x clear=%d\n", t, addr, cf.gxFmt, w,
+                        h, sx, sy, sw, sh, half, bp[0x43], clear);
             wgl_tex_register_copy(addr, cf.gxFmt, w, h, t);
             wgl_stats_cur.efbCopies++;
         }
@@ -783,9 +842,11 @@ static void be_present(void *ctx, uint32_t xfbAddr)
         glDrawArrays(GL_TRIANGLES, 0, 3);
         wgl_tex_restore_samplers();
     }
+    if (sTraceFrame && (int)wgl_frame == sTraceFrame) fprintf(stderr, "[wgl] present %08x\n", xfbAddr);
     sStatsPrev = wgl_stats_cur;
     memset(&wgl_stats_cur, 0, sizeof wgl_stats_cur);
     wgl_frame++;
+    if (sTraceFrame && wgl_frame % 250 == 0) fprintf(stderr, "[wgl] frame %u\n", wgl_frame);
     wgl_tex_new_frame();
 }
 
@@ -891,6 +952,8 @@ extern "C" const GpuBackend *gpu_webgl_create(void)
     }
     emscripten_webgl_make_context_current(sCtx);
     if (!init_gl()) return NULL;
+    sTraceFrame = port_env("MKDD_WGL_TRACE");
+    sDebug = wgl_debug = port_env("MKDD_WGL_DEBUG");
     sBackend.draw = be_draw;
     sBackend.efb_copy = be_efb_copy;
     sBackend.present = be_present;

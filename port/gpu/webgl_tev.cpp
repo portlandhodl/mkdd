@@ -34,6 +34,10 @@ static void emit(const char *fmt, ...)
     }
 }
 
+/* MKDD_WGL_DEBUG (?wgldebug=bits): 1 ignore the SU texcoord sizes, 2 sample LOD 0 only,
+ * 4 show texcoord 0, 8 show stage 0's texture, 16 skip draws that sample EFB copies */
+int wgl_debug;
+
 /* ---- key ---- */
 
 void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode)
@@ -151,7 +155,8 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
          "  if (sh == 3) return (v + 256) >> 9;\n  return ((v << sh) + 128) >> 8; }\n"
          "int c16(ivec3 v) { v &= 255; return v.r | (v.g << 8); }\n"
          "int c24(ivec3 v) { v &= 255; return v.r | (v.g << 8) | (v.b << 16); }\n"
-         "ivec4 smp(sampler2D s, vec2 uv, float bias) { return ivec4(round(texture(s, uv, bias) * 255.0)); }\n");
+         "ivec4 smp(sampler2D s, vec2 uv, float bias) { return ivec4(round(%s * 255.0)); }\n",
+         (wgl_debug & 2) ? "textureLod(s, uv, 0.0)" : "texture(s, uv, bias)");
     emit("void main() {\n");
     emit("  ivec4 prev = u_reg[0], c0 = u_reg[1], c1 = u_reg[2], c2 = u_reg[3];\n");
     emit("  ivec4 rc0 = ivec4(round(clamp(v_c0, 0.0, 1.0) * 255.0));\n");
@@ -328,6 +333,9 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
     if (srcMode == WGL_SRC_INVERT) emit("  o.rgb = 255 - o.rgb; o.a = 255 - o.a;\n");
     else if (srcMode == WGL_SRC_ONE) emit("  o = ivec4(255);\n");
     if (alphaOut == WGL_ALPHAOUT_CONST) emit("  o.a = u_dstalpha;\n");
+    if ((wgl_debug & 8) && ntev && (stw[0] & 0x40))
+        emit("  o = smp(s%d, tc%d / u_tsize[%d], 0.0); o.a = 255;\n", (int)(stw[0] & 7), (int)((stw[0] >> 3) & 7), (int)(stw[0] & 7));
+    if ((wgl_debug & 4) && (coords & 1)) emit("  o = ivec4(ivec2(fract(tc0 / u_tsize[0]) * 255.0), 0, 255);\n");
     emit("  o_col = vec4(o) / 255.0;\n}\n");
 
     *usedMaps = maps;

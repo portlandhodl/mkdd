@@ -49,6 +49,7 @@ void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode);
 /* Looks up or compiles the program for `key`; NULL on failure. */
 WglProgram *wgl_tev_program(const WglKey *key);
 void wgl_tev_init(void);
+extern int wgl_debug;
 
 /* ---- textures: webgl_texture.cpp ---- */
 
@@ -56,6 +57,7 @@ struct WglTexInfo {
     GLuint tex;
     int w, h;       /* level 0 size */
     int levels;
+    int isCopy;     /* an EFB copy */
 };
 
 void wgl_tex_init(void);

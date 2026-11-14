@@ -666,8 +666,8 @@ struct J3DTevStage {
 
     void load(u32) const
     {
-        J3DGDWriteBPCmd(*(u32*)&mBPCommand1);
-        J3DGDWriteBPCmd(*(u32*)&mBPCommand2);
+        J3DGDWriteBPCmd(DECOMP_BE32(&mBPCommand1));
+        J3DGDWriteBPCmd(DECOMP_BE32(&mBPCommand2));
     }
 
     u8 mBPCommand1;      // _00

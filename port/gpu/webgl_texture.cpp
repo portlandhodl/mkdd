@@ -44,7 +44,7 @@ static int sTexCount;
 static uint8_t *sDecode; /* 1024 x 1024 RGBA8 */
 static GLuint sWhite;
 static GLuint sSampler[8];
-static uint32_t sSamplerKey[8];
+static uint64_t sSamplerKey[8];
 static GLuint sBound[8];
 
 /* ---- EFB copies ---- */
@@ -71,7 +71,7 @@ void wgl_tex_init(void)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
     glGenSamplers(8, sSampler);
     for (int i = 0; i < 8; i++) {
-        sSamplerKey[i] = 0xFFFFFFFFu;
+        sSamplerKey[i] = ~0ull;
         glBindSampler((GLuint)i, sSampler[i]);
     }
 }
@@ -207,7 +207,7 @@ void wgl_tex_new_frame(void)
 
 static void set_sampler(int unit, uint32_t mode0, uint32_t mode1, int levels)
 {
-    uint32_t key = (mode0 & 0x1FFFFF) ^ (mode1 & 0xFFFF) << 21 ^ (uint32_t)levels << 29;
+    uint64_t key = (uint64_t)(mode0 & 0x1FFFFF) | (uint64_t)(mode1 & 0xFFFF) << 21 | (uint64_t)(levels & 31) << 37;
     if (sSamplerKey[unit] == key) return;
     sSamplerKey[unit] = key;
     GLuint s = sSampler[unit];
@@ -263,6 +263,7 @@ void wgl_tex_bind(const WglSnap *s, int map, WglTexInfo *out)
     if (c) {
         out->tex = c->tex;
         out->levels = 1;
+        out->isCopy = 1;
         bind_unit(map, c->tex);
         set_sampler(map, mode0, mode1, 1);
         return;
