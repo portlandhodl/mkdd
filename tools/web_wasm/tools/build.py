@@ -150,6 +150,8 @@ def main():
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(TREE, "libs/dolphin/gd/*.c")))]
     jobs += [("gx", s) for s in sorted(glob.glob(os.path.join(TREE, "libs/dolphin/gx/*.c")))]
     jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/sdk/*.cpp")))]
+    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/net/*.c")))]
+    jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/net/*.cpp")))]
     jobs += [("conv", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/conv/*.cpp"))) if not s.endswith("cli.cpp")]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/gpu/*.c")))]
     jobs += [("gpucxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/gpu/*.cpp")))]
