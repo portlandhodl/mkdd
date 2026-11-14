@@ -49,6 +49,7 @@
     leave() { const b = document.getElementById('mpLeave'); if (b && ui() && ui().lobby && ui().lobby.room) b.click(); },
     ready(d) { const u = ui(), l = u && u.lobby; if (l) { u.render(); /* status { inGame } first */ l.setReady(!!d.ready); } },
     name(d) { const l = ui() && ui().lobby; if (l && d.name) l.setName(String(d.name)); },
+    hello() { const u = ui(); if (u && u.lobby) u.render(); /* the status now says inGame */ },
     profile(d) { const l = ui() && ui().lobby; if (l && d.profile) l.setProfile(d.profile); },
   };
 
@@ -64,6 +65,13 @@
       dispatchEvent(new CustomEvent('mkdd-game', { detail: { type, data } }));
     },
   };
+
+  // Background connect: the page is settings only (name, server); once a disc is chosen it connects to
+  // the lobby so the game's MULTIPLAYER menu finds it ready (?netauto=0: off; ?nethost / ?netroom
+  // automation connects on its own).
+  const page = window.mkddPage, params = page ? page.params : new URLSearchParams();
+  if (page && page.onDisc && params.get('netauto') !== '0' && !params.has('nethost') && !params.has('netroom'))
+    page.onDisc(() => setTimeout(() => { const u = ui(); if (u && !u.lobby) u.connect().catch(() => {}); }, 500));
 
   // lobby errors and the bridge: follow netui's lobby/mesh as they are replaced
   let lobbySeen = null, meshSeen = null;

@@ -36,6 +36,7 @@
 using namespace jsonlite;
 
 extern "C" int netonline_menu_race(const char *json);
+extern "C" int port_env(const char *name);
 extern "C" double emscripten_get_now(void);
 
 namespace {
@@ -490,6 +491,8 @@ extern "C" int port_net_race_begin(void)
         char *js = sRaceJson;
         int cap = sizeof sRaceJson, n = 0;
         int laps = gRaceInfo.mVsLapNum > 0 ? gRaceInfo.mVsLapNum : 3;
+        if (port_env("MKDD_NET_LAPS") > 0) // tests: shorter races
+            laps = port_env("MKDD_NET_LAPS");
         n += snprintf(js + n, cap - n,
                       "{\"code\":\"m%d\",\"host\":%d,\"self\":%d,\"settings\":{\"course\":%d,\"level\":%d,\"laps\":%d,"
                       "\"mode\":%d},\"members\":[",

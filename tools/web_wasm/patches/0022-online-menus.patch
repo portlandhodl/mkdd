@@ -63,11 +63,14 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
              break;
          }
      }
-@@ -371,6 +373,7 @@
+@@ -371,6 +373,10 @@
          mBck[7].mPane->hide();
          mBck[11].mPane->hide();
      }
-+    mBck[3].mPane->hide(); // the LAN MODE picture: port_net_title_entry draws MULTIPLAYER there
++    // the LAN MODE picture: port_net_title_entry draws MULTIPLAYER there
++    mBck[3].mPane->hide();
++    mBck[7].mPane->hide();
++    mBck[11].mPane->hide();
  
      for (int i = 0; i < 4; i++) {
          if (i == mCursor) {
@@ -283,3 +286,16 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
          if (mRecorder)
          {
              if (gRaceInfo.getRaceMode() == TIME_ATTACK && !(gSystemRecord.mOptions & 8))
+@@ -411,6 +426,12 @@
+     }
+     case PHASE_5:
+     {
++        if (port_net_menu_race())
++        {
++            // online: no replay (nothing is recorded), back to the room
++            mState = 3;
++            break;
++        }
+         for (int i = 0; i < 4; i++)
+         {
+             mRecorder->setRecord((u8)i, mPadRecord[i]);

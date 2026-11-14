@@ -130,7 +130,7 @@ const results = {};
 const check = (name, ok, detail = '') => { results[name] = !!ok; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${detail ? ': ' + detail : ''}`); };
 const t0 = Date.now();
 const A = await launch('alice', debugPort), B = await launch('bob', debugPort + 1);
-const base = `http://127.0.0.1:${port}/?env=MKDD_GFX_SCALE%3D1&env=MKDD_GFX_MSAA%3D0&env=MKDD_GFX_SHADER_WARM%3D0`;
+const base = `http://127.0.0.1:${port}/?env=MKDD_GFX_SCALE%3D1&env=MKDD_GFX_MSAA%3D0&env=MKDD_GFX_SHADER_WARM%3D0&netpageboot=1&netauto=0`;
 
 async function load(p, url = base) {
   await p.send('Page.navigate', { url });

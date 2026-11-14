@@ -102,6 +102,7 @@ int sRaceHost;           // the member that sends GO ("host" of the session JSON
 Member sMembers[MAX_MEMBERS];
 int sNumMembers;
 int sKartMember[8]; // kart index -> member index
+int sGrid[8];       // kart index -> start position (the order of the lobby slots)
 int sNumKarts;
 int sSelf, sSelfKart = -1, sSelfSlot = -1;
 int sCourse = LUIGI_CIRCUIT, sLaps = 3;
@@ -198,14 +199,24 @@ bool loadSession()
         mb.c2 = (ECharID)(c2 >= BABY_MARIO && c2 <= PETEY ? c2 : LUIGI);
         mb.kartId = (EKartID)(k >= RED_FIRE && k <= PARADE_KART ? k : RED_FIRE);
     }
-    // karts in slot order (slot = grid position)
-    sNumKarts = 0;
+    // grid positions in slot order; the local kart is kart 0, the others follow in slot order (the
+    // game takes its local players to be the first karts: RaceApp's pad recorder and the status
+    // views index karts by local player number)
+    int bySlot[8], nSlot = 0;
     for (int slot = 0; slot < 8; slot++)
         for (int i = 0; i < sNumMembers; i++)
-            if (sMembers[i].slot == slot && sNumKarts < 8) {
-                sMembers[i].kart = sNumKarts;
-                sKartMember[sNumKarts++] = i;
-            }
+            if (sMembers[i].slot == slot && nSlot < 8)
+                bySlot[nSlot++] = i;
+    sNumKarts = 0;
+    for (int pass = 0; pass < 2; pass++)
+        for (int g = 0; g < nSlot; g++) {
+            int i = bySlot[g];
+            if ((sMembers[i].id == sSelf) != (pass == 0))
+                continue;
+            sMembers[i].kart = sNumKarts;
+            sGrid[sNumKarts] = g;
+            sKartMember[sNumKarts++] = i;
+        }
     Member *me = memberById(sSelf);
     sSelfKart = me ? me->kart : -1;
     sSelfSlot = me ? me->slot : -1;
@@ -242,7 +253,7 @@ void setupRaceInfo()
     for (int k = 0; k < sNumKarts; k++) {
         Member &m = sMembers[sKartMember[k]];
         gRaceInfo.setKart(k, m.kartId, m.c1, k == sSelfKart ? gpaKartPad[0] : netPad(k), m.c2, nullptr);
-        gRaceInfo.setStartPosIdx(k, k);
+        gRaceInfo.setStartPosIdx(k, sGrid[k]);
     }
     // a spectator (no slot) watches kart 0
     gRaceInfo.setConsoleTarget(0, sSelfKart >= 0 ? sSelfKart : 0, false);

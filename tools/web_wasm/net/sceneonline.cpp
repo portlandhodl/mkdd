@@ -145,6 +145,7 @@ public:
         GameAudio::Main::getAudio()->startSequenceBgm(0x1000001);
         System::getDisplay()->startFadeIn(15);
         port_net_emit("phase", "{\"phase\":\"multiplayer\"}");
+        lobbyOp("hello"); // the page tells the room this game is in its multiplayer menu
     }
 
     void calc()
@@ -679,5 +680,5 @@ void port_net_title_entry(bool selected, int frame)
     print->setCharColor(selected ? JUtility::TColor(255, 140, 0, 255) : JUtility::TColor(120, 80, 10, 255));
     print->initiate();
     f32 w = print->getWidth("MULTIPLAYER");
-    print->print(320.0f - w / 2, 436.0f, "MULTIPLAYER");
+    print->print(320.0f - w / 2, 410.0f, "MULTIPLAYER");
 }

@@ -8,6 +8,9 @@
   if (!page || !Net) return;
   const $ = (id) => document.getElementById(id);
   const params = page.params;
+  // Races are started from the game's own MULTIPLAYER menu; the panel's Ready/GO! session start (which
+  // boots a fresh game straight into a race) is kept for tests and debugging behind ?netpageboot=1.
+  const pageBoot = params.has('netpageboot') || params.has('netnoboot');
   const ui = {
     server: $('mpServer'), name: $('mpName'), connect: $('mpConnect'), lobbyBar: $('mpLobbyBar'), create: $('mpCreate'),
     code: $('mpCode'), join: $('mpJoin'), leave: $('mpLeave'), room: $('mpRoom'), roomCode: $('mpRoomCode'), copy: $('mpCopy'),
@@ -316,8 +319,8 @@
     ui.ready.checked = !!(me && me.ready) && !mine;
     ui.ready.disabled = running || !!mine;
     ui.ready.parentNode.title = mine ? 'You cannot race: ' + mine : '';
-    ui.ready.parentNode.hidden = host;
-    ui.start.hidden = !host;
+    ui.ready.parentNode.hidden = host || !pageBoot;
+    ui.start.hidden = !host || !pageBoot;
     const others = room.members.filter((m) => m.id !== lobby.id);
     const notReady = others.filter((m) => !m.ready);
     const blocked = others.filter((m) => memberProblem(m)).map((m) => `${m.name} (${memberProblem(m)})`);
@@ -330,6 +333,7 @@
     ui.start.title = why || 'Start the race on every player\'s screen';
     if (!running) {
       if (mine) setStatus(`You cannot race: ${mine}.`);
+      else if (!pageBoot) setStatus('Room ' + room.code + ': start races from the game (title screen, MULTIPLAYER).');
       else if (host) setStatus(why || 'Everyone is ready: press GO! to start the race.');
       else if (blocked.length || !allOpen) setStatus(why);
       else setStatus(me && me.ready ? 'Ready: waiting for the host to start.' : 'Pick your drivers and kart, then tick Ready.');

@@ -88,7 +88,7 @@ async function launch(name, debugPort) {
   return { name, send, evaluate, errors };
 }
 
-const q = new URLSearchParams({ netserver: `ws://127.0.0.1:${port}/ws` });
+const q = new URLSearchParams({ netserver: `ws://127.0.0.1:${port}/ws`, netpageboot: '1' }); // the panel's session start
 for (const e of ['MKDD_GFX_SCALE=1', 'MKDD_GFX_MSAA=0', 'MKDD_GFX_ANISO=1', `MKDD_GFX_SHADER_WARM=${process.env.RACE_WARM || 0}`]) q.append('env', e);
 for (const [k, e] of [['netlag', 'NET_LAG'], ['netjitter', 'NET_JITTER'], ['netloss', 'NET_LOSS']]) if (process.env[e]) q.set(k, process.env[e]);
 async function open(peer, extra) {
