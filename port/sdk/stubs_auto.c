@@ -2,37 +2,6 @@
 #include "sdk_all.h"
 #include "port_sdk.h"
 
-void AIInit(u8 * stack)
-{
-    MKDD_STUB("AIInit");
-}
-
-void AIInitDMA(u32 start_addr, u32 length)
-{
-    MKDD_STUB("AIInitDMA");
-}
-
-AIDCallback AIRegisterDMACallback(AIDCallback callback)
-{
-    MKDD_STUB("AIRegisterDMACallback");
-    { AIDCallback r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-void AISetDSPSampleRate(u32 rate)
-{
-    MKDD_STUB("AISetDSPSampleRate");
-}
-
-void AIStartDMA(void)
-{
-    MKDD_STUB("AIStartDMA");
-}
-
-void AIStopDMA(void)
-{
-    MKDD_STUB("AIStopDMA");
-}
-
 s32 CARDCheck(s32 chan)
 {
     MKDD_STUB("CARDCheck");
@@ -138,18 +107,6 @@ s32 CARDWrite(CARDFileInfo * fileInfo, const void * addr, s32 length, s32 offset
 {
     MKDD_STUB("CARDWrite");
     { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-u32 DSPCheckMailFromDSP(void)
-{
-    MKDD_STUB("DSPCheckMailFromDSP");
-    { u32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-u32 DSPReadMailFromDSP(void)
-{
-    MKDD_STUB("DSPReadMailFromDSP");
-    { u32 r; __builtin_memset(&r, 0, sizeof r); return r; }
 }
 
 s32 EXIGetType(s32 chan, u32 dev, u32 * type)

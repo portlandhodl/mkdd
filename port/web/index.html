@@ -76,9 +76,12 @@
   loadDisc().then(f => { if (f && !discFile) setDisc(f); });
 
   // Environment switches for the port, from the URL: ?fast=1&threads=1
+  // (GPU debugging: ?wgltrace=N logs frame N's batches, ?wgldebug=bits, see webgl_tev.cpp)
   const env = {};
   if (params.has('fast')) env.MKDD_FAST_MOVIE = '1';
   if (params.has('threads')) env.MKDD_THREADS = '1';
+  if (params.has('wgldebug')) env.MKDD_WGL_DEBUG = params.get('wgldebug');
+  if (params.has('wgltrace')) env.MKDD_WGL_TRACE = params.get('wgltrace');
 
   var Module = {
     canvas: document.getElementById('screen'),
@@ -100,5 +103,6 @@
 </script>
 <script src="mkdd.js"></script>
 <script src="input.js"></script>
+<script src="audio.js"></script>
 </body>
 </html>

@@ -57,10 +57,4 @@ bool JAISoundHandles::isActive() const
 Result2D::~Result2D() { MKDD_STUB("Result2D::~Result2D"); }
 void Result2D::getCharPos(int) { MKDD_STUB("Result2D::getCharPos"); }
 
-// DSP microcode interface: no DSP on the host; the audio mixer replaces it later.
-void DspBoot(DSPCallback) { MKDD_STUB("DspBoot"); }
-void DspFinishWork(u16) {}
-void DsyncFrame2(u32, u32, u32) {}
-void DSPReleaseHalt2(u32) {}
-void DsetupTable(u32, u32, u32, u32, u32) {}
-void DsetMixerLevel(f32) {}
+// The DSP microcode interface (DspBoot, DsyncFrame2, ...) is port/sdk/dsp_mixer.cpp.

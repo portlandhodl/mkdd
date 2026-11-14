@@ -68,6 +68,10 @@ extern "C"
 #endif
 const void *port_osc_table(const void *be);
 
+/* Host-order fields for .ast stream headers read raw from the disc (port/sdk/dsp_mixer.cpp). */
+void port_ast_header(void *header);
+void port_ast_block(void *blockHeader);
+
 /* Fakematches that name MWCC-mangled symbols directly; port/sdk/game_missing.cpp
  * fills these host-side stand-ins at startup. */
 #define __vt__11J3DTexNoAnm port_vt_J3DTexNoAnm

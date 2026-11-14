@@ -319,7 +319,9 @@ BOOL OSCreateThread(OSThread *thread, OSThreadStartFunction func, void *param, v
     thread->specific[1] = param;
     p = port_alloc(thread);
     if (!p->cStack) {
-        p->cStack = malloc(C_STACK_SIZE);
+        /* 16-byte aligned: compiled code assumes an aligned stack pointer (musl's
+         * __stdio_write finds its second iovec as (sp + 16) | 8) */
+        p->cStack = aligned_alloc(16, C_STACK_SIZE);
         p->asyncStack = malloc(ASYNC_STACK_SIZE);
     }
     emscripten_fiber_init(&p->fiber, thread_entry, thread, p->cStack, C_STACK_SIZE, p->asyncStack, ASYNC_STACK_SIZE);
@@ -407,6 +409,8 @@ void OSWakeupThread(OSThreadQueue *queue)
 void OSYieldThread(void)
 {
     ensure_init();
+    /* a yield loop waits on other threads: let due interrupts (audio DMA/DSP) ready them */
+    port_poll();
     sCurPort->seq = ++sSeq;
     sCurrent->state = OS_THREAD_STATE_READY;
     reschedule();

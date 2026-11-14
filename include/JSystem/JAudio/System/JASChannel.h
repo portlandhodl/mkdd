@@ -76,9 +76,9 @@ public:
         u16 whole;
         struct
         {
-            u8 upper;
+            DECOMP_HOST(u8 upper;, u8 lower1 : 4;)
             u8 lower0 : 4;
-            u8 lower1 : 4;
+            DECOMP_HOST(u8 lower1 : 4;, u8 upper;)
         } parts;
     };
 

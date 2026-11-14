@@ -174,7 +174,7 @@ void Main::bootDSP() {
 }
 
 bool Main::isActive() {
-    return mState.pack & 0x10;
+    return DECOMP_HOST(mState.pack & 0x10, mState.bits.active);
 }
 
 void Main::initRaceSound() {
