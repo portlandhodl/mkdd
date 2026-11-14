@@ -22,6 +22,8 @@ OSTime port_vi_next_retrace(void)
     return sNextRetrace;
 }
 
+u32 port_vi_retrace_count(void) { return sRetraceCount; }
+
 void port_vi_retrace(void)
 {
     OSTime now = (OSTime)(emscripten_get_now() * (PORT_TICKS_PER_SEC / 1000));

@@ -280,11 +280,8 @@ static void bloMAT1(Swapper &s, u32 b, u32 end)
     if (indOff) {
         u32 ext = extent(indOff);
         if (indOff - ntOff > 4 && nmat) {
-            u32 stride = ext / nmat;
-            // disc data uses 0x128 (TP layout); the decomp's J2DIndInitData
-            // declares 0x13C
-            if (stride != 0x128 && stride != 0x13C)
-                stride = 0x128;
+            // sizeof(J2DIndInitData) == 0x128, the disc stride
+            u32 stride = 0x128;
             if (stride * nmat > ext) {
                 s.fail("MAT1 ind data 0x%x x %u exceeds extent 0x%x", stride, nmat, ext);
                 return;

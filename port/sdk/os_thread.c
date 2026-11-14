@@ -248,6 +248,8 @@ void port_defer(void (*fn)(void *, void *), void *a, void *b)
     sDeferTail = next;
 }
 
+void port_heap_check(const char *where);
+
 void port_poll(void)
 {
     OSTime now;
@@ -262,6 +264,7 @@ void port_poll(void)
     }
     if (sInIrq)
         return;
+    port_heap_check(NULL);
     sInIrq = 1;
     while (sDeferHead != sDeferTail) {
         Deferred d = sDeferred[sDeferHead];
@@ -279,8 +282,10 @@ void port_poll(void)
         }
         a = next;
     }
-    if (port_vi_next_retrace() <= now)
+    if (port_vi_next_retrace() <= now) {
         port_vi_retrace();
+        port_heap_check("retrace");
+    }
     sInIrq = 0;
     /* like returning from an interrupt: run a higher-priority thread it readied */
     if (port_interrupts_enabled())

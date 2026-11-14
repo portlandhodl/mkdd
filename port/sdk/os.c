@@ -48,6 +48,18 @@ void OSInit(void)
     sArenaHi = (u8 *)sArenaLo + PORT_ARENA_SIZE;
     port_os_init();
     port_load_dol_data();
+    if (port_env("MKDD_HEAPCHECK"))
+        EM_ASM({
+            if (typeof process === 'undefined')
+                return;
+            var dump = function(e) {
+                console.error(e && e.stack ? e.stack : e);
+                try { wasmExports['port_heap_dump'](); } catch (e2) { console.error('heap dump failed', e2); }
+                process.exit(7);
+            };
+            process.on('uncaughtException', dump);
+            process.on('unhandledRejection', dump);
+        });
 }
 
 void *OSGetArenaLo(void) { OSInit(); return sArenaLo; }
