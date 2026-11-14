@@ -104,7 +104,7 @@ async function open(peer, extra) {
 // for the first `rival` race frames }.
 const BOT = (opts) => `(() => {
   const o = ${JSON.stringify(opts)};
-  const buf = Module._malloc(48), held = {};
+  const buf = (Module._malloc || _malloc)(48), held = {};
   const key = (code, down) => { if (!!held[code] === down) return; held[code] = down;
     dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code })); };
   window.__bot = { frames: 0, steer: 0 };
@@ -152,8 +152,13 @@ try {
 
   const pick = (peer, id, v) => peer.evaluate(`(() => { const s = document.getElementById('${id}'); s.value = '${v}'; s.dispatchEvent(new Event('change')); return true; })()`);
   await pick(B, 'mpChar1', 9); await pick(B, 'mpChar2', 10); await pick(B, 'mpKart', 6);
-  await pick(A, 'mpCourse', 0x24); await pick(A, 'mpCc', 150); await pick(A, 'mpLaps', 3);
-  await waitFor(() => B.evaluate('mkddNetUi.lobby.room.settings.course === 0x24 && mkddNetUi.lobby.room.settings.cc === 150'), 'race settings on Bob');
+  // (re-sent until Bob sees them: a change right after the room was created can be overwritten by the
+  // panel's initial host defaults)
+  await waitFor(async () => {
+    await pick(A, 'mpCourse', 0x24); await pick(A, 'mpCc', 150); await pick(A, 'mpLaps', 3);
+    await delay(500);
+    return B.evaluate('mkddNetUi.lobby.room.settings.course === 0x24 && mkddNetUi.lobby.room.settings.cc === 150 && mkddNetUi.lobby.room.settings.laps === 3');
+  }, 'race settings on Bob');
   await B.evaluate("document.getElementById('mpReady').click(); true");
   await waitFor(() => A.evaluate("!document.getElementById('mpStart').disabled"), 'start enabled');
   await delay(1500); // host clock samples

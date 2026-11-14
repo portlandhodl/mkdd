@@ -56,7 +56,7 @@ const double GO_LEAD_MS = 1500;              // host: time for GO to reach every
 const double READY_TIMEOUT_MS = 30000;       // host: go without peers that never reach the gate
 const double NO_HOST_TIMEOUT_MS = 45000;     // peer: no GO from any host -> start alone
 const double STALE_MS = 500;                 // no state for this long: freeze the remote kart
-enum { MAX_MEMBERS = 16, RB = 16, HB = 128 };
+enum { MAX_MEMBERS = 16, RB = 16, HB = 128, TB = 32 };
 enum { MSG_FINISH = 0x31, MSG_READY = 0x41, MSG_GO = 0x42 };
 enum { ST_LIVE, ST_LOST, ST_LEFT };
 
@@ -64,6 +64,7 @@ struct Member {
     int id, slot, kart; // kart index, -1 for a spectator
     int status;
     int ready;          // host: highest READY attempt
+    double frameMs;     // host: its frame time at the start gate
     char name[24];
     ECharID c1, c2;
     EKartID kartId;
@@ -85,6 +86,10 @@ struct Remote {
     double errSumAll, errMaxAll;
     int errNAll, rxAll, snapsAll;
     int finishMs;
+    // received truths waiting for the replica history to reach their frame
+    double truthF[TB];
+    f32 truthPos[TB][3];
+    int truthLen;
 };
 
 int sOnline = -1;
@@ -105,7 +110,7 @@ int sBoot;
 // countdown gate
 int sAttempt;
 bool sWaiting, sStarted, sGoLogged;
-double sGateSince, sGoFor[16], sFirstReady[16];
+double sGateSince, sGoFor[16], sFirstReady[16], sAllReadySince, sLastReadySent;
 const char *sPhase = "";
 // sending / stats
 s32 sLastSentF = -1000;
@@ -347,9 +352,15 @@ void setPhase(const char *p)
 void put32(u8 *p, u32 v) { memcpy(p, &v, 4); }
 u32 get32(const u8 *p) { u32 v; memcpy(&v, p, 4); return v; }
 
+// this machine's frame time at the start gate (EMA), sent with READY: the countdown is 240 game frames
+double sGateFrameMs;
+double gateFrameMs() { return sGateFrameMs > FRAME_MS ? sGateFrameMs : FRAME_MS; }
+
+// READY: u8 type, u8 attempt, u16 0, u32 frame time in 1/100 ms
 void sendReady(int to)
 {
-    u8 m[8] = {MSG_READY, (u8)sAttempt, 0, 0, 0, 0, 0, 0};
+    u8 m[8] = {MSG_READY, (u8)sAttempt, 0, 0};
+    put32(m + 4, (u32)(gateFrameMs() * 100));
     port_net_send(to, PORT_NET_RELIABLE, m, sizeof m);
 }
 
@@ -377,16 +388,32 @@ void hostCheckGo()
     double now = hostNow();
     if (sFirstReady[a & 15] == 0)
         sFirstReady[a & 15] = now;
-    if (waiting && now - sFirstReady[a & 15] < READY_TIMEOUT_MS)
+    if (waiting && now - sFirstReady[a & 15] < READY_TIMEOUT_MS) {
+        sAllReadySince = 0;
+        return;
+    }
+    // everyone is there: give the frame time estimates (READY repeats every second) a moment
+    if (!sAllReadySince)
+        sAllReadySince = now;
+    if (!waiting && now - sAllReadySince < 1500)
         return;
     if (waiting)
         fprintf(stderr, "[net] host: %d player(s) not at the start after %.0f s, starting without them\n", waiting,
                 READY_TIMEOUT_MS / 1000);
-    double lead = GO_LEAD_MS;
-    for (int i = 0; i < sNumMembers; i++)
-        if (sMembers[i].id != sSelf && port_net_rtt(sMembers[i].id) > 0)
-            lead = lead > 1000 + 2 * port_net_rtt(sMembers[i].id) ? lead : 1000 + 2 * port_net_rtt(sMembers[i].id);
-    hostGo(a, now + lead + COUNTDOWN_MS);
+    double lead = GO_LEAD_MS, slowest = gateFrameMs();
+    for (int i = 0; i < sNumMembers; i++) {
+        Member &m = sMembers[i];
+        if (m.id == sSelf || m.status != ST_LIVE)
+            continue;
+        if (port_net_rtt(m.id) > 0 && 1000 + 2 * port_net_rtt(m.id) > lead)
+            lead = 1000 + 2 * port_net_rtt(m.id);
+        if (m.frameMs > slowest)
+            slowest = m.frameMs;
+    }
+    if (slowest > 250)
+        slowest = 250;
+    sAllReadySince = 0;
+    hostGo(a, now + lead + 240 * slowest);
 }
 
 void onState(int from, const u8 *p)
@@ -405,32 +432,11 @@ void onState(int from, const u8 *p)
     r.rxAll++;
     if (m->status == ST_LOST)
         m->status = ST_LIVE;
-    // true replica error: the replica where it was at the sender's shared frame vs the sender's truth
-    if (r.histLen >= 2) {
-        int i1 = -1;
-        for (int n = 0, i = r.histHead; n < r.histLen; n++) {
-            i = (i + HB - 1) % HB;
-            if (r.histT[i] <= s.frame) {
-                i1 = i;
-                break;
-            }
-        }
-        int i2 = i1 >= 0 ? (i1 + 1) % HB : -1;
-        if (i1 >= 0 && i1 != (r.histHead + HB - 1) % HB && r.histT[i2] - r.histT[i1] < 10) {
-            f32 t = (f32)((s.frame - r.histT[i1]) / (r.histT[i2] - r.histT[i1]));
-            f32 at[3];
-            for (int j = 0; j < 3; j++)
-                at[j] = r.histPos[i1][j] + (r.histPos[i2][j] - r.histPos[i1][j]) * t;
-            double e = dist(at, s.pos);
-            r.errSum += e;
-            r.errN++;
-            if (e > r.errMax)
-                r.errMax = e;
-            r.errSumAll += e;
-            r.errNAll++;
-            if (e > r.errMaxAll)
-                r.errMaxAll = e;
-        }
+    // true replica error: measured once the replica history covers the sender's frame (recordReplica)
+    if (r.truthLen < TB) {
+        r.truthF[r.truthLen] = s.frame;
+        memcpy(r.truthPos[r.truthLen], s.pos, sizeof s.pos);
+        r.truthLen++;
     }
     r.ageSum += nowF - s.frame;
     r.ageN++;
@@ -517,6 +523,8 @@ void pump()
                 Member *m = memberById(from);
                 if (m && buf[1] > m->ready)
                     m->ready = buf[1];
+                if (m)
+                    m->frameMs = get32(buf + 4) / 100.0;
                 // a GO this peer may have missed (it arrived late or the host changed)
                 if (m && isHost() && sGoFor[buf[1] & 15] > 0) {
                     u8 g[16] = {MSG_GO, buf[1]};
@@ -565,7 +573,7 @@ void freeze(KartBody *b, Remote &r, bool ghost)
     }
 }
 
-void correctRemote(int k, double nowF, f32 kDt)
+void correctRemote(int k, double nowF, double dtF, f32 kDt)
 {
     KartBody *b = KartCtrl::getKartCtrl()->getKartBody(k);
     Remote &r = sRemote[k];
@@ -594,10 +602,35 @@ void correctRemote(int k, double nowF, f32 kDt)
         age = 0;
     if (age > 15)
         age = 15;
-    f32 target[3], err[3], e2 = 0;
+    // displacement per shared-clock frame: mEffctVel is per game frame of the sender, which differs when
+    // the sender runs below 60 fps, so measure it from the last two samples when they are close
+    f32 vel[3];
+    for (int j = 0; j < 3; j++)
+        vel[j] = last.effVel[j];
+    if (r.recvLen >= 2) {
+        const State &prev = r.recv[r.recvLen - 2];
+        s32 df = last.frame - prev.frame;
+        if (df > 0 && df <= 12) {
+            f32 move[3], m2 = 0, e2v = 0;
+            for (int j = 0; j < 3; j++) {
+                move[j] = (last.pos[j] - prev.pos[j]) / (f32)df;
+                m2 += move[j] * move[j];
+                e2v += last.effVel[j] * last.effVel[j];
+            }
+            // trust the measured rate unless it is far above the kart's own speed (a snap or teleport)
+            if (m2 <= e2v * 1.5f + 1.0f)
+                for (int j = 0; j < 3; j++)
+                    vel[j] = move[j];
+        }
+    }
+    // (carrying the replica forward by the shared frames a slow local frame skips was tried: in the
+    // two-Chrome test at ~9 fps it raised the average error, since the measured rate overshoots in turns
+    // and wall contacts)
+    f32 target[3], err[3], here[3], e2 = 0;
     for (int j = 0; j < 3; j++) {
-        target[j] = last.pos[j] + last.effVel[j] * (f32)age;
-        err[j] = target[j] - (&b->mPos.x)[j];
+        target[j] = last.pos[j] + vel[j] * (f32)age;
+        here[j] = (&b->mPos.x)[j];
+        err[j] = target[j] - here[j];
         e2 += err[j] * err[j];
     }
     if (!r.active || e2 > 1500.0f * 1500.0f) {
@@ -611,7 +644,7 @@ void correctRemote(int k, double nowF, f32 kDt)
     }
     f32 pos[3], rot[3][3], cur[3][3];
     for (int j = 0; j < 3; j++)
-        pos[j] = (&b->mPos.x)[j] + err[j] * kDt;
+        pos[j] = here[j] + err[j] * kDt;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             cur[i][j] = b->_110[i][j];
@@ -633,6 +666,42 @@ void recordReplica(int k, double nowF)
     r.histHead = (r.histHead + 1) % HB;
     if (r.histLen < HB)
         r.histLen++;
+    // received truths (sender's own state at shared frame f) vs the replica at f, interpolated between
+    // the local frames around it
+    int keep = 0;
+    for (int t = 0; t < r.truthLen; t++) {
+        double f = r.truthF[t];
+        if (f > nowF) { // not reached yet here
+            r.truthF[keep] = r.truthF[t];
+            memcpy(r.truthPos[keep++], r.truthPos[t], sizeof r.truthPos[t]);
+            continue;
+        }
+        int i2 = -1, i1 = -1;
+        for (int n = 0, i = r.histHead; n < r.histLen; n++) {
+            i = (i + HB - 1) % HB;
+            if (r.histT[i] <= f) {
+                i1 = i;
+                break;
+            }
+            i2 = i;
+        }
+        if (i1 < 0 || i2 < 0 || r.histT[i2] - r.histT[i1] > 30)
+            continue;
+        f32 w = (f32)((f - r.histT[i1]) / (r.histT[i2] - r.histT[i1]));
+        f32 at[3];
+        for (int j = 0; j < 3; j++)
+            at[j] = r.histPos[i1][j] + (r.histPos[i2][j] - r.histPos[i1][j]) * w;
+        double e = dist(at, r.truthPos[t]);
+        r.errSum += e;
+        r.errN++;
+        if (e > r.errMax)
+            r.errMax = e;
+        r.errSumAll += e;
+        r.errNAll++;
+        if (e > r.errMaxAll)
+            r.errMaxAll = e;
+    }
+    r.truthLen = keep;
 }
 
 void stats(double now)
@@ -749,7 +818,7 @@ void postStage1()
     for (int k = 0; k < sNumKarts && k < n; k++) {
         if (k == sSelfKart)
             continue;
-        correctRemote(k, nowF, kDt);
+        correctRemote(k, nowF, dtF, kDt);
         Remote &r = sRemote[k];
         if (r.recvLen) {
             // keep the input on the pad for DoAccel (stage 2) and remember it for trigger edges
@@ -819,7 +888,9 @@ extern "C" int port_net_boot_race(void)
         break;
     case 1:
         if (ResMgr::isFinishLoadingArc(ResMgr::mcArcCourse) && ResMgr::isFinishLoadingArc(ResMgr::mcArcMRAM) &&
-            ResMgr::isFinishLoadingArc(ResMgr::mcArcMRAMLoc) && ResMgr::isFinishLoadingArc(ResMgr::mcArcRace2D)) {
+            ResMgr::isFinishLoadingArc(ResMgr::mcArcMRAMLoc) && ResMgr::isFinishLoadingArc(ResMgr::mcArcRace2D) &&
+            ResMgr::isFinishLoadingArc(ResMgr::mcArcARAM)) {
+            // the keep data (MRAM, ARAM, Race2D) loads in the background since the logos; the race needs all of it
             AppMgr::deleteCurrentApp();
             RaceApp::call();
             sBoot = 2;
@@ -842,10 +913,19 @@ extern "C" int port_net_countdown_hold(void)
         sGoLogged = false;
         sAttempt++;
         sGateSince = now;
-        if (!isHost())
-            sendReady(port_net_host());
+        sLastReadySent = 0;
         fprintf(stderr, "[net] at the start (attempt %d), waiting for the others\n", sAttempt);
         setPhase("waiting");
+    }
+    // this machine's frame time while waiting: the countdown is 240 game frames, which take longer than
+    // 4 s below 60 fps, so a slow peer starts it earlier (and the host plans GO for the slowest)
+    static double lastCall;
+    if (lastCall > 0 && now - lastCall < 500)
+        sGateFrameMs = sGateFrameMs > 0 ? sGateFrameMs * 0.9 + (now - lastCall) * 0.1 : now - lastCall;
+    lastCall = now;
+    if (!isHost() && sGoFor[sAttempt & 15] == 0 && now - sLastReadySent >= 1000) {
+        sendReady(port_net_host());
+        sLastReadySent = now;
     }
     if (isHost())
         hostCheckGo();
@@ -856,13 +936,17 @@ extern "C" int port_net_countdown_hold(void)
         fprintf(stderr, "[net] no GO from the host, starting alone\n");
         go = sGoFor[sAttempt & 15] = now + COUNTDOWN_MS;
     }
-    if (!clockSynced() || now < go - COUNTDOWN_MS)
+    double countdown = 240 * gateFrameMs();
+    if (countdown > 60000)
+        countdown = 60000;
+    if (!clockSynced() || now < go - countdown)
         return 1;
     sWaiting = false;
     sStarted = true;
+    lastCall = 0;
     setPhase("countdown");
-    fprintf(stderr, "[net] countdown %d: starts %.0f ms after the shared time, GO at host time %.0f\n", sAttempt,
-            now - (go - COUNTDOWN_MS), go);
+    fprintf(stderr, "[net] countdown %d: starts %.0f ms before GO (%.1f ms/frame here), GO at host time %.0f\n", sAttempt,
+            go - now, gateFrameMs(), go);
     return 0;
 }
 
