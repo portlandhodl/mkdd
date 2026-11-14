@@ -126,6 +126,12 @@
     for (const m of room.members) {
       const tr = ui.members.insertRow();
       const p = mesh && mesh.peers.get(m.id);
+      // styling hooks (theme.css)
+      tr.dataset.slot = String(m.slot);
+      tr.dataset.ready = m.id === room.host ? 'host' : m.ready ? '1' : '0';
+      tr.dataset.link = m.id === lobby.id || !p ? '' : p.left ? 'left' : p.lost ? 'lost' : p.open ? 'direct' : 'connecting';
+      tr.classList.toggle('host', m.id === room.host);
+      tr.classList.toggle('me', m.id === lobby.id);
       const slotCell = tr.insertCell();
       if (host && !running) {
         const sel = document.createElement('select');

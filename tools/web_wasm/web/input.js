@@ -14,7 +14,15 @@
   const down = new Set();
   const handled = new Set([...Object.keys(keyButtons), 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
                            'KeyI', 'KeyJ', 'KeyK', 'KeyL']);
-  addEventListener('keydown', (e) => { if (handled.has(e.code)) { down.add(e.code); e.preventDefault(); } });
+  // Keys typed into a text field or a list stay there; before the game runs, the
+  // page's buttons and links keep their keyboard behaviour too.
+  const typing = (t) => t instanceof Element && t.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]), select, textarea, [contenteditable]');
+  const control = (t) => t instanceof Element && t.matches('button, a[href], summary, label, input');
+  const running = () => !!(window.mkddPage && window.mkddPage.started && window.mkddPage.started());
+  addEventListener('keydown', (e) => {
+    if (!handled.has(e.code) || typing(e.target) || (!running() && control(e.target))) return;
+    down.add(e.code); e.preventDefault();
+  });
   addEventListener('keyup', (e) => { down.delete(e.code); });
   addEventListener('blur', () => down.clear());
 

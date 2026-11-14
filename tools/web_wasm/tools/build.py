@@ -174,8 +174,11 @@ def main():
     r = subprocess.run(cmd, cwd=ROOT)
     if r.returncode == 0 and a.target == "web":
         for f in glob.glob(os.path.join(ROOT, "tools", "web_wasm", "web", "*")):
-            if os.path.isfile(f) and f.endswith((".html", ".css", ".js", ".ico", ".png")):
+            if os.path.isfile(f) and f.endswith((".html", ".css", ".js", ".ico", ".png", ".svg")):
                 shutil.copy(f, out)
+        fonts = os.path.join(ROOT, "tools", "web_wasm", "web", "fonts")
+        if os.path.isdir(fonts):
+            shutil.copytree(fonts, os.path.join(out, "fonts"), dirs_exist_ok=True)
     sys.exit(r.returncode)
 
 if __name__ == "__main__":
