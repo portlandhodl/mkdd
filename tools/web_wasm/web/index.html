@@ -28,6 +28,22 @@
   #gfx select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; font: inherit; }
   #gfx .note { grid-column: 1 / -1; font-size: 12px; }
   button.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 4px 10px; }
+  /* Multiplayer (netui.js) */
+  #mp { margin-top: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+  #mp summary { cursor: pointer; color: var(--muted); }
+  #mp [hidden] { display: none !important; }
+  #mp .mpgrid { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 8px; }
+  #mp input:not([type]), #mp select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font: inherit; }
+  #mp .note { margin-top: 8px; font-size: 12px; }
+  #mpRoomCode { font: 600 16px ui-monospace, monospace; letter-spacing: 2px; }
+  #mpMembers { margin-top: 8px; border-collapse: collapse; width: 100%; }
+  #mpMembers th, #mpMembers td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--line); }
+  #mpMembers th { color: var(--muted); font-weight: 500; }
+  #netHud { position: absolute; left: 8px; top: 8px; background: rgba(0,0,0,.55); color: #e6e6e6; padding: 3px 8px; border-radius: 4px;
+    font: 12px/1.4 ui-monospace, monospace; pointer-events: none; white-space: pre; }
+  #netMsg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,.8); color: #fff;
+    padding: 12px 18px; border-radius: 8px; text-align: center; max-width: 80%; }
+  #netMsgButtons { margin-top: 8px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   #log { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px;
     height: 220px; overflow: auto; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
 </style>
@@ -42,7 +58,8 @@
     <label class="btn" title="Replace the slot A memory card with a card image (.raw)">Import save<input id="cardImport" type="file" accept=".raw,.bin"></label>
     <span id="status" class="muted">Your own disc image is read locally; nothing is uploaded.</span>
   </div>
-  <div id="stage"><canvas id="screen" width="640" height="480"></canvas></div>
+  <div id="stage"><canvas id="screen" width="640" height="480"></canvas>
+    <div id="netHud" hidden></div><div id="netMsg" hidden><div id="netMsgText"></div><div id="netMsgButtons"></div></div></div>
   <details id="gfx">
     <summary>Graphics <span id="gfxSummary" class="muted"></span></summary>
     <div class="grid">
@@ -65,6 +82,47 @@
         (at most 2× with 4×/8× MSAA). Double-click the picture for fullscreen.</div>
     </div>
   </details>
+  <!-- ==== Multiplayer (online): tools/web_wasm/web/net.js + netui.js, server in tools/web_wasm/net ==== -->
+  <details id="mp">
+    <summary>Multiplayer <span id="mpSummary" class="muted"></span></summary>
+    <div class="mpgrid">
+      <label>Server <input id="mpServer" size="30" spellcheck="false"></label>
+      <label>Your name <input id="mpName" size="14" maxlength="24"></label>
+      <button id="mpConnect" class="ghost">Connect</button>
+    </div>
+    <div class="mpgrid" id="mpLobbyBar" hidden>
+      <button id="mpCreate">Create room</button>
+      <label>Code <input id="mpCode" size="8" maxlength="6" spellcheck="false" autocomplete="off"></label>
+      <button id="mpJoin" class="ghost">Join</button>
+      <button id="mpLeave" class="ghost" hidden>Leave room</button>
+    </div>
+    <div id="mpRoom" hidden>
+      <div class="mpgrid"><span>Room <b id="mpRoomCode"></b> <button id="mpCopy" class="ghost" title="Copy the join code">Copy</button></span>
+        <span id="mpRoomInfo" class="muted"></span></div>
+      <table id="mpMembers"><thead><tr><th>Slot</th><th>Player</th><th>Drivers / kart</th><th>Ping</th><th>Link</th><th>Ready</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="mpgrid">
+        <span class="muted">You:</span>
+        <label>Driver <select id="mpChar1" data-p="char1"></select></label>
+        <label>Partner <select id="mpChar2" data-p="char2"></select></label>
+        <label>Kart <select id="mpKart" data-p="kart"></select></label>
+      </div>
+      <div class="mpgrid" id="mpGame">
+        <span class="muted">Race:</span>
+        <label>Course <select id="mpCourse" data-g="course"></select></label>
+        <label>Class <select id="mpCc" data-g="cc"><option value="50">50cc</option><option value="100">100cc</option><option value="150">150cc</option></select></label>
+        <label>Laps <select id="mpLaps" data-g="laps"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></label>
+        <label>Mirror <select id="mpMirror" data-g="mirror"><option value="0">Off</option><option value="1">On</option></select></label>
+      </div>
+      <div class="mpgrid">
+        <label><input id="mpReady" type="checkbox"> Ready</label>
+        <button id="mpStart" disabled>Start session</button>
+      </div>
+    </div>
+    <div id="mpStatus" class="muted note">Choose your disc image, connect to a lobby server, then create a room or join one with its code.
+      Everyone needs their own disc image and the same build. Only lobby messages go to the server; game messages go directly
+      between the players.</div>
+  </details>
+  <!-- ==== end Multiplayer ==== -->
   <p class="muted">Controls: arrows steer · X accelerate (A) · Z brake (B) · Q/W L/R (drift) · Space item (Z) ·
     C/V X/Y · Enter Start · I/J/K/L C-stick. Gamepads work too (standard mapping).</p>
   <div id="log"></div>
@@ -260,15 +318,23 @@
     onAbort: what => { log('ABORT: ' + what); statusEl.textContent = 'Stopped (see log).'; },
   };
 
-  startBtn.addEventListener('click', async () => {
-    if (!discFile) return;
+  // net: an online session (netui.js) adds environment and an attach(Module) hook
+  // that runs before callMain.
+  let gameStarted = false;
+  async function startGame(net) {
+    if (!discFile || gameStarted) return;
+    gameStarted = true;
     startBtn.disabled = true;
     pick.disabled = true;
     Module.discFile = discFile;
-    // ?nocard=1: no memory card in slot A
-    if (params.has('nocard')) Module.cardDisabled = true;
+    if (params.has('nocard')) Module.cardDisabled = true; // ?nocard=1: no memory card in slot A
     else { Module.cardImage = await loadCard(); Module.cardSave = cardSave; }
-    statusEl.textContent = 'Running ' + discFile.name;
+    if (net) {
+      Object.assign(env, net.env);
+      if (!Module.portReady) await new Promise(r => { const t = setInterval(() => { if (Module.portReady) { clearInterval(t); r(); } }, 20); });
+      net.attach(Module);
+    }
+    statusEl.textContent = 'Running ' + discFile.name + (net ? ' (online)' : '');
     Module.callMain([]);
     if (env.MKDD_DFF) {
       const poll = setInterval(() => {
@@ -283,10 +349,17 @@
         logEl.parentNode.insertBefore(a, logEl);
       }, 1000);
     }
-  });
+  }
+  startBtn.addEventListener('click', () => startGame(null));
+  // for the Multiplayer panel (netui.js)
+  window.mkddPage = { startGame, loadCard, log, params, getDisc: () => discFile, started: () => gameStarted,
+                      onDisc: (fn) => { const prev = setDisc; setDisc = (f) => { prev(f); fn(f); }; if (discFile) fn(discFile); },
+                      setSoloStart: (on) => { startBtn.hidden = !on; } };
 </script>
 <script src="mkdd.js"></script>
 <script src="input.js"></script>
 <script src="audio.js"></script>
+<script src="net.js"></script>
+<script src="netui.js"></script>
 </body>
 </html>
