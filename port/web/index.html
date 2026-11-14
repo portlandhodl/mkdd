@@ -27,6 +27,8 @@
   <div class="bar">
     <label class="btn">Choose disc image (.iso / .gcm)<input id="pick" type="file" accept=".iso,.gcm"></label>
     <button id="start" disabled>Start</button>
+    <button id="cardExport" title="Download the slot A memory card image">Export save</button>
+    <label class="btn" title="Replace the slot A memory card with a card image (.raw)">Import save<input id="cardImport" type="file" accept=".raw,.bin"></label>
     <span id="status" class="muted">Your own disc image is read locally; nothing is uploaded.</span>
   </div>
   <canvas id="screen" width="640" height="480"></canvas>
@@ -48,11 +50,15 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
-  // Remember the chosen disc image between visits (browser-local IndexedDB).
+  // Remember the chosen disc image and the memory card between visits (browser-local IndexedDB).
   function idb() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('mkdd-port', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('disc');
+      const req = indexedDB.open('mkdd-port', 2);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('disc')) db.createObjectStore('disc');
+        if (!db.objectStoreNames.contains('card')) db.createObjectStore('card');
+      };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
@@ -66,6 +72,44 @@
       return await new Promise(r => { const q = db.transaction('disc').objectStore('disc').get('image'); q.onsuccess = () => r(q.result || null); q.onerror = () => r(null); });
     } catch (e) { return null; }
   }
+  // Slot A memory card: a raw card image (see port/sdk/card.c), saved after each change.
+  async function loadCard() {
+    try {
+      const db = await idb();
+      return await new Promise(r => { const q = db.transaction('card').objectStore('card').get('slotA'); q.onsuccess = () => r(q.result || null); q.onerror = () => r(null); });
+    } catch (e) { return null; }
+  }
+  async function storeCard(img) {
+    try {
+      const db = await idb();
+      await new Promise((r, j) => { const t = db.transaction('card', 'readwrite'); t.objectStore('card').put(img, 'slotA'); t.oncomplete = r; t.onerror = () => j(t.error); });
+    } catch (e) { log('memory card: could not save (' + e + ')'); }
+  }
+  let cardTimer = 0, cardPending = null;
+  function cardSave(img) {
+    cardPending = img;
+    clearTimeout(cardTimer);
+    cardTimer = setTimeout(() => { const i = cardPending; cardPending = null; storeCard(i); }, 300);
+  }
+  addEventListener('pagehide', () => { if (cardPending) { clearTimeout(cardTimer); storeCard(cardPending); cardPending = null; } });
+  document.getElementById('cardExport').addEventListener('click', async () => {
+    const img = (typeof Module !== 'undefined' && Module.cardImage) || await loadCard();
+    if (!img) { log('memory card: nothing saved yet'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([img]));
+    a.download = 'mkdd-slotA.raw';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  document.getElementById('cardImport').addEventListener('change', async (ev) => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    const img = new Uint8Array(await f.arrayBuffer());
+    if (![4, 8, 16, 32, 64, 128].some(m => img.length === m * 131072)) { log('memory card: not a card image (' + img.length + ' bytes)'); return; }
+    await storeCard(img);
+    log('memory card: imported ' + f.name + (Module.discFile ? ' (reload the page to use it)' : ''));
+  });
+
   function setDisc(file) {
     discFile = file;
     startBtn.disabled = !file;
@@ -92,11 +136,14 @@
     onAbort: what => { log('ABORT: ' + what); statusEl.textContent = 'Stopped (see log).'; },
   };
 
-  startBtn.addEventListener('click', () => {
+  startBtn.addEventListener('click', async () => {
     if (!discFile) return;
     startBtn.disabled = true;
     pick.disabled = true;
     Module.discFile = discFile;
+    // ?nocard=1: no memory card in slot A
+    if (params.has('nocard')) Module.cardDisabled = true;
+    else { Module.cardImage = await loadCard(); Module.cardSave = cardSave; }
     statusEl.textContent = 'Running ' + discFile.name;
     Module.callMain([]);
   });
