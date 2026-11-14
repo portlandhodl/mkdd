@@ -14,7 +14,7 @@
 #include "Yamamoto/KartDamage.h"
 
 // The original call sites see getNowTandemDriverNum returning int (no zero-extension of the result)
-#define GET_NOW_TANDEM_DRIVER_NUM(idx) ((int (*)(int))ItemObjMgr::getNowTandemDriverNum)(idx)
+#define GET_NOW_TANDEM_DRIVER_NUM(idx) DECOMP_HOST(((int (*)(int))ItemObjMgr::getNowTandemDriverNum)(idx), (int)ItemObjMgr::getNowTandemDriverNum(idx))
 
 void KartItem::Init(int idx)
 {
