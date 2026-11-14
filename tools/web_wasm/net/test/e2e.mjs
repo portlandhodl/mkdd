@@ -12,7 +12,7 @@
 //  - measures RTT, host-clock agreement and delivery of 600 unreliable 56-byte
 //    packets at 30 Hz-like pacing.
 // Simulated network on both pages: NET_LAG (ms), NET_JITTER (ms), NET_LOSS (0..1).
-// Ports: MKDD_NET_PORT (server, default 18610), Chrome debug 19610/19611.
+// Ports: MKDD_NET_PORT (server, default 18610), MKDD_NET_DEBUG_PORT (Chrome debug, default 19610, and +1).
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -94,7 +94,8 @@ async function open(peer, extra) {
 const results = {};
 const check = (name, ok, detail = '') => { results[name] = ok; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${detail ? ': ' + detail : ''}`); };
 const t0 = Date.now();
-const A = await launch('alice', 19610), B = await launch('bob', 19611);
+const debugPort = Number(process.env.MKDD_NET_DEBUG_PORT || 19610);
+const A = await launch('alice', debugPort), B = await launch('bob', debugPort + 1);
 try {
   await open(A, { netname: 'Alice', nethost: '1' });
   const code = await waitFor(() => A.evaluate('mkddNetUi.lobby && mkddNetUi.lobby.room && mkddNetUi.lobby.room.code'), 'room code');

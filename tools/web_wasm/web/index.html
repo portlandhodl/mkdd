@@ -3,88 +3,211 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MKDD Web Port</title>
-<style>
-  :root { --bg: #111214; --panel: #1b1d21; --ink: #e6e6e6; --muted: #9aa0a6; --accent: #e8443a; --line: #2c2f35; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
-  main { max-width: 980px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 18px; margin: 0 0 12px; font-weight: 600; }
-  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-  button, label.btn { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px;
-    font: inherit; cursor: pointer; }
-  button[disabled] { opacity: .5; cursor: default; }
-  label.btn input { display: none; }
-  .muted { color: var(--muted); }
-  #stage { position: relative; background: #000; border-radius: 6px; overflow: hidden; }
-  #screen { width: 100%; aspect-ratio: 640 / 480; background: #000; display: block; }
-  #stage.wide #screen { aspect-ratio: 16 / 9; }
-  #stage:fullscreen { border-radius: 0; display: flex; align-items: center; justify-content: center; }
-  #stage:fullscreen #screen { width: 100vw; height: 100vh; aspect-ratio: auto; }
-  #gfx { margin-top: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
-  #gfx summary { cursor: pointer; color: var(--muted); }
-  #gfx .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px 14px; margin-top: 8px; }
-  #gfx label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  #gfx select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; font: inherit; }
-  #gfx .note { grid-column: 1 / -1; font-size: 12px; }
-  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 4px 10px; }
-  /* Multiplayer (netui.js) */
-  #mp { margin-top: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
-  #mp summary { cursor: pointer; color: var(--muted); }
-  #mp [hidden] { display: none !important; }
-  #mp .mpgrid { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 8px; }
-  #mp input:not([type]), #mp select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font: inherit; }
-  #mp .note { margin-top: 8px; font-size: 12px; }
-  #mpRoomCode { font: 600 16px ui-monospace, monospace; letter-spacing: 2px; }
-  #mpMembers { margin-top: 8px; border-collapse: collapse; width: 100%; }
-  #mpMembers th, #mpMembers td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--line); }
-  #mpMembers th { color: var(--muted); font-weight: 500; }
-  #netHud { position: absolute; left: 8px; top: 8px; background: rgba(0,0,0,.55); color: #e6e6e6; padding: 3px 8px; border-radius: 4px;
-    font: 12px/1.4 ui-monospace, monospace; pointer-events: none; white-space: pre; }
-  #netMsg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,.8); color: #fff;
-    padding: 12px 18px; border-radius: 8px; text-align: center; max-width: 80%; }
-  #netMsgButtons { margin-top: 8px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  #log { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px;
-    height: 220px; overflow: auto; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
-</style>
+<meta name="theme-color" content="#170f3d">
+<title>MKDD decomp — web port</title>
+<link rel="preload" href="fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
-<main>
-  <h1>Mario Kart: Double Dash!! — WebAssembly port (decomp)</h1>
-  <div class="bar">
-    <label class="btn">Choose disc image (.iso / .gcm)<input id="pick" type="file" accept=".iso,.gcm"></label>
-    <button id="start" disabled>Start</button>
-    <button id="cardExport" title="Download the slot A memory card image">Export save</button>
-    <label class="btn" title="Replace the slot A memory card with a card image (.raw)">Import save<input id="cardImport" type="file" accept=".raw,.bin"></label>
-    <span id="status" class="muted">Your own disc image is read locally; nothing is uploaded.</span>
+<div class="fx" aria-hidden="true"><div class="fx-checker"></div><div class="fx-lines"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+
+<header class="topbar">
+  <a class="brand" href="./" title="Reload the page">
+    <svg viewBox="0 0 40 40" aria-hidden="true">
+      <defs><linearGradient id="emb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9c86ff"/><stop offset="1" stop-color="#4a2fc2"/></linearGradient>
+        <pattern id="chk" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#fff"/><rect width="4" height="4" fill="#1a1240"/><rect x="4" y="4" width="4" height="4" fill="#1a1240"/></pattern></defs>
+      <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#emb)"/>
+      <rect x="3" y="3" width="34" height="14" rx="8" fill="#fff" opacity=".18"/>
+      <rect x="9" y="7" width="3" height="27" rx="1.5" fill="#ffc61a"/>
+      <path class="flag" d="M12 8 q7 -3 12 0 t11 0 v14 q-5 3 -11 0 t-12 0 z" fill="url(#chk)" stroke="#1a1240" stroke-width="1.2"/>
+    </svg>
+    <span><b>MKDD</b><small>decomp · web port</small></span>
+  </a>
+  <div class="chip disc-chip" title="Disc image"><span class="dot"></span>
+    <span id="status" class="muted">Your own disc image is read locally; nothing is uploaded.</span></div>
+  <div class="tb-right">
+    <span class="hud-chip" id="uiFps" hidden title="Page frame rate"><b>--</b><span class="lbl">FPS</span></span>
+    <span class="hud-chip" id="uiPad" hidden title="A gamepad is connected">&#127918;<span class="lbl">PAD</span></span>
+    <button id="start" class="b-green" disabled title="Start the game">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 1.5v13l11-6.5z" fill="currentColor"/></svg>Start</button>
+    <button id="fullscreen" class="icon-btn" title="Fullscreen (Esc leaves)" aria-label="Fullscreen">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button id="uiMpBtn" class="icon-btn" data-drawer="mpDrawer" title="Multiplayer" aria-label="Multiplayer" aria-expanded="false" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6 3h12v2h3v3a5 5 0 0 1-4.6 5A6 6 0 0 1 13 16v2h3v3H8v-3h3v-2a6 6 0 0 1-3.4-3A5 5 0 0 1 3 8V5h3zm0 4H5v1a3 3 0 0 0 1.4 2.5A6 6 0 0 1 6 9zm12 0v2a6 6 0 0 1-.4 1.5A3 3 0 0 0 19 8V7z"/></svg>
+      <span class="badge info" id="uiMpBadge" hidden></span></button>
+    <button id="uiLogBtn" class="icon-btn" title="Pit radio (log)" aria-label="Log" aria-expanded="false" aria-controls="uiConsole">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="8" width="18" height="13" rx="3"/><path d="M7 8 17 3M7 13h4M7 16.5h4"/><circle cx="16" cy="14.5" r="2.4"/></svg>
+      <span class="badge" id="uiLogBadge" hidden></span></button>
+    <button id="uiSetBtn" class="icon-btn" data-drawer="settings" title="Settings" aria-label="Settings" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M10.3 2h3.4l.5 2.6 1.8.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.8 2.6.5v3.4l-2.6.5-.8 1.8 1.5 2.2-2.4 2.4-2.2-1.5-1.8.8-.5 2.6h-3.4l-.5-2.6-1.8-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.8L2 13.7v-3.4l2.6-.5.8-1.8-1.5-2.2 2.4-2.4 2.2 1.5 1.8-.8zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/></svg></button>
   </div>
-  <div id="stage"><canvas id="screen" width="640" height="480"></canvas>
-    <div id="netHud" hidden></div><div id="netMsg" hidden><div id="netMsgText"></div><div id="netMsgButtons"></div></div></div>
-  <details id="gfx">
-    <summary>Graphics <span id="gfxSummary" class="muted"></span></summary>
-    <div class="grid">
-      <label>Internal resolution <select data-k="scale">
-        <option value="0">Auto (display)</option><option value="1">1× native</option><option value="2">2× (1280×1056)</option>
-        <option value="3">3× (1920×1584)</option><option value="4">4× (2560×2112)</option></select></label>
-      <label>Anti-aliasing (MSAA) <select data-k="msaa"><option value="0">Off</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></label>
-      <label>FXAA <select data-k="fxaa"><option value="0">Off</option><option value="1">On</option></select></label>
-      <label>Anisotropic filtering <select data-k="aniso"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option></select></label>
-      <label>Texture filtering <select data-k="texfilter"><option value="0">As the game sets it</option><option value="1">Trilinear mips</option><option value="2">Force linear</option></select></label>
-      <label>Aspect <select data-k="aspect"><option value="0">Keep (4:3)</option><option value="1">Stretch to window</option></select></label>
-      <label title="The game draws a wider 3D view; the HUD is stretched">Widescreen 16:9 (hack) <select data-k="wide"><option value="0">Off</option><option value="1">On</option></select></label>
-      <label>Scaling <select data-k="present"><option value="0">Smooth</option><option value="1">Integer (pixel-exact)</option></select></label>
-      <label>Deflicker filter <select data-k="deflicker"><option value="0">Off (sharp)</option><option value="1">On (console)</option></select></label>
-      <label>Shader warm-up <select data-k="warm"><option value="1">On</option><option value="0">Off</option></select></label>
-      <label><button id="fullscreen" class="ghost" title="Fullscreen (Escape leaves)">Fullscreen</button>
-        <button id="gfxReset" class="ghost">Defaults</button></label>
-      <div class="note muted">Resolution, anti-aliasing and filtering apply at the next frame; shader warm-up applies at the next start.
-        1× with everything off is the console-accurate picture. Auto resolution follows the picture's size on screen
-        (at most 2× with 4×/8× MSAA). Double-click the picture for fullscreen.</div>
+</header>
+
+<main class="track">
+  <div class="tv">
+    <div id="stage"><canvas id="screen" width="640" height="480" tabindex="0" aria-label="Game screen"></canvas>
+      <div id="netHud" hidden></div><div id="netMsg" hidden><div id="netMsgText"></div><div id="netMsgButtons"></div></div>
+      <div class="attract" id="uiAttract">
+        <div class="dropzone" id="uiOnboard">
+          <div class="qblock" aria-hidden="true">?</div>
+          <h2>Load your own disc image</h2>
+          <p>Pick a <b>.iso</b> or <b>.gcm</b> of your game disc. It stays on your computer: the port reads it locally and remembers it for next time.</p>
+          <div class="row"><label class="btn b-yellow b-big" for="pick" tabindex="0" data-file>
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            Choose disc image</label></div>
+          <div class="hint">…or drag and drop it anywhere on this page.</div>
+          <div class="lock">&#128274; Nothing is uploaded</div>
+        </div>
+        <div class="disccard" id="uiDiscCard" hidden>
+          <svg class="disc" viewBox="0 0 120 120" aria-hidden="true">
+            <defs><radialGradient id="discG" cx=".5" cy=".5" r=".5"><stop offset=".2" stop-color="#e8e6f5"/><stop offset=".55" stop-color="#b9b2e8"/><stop offset=".8" stop-color="#d9f0ff"/><stop offset="1" stop-color="#8c84c9"/></radialGradient>
+              <linearGradient id="discShine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".45" stop-color="#fff" stop-opacity=".75"/><stop offset=".55" stop-color="#ffd6f6" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+            <circle cx="60" cy="60" r="57" fill="url(#discG)" stroke="#4a3aa8" stroke-width="3"/>
+            <circle cx="60" cy="60" r="57" fill="url(#discShine)" opacity=".7"/>
+            <circle cx="60" cy="60" r="40" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1"/>
+            <path d="M60 3a57 57 0 0 1 57 57H83a23 23 0 0 0-23-23z" fill="#ffc61a" opacity=".25"/>
+            <circle cx="60" cy="60" r="18" fill="#2f2278" stroke="#ffc61a" stroke-width="3"/>
+            <circle cx="60" cy="60" r="7" fill="#0d0824"/>
+          </svg>
+          <div>
+            <div class="eyebrow" id="uiDiscEyebrow">Disc ready</div>
+            <h2 id="uiDiscTitle">Disc image</h2>
+            <div class="meta"><span id="uiDiscId"></span><span id="uiDiscFile"></span><span id="uiDiscSize"></span></div>
+            <div class="row">
+              <button id="uiPlay" class="b-green b-big" disabled><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 1.5v13l11-6.5z" fill="currentColor"/></svg>Play</button>
+              <label class="btn b-grey b-sm" for="pick" tabindex="0" data-file>Change disc</label>
+            </div>
+            <div class="hint" id="uiDiscHint"></div>
+          </div>
+        </div>
+        <div class="loader" id="uiLoader" hidden role="status">
+          <div class="gantry" aria-hidden="true"><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span></div>
+          <div class="cap" id="uiLoaderCap">Get ready…</div>
+          <div class="sub" id="uiLoaderSub"></div>
+        </div>
+      </div>
+      <div class="countdown" id="uiCountdown" hidden></div>
     </div>
-  </details>
-  <!-- ==== Multiplayer (online): tools/web_wasm/web/net.js + netui.js, server in tools/web_wasm/net ==== -->
-  <details id="mp">
-    <summary>Multiplayer <span id="mpSummary" class="muted"></span></summary>
+    <div class="tv-chin"><span class="led" aria-hidden="true"></span>
+      <span class="hide-s">Keys drive the game anywhere on the page · <kbd>Enter</kbd> is Start · double-click the picture for fullscreen</span>
+      <span class="grille" aria-hidden="true"></span></div>
+  </div>
+  <input id="pick" class="sr-only" type="file" accept=".iso,.gcm" tabindex="-1">
+
+  <section class="card" id="uiControls" aria-labelledby="uiControlsTitle">
+    <div class="card-head"><h3 id="uiControlsTitle">Controls</h3>
+      <div class="seg" role="group" aria-label="Show controls for">
+        <button type="button" data-legend="kb" aria-pressed="true">Keyboard</button><button type="button" data-legend="gp" aria-pressed="false">Gamepad</button></div></div>
+    <svg class="pad" viewBox="0 0 800 340" role="img" aria-label="Controller diagram: keyboard X accelerates, Z brakes, Q and W drift, Space uses an item, arrows steer, Enter is Start">
+      <defs><linearGradient id="padBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6d58e0"/><stop offset=".55" stop-color="#3f2fa6"/><stop offset="1" stop-color="#2a1d77"/></linearGradient>
+        <radialGradient id="padGloss" cx=".5" cy="0" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+      <g class="leads">
+        <path class="lead" d="M142 61H220L292 84"/><path class="lead" d="M142 149H280"/><path class="lead" d="M142 237H240L320 222"/>
+        <path class="lead" d="M400 292V170"/>
+        <path class="lead" d="M658 25H600L510 64"/><path class="lead" d="M658 71H600L540 82"/><path class="lead" d="M658 117H600L528 112"/>
+        <path class="lead" d="M658 163H620L560 140"/><path class="lead" d="M658 209H600L520 156"/><path class="lead" d="M658 255H560L474 186"/>
+        <path class="lead" d="M658 301H560L482 224"/>
+      </g>
+      <rect class="btnG lit-target" data-hit="L" x="248" y="72" width="94" height="28" rx="14"/>
+      <rect class="btnZ lit-target" data-hit="Z" x="482" y="56" width="58" height="20" rx="10"/>
+      <rect class="btnG lit-target" data-hit="R" x="458" y="72" width="94" height="28" rx="14"/>
+      <g filter="drop-shadow(0 8px 0 #120b38)">
+        <ellipse class="body" cx="268" cy="208" rx="64" ry="86" transform="rotate(-18 268 208)"/>
+        <ellipse class="body" cx="532" cy="208" rx="64" ry="86" transform="rotate(18 532 208)"/>
+        <rect class="body" x="222" y="90" width="356" height="150" rx="75"/>
+        <rect x="236" y="96" width="328" height="60" rx="30" fill="url(#padGloss)"/>
+      </g>
+      <circle cx="280" cy="150" r="37" fill="#1a1250"/><circle class="stick lit-target" data-hit="S" cx="280" cy="150" r="25"/>
+      <g class="lit-target" data-hit="D" fill="#c3c5d3"><rect x="310" y="203" width="20" height="44" rx="5"/><rect x="298" y="215" width="44" height="20" rx="5"/></g>
+      <circle class="btnG lit-target" data-hit="START" cx="400" cy="160" r="9"/>
+      <circle cx="480" cy="224" r="23" fill="#1a1250"/><circle class="btnC lit-target" data-hit="C" cx="480" cy="224" r="14"/>
+      <circle class="btnA lit-target" data-hit="A" cx="515" cy="150" r="26"/>
+      <circle class="btnB lit-target" data-hit="B" cx="474" cy="186" r="14"/>
+      <ellipse class="btnG lit-target" data-hit="X" cx="556" cy="136" rx="10" ry="21" transform="rotate(18 556 136)"/>
+      <ellipse class="btnG lit-target" data-hit="Y" cx="508" cy="111" rx="21" ry="9" transform="rotate(-12 508 111)"/>
+      <g class="caps">
+        <g class="cap" data-cap="L" transform="translate(30 40)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="Q" data-gp="LT / LB">Q</text><text class="a" x="56" y="34" text-anchor="middle">Drift (L)</text></g>
+        <g class="cap" data-cap="S" transform="translate(30 128)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="← ↑ → ↓" data-gp="L-stick">← ↑ → ↓</text><text class="a" x="56" y="34" text-anchor="middle">Steer</text></g>
+        <g class="cap" data-cap="D" transform="translate(30 216)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="1 · 2" data-gp="D-pad">1 · 2</text><text class="a" x="56" y="34" text-anchor="middle">D-pad ← →</text></g>
+        <g class="cap" data-cap="START" transform="translate(344 292)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="Enter" data-gp="Start">Enter</text><text class="a" x="56" y="34" text-anchor="middle">Start / pause</text></g>
+        <g class="cap" data-cap="Z" transform="translate(658 4)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="Space" data-gp="RB">Space</text><text class="a" x="56" y="34" text-anchor="middle">Item (Z)</text></g>
+        <g class="cap" data-cap="R" transform="translate(658 50)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="W" data-gp="RT">W</text><text class="a" x="56" y="34" text-anchor="middle">Drift (R)</text></g>
+        <g class="cap" data-cap="Y" transform="translate(658 96)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="V" data-gp="Top">V</text><text class="a" x="56" y="34" text-anchor="middle">Y</text></g>
+        <g class="cap" data-cap="X" transform="translate(658 142)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="C" data-gp="Left">C</text><text class="a" x="56" y="34" text-anchor="middle">X</text></g>
+        <g class="cap" data-cap="A" transform="translate(658 188)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="X" data-gp="Bottom">X</text><text class="a" x="56" y="34" text-anchor="middle">Accelerate (A)</text></g>
+        <g class="cap" data-cap="B" transform="translate(658 234)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="Z" data-gp="Right">Z</text><text class="a" x="56" y="34" text-anchor="middle">Brake (B)</text></g>
+        <g class="cap" data-cap="C" transform="translate(658 280)"><rect width="112" height="42" rx="10"/><text class="k" x="56" y="19" text-anchor="middle" data-kb="I J K L" data-gp="R-stick">I J K L</text><text class="a" x="56" y="34" text-anchor="middle">C-stick</text></g>
+      </g>
+    </svg>
+    <div class="quick"><span>Accelerate <kbd>X</kbd></span><span>Brake <kbd>Z</kbd></span><span>Drift: hold <kbd>Q</kbd> / <kbd>W</kbd> and steer</span>
+      <span>Item <kbd>Space</kbd></span><span>Gamepads work too (standard mapping)</span></div>
+  </section>
+  <p class="muted" style="font-size:12px;margin:0;text-align:center">Unofficial fan project built from a decompilation. Not affiliated with or endorsed by Nintendo. Bring your own disc image.</p>
+</main>
+
+<div class="scrim" id="uiScrim"></div>
+
+<aside class="drawer" id="settings" aria-label="Settings">
+  <div class="drawer-head"><h2>Settings</h2><button class="icon-btn x" data-close title="Close (Esc)" aria-label="Close">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" aria-controls="paneGfx" data-tab="paneGfx">Graphics</button>
+    <button role="tab" aria-selected="false" aria-controls="paneSaves" data-tab="paneSaves">Saves</button>
+    <button role="tab" aria-selected="false" aria-controls="paneExtras" data-tab="paneExtras">Extras</button>
+  </div>
+  <div class="drawer-body">
+    <section class="pane" id="paneGfx" role="tabpanel">
+      <div id="gfx">
+        <div class="section-title">Picture <span id="gfxSummary"></span></div>
+        <label class="setting"><span>Internal resolution</span><select data-k="scale">
+          <option value="0">Auto (display)</option><option value="1">1× native</option><option value="2">2× (1280×1056)</option>
+          <option value="3">3× (1920×1584)</option><option value="4">4× (2560×2112)</option></select></label>
+        <label class="setting"><span>Anti-aliasing (MSAA)</span><select data-k="msaa"><option value="0">Off</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></label>
+        <label class="setting"><span>FXAA</span><select data-k="fxaa"><option value="0">Off</option><option value="1">On</option></select></label>
+        <label class="setting"><span>Anisotropic filtering</span><select data-k="aniso"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option></select></label>
+        <label class="setting"><span>Texture filtering</span><select data-k="texfilter"><option value="0">As the game sets it</option><option value="1">Trilinear mips</option><option value="2">Force linear</option></select></label>
+        <div class="section-title">Screen</div>
+        <label class="setting"><span>Aspect</span><select data-k="aspect"><option value="0">Keep (4:3)</option><option value="1">Stretch to window</option></select></label>
+        <label class="setting" title="The game draws a wider 3D view; the HUD is stretched"><span>Widescreen 16:9 <small>hack: the HUD is stretched</small></span><select data-k="wide"><option value="0">Off</option><option value="1">On</option></select></label>
+        <label class="setting"><span>Scaling</span><select data-k="present"><option value="0">Smooth</option><option value="1">Integer (pixel-exact)</option></select></label>
+        <label class="setting"><span>Deflicker filter</span><select data-k="deflicker"><option value="0">Off (sharp)</option><option value="1">On (console)</option></select></label>
+        <label class="setting"><span>Shader warm-up <small>applies at the next start</small></span><select data-k="warm"><option value="1">On</option><option value="0">Off</option></select></label>
+        <div class="row" style="display:flex;gap:10px;margin-top:12px"><button id="gfxReset" class="b-grey b-sm">Defaults</button></div>
+        <div class="note">Resolution, anti-aliasing and filtering apply at the next frame; shader warm-up applies at the next start.
+          1× with everything off is the console-accurate picture. Auto resolution follows the picture's size on screen
+          (at most 2× with 4×/8× MSAA). Double-click the picture for fullscreen.</div>
+      </div>
+    </section>
+    <section class="pane" id="paneSaves" role="tabpanel" hidden>
+      <div class="section-title">Memory card · slot A</div>
+      <div class="save-card">
+        <svg viewBox="0 0 54 54" aria-hidden="true"><rect x="9" y="3" width="36" height="48" rx="6" fill="#3f2fa6" stroke="#9c86ff" stroke-width="2"/>
+          <rect x="15" y="9" width="24" height="16" rx="3" fill="#ffc61a"/><path d="M15 38h24M15 43h24" stroke="#9c86ff" stroke-width="3" stroke-linecap="round"/>
+          <rect x="18" y="47" width="18" height="4" fill="#c3c5d3"/></svg>
+        <div><b>Saved in this browser</b><div class="muted" style="font-size:13px">Your records and unlocks are kept after each save. Back them up or move them to another browser.</div></div>
+        <div class="row">
+          <button id="cardExport" class="b-yellow b-sm" title="Download the slot A memory card image">Export save</button>
+          <label class="btn b-grey b-sm" title="Replace the slot A memory card with a card image (.raw)" tabindex="0" data-file>Import save<input id="cardImport" type="file" accept=".raw,.bin"></label>
+        </div>
+      </div>
+      <div class="muted" style="font-size:12.5px">An imported card is used the next time the game starts (reload the page if it is running).</div>
+    </section>
+    <section class="pane" id="paneExtras" role="tabpanel" hidden>
+      <div class="section-title">Page</div>
+      <label class="setting"><span>Button blips <small>tiny synthesized clicks on the page's buttons</small></span><input type="checkbox" class="switch" id="uiSfx"></label>
+      <label class="setting"><span>Background motion <small>paused automatically while you race</small></span><input type="checkbox" class="switch" id="uiMotion"></label>
+      <label class="setting"><span>FPS meter <small>page frame rate in the top bar while running</small></span><input type="checkbox" class="switch" id="uiFpsOn"></label>
+    </section>
+  </div>
+</aside>
+
+<!-- ==== Multiplayer (online): tools/web_wasm/web/net.js + netui.js, server in tools/web_wasm/net ==== -->
+<aside class="drawer" id="mpDrawer" aria-label="Multiplayer">
+  <div class="drawer-head"><h2>Multiplayer</h2><span id="mpSummary" class="muted"></span><button class="icon-btn x" data-close title="Close (Esc)" aria-label="Close">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="drawer-body">
+  <details id="mp" open>
+    <summary>Multiplayer</summary>
     <div class="mpgrid">
       <label>Server <input id="mpServer" size="30" spellcheck="false"></label>
       <label>Your name <input id="mpName" size="14" maxlength="24"></label>
@@ -115,18 +238,28 @@
       </div>
       <div class="mpgrid">
         <label><input id="mpReady" type="checkbox"> Ready</label>
-        <button id="mpStart" disabled>Start session</button>
+        <button id="mpStart" disabled>GO! <small>start session</small></button>
       </div>
     </div>
     <div id="mpStatus" class="muted note">Choose your disc image, connect to a lobby server, then create a room or join one with its code.
       Everyone needs their own disc image and the same build. Only lobby messages go to the server; game messages go directly
       between the players.</div>
   </details>
-  <!-- ==== end Multiplayer ==== -->
-  <p class="muted">Controls: arrows steer · X accelerate (A) · Z brake (B) · Q/W L/R (drift) · Space item (Z) ·
-    C/V X/Y · Enter Start · I/J/K/L C-stick. Gamepads work too (standard mapping).</p>
+  </div>
+</aside>
+<!-- ==== end Multiplayer ==== -->
+
+<section class="console" id="uiConsole" aria-label="Log">
+  <div class="console-head"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><h2>Pit radio</h2>
+    <span class="muted" style="font-size:12px">game &amp; port log</span><span class="sp"></span>
+    <button class="b-grey b-sm" id="uiLogCopy" title="Copy the log">Copy</button>
+    <button class="icon-btn x" data-close title="Close (Esc)" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
   <div id="log"></div>
-</main>
+</section>
+
+<div class="toasts" id="uiToasts" aria-live="polite"></div>
+<div class="dropveil" aria-hidden="true"><div>Drop your disc image</div></div>
 <script>
   const logEl = document.getElementById('log');
   const statusEl = document.getElementById('status');
@@ -361,5 +494,6 @@
 <script src="audio.js"></script>
 <script src="net.js"></script>
 <script src="netui.js"></script>
+<script src="ui.js"></script>
 </body>
 </html>

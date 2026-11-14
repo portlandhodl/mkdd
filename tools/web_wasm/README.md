@@ -12,7 +12,7 @@ node. Independent of `ninja` and the matching build.
 | `patches/` | host patch set for decomp files, applied in `series` order |
 | `tools/` | `build.py`, `patches.py`, disc extraction, stub generation |
 | `net/` | online multiplayer: state-sync netcode design (`NETCODE.md`) and remote-kart spike (`netkart.cpp`) |
-| `web/` | page, input, audio, `serve.sh`, headless smoke test |
+| `web/` | page (`index.html`, `theme.css`, `ui.js`, OFL fonts in `fonts/`), input, audio, `serve.sh`, headless smoke test |
 
 ## Build and run
 
