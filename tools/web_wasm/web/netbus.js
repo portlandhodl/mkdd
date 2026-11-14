@@ -47,7 +47,7 @@
     create() { const l = ui() && ui().lobby; if (l) { error = ''; l.create(); } },
     join(d) { const l = ui() && ui().lobby; if (l && d.code) { error = ''; l.join(String(d.code)); } },
     leave() { const b = document.getElementById('mpLeave'); if (b && ui() && ui().lobby && ui().lobby.room) b.click(); },
-    ready(d) { const l = ui() && ui().lobby; if (l) l.setReady(!!d.ready); },
+    ready(d) { const u = ui(), l = u && u.lobby; if (l) { u.render(); /* status { inGame } first */ l.setReady(!!d.ready); } },
     name(d) { const l = ui() && ui().lobby; if (l && d.name) l.setName(String(d.name)); },
     profile(d) { const l = ui() && ui().lobby; if (l && d.profile) l.setProfile(d.profile); },
   };
@@ -55,7 +55,9 @@
   M.netBus = {
     toGame, post, lobbyState,
     get phase() { return phase; },
+    inGame: false, // set once the game's MULTIPLAYER menu drives the lobby (netui.js: a running game may go online)
     fromGame(type, data) {
+      if (type === 'lobby') M.netBus.inGame = true;
       if (type === 'lobby' && ops[data.op]) Promise.resolve(ops[data.op](data)).catch((e) => post('lobby-error', { msg: String(e.message || e) }));
       if (type === 'phase') phase = data.phase || '';
       if (type === 'log' && window.mkddPage) window.mkddPage.log('[game] ' + (data.msg || ''));

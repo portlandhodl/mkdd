@@ -2,16 +2,17 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
 
 --- a/src/Kameda/SceneTitle.cpp
 +++ b/src/Kameda/SceneTitle.cpp
-@@ -24,6 +24,8 @@
+@@ -24,6 +24,9 @@
  #include "dolphin/os.h"
  #include "mathHelper.h"
  
 +extern "C" void port_netsync_scene(int scene);
++void port_net_title_entry(bool selected, int frame);
 +
  u8 SceneTitleParam::mDemoType;
  int SceneTitle::mDemoFlag = 1;
  
-@@ -97,6 +99,7 @@
+@@ -97,6 +100,7 @@
      }
  
      System::getDisplay()->startFadeIn(15);
@@ -19,7 +20,16 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
      mPrintMemoryCard->reset();
      mPrintMemoryCard->init(PrintMemoryCard::mcMsg40);
  }
-@@ -247,15 +250,8 @@
+@@ -108,6 +112,8 @@
+ void SceneTitle::draw() {
+     mOrtho->setPort();
+     mScreen->draw(0.0f, 0.0f, mOrtho);
++    if (mState == 4 || mState == 5) // MULTIPLAYER in place of the LAN MODE picture (sceneonline.cpp)
++        port_net_title_entry(mCursor == 3, (int)mBck[3].mFrame);
+     if (mIsPrintCard)
+         mPrintMemoryCard->draw();
+ }
+@@ -247,15 +253,8 @@
          return;
      }
  
@@ -37,7 +47,7 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
  
      if (gGamePad1P.mButtons.mRepeat & 0x08000000) {
          GetGameAudioMain()->startSystemSe(0x20000);
-@@ -302,9 +298,12 @@
+@@ -302,9 +301,12 @@
              mNextScene = SCENE_RECORD;
              break;
          case 3:
@@ -53,6 +63,14 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
              break;
          }
      }
+@@ -371,6 +373,7 @@
+         mBck[7].mPane->hide();
+         mBck[11].mPane->hide();
+     }
++    mBck[3].mPane->hide(); // the LAN MODE picture: port_net_title_entry draws MULTIPLAYER there
+ 
+     for (int i = 0; i < 4; i++) {
+         if (i == mCursor) {
 --- a/src/Kameda/SceneFactory.cpp
 +++ b/src/Kameda/SceneFactory.cpp
 @@ -161,6 +161,8 @@

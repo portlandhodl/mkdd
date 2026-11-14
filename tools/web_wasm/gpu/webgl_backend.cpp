@@ -736,10 +736,22 @@ static void flush(void)
     }
 }
 
+/* MKDD_GFX_SKIP=N (tests on a loaded machine, e.g. two headless browsers with a software
+ * renderer): render only every Nth game frame; the others issue no GL work and the canvas keeps
+ * the last picture. */
+static int sSkipFrame;
+static void skip_next_frame(void)
+{
+    static int every = -1;
+    static uint32_t frameNo;
+    if (every < 0) every = wgl_js_env_int("MKDD_GFX_SKIP", 0);
+    sSkipFrame = every > 1 && (++frameNo % (uint32_t)every) != 0;
+}
+
 static void be_draw(void *ctx, const GpuRegs *regs, int prim, const GpuVertex *v, uint32_t count)
 {
     (void)ctx;
-    if (!sReady || !count) return;
+    if (!sReady || !count || sSkipFrame) return;
     /* the register state is unchanged since the last draw: skip the snapshot */
     static uint32_t snapSerial;
     if (!sSnapValid || sStagePrim != prim || snapSerial != gpu_state_serial) {
@@ -958,7 +970,7 @@ static XfbEntry *xfb_for_copy(uint32_t addr, uint32_t stride, int srcY, int *row
 static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
 {
     (void)ctx;
-    if (!sReady) return;
+    if (!sReady || sSkipFrame) return;
     flush();
     const uint32_t *bp = regs->bp;
     uint32_t exec = bp[0x52];
@@ -1022,6 +1034,11 @@ static void be_present(void *ctx, uint32_t xfbAddr)
 {
     (void)ctx;
     if (!sReady) return;
+    if (sSkipFrame) {
+        skip_next_frame();
+        return;
+    }
+    skip_next_frame();
     flush();
     XfbEntry *e = NULL;
     for (int i = 0; i < MAX_XFB && !e && xfbAddr; i++)

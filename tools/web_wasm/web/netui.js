@@ -56,12 +56,15 @@
   let bootState = '', bootWhy = '';
   let autoRoom = '', autoDone = false; // ?netroom: the room to (re)join once connected
   const setStatus = (t) => { ui.status.textContent = t; };
+  // the running game drives the lobby from its own MULTIPLAYER menu (netbus.js): a started game is fine
+  const inGame = () => !!(window.Module && Module.netBus && Module.netBus.inGame);
+  const soloRunning = () => page.started() && !inGame();
 
   // Why this window cannot race right now ('' = it can): it needs a disc image and a game that has
   // not been started solo (a running game cannot switch to the online race; only a reload can).
   function cannotRace() {
     if (!page.getDisc()) return 'no disc image chosen';
-    if (page.started() && !(mesh && mesh.session)) return 'game already running; reload the page to play online';
+    if (soloRunning() && !(mesh && mesh.session)) return 'game already running; reload the page to play online';
     return '';
   }
   // the same, for another member, from the status that member reports to the room
@@ -69,7 +72,7 @@
     const st = m && m.status;
     if (!st) return '';
     if (st.disc === false) return 'no disc image chosen';
-    if (st.idle === false && !(lobby && lobby.room && lobby.room.state === 'playing')) return 'game already running, needs a page reload';
+    if (st.idle === false && !st.inGame && !(lobby && lobby.room && lobby.room.state === 'playing')) return 'game already running, needs a page reload';
     return '';
   }
   const BOOT = { booting: 'starting the game', loading: 'loading the course', waiting: 'at the start line', countdown: 'countdown',
@@ -80,6 +83,7 @@
   function syncStatus() {
     if (!lobby || !lobby.id) return;
     const st = { disc: !!page.getDisc(), idle: !page.started() };
+    if (inGame()) st.inGame = true;
     if (mesh && mesh.session) {
       const M = window.Module || {};
       st.boot = bootState === 'failed' ? 'failed' : M.netPhase || (page.started() ? 'booting' : params.has('netnoboot') ? 'none' : 'booting');
@@ -134,7 +138,7 @@
   }
   function createRoom() {
     if (!lobby) return;
-    if (page.started()) return refuseRunning({ host: true });
+    if (soloRunning()) return refuseRunning({ host: true });
     lobby.create();
   }
   let joinRetry = 0;
@@ -142,7 +146,7 @@
     clearTimeout(joinRetry);
     code = String(code || '').trim().toUpperCase();
     if (!lobby || !code) return;
-    if (page.started()) return refuseRunning({ room: code });
+    if (soloRunning()) return refuseRunning({ room: code });
     lobby.join(code);
   }
 
@@ -151,7 +155,7 @@
   async function connect() {
     if (connecting) return;
     if (lobby) { disconnect(); return; }
-    if (page.started()) {
+    if (soloRunning()) {
       const room = params.get('netroom');
       refuseRunning(room ? { room } : params.has('nethost') ? { host: true } : {});
       return;

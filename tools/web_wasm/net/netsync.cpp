@@ -83,10 +83,10 @@ int sOwnOptions;
 void put32(u8 *p, u32 v) { memcpy(p, &v, 4); }
 u32 get32(const u8 *p) { u32 v; memcpy(&v, p, 4); return v; }
 
-void logf(const char *fmt, int a = 0, int b = 0, int c = 0)
+void logf(const char *fmt, int a = 0, int b = 0, int c = 0, int d = 0)
 {
     char msg[160], js[200];
-    snprintf(msg, sizeof msg, fmt, a, b, c);
+    snprintf(msg, sizeof msg, fmt, a, b, c, d);
     fprintf(stderr, "[netsync] %s\n", msg);
     snprintf(js, sizeof js, "{\"msg\":\"netsync: %s\"}", msg);
     port_net_emit("log", js);
@@ -143,7 +143,7 @@ void apply(const u8 *m)
     sEpoch = 0;
     sArmed = sRunning = false;
     sRaceReady = false;
-    logf("start %d: %d consoles, you are player %d, input delay %d frames", sSeq, sN, sSelfIdx + 1);
+    logf("start %d: %d consoles, you are player %d, input delay %d frames", sSeq, sN, sSelfIdx + 1, sDelay);
 }
 
 void onMessage(int from, int kind, const u8 *m, int n)

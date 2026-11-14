@@ -663,3 +663,21 @@ private:
 
 // SceneFactory, SCENE_LAN_ENTRY (patch 0022)
 Scene *port_net_create_scene(JKRArchive *archive, JKRHeap *heap) { return new (heap, 0) SceneOnline(archive, heap); }
+
+// SceneTitle::draw (patch 0022): the title menu's fourth entry, MULTIPLAYER, where the console drew the
+// LAN MODE picture; brighter and a little larger while selected, like the other entries
+void port_net_title_entry(bool selected, int frame)
+{
+    static J2DPrint *print;
+    if (!print)
+        print = new J2DPrint(FontMgr::mspResFont, 0.0f);
+    J2DOrthoGraph *o = System::getJ2DOrtho();
+    o->setPort();
+    f32 size = selected ? 26.0f + (frame > 16 ? 4.0f : frame * 0.25f) : 26.0f;
+    print->setFontSize(size, size);
+    print->setGradColor(selected ? JUtility::TColor(255, 250, 120, 255) : JUtility::TColor(190, 160, 40, 255));
+    print->setCharColor(selected ? JUtility::TColor(255, 140, 0, 255) : JUtility::TColor(120, 80, 10, 255));
+    print->initiate();
+    f32 w = print->getWidth("MULTIPLAYER");
+    print->print(320.0f - w / 2, 436.0f, "MULTIPLAYER");
+}

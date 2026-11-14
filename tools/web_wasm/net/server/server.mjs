@@ -109,6 +109,7 @@ function cleanStatus(v) {
   const s = {};
   if (typeof v.disc === 'boolean') s.disc = v.disc;
   if (typeof v.idle === 'boolean') s.idle = v.idle;
+  if (v.inGame === true) s.inGame = true; // a running game that joined from its own MULTIPLAYER menu
   if (v.boot !== undefined) s.boot = cleanTag(v.boot, 16);
   if (v.why !== undefined) s.why = String(v.why).replace(/[\u0000-\u001f\u007f<>]/g, '').slice(0, 120);
   return s;
@@ -116,7 +117,7 @@ function cleanStatus(v) {
 export function cannotRace(status) {
   if (!status) return '';
   if (status.disc === false) return 'no disc image chosen';
-  if (status.idle === false) return 'game already running, needs a page reload';
+  if (status.idle === false && !status.inGame) return 'game already running, needs a page reload';
   return '';
 }
 
