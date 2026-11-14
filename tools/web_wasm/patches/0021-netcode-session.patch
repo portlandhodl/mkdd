@@ -1,0 +1,100 @@
+Online session (tools/web_wasm/net/netonline.cpp): with MKDD_NET_ONLINE=1 the logos are skipped and LogoApp hands the boot to port_net_boot_race(), which sets up a VS race from the lobby session and enters RaceApp; the Lakitu countdown waits for the shared start time (port_net_countdown_hold before the lights, port_net_go_hold at the green light) so every peer's GO lands on the same host-clock time; the pause menu is off online (the race cannot stop for one player). Offline the hooks return 0 and nothing changes.
+
+--- a/src/Osako/LogoApp.cpp
++++ b/src/Osako/LogoApp.cpp
+@@ -17,6 +17,9 @@
+ extern const char _pBuildtimeDat[];
+ 
+ LogoApp *LogoApp::mspLogoApp;
++
++extern "C" int port_net_online(void);
++extern "C" int port_net_boot_race(void);
+ 
+ LogoApp *LogoApp::create()
+ {
+@@ -122,7 +125,7 @@
+         mState = mcLogoFadeIn;
+         break;
+     case mcLogoFadeIn:
+-        if (++mFadeTimer > 90)
++        if (++mFadeTimer > 90 || port_net_online())
+         {
+             SYSTEM_StartFadeOut(30);
+             mState = mcLogoFadeOut;
+@@ -148,7 +151,7 @@
+         }
+         break;
+     case mcDolbyFadeIn:
+-        if (++mFadeTimer > 90)
++        if (++mFadeTimer > 90 || port_net_online())
+         {
+             SYSTEM_StartFadeOut(30);
+ 
+@@ -258,6 +261,12 @@
+     case mcLoadOpening:
+         if (SYSTEM_IsFadingOut())
+         {
++            if (port_net_online())
++            {
++                if (!mIsLoadingMovie)
++                    port_net_boot_race();
++                break;
++            }
+             if (ResMgr::isFinishLoadingArc(ResMgr::mcArcOpening))
+                 MovieApp::call();
+         }
+--- a/src/Shiraiwa/JugemStart.cpp
++++ b/src/Shiraiwa/JugemStart.cpp
+@@ -19,6 +19,10 @@
+     { 300.0f, 240.0f, -400.0f },
+     { 300.0f,   scEraseHeight, -400.0f },
+ };
++
++extern "C" int port_net_online(void);
++extern "C" int port_net_countdown_hold(void);
++extern "C" int port_net_go_hold(void);
+ 
+ s16 TJugem::sStartWaitCameraFrame;
+ s16 TJugem::sStartWaitBlendFrame;
+@@ -96,7 +100,7 @@
+ 
+ void TJugem::doFunc_StartWaitBlend() {
+     move(getKartNum());
+-    if (getStateCount() > sStartWaitBlendFrame) {
++    if (getStateCount() > sStartWaitBlendFrame && !port_net_countdown_hold()) {
+         setState(0xe);
+     }
+ }
+@@ -128,10 +132,10 @@
+ void TJugem::doFunc_StartUp() {
+     move(getKartNum());
+ 
+-    if (mIsAbleStart == false && ((s32)mSignal->_164.getFrameCtrl()->getFrame() == 7)) {
++    if (mIsAbleStart == false && ((s32)mSignal->_164.getFrameCtrl()->getFrame() == 7) && !port_net_go_hold()) {
+         mIsAbleStart = true;
+     }
+-    if (getStateCount() > sStartUpFrame) {
++    if (getStateCount() > sStartUpFrame && (mIsAbleStart || !port_net_online())) {
+         setState(0x10);
+     }
+ }
+--- a/src/Kameda/PauseManager.cpp
++++ b/src/Kameda/PauseManager.cpp
+@@ -14,6 +14,8 @@
+ #include "Osako/ResMgr.h"
+ #include "Osako/system.h"
+ #include "mathHelper.h"
++
++extern "C" int port_net_online(void);
+ 
+ PauseManager *PauseManager::mThis;    // 0x80416298
+ bool PauseManager::mIsPause;
+@@ -213,7 +215,7 @@
+             }
+             else {
+                 KartGamePad *pad = gpaGamePad[0];
+-                if (pad && pad->testTrigger(JUTGamePad::START)) {
++                if (pad && pad->testTrigger(JUTGamePad::START) && !port_net_online()) {
+                     mPausePad = pad;
+                     mPauseSelector = 0;
+                     mPauseChoice = 13;

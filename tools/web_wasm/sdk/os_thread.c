@@ -277,6 +277,19 @@ static void yield_for_reads(void)
     sLastHostYield = emscripten_get_now();
 }
 
+/* Online play: messages from the other players (tools/web_wasm/net) arrive from the browser's event
+ * loop too. A thread that polls in a loop (VIGetRetraceCount, OSGetTime) without ever idling the
+ * scheduler would starve them, so in a session return to the event loop at least every 50 ms. */
+int port_net_active(void);
+static void yield_for_net(void)
+{
+    double now = emscripten_get_now();
+    if (now - sLastHostYield < 50.0 || !port_net_active())
+        return;
+    emscripten_sleep(0);
+    sLastHostYield = emscripten_get_now();
+}
+
 void port_poll(void)
 {
     OSTime now;
@@ -292,6 +305,7 @@ void port_poll(void)
     if (sInIrq)
         return;
     yield_for_reads();
+    yield_for_net();
     port_heap_check(NULL);
     sInIrq = 1;
     while (sDeferHead != sDeferTail) {

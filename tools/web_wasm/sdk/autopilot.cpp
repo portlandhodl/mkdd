@@ -28,13 +28,17 @@ extern "C" void port_autopilot(void)
     KartCtrl *ctrl = KartCtrl::getKartCtrl();
     if (!rcm || !ctrl || rcm->getRaceFrame() < 2 || ctrl->GetKartNumber() <= 0)
         return;
-    KartBody *body = ctrl->getKartBody(0);
-    if (body && (body->mGameStatus & 2) && !(body->mGameStatus & 8))
+    // the kart on screen 1 (kart 0 offline; online the local kart can be any)
+    int kart = gRaceInfo.getConsoleTarget(0);
+    if (kart < 0 || kart >= ctrl->GetKartNumber())
+        return;
+    KartBody *body = ctrl->getKartBody(kart);
+    if (body && (body->mGameStatus & 0x100) && !(body->mGameStatus & 8))
         body->mGameStatus |= 8;
     static u32 last;
     if (body && rcm->getRaceFrame() % 600 == 0 && rcm->getRaceFrame() != last) {
         last = rcm->getRaceFrame();
-        KartChecker *kc = rcm->getKartChecker(0);
+        KartChecker *kc = rcm->getKartChecker(kart);
         OSReport("[autopilot] frame %u lap %d rank %d goal %d pos %.0f %.0f %.0f\n", rcm->getRaceFrame(), kc->getLap(),
                  kc->getRank(), kc->isGoal(), body->mPos.x, body->mPos.y, body->mPos.z);
     }

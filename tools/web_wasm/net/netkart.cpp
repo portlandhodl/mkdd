@@ -1,5 +1,6 @@
-// Netcode spike: drive one kart from a (simulated) network stream of kart state.
-// See NETCODE.md. Called from KartCtrl::DynamicsStage1/2 (patch 0020-netcode-remote-kart).
+// Netcode: kart state wire format, remote-kart correction helpers (netkart.h) and the spike harness that
+// drives one kart from a simulated network stream. See NETCODE.md. Called from KartCtrl::DynamicsStage1/2
+// (patch 0020-netcode-remote-kart); in an online session (MKDD_NET_ONLINE=1) the hooks go to netonline.cpp.
 //
 //   MKDD_NET=rec    MKDD_NET_FILE=f   record every kart's wire state each frame
 //   MKDD_NET=play   MKDD_NET_FILE=f   kart MKDD_NET_KART is remote, fed from kart MKDD_NET_KART's recording
@@ -17,39 +18,17 @@
 #include "types.h"
 #include "Kaneshige/RaceMgr.h"
 #include "Yamamoto/kartCtrl.h"
+#include "netkart.h"
 
-extern "C" int port_env(const char *name);
-extern "C" char *gpu_js_env_str(const char *name);
-extern "C" void free(void *);
-
-// The decomp's MSL headers shadow the host libc here, so math is builtins and file I/O goes through node's fs (netkart_io.c).
-#define sqrtf __builtin_sqrtf
-#define fabsf __builtin_fabsf
-#define lrintf __builtin_lrintf
-
+// File I/O goes through node's fs (netkart_io.c): the decomp's MSL headers shadow the host libc here.
 extern "C" int net_js_open(const char *path, int write);
 extern "C" void net_js_write(const void *p, int n);
 extern "C" int net_js_read(void *p, int n);
 extern "C" void net_js_close(void);
 
+namespace netkart {
+
 namespace {
-
-enum { MAX_KART = 8, HIST = 1024, WIRE = 56 };
-
-struct State {
-    u32 frame;
-    f32 pos[3];
-    f32 rot[3][3]; // KartBody::_110 rotation part
-    f32 vel[3], effVel[3], wg[3];
-    s8 sx, sy;     // stick, -127..127
-    u16 buttons;   // JUTGamePad bits
-    u8 aL, aR;
-    u64 carStatus;
-    u16 boost, mtBoost;
-    u8 mtState, driver;
-    bool valid;
-};
-
 // ---- wire format (little endian on every host this runs on) ----
 void put16(u8 *p, u16 v) { memcpy(p, &v, 2); }
 void put32(u8 *p, u32 v) { memcpy(p, &v, 4); }
@@ -150,6 +129,8 @@ void quatUnpack(u32 in, f32 q[4])
     q[big] = sqrtf(sum < 1.0f ? 1.0f - sum : 0.0f);
 }
 
+} // namespace
+
 void encode(const State &s, int kart, u8 *p)
 {
     f32 q[4];
@@ -179,14 +160,9 @@ void encode(const State &s, int kart, u8 *p)
     p[55] = s.driver;
 }
 
-void decode(const u8 *p, u32 nowFrame, State &s)
+u16 decode(const u8 *p, State &s)
 {
     f32 q[4];
-    u16 f16 = get16(p + 2);
-    // full frame = the latest frame <= now with these low 16 bits (clock is shared in the spike)
-    s.frame = (nowFrame & ~0xffffu) | f16;
-    if (s.frame > nowFrame)
-        s.frame -= 0x10000;
     for (int i = 0; i < 3; i++)
         memcpy(&s.pos[i], p + 4 + i * 4, 4);
     quatUnpack(get32(p + 16), q);
@@ -207,16 +183,17 @@ void decode(const u8 *p, u32 nowFrame, State &s)
     s.mtState = p[54];
     s.driver = p[55];
     s.valid = true;
+    return get16(p + 2);
 }
 
 // ---- capture / apply on KartBody ----
-s8 stick8(f32 v)
+static s8 stick8(f32 v)
 {
     int i = (int)lrintf(v * 127.0f);
     return (s8)(i > 127 ? 127 : i < -127 ? -127 : i);
 }
 
-void capture(int k, u32 frame, State &s)
+void capture(int k, s32 frame, State &s)
 {
     KartCtrl *ctrl = KartCtrl::getKartCtrl();
     KartBody *b = ctrl->getKartBody(k);
@@ -275,7 +252,68 @@ void nlerpRot(const f32 a[3][3], const f32 b[3][3], f32 t, f32 out[3][3])
     quatToMtx(q, out);
 }
 
-// ---- configuration and simulated link ----
+void makeRemote(KartBody *b)
+{
+    b->mGameStatus &= ~8u;     // no CPU driver
+    b->mGameStatus |= 0x802;   // what KartBody::Init gives a PORT_NET pad (player kind 3)
+    b->mGameStatus &= ~0x100u; // not a local human
+}
+
+void feedPad(int k, const State &s, u16 prevButtons)
+{
+    KartGamePad *pad = KartCtrl::getKartCtrl()->GetDriveCont(k);
+    // item use arrives as events (NETCODE.md 5.3), never from the predicted pad
+    u16 itemMask = (u16)KartCtrl::getKartCtrl()->getKartPad(k)->mItemMask;
+    u16 buttons = s.buttons & ~itemMask, prev = prevButtons & ~itemMask;
+    pad->mMainStick.mX = s.sx / 127.0f;
+    pad->mMainStick.mY = s.sy / 127.0f;
+    pad->mButtons.mButton = buttons;
+    pad->mButtons.mTrigger = buttons & ~prev;
+    pad->mButtons.mRelease = prev & ~buttons;
+    pad->mButtons.mAnalogL = s.aL;
+    pad->mButtons.mAnalogR = s.aR;
+}
+
+void snapTo(KartBody *b, const State &s)
+{
+    setPose(b, s.pos, s.rot);
+    b->mPrevPos.set(s.pos[0], s.pos[1], s.pos[2]);
+    b->mVel.set(s.vel[0], s.vel[1], s.vel[2]);
+    b->mEffctVel.set(s.effVel[0], s.effVel[1], s.effVel[2]);
+    b->mWg.set(s.wg[0], s.wg[1], s.wg[2]);
+}
+
+f32 dist(const f32 a[3], const f32 b[3])
+{
+    f32 d0 = a[0] - b[0], d1 = a[1] - b[1], d2 = a[2] - b[2];
+    return sqrtf(d0 * d0 + d1 * d1 + d2 * d2);
+}
+
+int envInt(const char *name, int def)
+{
+    char *v = gpu_js_env_str(name);
+    if (!v)
+        return def;
+    int sign = 1, n = 0;
+    const char *p = v;
+    if (*p == '-') {
+        sign = -1;
+        p++;
+    }
+    while (*p >= '0' && *p <= '9')
+        n = n * 10 + (*p++ - '0');
+    free(v);
+    return sign * n;
+}
+
+} // namespace netkart
+
+// ---- spike harness: configuration and simulated link ----
+namespace {
+using namespace netkart;
+
+enum { HIST = 1024 };
+
 struct Packet {
     u32 arrive;
     u8 data[WIRE];
@@ -299,23 +337,6 @@ int sErrN, sSent, sDropped, sSnaps;
 u16 sPrevButtons;
 u32 sLastNow;
 
-// port_env() maps "0" to 1 (it is a flag reader); numeric settings need the real value
-int envInt(const char *name, int def)
-{
-    char *v = gpu_js_env_str(name);
-    if (!v)
-        return def;
-    int sign = 1, n = 0;
-    const char *p = v;
-    if (*p == '-') {
-        sign = -1;
-        p++;
-    }
-    while (*p >= '0' && *p <= '9')
-        n = n * 10 + (*p++ - '0');
-    free(v);
-    return sign * n;
-}
 
 u32 rnd()
 {
@@ -365,7 +386,7 @@ void init()
             u32 f = get32(rec);
             if (rec[4 + 1] != sRemote || f >= TAPE)
                 continue;
-            decode(rec + 4, f, sTape[f]);
+            decode(rec + 4, sTape[f]);
             sTape[f].frame = f;
             if (f + 1 > sTapeLen)
                 sTapeLen = f + 1;
@@ -421,7 +442,11 @@ void netTick(u32 now)
             continue;
         }
         State s;
-        decode(sQueue[i].data, now, s);
+        u16 f16 = decode(sQueue[i].data, s);
+        // full frame = the latest frame <= now with these low 16 bits (clock is shared in the spike)
+        s.frame = (s32)((now & ~0xffffu) | f16);
+        if ((u32)s.frame > now)
+            s.frame -= 0x10000;
         sQueue[i] = sQueue[--sQueueLen];
         if (sRecvLen && s.frame <= sRecv[sRecvLen - 1].frame) {
             bool dup = false;
@@ -441,37 +466,6 @@ void netTick(u32 now)
         sRecv[at] = s;
         sRecvLen++;
     }
-}
-
-void makeRemote(KartBody *b)
-{
-    b->mGameStatus &= ~8u;     // no CPU driver
-    b->mGameStatus |= 0x802;   // what KartBody::Init gives a PORT_NET pad (player kind 3)
-    b->mGameStatus &= ~0x100u; // not a local human
-}
-
-void feedPad(int k, const State &s)
-{
-    KartGamePad *pad = KartCtrl::getKartCtrl()->GetDriveCont(k);
-    // item use arrives as events (NETCODE.md 5.3), never from the predicted pad
-    u16 itemMask = (u16)KartCtrl::getKartCtrl()->getKartPad(k)->mItemMask;
-    u16 buttons = s.buttons & ~itemMask, prev = sPrevButtons & ~itemMask;
-    pad->mMainStick.mX = s.sx / 127.0f;
-    pad->mMainStick.mY = s.sy / 127.0f;
-    pad->mButtons.mButton = buttons;
-    pad->mButtons.mTrigger = buttons & ~prev;
-    pad->mButtons.mRelease = prev & ~buttons;
-    pad->mButtons.mAnalogL = s.aL;
-    pad->mButtons.mAnalogR = s.aR;
-}
-
-void snapTo(KartBody *b, const State &s)
-{
-    setPose(b, s.pos, s.rot);
-    b->mPrevPos.set(s.pos[0], s.pos[1], s.pos[2]);
-    b->mVel.set(s.vel[0], s.vel[1], s.vel[2]);
-    b->mEffctVel.set(s.effVel[0], s.effVel[1], s.effVel[2]);
-    b->mWg.set(s.wg[0], s.wg[1], s.wg[2]);
 }
 
 void correct(u32 now)
@@ -578,16 +572,24 @@ void correct(u32 now)
 
 extern "C" void port_net_pre_dynamics(void)
 {
+    if (netonline::enabled()) {
+        netonline::preDynamics();
+        return;
+    }
     if (!sInit)
         init();
     if (!sActive || sMode == 0 || !sRecvLen)
         return;
     // input prediction: hold the newest received input (PadMgr already overwrote a human pad this frame)
-    feedPad(sRemote, sRecv[sRecvLen - 1]);
+    feedPad(sRemote, sRecv[sRecvLen - 1], sPrevButtons);
 }
 
 extern "C" void port_net_post_stage1(void)
 {
+    if (netonline::enabled()) {
+        netonline::postStage1();
+        return;
+    }
     if (!sInit)
         init();
     if (!sRec && !sMirror && !sPlay)
@@ -626,7 +628,7 @@ extern "C" void port_net_post_stage1(void)
     correct(now);
     if (sActive && sMode != 0 && sRecvLen) {
         // keep the input on the pad for DoAccel (stage 2) and remember it for trigger edges
-        feedPad(sRemote, sRecv[sRecvLen - 1]);
+        feedPad(sRemote, sRecv[sRecvLen - 1], sPrevButtons);
         sPrevButtons = sRecv[sRecvLen - 1].buttons;
     }
 }
