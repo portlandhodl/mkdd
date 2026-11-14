@@ -41,7 +41,7 @@ J2DPicture::J2DPicture(J2DPane* parent, JSURandomInputStream* input, J2DMaterial
 
     for (int i = 0; i < 4; i++) {
         mTexCoords[i]    = trailer.mTexCoords[i];
-        mCornerColors[i] = JUTColor(GXCOLOR_AS_U32(trailer.mCornerColor[i]));
+        mCornerColors[i] = JUTColor(DECOMP_HOST(GXCOLOR_AS_U32(trailer.mCornerColor[i]), trailer.mCornerColor[i]));
     }
     input->seek(headerPosition + header.mBlockLength, SEEK_SET);
 
