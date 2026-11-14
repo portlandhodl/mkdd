@@ -2,113 +2,6 @@
 #include "sdk_all.h"
 #include "port_sdk.h"
 
-s32 CARDCheck(s32 chan)
-{
-    MKDD_STUB("CARDCheck");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDClose(CARDFileInfo * fileInfo)
-{
-    MKDD_STUB("CARDClose");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDCreate(s32 chan, const char * fileName, u32 size, CARDFileInfo * fileInfo)
-{
-    MKDD_STUB("CARDCreate");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDDelete(s32 chan, const char * fileName)
-{
-    MKDD_STUB("CARDDelete");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDFastDelete(s32 chan, s32 fileNo)
-{
-    MKDD_STUB("CARDFastDelete");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDFastOpen(s32 chan, s32 fileNo, CARDFileInfo * fileInfo)
-{
-    MKDD_STUB("CARDFastOpen");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDFormat(s32 chan)
-{
-    MKDD_STUB("CARDFormat");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDFreeBlocks(s32 chan, s32 * byteNotUsed, s32 * filesNotUsed)
-{
-    MKDD_STUB("CARDFreeBlocks");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDGetStatus(s32 chan, s32 fileNo, CARDStat * stat)
-{
-    MKDD_STUB("CARDGetStatus");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-void CARDInit(void)
-{
-    MKDD_STUB("CARDInit");
-}
-
-s32 CARDMount(s32 chan, void * workArea, CARDCallback detachCallback)
-{
-    MKDD_STUB("CARDMount");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDOpen(s32 chan, const char * fileName, CARDFileInfo * fileInfo)
-{
-    MKDD_STUB("CARDOpen");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDProbeEx(s32 chan, s32 * memSize, s32 * sectorSize)
-{
-    MKDD_STUB("CARDProbeEx");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDRead(CARDFileInfo * fileInfo, void * addr, s32 length, s32 offset)
-{
-    MKDD_STUB("CARDRead");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDRename(s32 chan, const char * oldName, const char * newName)
-{
-    MKDD_STUB("CARDRename");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDSetStatus(s32 chan, s32 fileNo, CARDStat * stat)
-{
-    MKDD_STUB("CARDSetStatus");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDUnmount(s32 chan)
-{
-    MKDD_STUB("CARDUnmount");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
-s32 CARDWrite(CARDFileInfo * fileInfo, const void * addr, s32 length, s32 offset)
-{
-    MKDD_STUB("CARDWrite");
-    { s32 r; __builtin_memset(&r, 0, sizeof r); return r; }
-}
-
 s32 EXIGetType(s32 chan, u32 dev, u32 * type)
 {
     MKDD_STUB("EXIGetType");
@@ -135,12 +28,6 @@ void OSRegisterResetFunction(OSResetFunctionInfo * func)
 void OSRegisterVersion(const char * id)
 {
     MKDD_STUB("OSRegisterVersion");
-}
-
-u32 SIProbe(s32 chan)
-{
-    MKDD_STUB("SIProbe");
-    { u32 r; __builtin_memset(&r, 0, sizeof r); return r; }
 }
 
 s32 SOBind(s32 s, u8 * addr)

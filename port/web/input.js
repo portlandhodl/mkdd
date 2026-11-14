@@ -73,9 +73,8 @@
 
   let send = null;
   function frame() {
-    if (!send && typeof Module !== 'undefined' && Module.calledRun && Module.cwrap) {
-      send = Module.cwrap('port_pad_set', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']);
-    }
+    // index.html sets portReady when the runtime is up (Module.calledRun is not exposed).
+    if (!send && typeof Module !== 'undefined' && Module.portReady) send = Module._port_pad_set;
     if (send) {
       const s = merge(readKeyboard(), readGamepad());
       send(0, s.button, clampS8(s.sx), clampS8(s.sy), clampS8(s.cx), clampS8(s.cy), s.tl, s.tr);

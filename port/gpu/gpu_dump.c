@@ -19,7 +19,7 @@
 
 #define EFB_W 640
 #define EFB_H 528
-#define DEFAULT_DIR "/tmp/claude-1000/-home-qrsnap-git-mkdd/a50c98e4-ba3a-45d8-b783-aaa5d5c99e18/scratchpad/frames"
+#define DEFAULT_DIR "build/port/frames"
 
 EM_JS(char *, gpu_js_env_str, (const char *name), {
     var n = UTF8ToString(name);

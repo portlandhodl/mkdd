@@ -1,6 +1,7 @@
 // Headless Chrome smoke test for the web port.
 //
 //   MKDD_ISO=/path/to/GM4E01.iso node port/web/smoke.mjs [seconds] [query]
+// (MKDD_SHOTS="15,40" timed canvas captures, MKDD_KEYS="12:Enter" key presses)
 // Serves build/port/web, picks the disc image through the page's file input
 // (the file stays local), presses Start, and after `seconds` (default 40) writes
 // the page log and a screenshot to build/port/smoke/. Query defaults to "fast=1".
@@ -82,9 +83,17 @@ await waitFor(() => evaluate("!document.getElementById('start').disabled"), "sta
 await evaluate("document.getElementById('start').click(); true");
 
 const shots = (process.env.MKDD_SHOTS || "").split(",").filter(Boolean).map(Number).sort((a, b) => a - b);
+// MKDD_KEYS="12:Enter,16:KeyX": hold a key (KeyboardEvent.code) for 300 ms at that second.
+const keys = (process.env.MKDD_KEYS || "").split(",").filter(Boolean)
+  .map((k) => { const [t, code] = k.split(":"); return { t: Number(t), code }; }).sort((a, b) => a.t - b.t);
+const key = (type, code) => evaluate(`dispatchEvent(new KeyboardEvent('${type}', { code: '${code}' })); true`);
 const t0 = Date.now();
 while (Date.now() - t0 < seconds * 1000) {
   await delay(250);
+  while (keys.length && Date.now() - t0 >= keys[0].t * 1000) {
+    const { code } = keys.shift();
+    await key("keydown", code); await delay(300); await key("keyup", code);
+  }
   while (shots.length && Date.now() - t0 >= shots[0] * 1000) {
     const s = shots.shift();
     const clip = await evaluate("(() => { const r = document.getElementById('screen').getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height, scale: 1 }; })()");
