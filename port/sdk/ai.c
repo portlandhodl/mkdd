@@ -3,8 +3,10 @@
  * the DMA interrupt (AIRegisterDMACallback) fires at every block start, and a
  * finished block goes to the host: a WAV file under node (MKDD_AUDIO_WAV=path)
  * and Module.audioPush in the browser (port/web/audio.js). Block periods are
- * paced by wall-clock time, like the VI retrace. MKDD_NO_AUDIO=1 keeps the DMA
- * (and with it the audio thread) stopped.
+ * paced by wall-clock time, like the VI retrace. MKDD_NO_AUDIO=1 only drops the
+ * output: the DMA, the audio thread and the DSP keep running, since sounds are
+ * only released once the DSP has played them (a stopped audio thread leaves the
+ * JAISe/JAISeq pools exhausted).
  *
  * Buffer format, as JASDriver::readDspBuffer writes it: s16 frames of
  * (right, left) in CPU (host) byte order. */
@@ -21,6 +23,10 @@ static BOOL sDmaEnabled;
 static u32 sDspRate;
 static OSAlarm sAlarm;
 static OSTime sNextBlock; /* end of the block being played */
+static BOOL sDmaFresh;    /* AIInitDMA since the last block started */
+static int sMute;         /* MKDD_NO_AUDIO */
+static int sDebug;        /* MKDD_DSP_DEBUG: report blocks the game did not refill in time */
+static u32 sBlocks, sRepeats, sResyncs;
 
 /* ---- host output ---- */
 
@@ -68,13 +74,23 @@ EM_JS(void, port_js_audio_push, (const s16 *lr, int frames), {
         Module.audioPush(HEAP16.subarray(lr >> 1, (lr >> 1) + frames * 2));
 });
 
+/* MKDD_DSP_DEBUG>=4 with MKDD_DSP_DUMP=path: raw DSP output, before the AI */
+EM_JS(void, port_dsp_dbg_dump, (const s16 *l, const s16 *r, int n), {
+    if (typeof process === 'undefined' || !process.env.MKDD_DSP_DUMP) return;
+    var fs = require('fs');
+    if (!Module.dspDumpFd) Module.dspDumpFd = fs.openSync(process.env.MKDD_DSP_DUMP, 'w');
+    var b = Buffer.alloc(n * 4);
+    for (var i = 0; i < n; i++) { b.writeInt16LE(HEAP16[(l >> 1) + i], i * 4); b.writeInt16LE(HEAP16[(r >> 1) + i], i * 4 + 2); }
+    fs.writeSync(Module.dspDumpFd, b);
+});
+
 static int sWav = -1;
 
 static void output_block(const s16 *rl, u32 frames)
 {
     static s16 lr[4096 * 2];
     u32 i;
-    if (!rl || !frames)
+    if (!rl || !frames || sMute)
         return;
     if (frames > 4096)
         frames = 4096;
@@ -101,6 +117,14 @@ static OSTime block_ticks(u32 length)
 
 static void block_start(void)
 {
+    sBlocks++;
+    if (!sDmaFresh)
+        sRepeats++;
+    sDmaFresh = FALSE;
+    if (sDebug && sBlocks % 2000 == 0) {
+        OSReport("[ai] %u blocks: %u replayed (audio thread late), %u host stalls\n", sBlocks, sRepeats, sResyncs);
+        sRepeats = sResyncs = 0;
+    }
     sPlayStart = sDmaStart;
     sPlayLength = sDmaLength;
     sNextBlock += block_ticks(sPlayLength);
@@ -116,8 +140,10 @@ static void dma_alarm(OSAlarm *alarm, OSContext *context)
     if (!sDmaEnabled)
         return;
     output_block((const s16 *)(uintptr_t)sPlayStart, sPlayLength / 4);
-    if (now - sNextBlock > PORT_TICKS_PER_SEC / 10)
+    if (now - sNextBlock > PORT_TICKS_PER_SEC / 10) {
         sNextBlock = now; /* the host stalled: resynchronise instead of bursting */
+        sResyncs++;
+    }
     block_start();
     {
         OSTime wait = sNextBlock - now_ticks();
@@ -151,6 +177,7 @@ void AIInitDMA(u32 start_addr, u32 length)
 {
     sDmaStart = start_addr;
     sDmaLength = length;
+    sDmaFresh = TRUE;
 }
 
 AIDCallback AIRegisterDMACallback(AIDCallback callback)
@@ -162,9 +189,11 @@ AIDCallback AIRegisterDMACallback(AIDCallback callback)
 
 void AIStartDMA(void)
 {
-    if (sDmaEnabled || port_env("MKDD_NO_AUDIO"))
+    if (sDmaEnabled)
         return;
+    sMute = port_env("MKDD_NO_AUDIO");
     sDmaEnabled = TRUE;
+    sDebug = port_env("MKDD_DSP_DEBUG");
     port_defer(dma_first, NULL, NULL); /* the first block starts (and interrupts) at once */
 }
 
