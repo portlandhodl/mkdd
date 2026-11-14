@@ -72,14 +72,80 @@ const char *port_disc_root(void)
     return sRoot;
 }
 
+/* Browser reads without suspending the whole program: start the File read,
+ * and let only the calling thread wait for it (port_dvd_poll wakes it), as a
+ * drive read blocks only its caller on hardware. With EM_ASYNC_JS every read
+ * (audio streams, loads) stalled all threads, rendering included, until the
+ * browser returned the data. */
+EM_JS(int, port_js_disc_read_start, (u32 off, u32 len, u8 *dst), {
+    var r = Module.portDiscReads || (Module.portDiscReads = { next: 1, done: {} });
+    var id = r.next++;
+    var finish = function(n) {
+        r.done[id] = n;
+        if (r.wake) { var w = r.wake; r.wake = null; w(); }
+    };
+    Module.discFile.slice(off, off + len).arrayBuffer().then(function(ab) {
+        HEAPU8.set(new Uint8Array(ab), dst);
+        finish(ab.byteLength);
+    }, function(e) {
+        console.error('[dvd] read failed: ' + e);
+        finish(0);
+    });
+    return id;
+});
+EM_JS(int, port_js_disc_read_poll, (int id), {
+    var r = Module.portDiscReads;
+    if (!r || !(id in r.done)) return -1;
+    var n = r.done[id];
+    delete r.done[id];
+    return n;
+});
+
+/* Idle until `ms` passed or a disc read completed (one suspension, woken early). */
+EM_ASYNC_JS(void, port_js_dvd_idle, (int ms), {
+    await new Promise(function(res) {
+        var r = Module.portDiscReads || (Module.portDiscReads = { next: 1, done: {} });
+        var t = setTimeout(function() { r.wake = null; res(); }, ms);
+        r.wake = function() { clearTimeout(t); res(); };
+    });
+});
+
+/* Scheduler idle with reads in flight (os_thread.c). */
+void port_dvd_idle(unsigned ms) { port_js_dvd_idle((int)ms); }
+
+static OSThreadQueue sReadQueue;
+static int sReadsPending;
+
+int port_dvd_reads_pending(void) { return sReadsPending; }
+
+/* From port_poll: let the threads waiting for a read check it. */
+void port_dvd_poll(void)
+{
+    if (sReadsPending)
+        OSWakeupThread(&sReadQueue);
+}
+
 /* Read from the disc image. Returns bytes read. */
 static u32 image_read(u32 off, u32 len, void *dst)
 {
+    int id, n;
     if (sImageFile) {
         fseek(sImageFile, (long)off, SEEK_SET);
         return (u32)fread(dst, 1, len, sImageFile);
     }
-    return (u32)port_js_disc_read(off, len, (u8 *)dst);
+    static int blocking = -1;
+    if (blocking < 0)
+        blocking = port_env("MKDD_DVD_BLOCKING"); /* the old behaviour, for comparison */
+    if (port_perf_enabled)
+        port_perf_add(PERF_READS, 1);
+    if (blocking || !port_thread_can_wait())
+        return (u32)port_js_disc_read(off, len, (u8 *)dst);
+    id = port_js_disc_read_start(off, len, (u8 *)dst);
+    sReadsPending++;
+    while ((n = port_js_disc_read_poll(id)) < 0)
+        OSSleepThread(&sReadQueue);
+    sReadsPending--;
+    return (u32)n;
 }
 
 static u32 be32(const u8 *p) { return (u32)p[0] << 24 | (u32)p[1] << 16 | (u32)p[2] << 8 | p[3]; }
@@ -183,6 +249,7 @@ void DVDInit(void)
     const char *root;
     if (sNumEntries)
         return;
+    OSInitThreadQueue(&sReadQueue);
     root = port_disc_root();
     if (port_js_has_disc_file()) {
         sImage = 1;
@@ -320,12 +387,20 @@ static void load_converted(Entry *e)
         e->convState = 2;
         return;
     }
-    raw = (u8 *)malloc(e->rawSize ? e->rawSize : 1);
-    raw_read(e, 0, e->rawSize, raw);
-    e->conv = port_conv_file(e->name, raw, e->rawSize, &outSize);
-    free(raw);
-    e->size = outSize;
-    e->convState = 1;
+    {
+        double t0 = port_perf_enabled ? port_perf_now() : 0, t1 = 0;
+        raw = (u8 *)malloc(e->rawSize ? e->rawSize : 1);
+        raw_read(e, 0, e->rawSize, raw);
+        if (port_perf_enabled)
+            t1 = port_perf_now();
+        e->conv = port_conv_file(e->name, raw, e->rawSize, &outSize);
+        free(raw);
+        e->size = outSize;
+        e->convState = 1;
+        if (port_perf_enabled)
+            fprintf(stderr, "[perf] dvd: %s %u -> %u bytes: read %.1f ms, convert %.1f ms\n", e->name, e->rawSize, outSize,
+                    t1 - t0, port_perf_now() - t1);
+    }
 }
 
 BOOL DVDFastOpen(s32 entrynum, DVDFileInfo *fi)
@@ -333,7 +408,13 @@ BOOL DVDFastOpen(s32 entrynum, DVDFileInfo *fi)
     DVDInit();
     if (entrynum < 0 || entrynum >= sNumEntries || sEntries[entrynum].isDir)
         return FALSE;
-    load_converted(&sEntries[entrynum]);
+    if (port_perf_enabled) {
+        double t0 = port_perf_now();
+        load_converted(&sEntries[entrynum]);
+        port_perf_add(PERF_DVD, port_perf_now() - t0);
+    } else {
+        load_converted(&sEntries[entrynum]);
+    }
     if (sEntries[entrynum].conv)
         sEntries[entrynum].convOpen++;
     memset(fi, 0, sizeof *fi);
@@ -367,7 +448,20 @@ BOOL DVDClose(DVDFileInfo *fi)
     return TRUE;
 }
 
+static s32 read_entry_(DVDFileInfo *fi, void *addr, s32 length, s32 offset);
 static s32 read_entry(DVDFileInfo *fi, void *addr, s32 length, s32 offset)
+{
+    double t0;
+    s32 r;
+    if (!port_perf_enabled)
+        return read_entry_(fi, addr, length, offset);
+    t0 = port_perf_now();
+    r = read_entry_(fi, addr, length, offset);
+    port_perf_add(PERF_DVD, port_perf_now() - t0);
+    return r;
+}
+
+static s32 read_entry_(DVDFileInfo *fi, void *addr, s32 length, s32 offset)
 {
     Entry *e = &sEntries[fi->startAddr];
     u32 got;

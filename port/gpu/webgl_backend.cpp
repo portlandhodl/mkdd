@@ -666,12 +666,17 @@ static void be_draw(void *ctx, const GpuRegs *regs, int prim, const GpuVertex *v
 {
     (void)ctx;
     if (!sReady || !count) return;
-    capture(&sTmpSnap, regs);
-    if (!sSnapValid || sStagePrim != prim || memcmp(&sTmpSnap, &sSnap, sizeof sSnap) != 0) {
-        flush();
-        sSnap = sTmpSnap;
-        sSnapValid = 1;
-        sStagePrim = prim;
+    /* the register state is unchanged since the last draw: skip the snapshot */
+    static uint32_t snapSerial;
+    if (!sSnapValid || sStagePrim != prim || snapSerial != gpu_state_serial) {
+        capture(&sTmpSnap, regs);
+        if (!sSnapValid || sStagePrim != prim || memcmp(&sTmpSnap, &sSnap, sizeof sSnap) != 0) {
+            flush();
+            sSnap = sTmpSnap;
+            sSnapValid = 1;
+            sStagePrim = prim;
+        }
+        snapSerial = gpu_state_serial;
     }
     uint32_t unit = prim == GPU_TRIANGLES ? 3 : prim == GPU_LINES ? 2 : 1;
     count -= count % unit;

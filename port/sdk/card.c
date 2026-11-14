@@ -162,12 +162,28 @@ static void mkdirs_for(const char *path)
     }
 }
 
+static int sSavePending;
+
+/* Browser: hand the image over once per batch of changes (from the next poll),
+ * not once per CARDWrite: each hand-over copies the whole image out of the heap. */
+static void card_save_deferred(void *a, void *b)
+{
+    (void)a;
+    (void)b;
+    sSavePending = 0;
+    if (sImage)
+        port_js_card_browser_save(sImage, sSize);
+}
+
 static void card_save(void)
 {
     if (!sImage)
         return;
     if (!port_js_card_is_node()) {
-        port_js_card_browser_save(sImage, sSize);
+        if (!sSavePending) {
+            sSavePending = 1;
+            port_defer(card_save_deferred, NULL, NULL);
+        }
         return;
     }
     char tmp[540];

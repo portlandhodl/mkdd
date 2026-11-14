@@ -44,10 +44,44 @@
   const params = new URLSearchParams(location.search);
   let discFile = null;
 
+  // The log panel is updated at most a few times a second, one text node per
+  // update, with repeated lines folded: rewriting the whole panel per line made
+  // a burst of game warnings stall the main thread (and with it the game).
+  const LOG_KEEP = 1500, LOG_CHUNKS = 200;
+  let logQueue = [], logLast = null, logRepeat = 0, logTimer = 0, logSkipped = 0;
+  function logFlushRepeat() {
+    if (logRepeat > 0) logQueue.push(`  (last line repeated ${logRepeat} more time${logRepeat > 1 ? 's' : ''})`);
+    logRepeat = 0;
+  }
+  function logFlush() {
+    logTimer = 0;
+    logFlushRepeat();
+    logLast = null;
+    if (!logQueue.length) return;
+    let lines = logQueue;
+    logQueue = [];
+    if (lines.length > LOG_KEEP) {
+      logSkipped += lines.length - LOG_KEEP;
+      lines = lines.slice(-LOG_KEEP);
+    }
+    if (logSkipped) {
+      lines.unshift(`(${logSkipped} lines not shown)`);
+      logSkipped = 0;
+    }
+    const stick = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 4;
+    logEl.appendChild(document.createTextNode(lines.join('\n') + '\n'));
+    while (logEl.childNodes.length > LOG_CHUNKS) logEl.removeChild(logEl.firstChild);
+    if (stick) logEl.scrollTop = logEl.scrollHeight;
+  }
   function log(text) {
-    logEl.textContent += text + '\n';
-    if (logEl.textContent.length > 200000) logEl.textContent = logEl.textContent.slice(-100000);
-    logEl.scrollTop = logEl.scrollHeight;
+    if (text === logLast) logRepeat++;
+    else {
+      logFlushRepeat();
+      logLast = text;
+      logQueue.push(text);
+      if (logQueue.length > 4 * LOG_KEEP) { logSkipped += logQueue.length - LOG_KEEP; logQueue = logQueue.slice(-LOG_KEEP); }
+    }
+    if (!logTimer) logTimer = setTimeout(logFlush, 250);
   }
 
   // Remember the chosen disc image and the memory card between visits (browser-local IndexedDB).
@@ -128,6 +162,12 @@
   if (params.has('wgldebug')) env.MKDD_WGL_DEBUG = params.get('wgldebug');
   if (params.has('wgltrace')) env.MKDD_WGL_TRACE = params.get('wgltrace');
   if (params.has('dff')) { env.MKDD_DFF = '/mkdd.dff'; env.MKDD_DFF_FRAMES = params.get('dff'); }
+  // ?perf=1 logs frame-time accounting every 600 retraces; ?autopilot=1 lets the
+  // CPU drive player 1's kart (testing); ?pad=... is MKDD_PAD (port/sdk/vi_pad.c)
+  if (params.has('perf')) env.MKDD_PERF = params.get('perf') || '1';
+  if (params.has('autopilot')) env.MKDD_AUTOPILOT = '1';
+  if (params.has('pad')) env.MKDD_PAD = params.get('pad');
+  for (const kv of params.getAll('env')) { const i = kv.indexOf('='); if (i > 0) env[kv.slice(0, i)] = kv.slice(i + 1); }
 
   var Module = {
     canvas: document.getElementById('screen'),

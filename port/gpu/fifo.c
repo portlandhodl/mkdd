@@ -111,12 +111,16 @@ static void cp_write(uint32_t reg, uint32_t v)
         gpu_vtx_invalidate();
 }
 
+uint32_t gpu_state_serial;
+
 static void xf_write(uint32_t addr, uint32_t v)
 {
-    if (addr < 0x800)
+    if (addr < 0x800) {
         memcpy(&gpu_r.xfmem[addr], &v, 4);
-    else if (addr >= 0x1000 && addr < 0x1000 + sizeof gpu_r.xf / sizeof gpu_r.xf[0])
+    } else if (addr >= 0x1000 && addr < 0x1000 + sizeof gpu_r.xf / sizeof gpu_r.xf[0]) {
         gpu_r.xf[addr - 0x1000] = v;
+        gpu_state_serial++;
+    }
 }
 
 static void tlut_load(uint32_t v)
@@ -138,6 +142,7 @@ static void tlut_load(uint32_t v)
 static void bp_write(uint32_t word)
 {
     uint32_t reg = word >> 24, v = word & 0xFFFFFF;
+    gpu_state_serial++;
     if (reg == 0xFE) {
         gpu_r.bp[0xFE] = v;
         sBpMask = v;
@@ -369,20 +374,40 @@ void port_gx_w8(u8 v)
     fifo_put(v);
 }
 
+/* A 16/32-bit store is one write-gather unit: append it whole, then run what
+ * became complete (the CPU cannot observe the GPU between its bytes). */
 void port_gx_w16(u16 v)
 {
     gpu_cur.fifoBytes += 2;
-    fifo_put((u8)(v >> 8));
-    fifo_put((u8)v);
+    if (sCap - sWr < 2) {
+        fifo_put((u8)(v >> 8));
+        fifo_put((u8)v);
+        return;
+    }
+    sBuf[sWr] = (u8)(v >> 8);
+    sBuf[sWr + 1] = (u8)v;
+    sWr += 2;
+    if (sWr - sRd >= sNeed)
+        pump();
 }
 
 void port_gx_w32(u32 v)
 {
     gpu_cur.fifoBytes += 4;
-    fifo_put((u8)(v >> 24));
-    fifo_put((u8)(v >> 16));
-    fifo_put((u8)(v >> 8));
-    fifo_put((u8)v);
+    if (sCap - sWr < 4) {
+        fifo_put((u8)(v >> 24));
+        fifo_put((u8)(v >> 16));
+        fifo_put((u8)(v >> 8));
+        fifo_put((u8)v);
+        return;
+    }
+    sBuf[sWr] = (u8)(v >> 24);
+    sBuf[sWr + 1] = (u8)(v >> 16);
+    sBuf[sWr + 2] = (u8)(v >> 8);
+    sBuf[sWr + 3] = (u8)v;
+    sWr += 4;
+    if (sWr - sRd >= sNeed)
+        pump();
 }
 
 void port_gx_wf32(f32 v)

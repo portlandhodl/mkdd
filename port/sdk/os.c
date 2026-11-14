@@ -122,13 +122,72 @@ BOOL OSRestoreInterrupts(BOOL level)
     return old;
 }
 
+/* OSReport output is assembled into whole lines (the game reports one line in
+ * several calls, e.g. JUTAssertion's "WARNING [file:line] " + text + "\n"), and
+ * repeats are folded: a game warning can fire every frame, and each line that
+ * reaches the browser's log costs far more than the frame budget allows. A line
+ * identical to the previous one is counted, not printed; past REPORT_BURST lines
+ * within a second the rest are counted and summarised once per second. */
+#define REPORT_BURST 100
+static char sReportLine[512], sReportLast[512];
+static int sReportLen;
+static u32 sReportRepeat, sReportSuppressed, sReportInSecond;
+static double sReportSecond;
+
+static void report_summary(void)
+{
+    if (sReportRepeat)
+        printf("  (previous line repeated %u more time%s)\n", sReportRepeat, sReportRepeat > 1 ? "s" : "");
+    if (sReportSuppressed)
+        printf("  (%u more report lines not shown)\n", sReportSuppressed);
+    if (sReportRepeat || sReportSuppressed)
+        fflush(stdout);
+    sReportRepeat = sReportSuppressed = 0;
+}
+
+/* Called once per retrace: report what was folded since the last line. */
+void port_report_tick(void)
+{
+    double now = emscripten_get_now();
+    if (now - sReportSecond >= 1000.0) {
+        report_summary();
+        sReportSecond = now;
+        sReportInSecond = 0;
+    }
+}
+
+static void report_line(void)
+{
+    sReportLine[sReportLen] = 0;
+    if (!strcmp(sReportLine, sReportLast)) {
+        sReportRepeat++;
+    } else if (sReportInSecond >= REPORT_BURST) {
+        sReportSuppressed++;
+        sReportLast[0] = 0;
+    } else {
+        report_summary();
+        sReportInSecond++;
+        printf("%s\n", sReportLine);
+        fflush(stdout);
+        memcpy(sReportLast, sReportLine, (size_t)sReportLen + 1);
+    }
+    sReportLen = 0;
+}
+
 void OSReport(const char *msg, ...)
 {
+    char buf[1024];
+    const char *p;
     va_list ap;
     va_start(ap, msg);
-    vprintf(msg, ap);
+    vsnprintf(buf, sizeof buf, msg, ap);
     va_end(ap);
-    fflush(stdout);
+    for (p = buf; *p; p++) {
+        if (*p == '\n')
+            report_line();
+        else if (sReportLen < (int)sizeof sReportLine - 1)
+            sReportLine[sReportLen++] = *p;
+    }
 }
 
 void OSPanic(const char *file, int line, const char *msg, ...)

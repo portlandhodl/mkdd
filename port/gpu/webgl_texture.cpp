@@ -202,8 +202,12 @@ void wgl_tex_register_copy(uint32_t addr, int fmt, int w, int h, GLuint tex)
 
 void wgl_tex_new_frame(void)
 {
-    if (sTexCount > TEX_MAX_LIVE) evict_old();
+    /* also every ~10 s: textures of a course left behind would otherwise stay
+     * (GPU memory) until TEX_MAX_LIVE of them pile up over several races */
+    if (sTexCount > TEX_MAX_LIVE || (wgl_frame % 600 == 0 && sTexCount > 256)) evict_old();
 }
+
+extern "C" int gpu_webgl_live_textures(void) { return sTexCount; }
 
 static void set_sampler(int unit, uint32_t mode0, uint32_t mode1, int levels)
 {

@@ -89,6 +89,9 @@ typedef struct GpuBackend {
 void gpu_init(void);
 void gpu_set_backend(const GpuBackend *backend); /* NULL = null backend (counts only) */
 const GpuRegs *gpu_regs(void);
+/* Bumped by every BP write and XF register (0x1000+) write: while it is
+ * unchanged, the raster state in GpuRegs (bp, tevColor/tevKonst, xf) is too. */
+extern uint32_t gpu_state_serial;
 uint8_t *gpu_tmem(void); /* 1 MB texture memory, indexed by TMEM address. A TLUT load (BP 0x64
                             source, BP 0x65) lands at 0x80000 + ((bp65 & 0x3FF) << 9), so a texture's
                             palette (BP 0x98-0x9B / 0xB8-0xBB, offset in bits 0-9) is at

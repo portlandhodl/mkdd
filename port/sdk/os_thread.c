@@ -34,6 +34,7 @@ static u32 sSeq;
 static int sInIrq;
 static OSSwitchThreadCallback sSwitchCallback;
 static OSAlarm *sAlarms;
+static double sLastHostYield; /* last return to the host event loop */
 
 typedef struct Deferred {
     void (*fn)(void *, void *);
@@ -198,10 +199,18 @@ static void reschedule(void)
             for (a = sAlarms; a; a = a->next)
                 if (a->fire < due)
                     due = a->fire;
-            if (due > now)
+            double t0 = port_perf_enabled ? emscripten_get_now() : 0;
+            if (port_dvd_reads_pending()) /* a disc read completes from the browser's event loop */
+                port_dvd_idle(due > now ? (unsigned)((due - now) / (PORT_TICKS_PER_SEC / 1000)) + 1 : 0);
+            else if (due > now)
                 emscripten_sleep((unsigned)((due - now) / (PORT_TICKS_PER_SEC / 1000)) + 1);
             else
                 emscripten_sleep(0);
+            sLastHostYield = emscripten_get_now();
+            if (port_perf_enabled) {
+                port_perf_add(PERF_IDLE, sLastHostYield - t0);
+                port_perf_add(PERF_IDLES, 1);
+            }
         }
         port_poll();
     }
@@ -250,6 +259,24 @@ void port_defer(void (*fn)(void *, void *), void *a, void *b)
 
 void port_heap_check(const char *where);
 
+int port_thread_can_wait(void) { return sCurrent && sCurPort && !sInIrq; }
+
+
+/* A thread waits for a browser disc read, which completes only from the event
+ * loop: if the others keep the CPU (a busy-wait loop never idles the
+ * scheduler), return to the event loop now and then so the read can finish. */
+static void yield_for_reads(void)
+{
+    double now;
+    if (!port_dvd_reads_pending())
+        return;
+    now = emscripten_get_now();
+    if (now - sLastHostYield < 4.0)
+        return;
+    port_dvd_idle(0);
+    sLastHostYield = emscripten_get_now();
+}
+
 void port_poll(void)
 {
     OSTime now;
@@ -264,6 +291,7 @@ void port_poll(void)
     }
     if (sInIrq)
         return;
+    yield_for_reads();
     port_heap_check(NULL);
     sInIrq = 1;
     while (sDeferHead != sDeferTail) {
@@ -271,6 +299,7 @@ void port_poll(void)
         sDeferHead = (sDeferHead + 1) % 256;
         d.fn(d.a, d.b);
     }
+    port_dvd_poll();
     now = (OSTime)(emscripten_get_now() * (PORT_TICKS_PER_SEC / 1000));
     for (a = sAlarms; a;) {
         OSAlarm *next = a->next;
