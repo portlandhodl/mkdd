@@ -26,6 +26,12 @@ extern "C" uint8_t *gpu_tmem(void) { return sTmem; }
 static GpuRegs R;
 static const GpuBackend *B;
 
+/* front-end symbols the backend refers to (debug switches, FIFO log captures) */
+extern "C" int port_env(const char *name) { (void)name; return 0; }
+extern "C" const GpuRegs *gpu_regs(void) { return &R; }
+extern "C" int gpu_fifolog_capture_index(void) { return -1; }
+extern "C" const char *gpu_fifolog_path(void) { return ""; }
+
 static void bp(int reg, uint32_t v)
 {
     R.bp[reg] = v & 0xFFFFFF;

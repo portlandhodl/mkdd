@@ -40,7 +40,7 @@ int wgl_debug;
 
 /* ---- key ---- */
 
-void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode)
+void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode, int quant)
 {
     const uint32_t *bp = s->bp;
     int ntev = (int)wgl_bits(bp[0x00], 10, 4) + 1;
@@ -49,7 +49,7 @@ void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode)
     uint32_t *w = key->w;
     int n = 0;
     w[n++] = (uint32_t)ntev | (uint32_t)nind << 4 | (uint32_t)alphaOut << 8 | (uint32_t)srcMode << 10 |
-             wgl_bits(bp[0xF1], 20, 4) << 16 | wgl_bits(bp[0xF5], 0, 4) << 20;
+             wgl_bits(bp[0xF1], 20, 4) << 16 | wgl_bits(bp[0xF5], 0, 4) << 20 | (uint32_t)quant << 24;
     w[n++] = wgl_bits(bp[0xF3], 16, 8);
     uint32_t swap = 0;
     for (int i = 0; i < 8; i++) swap |= wgl_bits(bp[0xF6 + i], 0, 4) << (i * 4);
@@ -117,6 +117,7 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
     int alphaOut = (int)((w[0] >> 8) & 3), srcMode = (int)((w[0] >> 10) & 3);
     int fogSel = (int)((w[0] >> 16) & 15);
     int ztex = (int)((w[0] >> 20) & 15);
+    int quant = (int)((w[0] >> 24) & 3);
     uint32_t atest = w[1], swap = w[2], iref = w[3];
     const uint32_t *stw = w + 4;
     uint32_t maps = 0, coords = 0;
@@ -141,18 +142,23 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
     for (int i = 0; i < 8; i++)
         if (maps & (1u << i)) emit("uniform sampler2D s%d;\n", i);
     emit("uniform ivec4 u_reg[4];\nuniform ivec4 u_kon[4];\nuniform vec2 u_tsize[8];\nuniform vec2 u_su[8];\n"
-         "uniform float u_lodbias[8];\nuniform ivec2 u_aref;\nuniform vec4 u_fog;\nuniform vec3 u_fogcolor;\n"
+         "uniform float u_lodbias[8];\nuniform ivec2 u_aref;\nuniform vec4 u_fog;\nuniform ivec4 u_fogi;\nuniform float u_fogk[10];\n"
+         "uniform vec3 u_fogcolor;\n"
          "uniform int u_dstalpha;\nuniform vec3 u_indm[6];\nuniform vec2 u_indss[4];\nuniform vec3 u_iscale;\n"
          "uniform int u_zbias;\n");
     emit("out vec4 o_col;\n");
     emit("ivec3 lerp3(ivec3 a, ivec3 b, ivec3 c) { a &= 255; b &= 255; c &= 255; c += c >> 7; return a * (256 - c) + b * c; }\n"
          "int lerp1(int a, int b, int c) { a &= 255; b &= 255; c &= 255; c += c >> 7; return a * (256 - c) + b * c; }\n"
+         /* (d + bias) op lerp, scaled; the scale goes inside the lerp, which is rounded
+          * (+128 add, +127 subtract) except when dividing by 2 (as Dolphin) */
          "ivec3 tev3(ivec3 d, ivec3 l, int sub, int bias, int sh) {\n"
-         "  ivec3 v = (d << 8) + (sub != 0 ? -l : l) + ivec3(bias);\n"
-         "  if (sh == 3) return (v + 256) >> 9;\n  return ((v << sh) + 128) >> 8; }\n"
+         "  if (sh == 3) { ivec3 r = l >> 8; return ((d + bias) + (sub != 0 ? -r : r)) >> 1; }\n"
+         "  ivec3 r = ((l << sh) + (sub != 0 ? 127 : 128)) >> 8;\n"
+         "  return ((d + bias) << sh) + (sub != 0 ? -r : r); }\n"
          "int tev1(int d, int l, int sub, int bias, int sh) {\n"
-         "  int v = (d << 8) + (sub != 0 ? -l : l) + bias;\n"
-         "  if (sh == 3) return (v + 256) >> 9;\n  return ((v << sh) + 128) >> 8; }\n"
+         "  if (sh == 3) { int r = l >> 8; return ((d + bias) + (sub != 0 ? -r : r)) >> 1; }\n"
+         "  int r = ((l << sh) + (sub != 0 ? 127 : 128)) >> 8;\n"
+         "  return ((d + bias) << sh) + (sub != 0 ? -r : r); }\n"
          "int c16(ivec3 v) { v &= 255; return v.r | (v.g << 8); }\n"
          "int c24(ivec3 v) { v &= 255; return v.r | (v.g << 8) | (v.b << 16); }\n"
          "ivec4 smp(sampler2D s, vec2 uv, float bias) { return ivec4(round(%s * 255.0)); }\n",
@@ -255,7 +261,7 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
                 break;
             }
         } else {
-            static const int biasv[3] = { 0, 128 << 8, -(128 << 8) };
+            static const int biasv[3] = { 0, 128, -128 };
             emit("    ivec3 cr = tev3(cd, lerp3(ca, cb, cc), %d, %d, %d);\n", csub, biasv[cbias], cscale);
         }
         emit("    %s.rgb = clamp(cr, %s);\n", kRegName[cdest], cclamp ? "0, 255" : "-1024, 1023");
@@ -275,7 +281,7 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
             default: emit("    int ar = ad + (((aa & 255) %s (ab & 255)) ? (ac & 255) : 0);\n", op); break;
             }
         } else {
-            static const int biasv[3] = { 0, 128 << 8, -(128 << 8) };
+            static const int biasv[3] = { 0, 128, -128 };
             emit("    int ar = tev1(ad, lerp1(aa, ab, ac), %d, %d, %d);\n", asub, biasv[abias], ascale);
         }
         emit("    %s.a = clamp(ar, %s);\n", kRegName[adest], aclamp ? "0, 255" : "-1024, 1023");
@@ -313,12 +319,22 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
             emit("  gl_FragDepth = clamp(float((%s + u_zbias) & 16777215) / 16777215.0, 0.0, 1.0);\n", zv);
     }
 
-    /* fog: u_fog = (A, B, C, ortho) */
-    int fsel = fogSel & 7;
+    /* fog, as Dolphin computes it (PixelShaderGen WriteFog): u_fog = (A, C, range centre,
+     * range width), u_fogi = (B magnitude, B shift, orthographic, range enabled).
+     * Key: bits 0-3 of fogSel are BP 0xF1 bits 20-23 (projection, then the function). */
+    int fsel = (fogSel >> 1) & 7;
     if (fsel >= 2) {
-        emit("  {\n    float z = gl_FragCoord.z;\n");
-        emit("    float ze = u_fog.w != 0.0 ? u_fog.x * z : u_fog.x / (u_fog.y - z);\n");
-        emit("    float f = clamp(ze - u_fog.z, 0.0, 1.0);\n");
+        emit("  {\n    int zc = clamp(int(gl_FragCoord.z * 16777216.0), 0, 16777215);\n");
+        emit("    float ze = u_fogi.z != 0 ? u_fog.x * float(zc) / 16777216.0\n"
+             "                           : (u_fog.x * 16777216.0) / float(u_fogi.x - (zc >> u_fogi.y));\n");
+        emit("    if (u_fogi.w != 0) {\n"
+             "      float off = 2.0 * (gl_FragCoord.x / u_fog.w) - 1.0 - u_fog.z;\n"
+             "      float fi = clamp(9.0 - abs(off) * 9.0, 0.0, 9.0);\n"
+             "      int il = int(fi);\n"
+             "      float k = mix(u_fogk[il], u_fogk[min(il + 1, 9)], fract(fi));\n"
+             "      ze *= sqrt(off * off + k * k) / k;\n"
+             "    }\n");
+        emit("    float f = clamp(ze - u_fog.y, 0.0, 1.0);\n");
         switch (fsel) {
         case 4: emit("    f = 1.0 - exp2(-8.0 * f);\n"); break;
         case 5: emit("    f = 1.0 - exp2(-8.0 * f * f);\n"); break;
@@ -327,7 +343,7 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
         default: break;
         }
         emit("    int fi = int(round(f * 256.0));\n");
-        emit("    o.rgb = (o.rgb * (256 - fi) + ivec3(round(u_fogcolor * 255.0)) * fi + 128) >> 8;\n  }\n");
+        emit("    o.rgb = (o.rgb * (256 - fi) + ivec3(round(u_fogcolor * 255.0)) * fi) >> 8;\n  }\n");
     }
 
     if (srcMode == WGL_SRC_INVERT) emit("  o.rgb = 255 - o.rgb; o.a = 255 - o.a;\n");
@@ -336,7 +352,10 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
     if ((wgl_debug & 8) && ntev && (stw[0] & 0x40))
         emit("  o = smp(s%d, tc%d / u_tsize[%d], 0.0); o.a = 255;\n", (int)(stw[0] & 7), (int)((stw[0] >> 3) & 7), (int)(stw[0] & 7));
     if ((wgl_debug & 4) && (coords & 1)) emit("  o = ivec4(ivec2(fract(tc0 / u_tsize[0]) * 255.0), 0, 255);\n");
-    emit("  o_col = vec4(o) / 255.0;\n}\n");
+    emit("  o_col = vec4(o) / 255.0;\n");
+    if (quant & 1) emit("  o_col.rgb = vec3(o.rgb >> 2) / 63.0;\n");
+    if (quant & 2) emit("  o_col.a = float(o.a >> 2) / 63.0;\n");
+    emit("}\n");
 
     *usedMaps = maps;
     *usedCoords = coords;
@@ -418,6 +437,8 @@ static int link_program(WglProgram *p, const WglKey *key)
     p->uAlphaRef = glGetUniformLocation(prog, "u_aref");
     p->uFog = glGetUniformLocation(prog, "u_fog");
     p->uFogColor = glGetUniformLocation(prog, "u_fogcolor");
+    p->uFogI = glGetUniformLocation(prog, "u_fogi");
+    p->uFogK = glGetUniformLocation(prog, "u_fogk");
     p->uDstAlpha = glGetUniformLocation(prog, "u_dstalpha");
     p->uIndM = glGetUniformLocation(prog, "u_indm");
     p->uIndSS = glGetUniformLocation(prog, "u_indss");

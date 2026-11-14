@@ -120,12 +120,14 @@
   loadDisc().then(f => { if (f && !discFile) setDisc(f); });
 
   // Environment switches for the port, from the URL: ?fast=1&threads=1
-  // (GPU debugging: ?wgltrace=N logs frame N's batches, ?wgldebug=bits, see webgl_tev.cpp)
+  // (GPU debugging: ?wgltrace=N logs frame N's batches, ?wgldebug=bits, see webgl_tev.cpp;
+  //  ?dff=start:count records a Dolphin FIFO log of those frames and offers it for download)
   const env = {};
   if (params.has('fast')) env.MKDD_FAST_MOVIE = '1';
   if (params.has('threads')) env.MKDD_THREADS = '1';
   if (params.has('wgldebug')) env.MKDD_WGL_DEBUG = params.get('wgldebug');
   if (params.has('wgltrace')) env.MKDD_WGL_TRACE = params.get('wgltrace');
+  if (params.has('dff')) { env.MKDD_DFF = '/mkdd.dff'; env.MKDD_DFF_FRAMES = params.get('dff'); }
 
   var Module = {
     canvas: document.getElementById('screen'),
@@ -146,6 +148,19 @@
     else { Module.cardImage = await loadCard(); Module.cardSave = cardSave; }
     statusEl.textContent = 'Running ' + discFile.name;
     Module.callMain([]);
+    if (env.MKDD_DFF) {
+      const poll = setInterval(() => {
+        let data;
+        try { data = Module.FS.readFile(env.MKDD_DFF); } catch (e) { return; }
+        clearInterval(poll);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([data]));
+        a.download = 'mkdd-' + env.MKDD_DFF_FRAMES.replace(':', '-') + '.dff';
+        a.textContent = 'FIFO log ready: ' + a.download + ' (' + (data.length / 1048576).toFixed(1) + ' MB)';
+        a.style.display = 'block';
+        logEl.parentNode.insertBefore(a, logEl);
+      }, 1000);
+    }
   });
 </script>
 <script src="mkdd.js"></script>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FIFO log player</title>
+<style>
+  body { margin: 0; background: #111214; color: #e6e6e6; font: 13px/1.4 ui-monospace, monospace; }
+  #screen { display: block; width: 640px; height: 480px; background: #000; }
+  #log { padding: 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="640" height="480"></canvas>
+<input type="file" id="pick" accept=".dff">
+<div id="log"></div>
+<script>
+  // Plays a Dolphin FIFO log with the port's GPU (pick a .dff). playDff(bytes, first, last)
+  // is the scripting entry point (dffplay.mjs); captures land in MEMFS /out/.
+  const logEl = document.getElementById('log');
+  const log = t => { logEl.textContent += t + '\n'; };
+  var Module = { canvas: document.getElementById('screen'), print: log, printErr: log, env: {},
+    onRuntimeInitialized() { Module.ready = true; } };
+  window.playDff = (bytes, first, last) => {
+    const p = Module._malloc(bytes.length);
+    Module.HEAPU8.set(bytes, p);
+    const out = Module.stringToNewUTF8('/out/cap');
+    try { Module.FS.mkdir('/out'); } catch (e) {}
+    const n = Module._dffplay(p, bytes.length, first, last, out);
+    Module._free(p);
+    Module._free(out);
+    return n;
+  };
+  document.getElementById('pick').addEventListener('change', async ev => {
+    const f = ev.target.files[0];
+    if (f) log('played ' + playDff(new Uint8Array(await f.arrayBuffer()), 0, -1) + ' frames');
+  });
+</script>
+<script src="dffplay.js"></script>
+</body>
+</html>

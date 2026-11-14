@@ -30,6 +30,7 @@ static int sInited;
 static int sStatsEnv;
 static uint32_t sPresents;
 static uint32_t sUnknownTotal;
+static int sXfbCopied; /* the command being executed copied to the XFB (FIFO log frames) */
 
 /* ---- backends ---- */
 
@@ -59,6 +60,8 @@ void gpu_init(void)
         gpu_backend = dump;
         gpu_xform_enabled = 1;
     }
+    gpu_fifolog_init();
+    gpu_fifolog_boot();
 }
 
 void gpu_set_backend(const GpuBackend *backend)
@@ -125,8 +128,11 @@ static void tlut_load(uint32_t v)
         return;
     if (bytes > sizeof sTmem - dst)
         bytes = sizeof sTmem - dst;
-    if (bytes && gpu_ram_ok(src, bytes))
+    if (bytes && gpu_ram_ok(src, bytes)) {
+        if (gpu_fifolog_on)
+            gpu_fifolog_tlut(src, bytes);
         memcpy(sTmem + dst, (const void *)(uintptr_t)src, bytes);
+    }
 }
 
 static void bp_write(uint32_t word)
@@ -159,6 +165,10 @@ static void bp_write(uint32_t word)
         break;
     case 0x52: /* PE_COPY_EXECUTE */
         gpu_cur.efbCopies++;
+        if (gpu_fifolog_wanted || gpu_fifolog_on) {
+            gpu_fifolog_efb_copy(&gpu_r, (v >> 14) & 1);
+            sXfbCopied |= (v >> 14) & 1;
+        }
         gpu_backend->efb_copy(gpu_backend->ctx, &gpu_r, (v >> 14) & 1, (v >> 11) & 1);
         break;
     case 0x65: /* TLUT load */
@@ -182,9 +192,14 @@ static void load_indexed(int array, uint32_t v)
     uint32_t i;
     if (!gpu_ram_ok(src, n * 4))
         return;
+    if (gpu_fifolog_on)
+        gpu_fifolog_indexed(src, n * 4);
     for (i = 0; i < n; i++) {
         uint32_t w;
-        memcpy(&w, (const uint8_t *)(uintptr_t)src + i * 4, 4); /* RAM: host byte order */
+        if (gpu_ram_be)
+            w = gpu_be32((const uint8_t *)(uintptr_t)src + i * 4);
+        else
+            memcpy(&w, (const uint8_t *)(uintptr_t)src + i * 4, 4); /* RAM: host byte order */
         xf_write(addr + i, w);
     }
 }
@@ -239,6 +254,8 @@ static uint32_t run(const uint8_t *p, uint32_t n, uint32_t *need, int depth)
             size = gpu_be32(c + 5);
             gpu_cur.displayLists++;
             if (depth < 8 && size && gpu_ram_ok(addr, size)) {
+                if (gpu_fifolog_on)
+                    gpu_fifolog_dl(addr, size);
                 used = run((const uint8_t *)(uintptr_t)addr, size, &dlNeed, depth + 1);
                 if (used != size)
                     gpu_cur.unknownOpcodes++; /* display list ends inside a command */
@@ -269,8 +286,13 @@ static uint32_t run(const uint8_t *p, uint32_t n, uint32_t *need, int depth)
                     goto partial;
                 gpu_cur.draws++;
                 gpu_cur.vertices += cnt;
-                if (cnt && gpu_xform_enabled)
+                if (cnt && gpu_xform_enabled) {
+                    if (gpu_fifolog_on)
+                        gpu_fifolog_draw_begin();
                     gpu_vtx_draw((op >> 3) & 7, op & 7, cnt, c + 3);
+                    if (gpu_fifolog_on)
+                        gpu_fifolog_draw_end();
+                }
             } else {
                 gpu_cur.unknownOpcodes++; /* desync: skip a byte and try again */
                 len = 1;
@@ -278,6 +300,14 @@ static uint32_t run(const uint8_t *p, uint32_t n, uint32_t *need, int depth)
             break;
         }
         gpu_cur.commands += op != 0;
+        if (depth == 0 && (gpu_fifolog_on || sXfbCopied)) {
+            if (gpu_fifolog_on)
+                gpu_fifolog_cmd(c, len);
+            if (sXfbCopied) {
+                sXfbCopied = 0;
+                gpu_fifolog_frame_end();
+            }
+        }
         i += len;
     }
     *need = 1;

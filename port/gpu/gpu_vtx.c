@@ -30,6 +30,10 @@ typedef struct VtxFmt {
 } VtxFmt;
 
 static VtxFmt sFmt[8];
+
+/* Nonzero when vertex arrays and indexed matrices in RAM are big-endian, as on
+ * the console (the FIFO log player, port/gpu/tools/dffplay.c). */
+int gpu_ram_be;
 static uint8_t sFmtValid;
 
 void gpu_vtx_invalidate(void) { sFmtValid = 0; }
@@ -187,10 +191,13 @@ typedef struct InVtx {
     float tex[8][2];
 } InVtx;
 
-static const uint8_t *array_elem(int array, uint32_t index, uint32_t bytes)
+/* `csize`: bytes per component in host order (1 = bytes, kept as they are) */
+static const uint8_t *array_elem(int array, uint32_t index, uint32_t bytes, uint32_t csize)
 {
     uint32_t addr = gpu_r.cp[0xA0 + array] + index * gpu_r.cp[0xB0 + array];
     static const uint8_t zero[64];
+    if (gpu_fifolog_on)
+        gpu_fifolog_array(array, index, bytes, csize);
     if (!gpu_ram_ok(addr, bytes))
         return zero;
     return (const uint8_t *)(uintptr_t)addr;
@@ -206,9 +213,9 @@ static uint32_t rd_attr(const Attr *a, int array, const uint8_t *p, float *out, 
         return a->comps * a->csize;
     } else {
         uint32_t idx = a->mode == VA_INDEX8 ? p[0] : gpu_be16(p);
-        const uint8_t *e = array_elem(array, idx, (uint32_t)comps * a->csize);
+        const uint8_t *e = array_elem(array, idx, (uint32_t)comps * a->csize, a->csize);
         for (k = 0; k < comps; k++)
-            out[k] = rd_host(e + k * a->csize, a->type) * a->scale;
+            out[k] = (gpu_ram_be ? rd_be(e + k * a->csize, a->type) : rd_host(e + k * a->csize, a->type)) * a->scale;
         return a->mode == VA_INDEX8 ? 1 : 2;
     }
 }
@@ -246,9 +253,10 @@ static void decode(const VtxFmt *f, const uint8_t *p, InVtx *v)
             float *dst[3] = {v->nrm, v->bin, v->tan};
             for (k = 0; k < 3; k++) {
                 uint32_t idx = f->nrm.mode == VA_INDEX8 ? p[0] : gpu_be16(p);
-                const uint8_t *e = array_elem(1, idx, 9u * f->nrm.csize) + 3 * k * f->nrm.csize;
+                const uint8_t *e = array_elem(1, idx, 9u * f->nrm.csize, f->nrm.csize) + 3 * k * f->nrm.csize;
                 for (j = 0; j < 3; j++)
-                    dst[k][j] = rd_host(e + j * f->nrm.csize, f->nrm.type) * f->nrm.scale;
+                    dst[k][j] = (gpu_ram_be ? rd_be(e + j * f->nrm.csize, f->nrm.type)
+                                            : rd_host(e + j * f->nrm.csize, f->nrm.type)) * f->nrm.scale;
                 p += f->nrm.mode == VA_INDEX8 ? 1 : 2;
             }
         }
@@ -261,7 +269,7 @@ static void decode(const VtxFmt *f, const uint8_t *p, InVtx *v)
             p += a->csize;
         } else if (a->mode) {
             uint32_t idx = a->mode == VA_INDEX8 ? p[0] : gpu_be16(p);
-            rd_color(v->col[i], array_elem(2 + i, idx, a->csize), a->type, 1);
+            rd_color(v->col[i], array_elem(2 + i, idx, a->csize, (a->type == 0 || a->type == 3) ? 2 : 1), a->type, !gpu_ram_be);
             p += a->mode == VA_INDEX8 ? 1 : 2;
         } else {
             v->col[i][0] = v->col[i][1] = v->col[i][2] = v->col[i][3] = 1;
@@ -358,7 +366,7 @@ static void light_chan(const XfState *s, uint32_t ctrl, int chan, int alpha, con
 {
     const float *mat = (ctrl & 1) ? vcol : s->matReg[chan];
     int c0 = alpha ? 3 : 0, c1 = alpha ? 4 : 3, c, l;
-    float acc[4];
+    int acc[4];
     uint32_t mask;
     int dfn, attn, spot;
 
@@ -370,54 +378,77 @@ static void light_chan(const XfState *s, uint32_t ctrl, int chan, int alpha, con
     {
         const float *amb = (ctrl & 0x40) ? vcol : s->ambReg[chan];
         for (c = c0; c < c1; c++)
-            acc[c] = amb[c];
+            acc[c] = (int)lrintf(amb[c] * 255.0f);
     }
     mask = ((ctrl >> 2) & 0xF) | (((ctrl >> 11) & 0xF) << 4);
     dfn = (ctrl >> 7) & 3;
     attn = (ctrl >> 9) & 1;
     spot = (ctrl >> 10) & 1;
+    /* Lighting as Dolphin models it (VideoCommon/LightingShaderGen.cpp). */
     for (l = 0; l < 8; l++) {
         const float *lp, *ld, *la, *lk;
-        float L[3], dist2, dist, diff, att = 1.0f;
+        float L[3], dist2, dist, diff, att = 1.0f, len;
         if (!(mask & (1u << l)))
             continue;
         la = xm(0x600 + l * 16 + 4);
         lk = xm(0x600 + l * 16 + 7);
         lp = xm(0x600 + l * 16 + 10);
         ld = xm(0x600 + l * 16 + 13);
-        L[0] = lp[0] - eye[0];
-        L[1] = lp[1] - eye[1];
-        L[2] = lp[2] - eye[2];
-        dist2 = dot3(L, L);
-        dist = sqrtf(dist2);
-        if (dist > 0) {
-            L[0] /= dist; L[1] /= dist; L[2] /= dist;
+        if (attn && !spot) {
+            /* specular: the light position is far away along the half-angle direction */
+            float x, kk[3], kl;
+            L[0] = lp[0] - eye[0]; L[1] = lp[1] - eye[1]; L[2] = lp[2] - eye[2];
+            len = sqrtf(dot3(L, L));
+            if (len > 0) {
+                L[0] /= len; L[1] /= len; L[2] /= len;
+            }
+            kl = sqrtf(dot3(ld, ld));
+            x = dot3(n, L) >= 0 && kl > 0 ? dot3(n, ld) / kl : 0.0f;
+            if (x < 0)
+                x = 0;
+            kk[0] = lk[0]; kk[1] = lk[1]; kk[2] = lk[2];
+            if (dfn != 0) {
+                kl = sqrtf(dot3(kk, kk));
+                if (kl > 0) {
+                    kk[0] /= kl; kk[1] /= kl; kk[2] /= kl;
+                }
+            }
+            {
+                float aa = la[0] + la[1] * x + la[2] * x * x, dd = kk[0] + kk[1] * x + kk[2] * x * x;
+                if (aa < 0)
+                    aa = 0;
+                att = dd != 0 ? aa / dd : 0;
+            }
+        } else {
+            L[0] = lp[0] - eye[0];
+            L[1] = lp[1] - eye[1];
+            L[2] = lp[2] - eye[2];
+            dist2 = dot3(L, L);
+            dist = sqrtf(dist2);
+            if (dist > 0) {
+                L[0] /= dist; L[1] /= dist; L[2] /= dist;
+            }
+            if (attn) { /* spot (Dolphin normalises the direction) */
+                float dl = sqrtf(dot3(ld, ld)), x = dl > 0 ? dot3(L, ld) / dl : 0.0f, aa, dd;
+                if (x < 0)
+                    x = 0;
+                aa = la[0] + la[1] * x + la[2] * x * x;
+                dd = lk[0] + lk[1] * dist + lk[2] * dist2;
+                if (aa < 0)
+                    aa = 0;
+                att = dd != 0 ? aa / dd : 0;
+            }
         }
         diff = dfn == 0 ? 1.0f : dot3(n, L);
         if (dfn == 2 && diff < 0)
             diff = 0;
-        if (attn) {
-            float x, aa, dd;
-            if (spot) {
-                x = dot3(L, ld);
-                aa = la[0] + la[1] * x + la[2] * x * x;
-                dd = lk[0] + lk[1] * dist + lk[2] * dist2;
-            } else {
-                float nn = sqrtf(dot3(n, n));
-                x = nn > 0 ? dot3(n, ld) / nn : 0;
-                aa = x > 0 ? la[0] + la[1] * x + la[2] * x * x : 0;
-                dd = lk[0] + lk[1] * x + lk[2] * x * x;
-            }
-            if (aa < 0)
-                aa = 0;
-            att = dd != 0 ? aa / dd : 0;
-        }
         for (c = c0; c < c1; c++)
-            acc[c] += diff * att * s->lightColor[l][c];
+            acc[c] += (int)lrintf(diff * att * s->lightColor[l][c] * 255.0f);
     }
+    /* integer like the hardware (and Dolphin): mat * (lacc + lacc >> 7) >> 8 */
     for (c = c0; c < c1; c++) {
-        float a = acc[c] < 0 ? 0 : acc[c] > 1 ? 1 : acc[c];
-        out[c] = mat[c] * a;
+        int a = acc[c] < 0 ? 0 : acc[c] > 255 ? 255 : acc[c], m = (int)lrintf(mat[c] * 255.0f);
+        out[c] = (float)((m * (a + (a >> 7))) >> 8) / 255.0f;
     }
 }
 
@@ -431,6 +462,12 @@ static void xform(const XfState *s, const InVtx *in, GpuVertex *o)
     if (s->needNormal) {
         const float *nm = xm(0x400 + (in->pn & 31) * 3);
         mul33(nm, in->nrm, n);
+        {
+            float nl = sqrtf(dot3(n, n));
+            if (nl > 0) {
+                n[0] /= nl; n[1] /= nl; n[2] /= nl;
+            }
+        }
         mul33(nm, in->bin, b);
         mul33(nm, in->tan, t);
     }
@@ -450,8 +487,8 @@ static void xform(const XfState *s, const InVtx *in, GpuVertex *o)
         if (i < s->numColors) {
             light_chan(s, s->chanCtrl[i], i, 0, in->col[i], eye, n, o->color[i]);
             light_chan(s, s->chanCtrl[2 + i], i, 1, in->col[i], eye, n, o->color[i]);
-        } else {
-            o->color[i][0] = o->color[i][1] = o->color[i][2] = o->color[i][3] = 1.0f;
+        } else { /* channel not enabled (XF 0x1009): the rasterizer sees zero, as in Dolphin */
+            o->color[i][0] = o->color[i][1] = o->color[i][2] = o->color[i][3] = 0.0f;
         }
     }
 
@@ -491,6 +528,10 @@ static void xform(const XfState *s, const InVtx *in, GpuVertex *o)
                 }
                 mul34(pm, v, out);
             }
+            if (out[2] == 0.0f) { /* q = 0: the console halves and clamps s, t (Dolphin) */
+                out[0] = out[0] * 0.5f < -1.0f ? -1.0f : out[0] * 0.5f > 1.0f ? 1.0f : out[0] * 0.5f;
+                out[1] = out[1] * 0.5f < -1.0f ? -1.0f : out[1] * 0.5f > 1.0f ? 1.0f : out[1] * 0.5f;
+            }
         } else if (type == 1) { /* emboss: shift a previous coordinate by the light direction */
             int srcGen = (info >> 12) & 7, light = (info >> 15) & 7;
             const float *lp = xm(0x600 + light * 16 + 10);
@@ -499,8 +540,9 @@ static void xform(const XfState *s, const InVtx *in, GpuVertex *o)
             if (len > 0) {
                 L[0] /= len; L[1] /= len; L[2] /= len;
             }
-            out[0] = o->tex[srcGen][0] + dot3(L, t);
-            out[1] = o->tex[srcGen][1] + dot3(L, b);
+            /* s along the first (tangent) and t along the second (binormal) vector of NBT */
+            out[0] = o->tex[srcGen][0] + dot3(L, b);
+            out[1] = o->tex[srcGen][1] + dot3(L, t);
             out[2] = 1.0f;
         } else { /* color texgen: (s, t) = (r, g) of color channel 0 or 1 */
             const float *c = o->color[type == 3 ? 1 : 0];

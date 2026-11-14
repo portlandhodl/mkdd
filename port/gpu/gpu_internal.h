@@ -42,6 +42,25 @@ uint32_t gpu_vtx_size(int fmt);                /* bytes per vertex of format `fm
  * bits 3-5) in format `fmt` from big-endian `data`, and hand them to the backend. */
 void gpu_vtx_draw(int prim, int fmt, uint32_t count, const uint8_t *data);
 
+extern int gpu_ram_be; /* arrays/indexed matrices in RAM are big-endian (FIFO log player) */
+
+/* Dolphin FIFO log recorder (gpu_fifolog.c, MKDD_DFF) */
+extern int gpu_fifolog_on, gpu_fifolog_wanted;
+void gpu_fifolog_init(void);
+void gpu_fifolog_boot(void);
+void gpu_fifolog_cmd(const uint8_t *c, uint32_t len);
+void gpu_fifolog_frame_end(void);
+void gpu_fifolog_dl(uint32_t addr, uint32_t size);
+void gpu_fifolog_tlut(uint32_t src, uint32_t bytes);
+void gpu_fifolog_indexed(uint32_t src, uint32_t bytes);
+void gpu_fifolog_array(int array, uint32_t index, uint32_t elem, uint32_t csize);
+void gpu_fifolog_draw_begin(void);
+void gpu_fifolog_draw_end(void);
+void gpu_fifolog_efb_copy(const GpuRegs *r, int toXfb);
+int gpu_fifolog_capture_index(void);
+const char *gpu_fifolog_path(void);
+void gpu_fifolog_replay_capture(const char *path, int frame); /* player: capture as `frame` */
+
 /* debug software rasteriser (gpu_dump.c): returns a backend if MKDD_DUMP_FRAMES
  * is set, else NULL. gpu_dump_frame_start runs at every present. */
 const GpuBackend *gpu_dump_backend(void);

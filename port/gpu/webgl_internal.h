@@ -39,13 +39,14 @@ struct WglProgram {
     GLuint prog;
     uint32_t usedMaps;     /* bitmask of texture maps sampled */
     uint32_t usedCoords;   /* bitmask of texcoords read */
-    GLint uReg, uKon, uTSize, uSu, uLodBias, uAlphaRef, uFog, uFogColor, uDstAlpha;
+    GLint uReg, uKon, uTSize, uSu, uLodBias, uAlphaRef, uFog, uFogI, uFogK, uFogColor, uDstAlpha;
     GLint uIndM, uIndSS, uIScale, uZBias;
     GLint uVp, uDepth, uPointSize;
 };
 
-/* Builds the key for `s` (alphaOut / srcMode come from the blend setup). */
-void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode);
+/* Builds the key for `s` (alphaOut / srcMode come from the blend setup; quant: bit 0
+ * truncate the color output to 6 bits, bit 1 the alpha output, for an RGBA6 EFB). */
+void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode, int quant);
 /* Looks up or compiles the program for `key`; NULL on failure. */
 WglProgram *wgl_tev_program(const WglKey *key);
 void wgl_tev_init(void);

@@ -118,7 +118,7 @@ LINK_COMMON = [
 LINK_TARGET = {
     "node": ["-sNODERAWFS=1", "-sENVIRONMENT=node", "-sEXIT_RUNTIME=1"],
     "web": ["-sENVIRONMENT=web", "-sINVOKE_RUN=0", "-sEXIT_RUNTIME=0", "-sMIN_WEBGL_VERSION=2",
-            "-sMAX_WEBGL_VERSION=2", "-sEXPORTED_RUNTIME_METHODS=callMain,ccall,cwrap"],
+            "-sMAX_WEBGL_VERSION=2", "-sEXPORTED_RUNTIME_METHODS=callMain,ccall,cwrap,FS"],
 }
 
 def main():

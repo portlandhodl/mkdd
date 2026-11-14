@@ -54,9 +54,14 @@ static XfbEntry sXfb[MAX_XFB];
 static uint32_t sXfbSeq;
 
 /* MKDD_WGL_TRACE=N (?wgltrace=N): log every batch, EFB copy and present of frame N (and
- * texcoord-scale mismatches) to the console. MKDD_WGL_DEBUG: see wgl_debug. */
+ * texcoord-scale mismatches) to the console. MKDD_WGL_PICK=x*1000+y: log every batch
+ * that changes EFB pixel (x, y), or covers it without changing it (handy with the FIFO
+ * log player, port/gpu/tools/dffplay.*). MKDD_WGL_DEBUG: see wgl_debug. */
 extern "C" int port_env(const char *name);
 static int sTraceFrame, sDebug;
+/* MKDD_DEFLICKER: apply the copy filter's vertical taps (console behaviour; Dolphin's
+ * default and ours leave them out, which keeps the picture sharp) */
+static int sDeflicker;
 
 void wgl_log(const char *fmt, ...)
 {
@@ -127,8 +132,9 @@ static const char *kMainVs =
     "out vec3 v_t0; out vec3 v_t1; out vec3 v_t2; out vec3 v_t3; out vec3 v_t4; out vec3 v_t5; out vec3 v_t6; out vec3 v_t7;\n"
     "void main() {\n"
     "  vec4 p = a_pos;\n"
-    "  float x = (u_vp.x * p.x + u_vp.z * p.w) * (2.0 / 640.0) - p.w;\n"
-    "  float y = (u_vp.y * p.y + u_vp.w * p.w) * (2.0 / 528.0) - p.w;\n"
+    /* the console samples pixels at (x + 7/12, y + 7/12), GL at (x + 1/2, y + 1/2) */
+    "  float x = (u_vp.x * p.x + (u_vp.z - 1.0 / 12.0) * p.w) * (2.0 / 640.0) - p.w;\n"
+    "  float y = (u_vp.y * p.y + (u_vp.w - 1.0 / 12.0) * p.w) * (2.0 / 528.0) - p.w;\n"
     "  float d = u_depth.x * p.w + u_depth.y * 0.5 * (p.z - p.w);\n"
     "  gl_Position = vec4(x, y, 2.0 * d - p.w, p.w);\n"
     "  gl_PointSize = u_psize;\n"
@@ -149,34 +155,50 @@ static const char *kCopyFs =
     "uniform highp sampler2D u_col; uniform highp sampler2D u_dep;\n"
     "uniform ivec4 u_rect; uniform ivec2 u_dst;\n"
     "uniform int u_half, u_depthsrc, u_pixfmt, u_layout, u_isel, u_asel, u_zrgb, u_xfb;\n"
-    "uniform float u_gamma; uniform vec3 u_vf;\n"
+    "uniform float u_gamma; uniform uvec3 u_vf;\n"
     "out vec4 o;\n"
     "vec4 fc(ivec2 p) { p = clamp(p, u_rect.xy, u_rect.xy + u_rect.zw - 1); return texelFetch(u_col, p, 0); }\n"
     "float fz(ivec2 p) { p = clamp(p, u_rect.xy, u_rect.xy + u_rect.zw - 1); return texelFetch(u_dep, p, 0).r; }\n"
     "float q(float v, float bits) { float m = exp2(bits) - 1.0; return floor(v * m + 0.5) / m; }\n"
+    /* One source row of the copy as 0..255 integers (depth: the Z bytes high, mid, low), the
+     * way Dolphin samples it: a half-size copy averages the 2x2 block (bilinear at its centre) */
+    "uvec4 row(ivec2 p, int r) {\n"
+    "  p.y += r;\n"
+    "  if (u_depthsrc != 0) {\n"
+    "    float z = u_half != 0 ? (fz(p) + fz(p + ivec2(1, 0)) + fz(p + ivec2(0, 1)) + fz(p + ivec2(1, 1))) * 0.25 : fz(p);\n"
+    "    uint zi = min(uint(clamp(z, 0.0, 1.0) * 16777216.0), 16777215u);\n"
+    "    return uvec4((zi >> 16) & 255u, (zi >> 8) & 255u, zi & 255u, 255u);\n"
+    "  }\n"
+    "  vec4 c = u_half != 0 ? (fc(p) + fc(p + ivec2(1, 0)) + fc(p + ivec2(0, 1)) + fc(p + ivec2(1, 1))) * 0.25 : fc(p);\n"
+    "  return uvec4(clamp(c, 0.0, 1.0) * 255.0 + 0.001);\n"
+    "}\n"
     "void main() {\n"
     "  ivec2 d = ivec2(gl_FragCoord.xy) - u_dst;\n"
-    "  vec4 c; float z;\n"
-    "  if (u_half != 0) {\n"
-    "    ivec2 p = u_rect.xy + d * 2;\n"
-    "    c = (fc(p) + fc(p + ivec2(1, 0)) + fc(p + ivec2(0, 1)) + fc(p + ivec2(1, 1))) * 0.25;\n"
-    "    z = fz(p);\n"
-    "  } else {\n"
-    "    ivec2 p = u_rect.xy + d;\n"
-    "    c = fc(p - ivec2(0, 1)) * u_vf.x + fc(p) * u_vf.y + fc(p + ivec2(0, 1)) * u_vf.z;\n"
-    "    z = fz(p);\n"
+    "  ivec2 p = u_rect.xy + (u_half != 0 ? d * 2 : d);\n"
+    /* vertical (deflicker) filter: integer weights for the rows above, at and below,
+     * normally summing to 64 */
+    "  uvec4 cur = row(p, 0);\n"
+    "  uvec3 sum = cur.rgb * u_vf.y;\n"
+    "  if (u_vf.x != 0u) sum += row(p, -1).rgb * u_vf.x;\n"
+    "  if (u_vf.z != 0u) sum += row(p, 1).rgb * u_vf.z;\n"
+    "  uvec4 ci = uvec4(min(sum >> 6, uvec3(255u)), u_pixfmt == 1 ? cur.a : 255u);\n"
+    "  if (u_depthsrc != 0) {\n"
+    "    float zh = float(ci.r) / 255.0, zm = float(ci.g) / 255.0, zl = float(ci.b) / 255.0;\n"
+    "    float ch[9] = float[9](zh, zm, zl, 1.0, zh, zh, zm, zl, 1.0);\n"
+    "    float I = ch[u_isel], A = ch[u_asel];\n"
+    "    if (u_layout == 0) o = vec4(q(I, 4.0));\n"
+    "    else if (u_layout == 1) o = vec4(I);\n"
+    "    else if (u_layout == 3) o = vec4(vec3(I), A);\n"
+    "    else o = vec4(zh, zm, zl, 1.0);\n"
+    "    return;\n"
     "  }\n"
-    "  c = clamp(c, 0.0, 1.0);\n"
-    "  if (u_pixfmt == 1) c = vec4(q(c.r, 6.0), q(c.g, 6.0), q(c.b, 6.0), q(c.a, 6.0));\n"
-    "  else if (u_pixfmt == 2) c = vec4(q(c.r, 5.0), q(c.g, 6.0), q(c.b, 5.0), 1.0);\n"
-    "  else c.a = 1.0;\n"
+    "  vec4 c = vec4(ci) / 255.0;\n"
+    "  if (u_pixfmt == 2) c = vec4(q(c.r, 5.0), q(c.g, 6.0), q(c.b, 5.0), 1.0);\n"
     "  if (u_xfb != 0) { o = vec4(pow(c.rgb, vec3(1.0 / u_gamma)), 1.0); return; }\n"
-    "  uint zi = uint(clamp(z, 0.0, 1.0) * 16777215.0 + 0.5);\n"
-    "  float zh = float((zi >> 16) & 255u) / 255.0, zm = float((zi >> 8) & 255u) / 255.0, zl = float(zi & 255u) / 255.0;\n"
     "  float y = clamp(0.257 * c.r + 0.504 * c.g + 0.098 * c.b + 16.0 / 255.0, 0.0, 1.0);\n"
-    "  float ch[9] = float[9](c.r, c.g, c.b, c.a, y, zh, zm, zl, 1.0);\n"
+    "  float ch[9] = float[9](c.r, c.g, c.b, c.a, y, 0.0, 0.0, 0.0, 1.0);\n"
     "  float I = ch[u_isel], A = ch[u_asel];\n"
-    "  vec4 rgba = u_zrgb != 0 ? vec4(zh, zm, zl, 1.0) : c;\n"
+    "  vec4 rgba = c;\n"
     "  if (u_layout == 0) { I = q(I, 4.0); o = vec4(I); }\n"
     "  else if (u_layout == 1) o = vec4(I);\n"
     "  else if (u_layout == 2) o = vec4(vec3(q(I, 4.0)), q(A, 4.0));\n"
@@ -390,15 +412,23 @@ static void set_uniforms(const WglProgram *p, const WglSnap *s, const WglTexInfo
         float a, c;
         memcpy(&a, &ab, 4);
         memcpy(&c, &cb, 4);
-        int ortho = (int)((bp[0xF1] >> 20) & 1);
-        float fa = a, fb = 0.0f;
-        if (!ortho) {
-            int shift = (int)(bp[0xF0] & 0x1F);
-            float mag = (float)(bp[0xEF] & 0xFFFFFF);
-            fa = a * (float)(1u << shift);
-            fb = mag / 8388638.0f * (shift >= 1 ? (float)(1u << (shift - 1)) : 0.5f);
+        int range = (int)((bp[0xE8] >> 10) & 1);
+        float center = 0.0f, width = 1.0f;
+        if (range) {
+            /* range adjustment (BP 0xE8-0xED), as Dolphin's PixelShaderManager sets it up */
+            float wd = s->vp[0] < 0 ? -s->vp[0] : s->vp[0];
+            center = ((float)((int)(bp[0xE8] & 0x3FF) - 342) / (2.0f * wd)) * 2.0f - 1.0f;
+            width = 2.0f * wd;
+            float k[10];
+            for (int i = 0; i < 5; i++) {
+                uint32_t r = bp[0xE9 + i];
+                k[i * 2] = (float)((r >> 12) & 0xFFF) / 256.0f * 4.0f;
+                k[i * 2 + 1] = (float)(r & 0xFFF) / 256.0f * 4.0f;
+            }
+            if (p->uFogK >= 0) glUniform1fv(p->uFogK, 10, k);
         }
-        glUniform4f(p->uFog, fa, fb, c, (float)ortho);
+        glUniform4f(p->uFog, a, c, center, width);
+        glUniform4i(p->uFogI, (int)(bp[0xEF] & 0xFFFFFF), (int)(bp[0xF0] & 0x1F), (int)((bp[0xF1] >> 20) & 1), range);
         uint32_t fc = bp[0xF2];
         glUniform3f(p->uFogColor, (float)((fc >> 16) & 0xFF) / 255.0f, (float)((fc >> 8) & 0xFF) / 255.0f, (float)(fc & 0xFF) / 255.0f);
     }
@@ -441,6 +471,49 @@ static void set_uniforms(const WglProgram *p, const WglSnap *s, const WglTexInfo
 
 /* ---- batching ---- */
 
+static int sPick = -1;
+static uint8_t sPickLast[4];
+
+static void trace_batch(const WglSnap *s, const WglProgram *p, const WglTexInfo *tex, uint32_t count)
+{
+    const uint32_t *bp = s->bp;
+    uint32_t zm = bp[0x40], cm0 = bp[0x41];
+    const GpuVertex *v0 = sStage;
+    fprintf(stderr, "[wgl] n=%u prim=%d gen=%06x tref=%06x %06x c0=%06x a0=%06x maps=%x z=%x cm=%x ss0=%06x ts0=%06x"
+            " t0=(%.3f %.3f %.3f) c=(%.2f %.2f %.2f %.2f) sc=%x %x pe=%06x at=%06x da=%06x\n",
+            count, sStagePrim, bp[0], bp[0x28], bp[0x29], bp[0xC0], bp[0xC1], p->usedMaps, zm, cm0, bp[0x30], bp[0x31],
+            v0->tex[0][0], v0->tex[0][1], v0->tex[0][2], v0->color[0][0], v0->color[0][1], v0->color[0][2],
+            v0->color[0][3], bp[0x20], bp[0x21], bp[0x43], bp[0xF3], bp[0x42]);
+    int nst = (int)((bp[0] >> 10) & 15) + 1;
+    if ((bp[0xF1] >> 21) & 7)
+        fprintf(stderr, "[wgl]    fog a=%06x b=%06x shift=%06x c=%06x color=%06x range=%06x %06x %06x\n", bp[0xEE], bp[0xEF], bp[0xF0], bp[0xF1],
+                bp[0xF2], bp[0xE8], bp[0xE9], bp[0xEA]);
+    fprintf(stderr, "[wgl]    tev");
+    for (int st = 0; st < nst; st++) fprintf(stderr, " [%06x %06x ind%06x]", bp[0xC0 + st * 2], bp[0xC1 + st * 2], bp[0x10 + st]);
+    fprintf(stderr, "\n[wgl]    ksel %06x %06x %06x %06x  creg %06x %06x %06x %06x %06x %06x  kon %06x %06x %06x %06x\n", bp[0xF6],
+            bp[0xF7], bp[0xF8], bp[0xF9], s->creg[0], s->creg[1], s->creg[2], s->creg[3], s->creg[4], s->creg[5], s->konst[0],
+            s->konst[1], s->konst[2], s->konst[3]);
+    for (int m = 0; m < 8; m++)
+        if (p->usedMaps & (1u << m)) {
+            int base = m < 4 ? 0x80 + m : 0xA0 + (m - 4);
+            fprintf(stderr, "[wgl]    map%d tex=%u %dx%d lv=%d mode0=%06x mode1=%06x img0=%06x img3=%06x\n", m, tex[m].tex,
+                    tex[m].w, tex[m].h, tex[m].levels, bp[base], bp[base + 4], bp[base + 8], bp[base + 0x14]);
+        }
+    const GpuRegs *r = gpu_regs(); /* XF state as of now (may be past this batch) */
+    fprintf(stderr, "[wgl]    xf ncol=%u chan %06x %06x %06x %06x amb %08x %08x mat %08x %08x ntex=%u texgen %06x %06x\n", r->xf[0x09],
+            r->xf[0x0E], r->xf[0x0F], r->xf[0x10], r->xf[0x11], r->xf[0x0A], r->xf[0x0B], r->xf[0x0C], r->xf[0x0D], r->xf[0x3F],
+            r->xf[0x40], r->xf[0x41]);
+    for (int l = 0; l < 8; l++) {
+        uint32_t mask = ((r->xf[0x0E] >> 2) & 0xF) | (((r->xf[0x0E] >> 11) & 0xF) << 4);
+        if (!(mask & (1u << l))) continue;
+        const float *L = &r->xfmem[0x600 + l * 16];
+        uint32_t col;
+        memcpy(&col, &L[3], 4);
+        fprintf(stderr, "[wgl]    light%d col %08x cos %g %g %g dist %g %g %g pos %g %g %g dir %g %g %g\n", l, col, L[4], L[5], L[6], L[7],
+                L[8], L[9], L[10], L[11], L[12], L[13], L[14], L[15]);
+    }
+}
+
 static void flush(void)
 {
     if (!sStageCount) return;
@@ -458,8 +531,18 @@ static void flush(void)
     int dstAlpha = (int)((bp[0x42] >> 8) & 1) && alphaUpd;
     int twoPass = dstAlpha && bl.enable;
 
+    /* RGBA6 EFB: the pixel is stored with 6 bits per channel (Dolphin truncates the TEV
+     * output); alpha keeps 8 bits when it is a blend factor (Dolphin blends with the
+     * 8-bit alpha through dual-source blending) */
+    int quant = 0;
+    if ((bp[0x43] & 7) == 1) {
+        int srcAlphaFactor = bl.enable && (bl.src == GL_SRC_ALPHA || bl.src == GL_ONE_MINUS_SRC_ALPHA ||
+                                           bl.dst == GL_SRC_ALPHA || bl.dst == GL_ONE_MINUS_SRC_ALPHA);
+        quant = srcAlphaFactor ? 1 : 3;
+    }
+
     WglKey key;
-    wgl_tev_key(&key, s, (dstAlpha && !twoPass) ? WGL_ALPHAOUT_CONST : WGL_ALPHAOUT_NORMAL, bl.srcMode);
+    wgl_tev_key(&key, s, (dstAlpha && !twoPass) ? WGL_ALPHAOUT_CONST : WGL_ALPHAOUT_NORMAL, bl.srcMode, quant);
     WglProgram *p = wgl_tev_program(&key);
     if (!p) return;
 
@@ -525,30 +608,46 @@ static void flush(void)
     glDrawArrays(mode, first, (GLsizei)count);
     wgl_stats_cur.drawCalls++;
 
-    if (sTraceFrame && (int)wgl_frame == sTraceFrame) {
-        const GpuVertex *v0 = sStage;
-        fprintf(stderr, "[wgl] n=%u prim=%d gen=%06x tref=%06x %06x c0=%06x a0=%06x maps=%x z=%x cm=%x ss0=%06x ts0=%06x"
-                " t0=(%.3f %.3f %.3f) c=(%.2f %.2f %.2f %.2f) sc=%x %x\n",
-                count, sStagePrim, bp[0], bp[0x28], bp[0x29], bp[0xC0], bp[0xC1], p->usedMaps, zm, cm0, bp[0x30], bp[0x31],
-                v0->tex[0][0], v0->tex[0][1], v0->tex[0][2], v0->color[0][0], v0->color[0][1], v0->color[0][2],
-                v0->color[0][3], bp[0x20], bp[0x21]);
-        int nst = (int)((bp[0] >> 10) & 15) + 1;
-        fprintf(stderr, "[wgl]    tev");
-        for (int st = 0; st < nst; st++) fprintf(stderr, " [%06x %06x ind%06x]", bp[0xC0 + st * 2], bp[0xC1 + st * 2], bp[0x10 + st]);
-        fprintf(stderr, "\n[wgl]    ksel %06x %06x %06x %06x  creg %06x %06x %06x %06x %06x %06x  kon %06x %06x %06x %06x\n", bp[0xF6],
-                bp[0xF7], bp[0xF8], bp[0xF9], s->creg[0], s->creg[1], s->creg[2], s->creg[3], s->creg[4], s->creg[5], s->konst[0],
-                s->konst[1], s->konst[2], s->konst[3]);
-        for (int m = 0; m < 8; m++)
-            if (p->usedMaps & (1u << m)) {
-                int base = m < 4 ? 0x80 + m : 0xA0 + (m - 4);
-                fprintf(stderr, "[wgl]    map%d tex=%u %dx%d lv=%d mode0=%06x mode1=%06x img0=%06x img3=%06x\n", m, tex[m].tex,
-                        tex[m].w, tex[m].h, tex[m].levels, bp[base], bp[base + 4], bp[base + 8], bp[base + 0x14]);
+    if (sTraceFrame && (int)wgl_frame == sTraceFrame) trace_batch(s, p, tex, count);
+    if (sPick >= 0) {
+        /* MKDD_WGL_PICK=x*1000+y: log the batches that change that EFB pixel */
+        uint8_t px[4];
+        glReadPixels(sPick / 1000, sPick % 1000, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+        if (memcmp(px, sPickLast, 4)) {
+            fprintf(stderr, "[pick] (%d,%d) %02x%02x%02x%02x -> %02x%02x%02x%02x\n", sPick / 1000, sPick % 1000, sPickLast[0],
+                    sPickLast[1], sPickLast[2], sPickLast[3], px[0], px[1], px[2], px[3]);
+            trace_batch(s, p, tex, count);
+            memcpy(sPickLast, px, 4);
+        } else if (sStagePrim == GPU_TRIANGLES) {
+            /* also report triangles over the pixel that left it unchanged (depth/alpha test) */
+            int ox2, oy2;
+            scissor_offset(bp, &ox2, &oy2);
+            float px0 = (float)(sPick / 1000) + 0.5f, py0 = (float)(sPick % 1000) + 0.5f;
+            for (uint32_t t = 0; t + 2 < count; t += 3) {
+                float X[3], Y[3];
+                int ok = 1;
+                for (int k = 0; k < 3; k++) {
+                    const float *P = sStage[t + k].pos;
+                    if (P[3] <= 0) { ok = 0; break; }
+                    X[k] = s->vp[3] - ox2 + s->vp[0] * P[0] / P[3];
+                    Y[k] = s->vp[4] - oy2 + s->vp[1] * P[1] / P[3];
+                }
+                if (!ok) continue;
+                float d0 = (X[1] - X[0]) * (py0 - Y[0]) - (Y[1] - Y[0]) * (px0 - X[0]);
+                float d1 = (X[2] - X[1]) * (py0 - Y[1]) - (Y[2] - Y[1]) * (px0 - X[1]);
+                float d2 = (X[0] - X[2]) * (py0 - Y[2]) - (Y[0] - Y[2]) * (px0 - X[2]);
+                if ((d0 >= 0 && d1 >= 0 && d2 >= 0) || (d0 <= 0 && d1 <= 0 && d2 <= 0)) {
+                    fprintf(stderr, "[pick] covered but unchanged:\n");
+                    trace_batch(s, p, tex, count);
+                    break;
+                }
             }
+        }
     }
 
     if (twoPass) {
         /* Destination alpha: write the constant alpha in a second, alpha-only pass. */
-        wgl_tev_key(&key, s, WGL_ALPHAOUT_CONST, bl.srcMode);
+        wgl_tev_key(&key, s, WGL_ALPHAOUT_CONST, bl.srcMode, quant ? (quant | 2) : 0);
         WglProgram *p2 = wgl_tev_program(&key);
         if (p2) {
             glUseProgram(p2->prog);
@@ -591,6 +690,30 @@ static void be_draw(void *ctx, const GpuRegs *regs, int prim, const GpuVertex *v
     }
 }
 
+/* ---- frame capture for comparisons with Dolphin (MKDD_DFF, gpu_fifolog.c) ---- */
+
+extern "C" int gpu_fifolog_capture_index(void);
+extern "C" const char *gpu_fifolog_path(void);
+
+/* Writes the XFB image as <MKDD_DFF>.ours-<frame>.ppm. */
+static void capture_xfb(GLuint tex, int w, int h, int frame)
+{
+    static uint8_t *buf;
+    if (!buf) buf = (uint8_t *)malloc(640 * 576 * 4);
+    if (!buf || w <= 0 || h <= 0) return;
+    glBindFramebuffer(GL_FRAMEBUFFER, sCopyFbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+    char path[600];
+    snprintf(path, sizeof path, "%s.ours-%05d.ppm", gpu_fifolog_path(), frame);
+    FILE *f = fopen(path, "wb");
+    if (!f) return;
+    fprintf(f, "P6\n%d %d\n255\n", w, h);
+    for (int i = 0; i < w * h; i++) fwrite(buf + i * 4, 1, 3, f);
+    fclose(f);
+}
+
 /* ---- EFB copies ---- */
 
 /* How a copy format is laid out for sampling: texdec layout + channel sources.
@@ -607,11 +730,13 @@ static CopyFormat copy_format(uint32_t exec, int depth)
     if (depth) {
         switch (f) {
         case 0: c = (CopyFormat){ 0x30, 0, 5, 5, 0 }; break; /* Z4 */
-        case 1: c = (CopyFormat){ 0x11, 1, 5, 5, 0 }; break; /* Z8 */
+        case 1: case 8: c = (CopyFormat){ 0x11, 1, 5, 5, 0 }; break; /* Z8 */
         case 9: c = (CopyFormat){ 0x39, 1, 6, 6, 0 }; break; /* Z8M */
         case 10: c = (CopyFormat){ 0x3A, 1, 7, 7, 0 }; break; /* Z8L */
-        case 11: c = (CopyFormat){ 0x13, 3, 6, 5, 0 }; break; /* Z16: A = hi, I = mid */
-        case 12: c = (CopyFormat){ 0x3C, 3, 7, 6, 0 }; break; /* Z16L */
+        /* Z16 samples as IA8 with I = Z bits 23-16 and A = bits 15-8 (the 16-bit value
+         * A | I << 8 the TEV compare modes see, as MKDD's depth of field relies on) */
+        case 11: c = (CopyFormat){ 0x13, 3, 5, 6, 0 }; break; /* Z16 */
+        case 12: c = (CopyFormat){ 0x3C, 3, 6, 7, 0 }; break; /* Z16L: I = bits 15-8, A = 7-0 */
         default: c = (CopyFormat){ 0x16, 6, 5, 8, 1 }; break; /* Z24X8 */
         }
         return c;
@@ -680,16 +805,14 @@ static void run_copy(GLuint dstTex, int dx, int dy, int w, int h, const uint32_t
     glUniform1f(uCopyGamma, gammas[(exec >> 7) & 3]);
     /* vertical (deflicker) filter: taps 0-1 previous line, 2-4 this line, 5-6 next line */
     uint32_t f0 = bp[0x53], f1 = bp[0x54];
-    float vf[3] = { 0.0f, 1.0f, 0.0f };
-    if (f0 || f1) {
-        int c[7] = { (int)(f0 & 63), (int)((f0 >> 6) & 63), (int)((f0 >> 12) & 63), (int)((f0 >> 18) & 63),
-                     (int)(f1 & 63), (int)((f1 >> 6) & 63), (int)((f1 >> 12) & 63) };
-        vf[0] = (float)(c[0] + c[1]) / 64.0f;
-        vf[1] = (float)(c[2] + c[3] + c[4]) / 64.0f;
-        vf[2] = (float)(c[5] + c[6]) / 64.0f;
+    GLuint vf[3] = { (f0 & 63) + ((f0 >> 6) & 63), ((f0 >> 12) & 63) + ((f0 >> 18) & 63) + (f1 & 63),
+                     ((f1 >> 6) & 63) + ((f1 >> 12) & 63) };
+    if (!sDeflicker) { /* as Dolphin by default: keep the brightness, drop the vertical blur */
+        vf[1] += vf[0] + vf[2];
+        vf[0] = vf[2] = 0;
     }
-    if (half) vf[0] = vf[2] = 0.0f, vf[1] = 1.0f;
-    glUniform3fv(uCopyVf, 1, vf);
+    if (!vf[1] && !vf[0] && !vf[2]) vf[1] = 64; /* never programmed: pass through */
+    glUniform3uiv(uCopyVf, 1, vf);
     glBindVertexArray(sEmptyVao);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
@@ -772,6 +895,8 @@ static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
                 if (row + h > e->h) e->h = row + h;
             }
             e->lastUsed = ++sXfbSeq;
+            int cap = gpu_fifolog_capture_index();
+            if (cap >= 0) capture_xfb(e->tex, e->w, e->h, cap);
             if (sTraceFrame && (int)wgl_frame == sTraceFrame)
                 fprintf(stderr, "[wgl] xfb copy addr=%08x stride=%u row=%d src=%d,%d %dx%d entry=%08x\n", addr, stride, row, sx, sy, sw, sh, e->addr);
             wgl_stats_cur.xfbCopies++;
@@ -954,6 +1079,8 @@ extern "C" const GpuBackend *gpu_webgl_create(void)
     if (!init_gl()) return NULL;
     sTraceFrame = port_env("MKDD_WGL_TRACE");
     sDebug = wgl_debug = port_env("MKDD_WGL_DEBUG");
+    if (port_env("MKDD_WGL_PICK")) sPick = port_env("MKDD_WGL_PICK");
+    sDeflicker = port_env("MKDD_DEFLICKER");
     sBackend.draw = be_draw;
     sBackend.efb_copy = be_efb_copy;
     sBackend.present = be_present;
