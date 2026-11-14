@@ -200,6 +200,7 @@
   }
   function hideMsg() { ui.msg.hidden = true; ui.msgKey = ''; }
   let lastHud = 0;
+  const fmtTime = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}.${String(ms % 1000).padStart(3, '0')}`;
   function hud() {
     requestAnimationFrame(hud);
     if (!mesh || !mesh.session) return;
@@ -207,8 +208,15 @@
     if (now - lastHud < 250) return;
     lastHud = now;
     const peers = [...mesh.peers.values()];
+    // the game's side (tools/web_wasm/net/netonline.cpp): race phase and per-kart replica state
+    const M = window.Module || {}, st = M.netStats;
+    const phase = { loading: 'loading the course', waiting: 'waiting for the other players at the start', countdown: 'countdown' }[M.netPhase];
+    const karts = st && st.phase !== 'loading' ? st.karts.filter((k) => !k.local).map((k) =>
+      `${k.name}: ${k.status}${k.status === 'live' ? `, ${Math.round(k.err)} u off, ${k.age.toFixed(1)} f old` : ''}` +
+      (k.goal >= 0 ? `, finished ${fmtTime(k.goal)}` : '')) : [];
     ui.hud.textContent = peers.map((p) => `${p.name} ${p.left ? 'left' : p.lost ? 'LOST' : Math.round(p.rtt) + ' ms'}`).join('  ') +
-                         (mesh.isHost ? '' : `\nclock ${mesh.clockSynced() ? (mesh.clockOffset >= 0 ? '+' : '') + Math.round(mesh.clockOffset) + ' ms' : 'syncing'}`);
+                         (mesh.isHost ? '' : `\nclock ${mesh.clockSynced() ? (mesh.clockOffset >= 0 ? '+' : '') + Math.round(mesh.clockOffset) + ' ms' : 'syncing'}`) +
+                         (phase ? '\n' + phase : '') + (karts.length ? '\n' + karts.join('\n') : '');
     const lost = peers.filter((p) => p.lost && !p.left);
     const key = lost.map((p) => p.id).join(',');
     if (key !== (ui.msgKey || '')) {
