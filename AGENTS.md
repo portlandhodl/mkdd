@@ -60,6 +60,30 @@ after each function.
 - Data matching counts too: prefer declaring real types/initializers over
   casts to opaque bytes.
 
+## WebAssembly port (`tools/web_wasm`)
+
+Browser/node port of the game: SDK replacement (`sdk/`), emulated GPU and
+WebGL2 renderer (`gpu/`), disc-format converters (`conv/`), page and smoke
+test (`web/`), build tooling (`tools/`). Independent of Ninja; outputs go to
+`build/web_wasm/`. See `tools/web_wasm/README.md`.
+
+- `src/`, `libs/` and `include/` contain only decomp work. Never make
+  port-only edits there (no `#ifdef` host blocks or host macros): put the host
+  change in a patch under `tools/web_wasm/patches/` (plain host code, a header
+  saying why, one owning patch per file, listed in `series`).
+- The build compiles `build/web_wasm/tree` = decomp tree + patches.
+  `python tools/web_wasm/tools/patches.py check` must pass after decomp
+  changes; fix breakage by editing the file in the tree and running
+  `patches.py refresh <patch>` (`patches.py new <name> <files...>` for files no
+  patch owns yet).
+
+```sh
+source ~/emsdk/emsdk_env.sh
+python tools/web_wasm/tools/build.py --target node   # or --target web
+python tools/web_wasm/tools/patches.py check
+tools/web_wasm/web/serve.sh                          # serves build/web_wasm/web
+```
+
 ## Track Studio (`tools/track-editor`)
 
 Standalone offline Rust/WASM/WebGL2 course and asset editor. It is independent of
