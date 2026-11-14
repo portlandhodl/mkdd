@@ -1,0 +1,16 @@
+{
+  "name": "mkdd-netplay-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lobby and WebRTC signalling server for the MKDD web port netplay",
+  "type": "module",
+  "main": "server.mjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "ws": "8.18.3"
+  }
+}
