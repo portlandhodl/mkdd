@@ -43,6 +43,18 @@
 #define DECOMP_BE32(p) ((u32)((const u8 *)(p))[0] << 24 | (u32)((const u8 *)(p))[1] << 16 | (u32)((const u8 *)(p))[2] << 8 | ((const u8 *)(p))[3])
 #define DECOMP_HOST(orig, host) host
 #endif
+// 3D perspective aspect ratio: the host port's widescreen option widens it (port_wide_aspect,
+// 1 = the original 4:3, 4/3 = anamorphic 16:9)
+#if DECOMP_MWERKS
+#define DECOMP_WIDE(aspect) (aspect)
+#else
+#ifdef __cplusplus
+extern "C" float port_wide_aspect;
+#else
+extern float port_wide_aspect;
+#endif
+#define DECOMP_WIDE(aspect) ((aspect) * port_wide_aspect)
+#endif
 // integer division that PowerPC's divw/divwu tolerate by zero (wasm traps)
 #define DECOMP_IDIV(a, b) DECOMP_HOST((a) / (b), ((b) == 0 ? 0 : (a) / (b)))
 

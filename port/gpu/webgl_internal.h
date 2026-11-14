@@ -11,6 +11,25 @@
 #define WGL_EFB_W 640
 #define WGL_EFB_H 528
 
+/* Graphics settings (webgl_backend.cpp). The defaults are console-accurate; the page
+ * (port/web/index.html) sets MKDD_GFX_* in Module.env and bumps Module.gfxVersion to
+ * apply changes at the next present. */
+struct WglGfx {
+    int scale;      /* internal resolution in use: the EFB, EFB copies and XFB are scale x native */
+    int scaleSet;   /* MKDD_GFX_SCALE: 1-4, 0 = from the canvas size (auto) */
+    int msaa;       /* MKDD_GFX_MSAA: samples (0/1 off, 2, 4, 8) */
+    int aniso;      /* MKDD_GFX_ANISO: max anisotropy (1 = off) */
+    int texFilter;  /* MKDD_GFX_TEXFILTER: 0 as the game sets it, 1 trilinear mips, 2 force linear */
+    int fxaa;       /* MKDD_GFX_FXAA: FXAA at present */
+    int present;    /* MKDD_GFX_PRESENT: 0 smooth, 1 integer (pixel-exact) */
+    int aspect;     /* MKDD_GFX_ASPECT: 0 4:3, 1 stretch to the canvas */
+    int widescreen; /* MKDD_GFX_WIDESCREEN: the game renders anamorphic 16:9 (port/sdk/vi_pad.c), shown at 16:9 */
+    int deflicker;  /* MKDD_DEFLICKER: the copy filter's vertical taps */
+    int shaderWarm; /* MKDD_GFX_SHADER_WARM: compile remembered TEV programs at start (default 1) */
+};
+extern WglGfx wgl_gfx;
+extern float wgl_max_aniso; /* 0 = EXT_texture_filter_anisotropic unavailable */
+
 /* Register state a batch is drawn with. Copied from GpuRegs when the state
  * changes, so pending draws keep the state they were issued with. */
 struct WglSnap {
@@ -50,6 +69,11 @@ void wgl_tev_key(WglKey *key, const WglSnap *s, int alphaOut, int srcMode, int q
 /* Looks up or compiles the program for `key`; NULL on failure. */
 WglProgram *wgl_tev_program(const WglKey *key);
 void wgl_tev_init(void);
+/* Program warm-up: compiles the TEV programs remembered from earlier sessions
+ * (browser localStorage) without waiting for them; wgl_tev_poll finishes the ones the
+ * driver has completed (KHR_parallel_shader_compile) and saves newly seen keys. */
+void wgl_tev_warm(int parallel);
+void wgl_tev_poll(void);
 extern int wgl_debug;
 
 /* ---- textures: webgl_texture.cpp ---- */
@@ -59,6 +83,7 @@ struct WglTexInfo {
     int w, h;       /* level 0 size */
     int levels;
     int isCopy;     /* an EFB copy */
+    int arbitraryMips; /* mip levels with their own content (gets +log2(scale) LOD bias) */
 };
 
 void wgl_tex_init(void);
@@ -67,8 +92,10 @@ void wgl_tex_init(void);
 void wgl_tex_bind(const WglSnap *s, int map, WglTexInfo *out);
 /* Register an EFB copy (GL texture owned by the texture module afterwards). */
 void wgl_tex_register_copy(uint32_t addr, int fmt, int w, int h, GLuint tex);
-/* Find (or make) the GL texture for an EFB copy of w x h to `addr`. */
-GLuint wgl_tex_copy_target(uint32_t addr, int fmt, int w, int h);
+/* Find (or make) the GL texture for an EFB copy of w x h to `addr` (allocated at
+ * w * scale x h * scale texels; sampling uses normalised coordinates). */
+GLuint wgl_tex_copy_target(uint32_t addr, int fmt, int w, int h, int scale);
+void wgl_tex_settings_changed(void); /* sampler settings (filtering, anisotropy) changed */
 void wgl_tex_new_frame(void);
 void wgl_tex_forget_bindings(void); /* after binding textures outside wgl_tex_bind */
 void wgl_tex_restore_samplers(void); /* rebind the per-unit sampler objects */

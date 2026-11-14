@@ -26,6 +26,7 @@ const GpuBackend *gpu_webgl_create(void);
 typedef struct GpuWebglStats {
     uint32_t flushes, drawCalls, programsCompiled, programsCached;
     uint32_t texUploads, texCached, texHashedBytes, efbCopies, xfbCopies;
+    uint32_t programsWarmed, programsWarmUsed; /* warm-up compiles issued, warmed programs first used */
 } GpuWebglStats;
 const GpuWebglStats *gpu_webgl_stats(void);
 

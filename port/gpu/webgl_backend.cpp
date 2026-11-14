@@ -7,7 +7,15 @@
  * holds EFB row r (top row first), so textures, EFB copies and the EFB share
  * one orientation; only present() flips. The vertex shader applies the XF
  * viewport (incl. the 342 offset and the scissor-box offset) and the depth
- * range itself, so glViewport always covers the whole EFB. */
+ * range itself, so glViewport always covers the whole EFB.
+ *
+ * Enhancements (wgl_gfx, off by default): at internal resolution scale S the EFB,
+ * every EFB copy texture and the XFB textures are S times the native size; all
+ * register-derived rectangles (scissor, copy source/destination, clears) stay in
+ * native units and are multiplied by S where they reach GL. Copies never reach RAM
+ * (texture loads resolve to the GL copy by address), so nothing native-sized needs
+ * to be kept. With MSAA the EFB is a multisampled renderbuffer pair that is resolved
+ * into the EFB textures before each copy. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,8 +34,13 @@ static EMSCRIPTEN_WEBGL_CONTEXT_HANDLE sCtx;
 static GpuBackend sBackend;
 static int sReady;
 
-/* EFB */
-static GLuint sEfbFbo, sEfbColor, sEfbDepth;
+/* EFB: sEfbFbo (textures sEfbColor/sEfbDepth) is what copies read; with MSAA the game
+ * draws into sEfbMsFbo and copies resolve it into sEfbFbo first */
+static GLuint sEfbFbo, sEfbColor, sEfbDepth, sEfbMsFbo, sEfbMsColor, sEfbMsDepth;
+static int sEfbW = WGL_EFB_W, sEfbH = WGL_EFB_H, sEfbSamples;
+WglGfx wgl_gfx = { 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1 };
+float wgl_max_aniso;
+static int sMaxSamples, sGfxVersion = -1;
 /* streaming vertices */
 #define RING_VERTS (1 << 16)
 #define STAGE_VERTS (1 << 15)
@@ -42,12 +55,13 @@ static int sSnapValid;
 static GLuint sCopyProg, sPresentProg, sEmptyVao, sCopyFbo;
 static GLint uCopyRect, uCopyHalf, uCopyDepth, uCopyPixFmt, uCopyLayout, uCopyISel, uCopyASel, uCopyZRgb, uCopyXfb,
     uCopyGamma, uCopyVf, uCopyDst;
-static GLint uPresentRect;
+static GLint uPresentRect, uPresentView, uPresentMode;
 
 #define MAX_XFB 4
 struct XfbEntry {
     uint32_t addr, stride, lastUsed;
-    int w, h;
+    int w, h;  /* native size of the image */
+    int scale; /* texture is 640 * scale x 576 * scale */
     GLuint tex;
 };
 static XfbEntry sXfb[MAX_XFB];
@@ -60,8 +74,18 @@ static uint32_t sXfbSeq;
 extern "C" int port_env(const char *name);
 static int sTraceFrame, sDebug;
 /* MKDD_DEFLICKER: apply the copy filter's vertical taps (console behaviour; Dolphin's
- * default and ours leave them out, which keeps the picture sharp) */
-static int sDeflicker;
+ * default and ours leave them out, which keeps the picture sharp): wgl_gfx.deflicker */
+
+/* Integer setting from Module.env (or process.env under node); `def` when unset. */
+EM_JS(int, wgl_js_env_int, (const char *name, int def), {
+    var n = UTF8ToString(name), v;
+    if (typeof Module !== 'undefined' && Module.env) v = Module.env[n];
+    if (v === undefined && typeof process !== 'undefined' && process.env) v = process.env[n];
+    var i = parseInt(v, 10);
+    return isNaN(i) ? def : i;
+});
+/* Module.gfxVersion: the page bumps it after changing MKDD_GFX_* settings */
+EM_JS(int, wgl_js_gfx_version, (void), { return (typeof Module !== 'undefined' && Module.gfxVersion) | 0; });
 
 void wgl_log(const char *fmt, ...)
 {
@@ -125,16 +149,16 @@ static const char *kMainVs =
     "#version 300 es\n"
     "in vec4 a_pos; in vec4 a_c0; in vec4 a_c1;\n"
     "in vec3 a_t0; in vec3 a_t1; in vec3 a_t2; in vec3 a_t3; in vec3 a_t4; in vec3 a_t5; in vec3 a_t6; in vec3 a_t7;\n"
-    "uniform vec4 u_vp;\n"     /* scale x, scale y, offset x, offset y in EFB pixels */
+    "uniform vec4 u_vp;\n"     /* scale x, scale y, offset x, offset y in native EFB pixels, the
+                                 offsets including the pixel-centre correction (set_uniforms) */
     "uniform vec2 u_depth;\n"  /* offset z, scale z, normalised to [0,1] */
     "uniform float u_psize;\n"
     "out vec4 v_c0; out vec4 v_c1;\n"
     "out vec3 v_t0; out vec3 v_t1; out vec3 v_t2; out vec3 v_t3; out vec3 v_t4; out vec3 v_t5; out vec3 v_t6; out vec3 v_t7;\n"
     "void main() {\n"
     "  vec4 p = a_pos;\n"
-    /* the console samples pixels at (x + 7/12, y + 7/12), GL at (x + 1/2, y + 1/2) */
-    "  float x = (u_vp.x * p.x + (u_vp.z - 1.0 / 12.0) * p.w) * (2.0 / 640.0) - p.w;\n"
-    "  float y = (u_vp.y * p.y + (u_vp.w - 1.0 / 12.0) * p.w) * (2.0 / 528.0) - p.w;\n"
+    "  float x = (u_vp.x * p.x + u_vp.z * p.w) * (2.0 / 640.0) - p.w;\n"
+    "  float y = (u_vp.y * p.y + u_vp.w * p.w) * (2.0 / 528.0) - p.w;\n"
     "  float d = u_depth.x * p.w + u_depth.y * 0.5 * (p.z - p.w);\n"
     "  gl_Position = vec4(x, y, 2.0 * d - p.w, p.w);\n"
     "  gl_PointSize = u_psize;\n"
@@ -210,16 +234,43 @@ static const char *kCopyFs =
     "  } else o = rgba;\n"
     "}\n";
 
+/* XFB -> canvas. u_mode: 1 FXAA (on the XFB's texels), 2 four-tap supersampling when
+ * the XFB is larger than the viewport (internal resolution above the display's). */
 static const char *kPresentFs =
     "#version 300 es\n"
     "precision highp float;\n"
     "uniform sampler2D u_tex; uniform vec4 u_rect;\n" /* texture-space x, y, w, h (normalised) */
-    "uniform vec2 u_canvas;\n"
+    "uniform vec4 u_view;\n"                          /* viewport x, y, w, h in canvas pixels */
+    "uniform int u_mode;\n"
     "out vec4 o;\n"
+    "vec3 src(vec2 uv) { return texture(u_tex, uv).rgb; }\n"
+    "float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }\n"
+    "vec3 fxaa(vec2 uv, vec2 px) {\n"
+    "  vec3 cNW = src(uv - px), cNE = src(uv + vec2(px.x, -px.y)), cSW = src(uv + vec2(-px.x, px.y)), cSE = src(uv + px), cM = src(uv);\n"
+    "  float lNW = luma(cNW), lNE = luma(cNE), lSW = luma(cSW), lSE = luma(cSE), lM = luma(cM);\n"
+    "  float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE))), lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));\n"
+    "  if (lMax - lMin < max(0.0312, lMax * 0.125)) return cM;\n"
+    "  vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));\n"
+    "  float red = max((lNW + lNE + lSW + lSE) * (0.25 / 8.0), 1.0 / 128.0);\n"
+    "  dir = clamp(dir / (min(abs(dir.x), abs(dir.y)) + red), -8.0, 8.0) * px;\n"
+    "  vec3 a = 0.5 * (src(uv + dir * (1.0 / 3.0 - 0.5)) + src(uv + dir * (2.0 / 3.0 - 0.5)));\n"
+    "  vec3 b = a * 0.5 + 0.25 * (src(uv - dir * 0.5) + src(uv + dir * 0.5));\n"
+    "  float lB = luma(b);\n"
+    "  return (lB < lMin || lB > lMax) ? a : b;\n"
+    "}\n"
     "void main() {\n"
-    "  vec2 uv = gl_FragCoord.xy / u_canvas; uv.y = 1.0 - uv.y;\n"
-    "  o = vec4(texture(u_tex, u_rect.xy + uv * u_rect.zw).rgb, 1.0);\n"
+    "  vec2 uv = (gl_FragCoord.xy - u_view.xy) / u_view.zw; uv.y = 1.0 - uv.y;\n"
+    "  vec2 tc = u_rect.xy + uv * u_rect.zw;\n"
+    "  vec3 c;\n"
+    "  if ((u_mode & 1) != 0) c = fxaa(tc, 1.0 / vec2(textureSize(u_tex, 0)));\n"
+    "  else if ((u_mode & 2) != 0) {\n"
+    "    vec2 d = u_rect.zw / u_view.zw * 0.25;\n"
+    "    c = 0.25 * (src(tc - d) + src(tc + d) + src(tc + vec2(d.x, -d.y)) + src(tc + vec2(-d.x, d.y)));\n"
+    "  } else c = src(tc);\n"
+    "  o = vec4(c, 1.0);\n"
     "}\n";
+
+static void apply_settings(int force);
 
 /* ---- register snapshot ---- */
 
@@ -249,8 +300,21 @@ static const GLenum kCompare[8] = { GL_NEVER, GL_LESS, GL_EQUAL, GL_LEQUAL, GL_G
 
 static void bind_efb(void)
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, sEfbFbo);
-    glViewport(0, 0, WGL_EFB_W, WGL_EFB_H);
+    glBindFramebuffer(GL_FRAMEBUFFER, sEfbSamples ? sEfbMsFbo : sEfbFbo);
+    glViewport(0, 0, sEfbW, sEfbH);
+}
+
+/* MSAA: resolve the EFB rectangle (native units) into the EFB textures. */
+static void resolve_efb(int x, int y, int w, int h)
+{
+    if (!sEfbSamples) return;
+    int S = wgl_gfx.scale;
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, sEfbMsFbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, sEfbFbo);
+    glDisable(GL_SCISSOR_TEST);
+    glBlitFramebuffer(x * S, y * S, (x + w) * S, (y + h) * S, x * S, y * S, (x + w) * S, (y + h) * S,
+                      GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, sEfbMsFbo);
 }
 
 static void scissor_offset(const uint32_t *bp, int *ox, int *oy)
@@ -331,11 +395,14 @@ static void set_uniforms(const WglProgram *p, const WglSnap *s, const WglTexInfo
     const uint32_t *bp = s->bp;
     int ox, oy;
     scissor_offset(bp, &ox, &oy);
-    glUniform4f(p->uVp, s->vp[0], s->vp[1], s->vp[3] - (float)ox, s->vp[4] - (float)oy);
+    /* the console samples pixels at (x + 7/12, y + 7/12), GL at (x + 1/2, y + 1/2); at a
+     * higher internal resolution the correction is 1/12 of a scaled pixel (as Dolphin) */
+    float pc = 1.0f / (12.0f * (float)wgl_gfx.scale);
+    glUniform4f(p->uVp, s->vp[0], s->vp[1], (s->vp[3] - (float)ox) - pc, (s->vp[4] - (float)oy) - pc);
     glUniform2f(p->uDepth, s->vp[5] / 16777215.0f, s->vp[2] / 16777215.0f);
     if (p->uPointSize >= 0) {
         float ps = (float)((bp[0x22] >> 8) & 0xFF) / 6.0f;
-        glUniform1f(p->uPointSize, ps < 1.0f ? 1.0f : ps);
+        glUniform1f(p->uPointSize, (ps < 1.0f ? 1.0f : ps) * (float)wgl_gfx.scale);
     }
     int regs[16], kon[16];
     for (int i = 0; i < 4; i++) {
@@ -366,6 +433,8 @@ static void set_uniforms(const WglProgram *p, const WglSnap *s, const WglTexInfo
         int b = (int)((bp[base] >> 9) & 0xFF);
         if (b & 0x80) b -= 256;
         lod[m] = (float)b / 32.0f;
+        /* as Dolphin: arbitrary mipmaps keep their native level choice at a higher internal resolution */
+        if (tex[m].arbitraryMips && wgl_gfx.scale > 1) lod[m] += wgl_gfx.scale == 2 ? 1.0f : wgl_gfx.scale == 4 ? 2.0f : 1.5849625f;
     }
     /* texcoord scale: SU size registers when set, else the size of the first
      * map sampled with that coordinate (texgen output is normalised) */
@@ -418,7 +487,7 @@ static void set_uniforms(const WglProgram *p, const WglSnap *s, const WglTexInfo
             /* range adjustment (BP 0xE8-0xED), as Dolphin's PixelShaderManager sets it up */
             float wd = s->vp[0] < 0 ? -s->vp[0] : s->vp[0];
             center = ((float)((int)(bp[0xE8] & 0x3FF) - 342) / (2.0f * wd)) * 2.0f - 1.0f;
-            width = 2.0f * wd;
+            width = 2.0f * wd * (float)wgl_gfx.scale; /* in gl_FragCoord units */
             float k[10];
             for (int i = 0; i < 5; i++) {
                 uint32_t r = bp[0xE9 + i];
@@ -579,7 +648,8 @@ static void flush(void)
     if (bottom > WGL_EFB_H) bottom = WGL_EFB_H;
     if (right <= left || bottom <= top) return;
     glEnable(GL_SCISSOR_TEST);
-    glScissor(left, top, right - left, bottom - top);
+    int S = wgl_gfx.scale;
+    glScissor(left * S, top * S, (right - left) * S, (bottom - top) * S);
 
     /* depth */
     uint32_t zm = bp[0x40];
@@ -612,7 +682,11 @@ static void flush(void)
     if (sPick >= 0) {
         /* MKDD_WGL_PICK=x*1000+y: log the batches that change that EFB pixel */
         uint8_t px[4];
-        glReadPixels(sPick / 1000, sPick % 1000, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+        resolve_efb(sPick / 1000, sPick % 1000, 1, 1);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, sEfbFbo);
+        glReadPixels(sPick / 1000 * S, sPick % 1000 * S, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+        bind_efb();
+        glEnable(GL_SCISSOR_TEST);
         if (memcmp(px, sPickLast, 4)) {
             fprintf(stderr, "[pick] (%d,%d) %02x%02x%02x%02x -> %02x%02x%02x%02x\n", sPick / 1000, sPick % 1000, sPickLast[0],
                     sPickLast[1], sPickLast[2], sPickLast[3], px[0], px[1], px[2], px[3]);
@@ -700,12 +774,18 @@ static void be_draw(void *ctx, const GpuRegs *regs, int prim, const GpuVertex *v
 extern "C" int gpu_fifolog_capture_index(void);
 extern "C" const char *gpu_fifolog_path(void);
 
-/* Writes the XFB image as <MKDD_DFF>.ours-<frame>.ppm. */
+/* Writes the XFB image as <MKDD_DFF>.ours-<frame>.ppm (w x h texels: native size x scale). */
 static void capture_xfb(GLuint tex, int w, int h, int frame)
 {
     static uint8_t *buf;
-    if (!buf) buf = (uint8_t *)malloc(640 * 576 * 4);
-    if (!buf || w <= 0 || h <= 0) return;
+    static size_t cap;
+    if (w <= 0 || h <= 0) return;
+    if ((size_t)w * h * 4 > cap) {
+        free(buf);
+        cap = (size_t)w * h * 4;
+        buf = (uint8_t *)malloc(cap);
+    }
+    if (!buf) { cap = 0; return; }
     glBindFramebuffer(GL_FRAMEBUFFER, sCopyFbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf);
@@ -777,11 +857,13 @@ static CopyFormat copy_format(uint32_t exec, int depth)
 static void run_copy(GLuint dstTex, int dx, int dy, int w, int h, const uint32_t *bp, int sx, int sy, int sw, int sh,
                      int half, int toXfb, const CopyFormat *cf)
 {
+    int S = wgl_gfx.scale;
+    resolve_efb(sx, sy, sw, sh);
     glBindFramebuffer(GL_FRAMEBUFFER, sCopyFbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dstTex, 0);
-    glViewport(0, 0, dx + w, dy + h);
+    glViewport(0, 0, (dx + w) * S, (dy + h) * S);
     glEnable(GL_SCISSOR_TEST);
-    glScissor(dx, dy, w, h);
+    glScissor(dx * S, dy * S, w * S, h * S);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -796,8 +878,8 @@ static void run_copy(GLuint dstTex, int dx, int dy, int w, int h, const uint32_t
     wgl_tex_forget_bindings();
 
     uint32_t exec = bp[0x52];
-    glUniform4i(uCopyRect, sx, sy, sw, sh);
-    glUniform2i(uCopyDst, dx, dy);
+    glUniform4i(uCopyRect, sx * S, sy * S, sw * S, sh * S);
+    glUniform2i(uCopyDst, dx * S, dy * S);
     glUniform1i(uCopyHalf, half);
     glUniform1i(uCopyDepth, (bp[0x43] & 7) == 3);
     glUniform1i(uCopyPixFmt, (int)(bp[0x43] & 7));
@@ -812,7 +894,7 @@ static void run_copy(GLuint dstTex, int dx, int dy, int w, int h, const uint32_t
     uint32_t f0 = bp[0x53], f1 = bp[0x54];
     GLuint vf[3] = { (f0 & 63) + ((f0 >> 6) & 63), ((f0 >> 12) & 63) + ((f0 >> 18) & 63) + (f1 & 63),
                      ((f1 >> 6) & 63) + ((f1 >> 12) & 63) };
-    if (!sDeflicker) { /* as Dolphin by default: keep the brightness, drop the vertical blur */
+    if (!wgl_gfx.deflicker) { /* as Dolphin by default: keep the brightness, drop the vertical blur */
         vf[1] += vf[0] + vf[2];
         vf[0] = vf[2] = 0;
     }
@@ -856,8 +938,9 @@ static XfbEntry *xfb_for_copy(uint32_t addr, uint32_t stride, int srcY, int *row
     }
     if (!e->tex) {
         glGenTextures(1, &e->tex);
+        e->scale = wgl_gfx.scale;
         glBindTexture(GL_TEXTURE_2D, e->tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 640, 576, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 640 * e->scale, 576 * e->scale, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -901,7 +984,7 @@ static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
             }
             e->lastUsed = ++sXfbSeq;
             int cap = gpu_fifolog_capture_index();
-            if (cap >= 0) capture_xfb(e->tex, e->w, e->h, cap);
+            if (cap >= 0) capture_xfb(e->tex, e->w * e->scale, e->h * e->scale, cap);
             if (sTraceFrame && (int)wgl_frame == sTraceFrame)
                 fprintf(stderr, "[wgl] xfb copy addr=%08x stride=%u row=%d src=%d,%d %dx%d entry=%08x\n", addr, stride, row, sx, sy, sw, sh, e->addr);
             wgl_stats_cur.xfbCopies++;
@@ -909,7 +992,7 @@ static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
             int half = (int)((exec >> 9) & 1);
             int w = half ? (sw + 1) / 2 : sw, h = half ? (sh + 1) / 2 : sh;
             CopyFormat cf = copy_format(exec, (bp[0x43] & 7) == 3);
-            GLuint t = wgl_tex_copy_target(addr, cf.gxFmt, w, h);
+            GLuint t = wgl_tex_copy_target(addr, cf.gxFmt, w, h, wgl_gfx.scale);
             run_copy(t, 0, 0, w, h, bp, sx, sy, sw, sh, half, 0, &cf);
             if (sTraceFrame && (int)wgl_frame == sTraceFrame)
                 fprintf(stderr, "[wgl] copy tex=%u addr=%08x fmt=%x %dx%d src=%d,%d %dx%d half=%d pix=%x clear=%d\n", t, addr, cf.gxFmt, w,
@@ -925,7 +1008,7 @@ static void be_efb_copy(void *ctx, const GpuRegs *regs, int toXfb, int clear)
         uint32_t cm0 = bp[0x41];
         int cu = (int)((cm0 >> 3) & 1), au = (int)((cm0 >> 4) & 1), zu = (int)((bp[0x40] >> 4) & 1);
         glEnable(GL_SCISSOR_TEST);
-        glScissor(sx, sy, sw, sh);
+        glScissor(sx * wgl_gfx.scale, sy * wgl_gfx.scale, sw * wgl_gfx.scale, sh * wgl_gfx.scale);
         glColorMask(cu, cu, cu, au);
         glDepthMask(zu ? GL_TRUE : GL_FALSE);
         float col[4] = { (float)(bp[0x4F] & 0xFF) / 255.0f, (float)((bp[0x50] >> 8) & 0xFF) / 255.0f,
@@ -952,22 +1035,50 @@ static void be_present(void *ctx, uint32_t xfbAddr)
     int cw = 640, ch = 480;
     emscripten_get_canvas_element_size("#screen", &cw, &ch);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, cw, ch);
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    if (!e || !e->w || !e->h) {
+    int vx = 0, vy = 0, vw = cw, vh = ch, nearest = 0;
+    if (e && e->w && e->h) {
+        if (wgl_gfx.present == 1) {
+            /* integer: whole multiples of the XFB's texels, square pixels */
+            int tw = e->w * e->scale, th = e->h * e->scale;
+            int k = cw / tw < ch / th ? cw / tw : ch / th;
+            if (k >= 1) {
+                vw = tw * k;
+                vh = th * k;
+                nearest = 1;
+            }
+        } else if (wgl_gfx.aspect == 0) {
+            /* 4:3 picture (16:9 with the widescreen option), pillar- or letterboxed */
+            int ax = wgl_gfx.widescreen ? 16 : 4, ay = wgl_gfx.widescreen ? 9 : 3;
+            if ((long)cw * ay > (long)ch * ax) vw = (int)((long)ch * ax / ay);
+            else vh = (int)((long)cw * ay / ax);
+        }
+        vx = (cw - vw) / 2;
+        vy = (ch - vh) / 2;
+    }
+    if (!e || !e->w || !e->h || vw != cw || vh != ch) {
+        glViewport(0, 0, cw, ch);
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
-    } else {
+    }
+    if (e && e->w && e->h) {
+        glViewport(vx, vy, vw, vh);
         glUseProgram(sPresentProg);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, e->tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, nearest ? GL_NEAREST : GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, nearest ? GL_NEAREST : GL_LINEAR);
         glBindSampler(0, 0);
         wgl_tex_forget_bindings();
         glUniform4f(uPresentRect, 0.0f, 0.0f, (float)e->w / 640.0f, (float)e->h / 576.0f);
-        glUniform2f(glGetUniformLocation(sPresentProg, "u_canvas"), (float)cw, (float)ch);
+        glUniform4f(uPresentView, (float)vx, (float)vy, (float)vw, (float)vh);
+        int mode = 0;
+        if (wgl_gfx.fxaa && !nearest) mode = 1;
+        else if (!nearest && (e->h * e->scale > vh * 3 / 2)) mode = 2;
+        glUniform1i(uPresentMode, mode);
         glBindVertexArray(sEmptyVao);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         wgl_tex_restore_samplers();
@@ -978,20 +1089,39 @@ static void be_present(void *ctx, uint32_t xfbAddr)
     wgl_frame++;
     if (sTraceFrame && wgl_frame % 250 == 0) fprintf(stderr, "[wgl] frame %u\n", wgl_frame);
     wgl_tex_new_frame();
+    wgl_tev_poll();
+    apply_settings(0);
 }
 
 /* ---- creation ---- */
 
-static int init_gl(void)
+/* (Re)creates the EFB at `scale` x native with `samples` (0 = no MSAA). The contents
+ * start cleared; the game clears the EFB with its copies every frame. */
+static int create_efb(int scale, int samples)
 {
+    if (sEfbFbo) {
+        glDeleteFramebuffers(1, &sEfbFbo);
+        glDeleteTextures(1, &sEfbColor);
+        glDeleteTextures(1, &sEfbDepth);
+        sEfbFbo = sEfbColor = sEfbDepth = 0;
+    }
+    if (sEfbMsFbo) {
+        glDeleteFramebuffers(1, &sEfbMsFbo);
+        glDeleteRenderbuffers(1, &sEfbMsColor);
+        glDeleteRenderbuffers(1, &sEfbMsDepth);
+        sEfbMsFbo = sEfbMsColor = sEfbMsDepth = 0;
+    }
+    wgl_tex_forget_bindings();
+    sEfbW = WGL_EFB_W * scale;
+    sEfbH = WGL_EFB_H * scale;
     glGenTextures(1, &sEfbColor);
     glBindTexture(GL_TEXTURE_2D, sEfbColor);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, WGL_EFB_W, WGL_EFB_H);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, sEfbW, sEfbH);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glGenTextures(1, &sEfbDepth);
     glBindTexture(GL_TEXTURE_2D, sEfbDepth);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH24_STENCIL8, WGL_EFB_W, WGL_EFB_H);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH24_STENCIL8, sEfbW, sEfbH);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glGenFramebuffers(1, &sEfbFbo);
@@ -999,13 +1129,113 @@ static int init_gl(void)
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sEfbColor, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, sEfbDepth, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        wgl_log("[webgl] EFB framebuffer incomplete");
+        wgl_log("[webgl] EFB framebuffer incomplete (%dx%d)", sEfbW, sEfbH);
         return 0;
     }
     glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
     glClearColor(0, 0, 0, 0);
     glClearDepthf(1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    sEfbSamples = 0;
+    if (samples > 1) {
+        glGenRenderbuffers(1, &sEfbMsColor);
+        glBindRenderbuffer(GL_RENDERBUFFER, sEfbMsColor);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_RGBA8, sEfbW, sEfbH);
+        glGenRenderbuffers(1, &sEfbMsDepth);
+        glBindRenderbuffer(GL_RENDERBUFFER, sEfbMsDepth);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, sEfbW, sEfbH);
+        glGenFramebuffers(1, &sEfbMsFbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, sEfbMsFbo);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, sEfbMsColor);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, sEfbMsDepth);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            sEfbSamples = samples;
+        } else {
+            wgl_log("[webgl] MSAA x%d EFB incomplete, MSAA off", samples);
+            glDeleteFramebuffers(1, &sEfbMsFbo);
+            glDeleteRenderbuffers(1, &sEfbMsColor);
+            glDeleteRenderbuffers(1, &sEfbMsDepth);
+            sEfbMsFbo = sEfbMsColor = sEfbMsDepth = 0;
+        }
+    }
+    return 1;
+}
+
+/* Internal resolution for MKDD_GFX_SCALE=0: the smallest scale whose 480 lines come
+ * close to the height of the 4:3 picture on the canvas. */
+static int auto_scale(const WglGfx *g)
+{
+    int cw = 640, ch = 480;
+    emscripten_get_canvas_element_size("#screen", &cw, &ch);
+    int h = ch;
+    if (g->aspect == 0 && (long)cw * 3 < (long)ch * 4) h = (int)((long)cw * 3 / 4);
+    if (g->aspect == 0 && g->widescreen && (long)cw * 9 < (long)ch * 16) h = (int)((long)cw * 9 / 16);
+    int sc = (h + 479 - 120) / 480;
+    /* 3x and 4x with 4x MSAA cost an integrated GPU too much (measured 8-30 ms a frame) */
+    int maxSc = g->msaa >= 4 ? 2 : 4;
+    return sc < 1 ? 1 : sc > maxSc ? maxSc : sc;
+}
+
+/* Reads the MKDD_GFX_* settings when the page changed them (Module.gfxVersion) and
+ * recreates the render targets if the resolution or MSAA changed. */
+static void apply_settings(int force)
+{
+    int ver = wgl_js_gfx_version();
+    WglGfx g = wgl_gfx;
+    if (force || ver != sGfxVersion) {
+        sGfxVersion = ver;
+        g.scaleSet = wgl_js_env_int("MKDD_GFX_SCALE", 1);
+        g.msaa = wgl_js_env_int("MKDD_GFX_MSAA", 0);
+        g.aniso = wgl_js_env_int("MKDD_GFX_ANISO", 1);
+        g.texFilter = wgl_js_env_int("MKDD_GFX_TEXFILTER", 0);
+        g.fxaa = wgl_js_env_int("MKDD_GFX_FXAA", 0);
+        g.present = wgl_js_env_int("MKDD_GFX_PRESENT", 0);
+        g.aspect = wgl_js_env_int("MKDD_GFX_ASPECT", 0);
+        g.widescreen = wgl_js_env_int("MKDD_GFX_WIDESCREEN", 0) > 0;
+        g.deflicker = wgl_js_env_int("MKDD_DEFLICKER", 0);
+        g.shaderWarm = wgl_js_env_int("MKDD_GFX_SHADER_WARM", 1);
+        if (g.scaleSet < 0 || g.scaleSet > 4) g.scaleSet = 1;
+        if (g.msaa > sMaxSamples) g.msaa = sMaxSamples;
+        if (g.msaa < 2) g.msaa = 0;
+        if (g.aniso < 1) g.aniso = 1;
+        if (g.aniso > 16) g.aniso = 16;
+    }
+    g.scale = g.scaleSet ? g.scaleSet : auto_scale(&g);
+    int targets = force || g.scale != wgl_gfx.scale || g.msaa != wgl_gfx.msaa;
+    int samplers = g.aniso != wgl_gfx.aniso || g.texFilter != wgl_gfx.texFilter;
+    if (!force && !targets && !samplers && !memcmp(&g, &wgl_gfx, sizeof g)) return;
+    wgl_gfx = g;
+    if (targets) {
+        if (!create_efb(g.scale, g.msaa) && g.scale > 1) {
+            wgl_gfx.scale = 1; /* out of memory at this size: native */
+            create_efb(1, 0);
+        }
+        /* XFB images are recreated at the new size by the next frame's copies */
+        for (int i = 0; i < MAX_XFB; i++) {
+            if (sXfb[i].tex) glDeleteTextures(1, &sXfb[i].tex);
+            memset(&sXfb[i], 0, sizeof sXfb[i]);
+        }
+        wgl_tex_forget_bindings();
+    }
+    if (samplers || force) wgl_tex_settings_changed();
+    if (!force)
+        fprintf(stderr, "[webgl] graphics: %dx internal resolution (%dx%d), MSAA %d, anisotropy %d, filter %d, FXAA %d, present %d, aspect %d\n",
+                wgl_gfx.scale, sEfbW, sEfbH, sEfbSamples, wgl_gfx.aniso, wgl_gfx.texFilter, wgl_gfx.fxaa, wgl_gfx.present, wgl_gfx.aspect);
+}
+
+static int init_gl(void)
+{
+    glGetIntegerv(GL_MAX_SAMPLES, &sMaxSamples);
+    if (sMaxSamples > 8) sMaxSamples = 8;
+    if (emscripten_webgl_enable_extension(sCtx, "EXT_texture_filter_anisotropic")) {
+        GLfloat m = 0;
+        glGetFloatv(0x84FF /* GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT */, &m);
+        wgl_max_aniso = m;
+    }
+    int parallel = emscripten_webgl_enable_extension(sCtx, "KHR_parallel_shader_compile");
     glGenFramebuffers(1, &sCopyFbo);
 
     wgl_main_vs = wgl_shader(GL_VERTEX_SHADER, kMainVs, "main vertex");
@@ -1052,9 +1282,16 @@ static int init_gl(void)
     glUseProgram(sPresentProg);
     glUniform1i(glGetUniformLocation(sPresentProg, "u_tex"), 0);
     uPresentRect = glGetUniformLocation(sPresentProg, "u_rect");
+    uPresentView = glGetUniformLocation(sPresentProg, "u_view");
+    uPresentMode = glGetUniformLocation(sPresentProg, "u_mode");
 
     wgl_tev_init();
     wgl_tex_init();
+    apply_settings(1);
+    if (!sEfbFbo) return 0;
+    if (wgl_gfx.shaderWarm) wgl_tev_warm(parallel);
+    fprintf(stderr, "[webgl] graphics: %dx internal resolution (%dx%d), MSAA %d (max %d), anisotropy %d (max %g)%s\n", wgl_gfx.scale,
+            sEfbW, sEfbH, sEfbSamples, sMaxSamples, wgl_gfx.aniso, wgl_max_aniso, parallel ? ", parallel shader compile" : "");
     return 1;
 }
 
@@ -1081,11 +1318,10 @@ extern "C" const GpuBackend *gpu_webgl_create(void)
         return NULL;
     }
     emscripten_webgl_make_context_current(sCtx);
+    sDebug = wgl_debug = port_env("MKDD_WGL_DEBUG");
     if (!init_gl()) return NULL;
     sTraceFrame = port_env("MKDD_WGL_TRACE");
-    sDebug = wgl_debug = port_env("MKDD_WGL_DEBUG");
     if (port_env("MKDD_WGL_PICK")) sPick = port_env("MKDD_WGL_PICK");
-    sDeflicker = port_env("MKDD_DEFLICKER");
     sBackend.draw = be_draw;
     sBackend.efb_copy = be_efb_copy;
     sBackend.present = be_present;

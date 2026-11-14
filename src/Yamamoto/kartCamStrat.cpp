@@ -276,10 +276,10 @@ void KartCam::First4ScreenPort(unsigned char idx) {
         mgr->hideConsole(idx);
     }
     if (mWidth != 0.0f && mHeight != 0.0f) {
-        mAspect = mWidth / mHeight;
+        mAspect = DECOMP_WIDE(mWidth / mHeight);
     }
-    if (mAspect > 3.0f) {
-        mAspect = 3.0f;
+    if (mAspect > DECOMP_WIDE(3.0f)) {
+        mAspect = DECOMP_WIDE(3.0f);
     }
     if (mAspect < 0.1f) {
         mAspect = 0.1f;
@@ -335,10 +335,10 @@ void KartCam::Second4ScreenPort(unsigned char idx) {
         mgr->hideConsole(idx);
     }
     if (mWidth != 0.0f && mHeight != 0.0f) {
-        mAspect = mWidth / mHeight;
+        mAspect = DECOMP_WIDE(mWidth / mHeight);
     }
-    if (mAspect > 3.0f) {
-        mAspect = 3.0f;
+    if (mAspect > DECOMP_WIDE(3.0f)) {
+        mAspect = DECOMP_WIDE(3.0f);
     }
     if (mAspect < 0.1f) {
         mAspect = 0.1f;
@@ -394,10 +394,10 @@ void KartCam::Third4ScreenPort(unsigned char idx) {
         mgr->hideConsole(idx);
     }
     if (mWidth != 0.0f && mHeight != 0.0f) {
-        mAspect = mWidth / mHeight;
+        mAspect = DECOMP_WIDE(mWidth / mHeight);
     }
-    if (mAspect > 3.0f) {
-        mAspect = 3.0f;
+    if (mAspect > DECOMP_WIDE(3.0f)) {
+        mAspect = DECOMP_WIDE(3.0f);
     }
     if (mAspect < 0.1f) {
         mAspect = 0.1f;
@@ -453,10 +453,10 @@ void KartCam::Fourth4ScreenPort(unsigned char idx) {
         mgr->hideConsole(idx);
     }
     if (mWidth != 0.0f && mHeight != 0.0f) {
-        mAspect = mWidth / mHeight;
+        mAspect = DECOMP_WIDE(mWidth / mHeight);
     }
-    if (mAspect > 3.0f) {
-        mAspect = 3.0f;
+    if (mAspect > DECOMP_WIDE(3.0f)) {
+        mAspect = DECOMP_WIDE(3.0f);
     }
     if (mAspect < 0.1f) {
         mAspect = 0.1f;
@@ -486,10 +486,10 @@ void KartCam::First2ScreenPort(unsigned char idx) {
         mgr->hideConsole(idx);
     }
     if (mWidth != 0.0f && mHeight != 0.0f) {
-        mAspect = mWidth / mHeight;
+        mAspect = DECOMP_WIDE(mWidth / mHeight);
     }
-    if (mAspect > 3.0f) {
-        mAspect = 3.0f;
+    if (mAspect > DECOMP_WIDE(3.0f)) {
+        mAspect = DECOMP_WIDE(3.0f);
     }
     if (mAspect < 0.1f) {
         mAspect = 0.1f;
@@ -517,10 +517,10 @@ void KartCam::Second2ScreenPort(unsigned char idx) {
         mgr->hideConsole(idx);
     }
     if (mWidth != 0.0f && mHeight != 0.0f) {
-        mAspect = mWidth / mHeight;
+        mAspect = DECOMP_WIDE(mWidth / mHeight);
     }
-    if (mAspect > 3.0f) {
-        mAspect = 3.0f;
+    if (mAspect > DECOMP_WIDE(3.0f)) {
+        mAspect = DECOMP_WIDE(3.0f);
     }
     if (mAspect < 0.1f) {
         mAspect = 0.1f;

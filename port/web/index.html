@@ -16,7 +16,18 @@
   button[disabled] { opacity: .5; cursor: default; }
   label.btn input { display: none; }
   .muted { color: var(--muted); }
-  #screen { width: 100%; aspect-ratio: 640 / 480; background: #000; display: block; border-radius: 6px; }
+  #stage { position: relative; background: #000; border-radius: 6px; overflow: hidden; }
+  #screen { width: 100%; aspect-ratio: 640 / 480; background: #000; display: block; }
+  #stage.wide #screen { aspect-ratio: 16 / 9; }
+  #stage:fullscreen { border-radius: 0; display: flex; align-items: center; justify-content: center; }
+  #stage:fullscreen #screen { width: 100vw; height: 100vh; aspect-ratio: auto; }
+  #gfx { margin-top: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+  #gfx summary { cursor: pointer; color: var(--muted); }
+  #gfx .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px 14px; margin-top: 8px; }
+  #gfx label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  #gfx select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; font: inherit; }
+  #gfx .note { grid-column: 1 / -1; font-size: 12px; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 4px 10px; }
   #log { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px;
     height: 220px; overflow: auto; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
 </style>
@@ -31,7 +42,29 @@
     <label class="btn" title="Replace the slot A memory card with a card image (.raw)">Import save<input id="cardImport" type="file" accept=".raw,.bin"></label>
     <span id="status" class="muted">Your own disc image is read locally; nothing is uploaded.</span>
   </div>
-  <canvas id="screen" width="640" height="480"></canvas>
+  <div id="stage"><canvas id="screen" width="640" height="480"></canvas></div>
+  <details id="gfx">
+    <summary>Graphics <span id="gfxSummary" class="muted"></span></summary>
+    <div class="grid">
+      <label>Internal resolution <select data-k="scale">
+        <option value="0">Auto (display)</option><option value="1">1× native</option><option value="2">2× (1280×1056)</option>
+        <option value="3">3× (1920×1584)</option><option value="4">4× (2560×2112)</option></select></label>
+      <label>Anti-aliasing (MSAA) <select data-k="msaa"><option value="0">Off</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></label>
+      <label>FXAA <select data-k="fxaa"><option value="0">Off</option><option value="1">On</option></select></label>
+      <label>Anisotropic filtering <select data-k="aniso"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option></select></label>
+      <label>Texture filtering <select data-k="texfilter"><option value="0">As the game sets it</option><option value="1">Trilinear mips</option><option value="2">Force linear</option></select></label>
+      <label>Aspect <select data-k="aspect"><option value="0">Keep (4:3)</option><option value="1">Stretch to window</option></select></label>
+      <label title="The game draws a wider 3D view; the HUD is stretched">Widescreen 16:9 (hack) <select data-k="wide"><option value="0">Off</option><option value="1">On</option></select></label>
+      <label>Scaling <select data-k="present"><option value="0">Smooth</option><option value="1">Integer (pixel-exact)</option></select></label>
+      <label>Deflicker filter <select data-k="deflicker"><option value="0">Off (sharp)</option><option value="1">On (console)</option></select></label>
+      <label>Shader warm-up <select data-k="warm"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label><button id="fullscreen" class="ghost" title="Fullscreen (Escape leaves)">Fullscreen</button>
+        <button id="gfxReset" class="ghost">Defaults</button></label>
+      <div class="note muted">Resolution, anti-aliasing and filtering apply at the next frame; shader warm-up applies at the next start.
+        1× with everything off is the console-accurate picture. Auto resolution follows the picture's size on screen
+        (at most 2× with 4×/8× MSAA). Double-click the picture for fullscreen.</div>
+    </div>
+  </details>
   <p class="muted">Controls: arrows steer · X accelerate (A) · Z brake (B) · Q/W L/R (drift) · Space item (Z) ·
     C/V X/Y · Enter Start · I/J/K/L C-stick. Gamepads work too (standard mapping).</p>
   <div id="log"></div>
@@ -167,11 +200,60 @@
   if (params.has('perf')) env.MKDD_PERF = params.get('perf') || '1';
   if (params.has('autopilot')) env.MKDD_AUTOPILOT = '1';
   if (params.has('pad')) env.MKDD_PAD = params.get('pad');
+
+  // Graphics settings (port/gpu/webgl_internal.h WglGfx): kept in localStorage, handed to the
+  // renderer as MKDD_GFX_* in Module.env; Module.gfxVersion tells it to re-read them.
+  const GFX_KEY = 'mkdd-gfx-v1';
+  const gfxDefaults = { scale: 0, msaa: 4, fxaa: 0, aniso: 16, texfilter: 0, aspect: 0, wide: 0, present: 0, deflicker: 0, warm: 1 };
+  const gfxEnv = { scale: 'MKDD_GFX_SCALE', msaa: 'MKDD_GFX_MSAA', fxaa: 'MKDD_GFX_FXAA', aniso: 'MKDD_GFX_ANISO',
+                   texfilter: 'MKDD_GFX_TEXFILTER', aspect: 'MKDD_GFX_ASPECT', wide: 'MKDD_GFX_WIDESCREEN', present: 'MKDD_GFX_PRESENT',
+                   deflicker: 'MKDD_DEFLICKER', warm: 'MKDD_GFX_SHADER_WARM' };
+  let gfx = { ...gfxDefaults };
+  try { Object.assign(gfx, JSON.parse(localStorage.getItem(GFX_KEY) || '{}')); } catch (e) {}
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('screen');
+  function gfxApply(save) {
+    for (const [k, name] of Object.entries(gfxEnv)) env[name] = String(gfx[k]);
+    stage.classList.toggle('wide', gfx.aspect == 1 || gfx.wide == 1);
+    for (const sel of document.querySelectorAll('#gfx select')) sel.value = String(gfx[sel.dataset.k]);
+    const sc = gfx.scale == 0 ? 'auto res' : gfx.scale + '× res';
+    document.getElementById('gfxSummary').textContent = '— ' + [sc, gfx.msaa > 0 ? 'MSAA ' + gfx.msaa + '×' : '', gfx.fxaa == 1 ? 'FXAA' : '',
+      gfx.aniso > 1 ? 'AF ' + gfx.aniso + '×' : ''].filter(Boolean).join(', ');
+    if (typeof Module !== 'undefined') Module.gfxVersion = (Module.gfxVersion | 0) + 1;
+    if (save) try { localStorage.setItem(GFX_KEY, JSON.stringify(gfx)); } catch (e) {}
+  }
+  for (const sel of document.querySelectorAll('#gfx select'))
+    sel.addEventListener('change', () => { gfx[sel.dataset.k] = Number(sel.value); gfxApply(true); sel.blur(); });
+  document.getElementById('gfxReset').addEventListener('click', (e) => { gfx = { ...gfxDefaults }; gfxApply(true); e.target.blur(); });
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else stage.requestFullscreen?.().catch(() => {});
+  }
+  document.getElementById('fullscreen').addEventListener('click', (e) => { toggleFullscreen(); e.target.blur(); });
+  canvas.addEventListener('dblclick', toggleFullscreen);
+  // The canvas backing store follows its CSS size x devicePixelRatio, so the picture is
+  // scaled once, by the renderer, to the real display pixels.
+  function fitCanvas(w, h) {
+    w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver((entries) => {
+      const e = entries[entries.length - 1];
+      const dp = e.devicePixelContentBoxSize && e.devicePixelContentBoxSize[0];
+      if (dp) fitCanvas(dp.inlineSize, dp.blockSize);
+      else fitCanvas(e.contentRect.width * devicePixelRatio, e.contentRect.height * devicePixelRatio);
+    });
+    try { ro.observe(canvas, { box: 'device-pixel-content-box' }); } catch (e) { ro.observe(canvas); }
+  }
+  gfxApply(false);
+
   for (const kv of params.getAll('env')) { const i = kv.indexOf('='); if (i > 0) env[kv.slice(0, i)] = kv.slice(i + 1); }
 
   var Module = {
     canvas: document.getElementById('screen'),
     env,
+    gfxVersion: 1,
     print: t => log(t),
     printErr: t => log(t),
     onRuntimeInitialized() { Module.portReady = true; if (discFile) startBtn.disabled = false; },

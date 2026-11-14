@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <emscripten.h>
 #include "webgl_internal.h"
 
 /* ---- string builder ---- */
@@ -368,6 +369,7 @@ static void gen_fragment(const WglKey *key, uint32_t *usedMaps, uint32_t *usedCo
 struct CacheEntry {
     uint32_t hash;
     int used;
+    int pending; /* linked but not yet queried (warm-up) */
     WglKey key;
     WglProgram prog;
 };
@@ -394,12 +396,16 @@ void wgl_tev_init(void)
     }
 }
 
-static int link_program(WglProgram *p, const WglKey *key)
+/* Compiles and links without waiting for the result (no status queries), so the
+ * driver can work on several programs at once. */
+static int start_program(WglProgram *p, const WglKey *key)
 {
     uint32_t maps, coords;
     gen_fragment(key, &maps, &coords);
-    GLuint fs = wgl_shader(GL_FRAGMENT_SHADER, sSrc, "tev fragment");
-    if (!fs) return 0;
+    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+    const char *src = sSrc;
+    glShaderSource(fs, 1, &src, NULL);
+    glCompileShader(fs);
     GLuint prog = glCreateProgram();
     glAttachShader(prog, wgl_main_vs);
     glAttachShader(prog, fs);
@@ -410,6 +416,17 @@ static int link_program(WglProgram *p, const WglKey *key)
     for (int i = 0; i < 8; i++) glBindAttribLocation(prog, 3 + i, tn[i]);
     glLinkProgram(prog);
     glDeleteShader(fs);
+    memset(p, 0, sizeof *p);
+    p->prog = prog;
+    p->usedMaps = maps;
+    p->usedCoords = coords;
+    return 1;
+}
+
+/* Waits for the link and looks up the uniforms. */
+static int finish_program(WglProgram *p)
+{
+    GLuint prog = p->prog;
     GLint ok = 0;
     glGetProgramiv(prog, GL_LINK_STATUS, &ok);
     if (!ok) {
@@ -417,12 +434,9 @@ static int link_program(WglProgram *p, const WglKey *key)
         glGetProgramInfoLog(prog, sizeof log, NULL, log);
         wgl_log("[webgl] TEV program link failed: %s", log);
         glDeleteProgram(prog);
+        p->prog = 0;
         return 0;
     }
-    memset(p, 0, sizeof *p);
-    p->prog = prog;
-    p->usedMaps = maps;
-    p->usedCoords = coords;
     glUseProgram(prog);
     static const char *sn[8] = { "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7" };
     for (int i = 0; i < 8; i++) {
@@ -450,26 +464,146 @@ static int link_program(WglProgram *p, const WglKey *key)
     return 1;
 }
 
+static int link_program(WglProgram *p, const WglKey *key) { return start_program(p, key) && finish_program(p); }
+
+/* ---- persistent warm-up set (browser localStorage) ----
+ * Every program key seen is remembered (most recent last, at most 4000); the next
+ * session compiles them in the background from the first frames on, instead of
+ * stalling when a course first needs them. Bump the storage name when the key
+ * layout changes. */
+EM_JS(int, wgl_js_keys_load, (uint32_t *buf, int maxWords), {
+    var list;
+    try { list = JSON.parse(localStorage.getItem("mkdd-tev-keys-v1") || "[]"); } catch (e) { list = []; }
+    Module.wglTevKeys = new Map();
+    var n = 0;
+    for (var i = 0; i < list.length; i++) {
+        var b = atob(list[i]);
+        var words = b.length >> 2;
+        if (!words || n + 1 + words > maxWords) continue;
+        Module.wglTevKeys.set(list[i], 1);
+        HEAPU32[(buf >> 2) + n++] = words;
+        for (var j = 0; j < words; j++)
+            HEAPU32[(buf >> 2) + n++] = (b.charCodeAt(j * 4) | b.charCodeAt(j * 4 + 1) << 8 | b.charCodeAt(j * 4 + 2) << 16 | b.charCodeAt(j * 4 + 3) << 24) >>> 0;
+    }
+    return n;
+});
+EM_JS(void, wgl_js_key_seen, (const uint32_t *w, int n), {
+    if (typeof localStorage === "undefined") return;
+    if (!Module.wglTevKeys) Module.wglTevKeys = new Map();
+    var s = "";
+    for (var i = 0; i < n; i++) { var v = HEAPU32[(w >> 2) + i]; s += String.fromCharCode(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255); }
+    var k = btoa(s);
+    Module.wglTevKeys.delete(k);
+    Module.wglTevKeys.set(k, 1);
+    if (Module.wglTevSave) return;
+    if (!Module.wglTevFlush) {
+        Module.wglTevFlush = function () {
+            if (Module.wglTevSave) clearTimeout(Module.wglTevSave);
+            Module.wglTevSave = 0;
+            var all = Array.from(Module.wglTevKeys.keys());
+            if (all.length > 4000) all = all.slice(all.length - 4000);
+            try { localStorage.setItem("mkdd-tev-keys-v1", JSON.stringify(all)); } catch (e) {}
+        };
+        if (typeof addEventListener !== "undefined") addEventListener("pagehide", Module.wglTevFlush);
+    }
+    Module.wglTevSave = setTimeout(Module.wglTevFlush, 3000);
+});
+
+static uint32_t *sWarm;   /* queued keys: [n, words...]... */
+static int sWarmLen, sWarmPos, sParallel;
+
+static CacheEntry *find_entry(const WglKey *key, uint32_t h)
+{
+    for (uint32_t i = 0; i < CACHE_SIZE; i++) {
+        CacheEntry *e = &sCache[(h + i) & (CACHE_SIZE - 1)];
+        if (!e->used) return e;
+        if (e->hash == h && e->key.n == key->n && !memcmp(e->key.w, key->w, (size_t)key->n * 4)) return e;
+    }
+    return NULL;
+}
+
 WglProgram *wgl_tev_program(const WglKey *key)
 {
     uint32_t h = key_hash(key);
-    for (uint32_t i = 0; i < CACHE_SIZE; i++) {
-        CacheEntry *e = &sCache[(h + i) & (CACHE_SIZE - 1)];
-        if (!e->used) {
-            if (!link_program(&e->prog, key)) return NULL;
-            e->used = 1;
-            e->hash = h;
-            e->key = *key;
-            wgl_stats_cur.programsCompiled++;
-            return &e->prog;
-        }
-        if (e->hash == h && e->key.n == key->n && !memcmp(e->key.w, key->w, (size_t)key->n * 4)) {
-            wgl_stats_cur.programsCached++;
-            return &e->prog;
-        }
+    CacheEntry *e = find_entry(key, h);
+    if (!e) {
+        wgl_log("[webgl] program cache full");
+        return NULL;
     }
-    wgl_log("[webgl] program cache full");
-    return NULL;
+    if (!e->used) {
+        if (!link_program(&e->prog, key)) return NULL;
+        e->used = 1;
+        e->hash = h;
+        e->key = *key;
+        wgl_stats_cur.programsCompiled++;
+        wgl_js_key_seen(key->w, key->n);
+        return &e->prog;
+    }
+    if (e->pending) {
+        /* warmed up but not finished yet: wait for it now */
+        e->pending = 0;
+        wgl_stats_cur.programsWarmUsed++;
+        wgl_js_key_seen(key->w, key->n);
+        if (!finish_program(&e->prog)) return NULL;
+        return &e->prog;
+    }
+    if (!e->prog.prog) return NULL; /* failed before */
+    wgl_stats_cur.programsCached++;
+    return &e->prog;
+}
+
+void wgl_tev_warm(int parallel)
+{
+    enum { MAX_WORDS = 4000 * 24 };
+    sParallel = parallel;
+    if (!sWarm) sWarm = (uint32_t *)malloc(MAX_WORDS * 4);
+    if (!sWarm) return;
+    sWarmLen = wgl_js_keys_load(sWarm, MAX_WORDS);
+    sWarmPos = 0;
+    if (sWarmLen) fprintf(stderr, "[webgl] warming up remembered TEV programs (%d words)\n", sWarmLen);
+}
+
+/* Once per frame: issue a few queued warm-up compiles and finish the programs the
+ * driver has completed. Without KHR_parallel_shader_compile the browser still
+ * compiles in its GPU process, so finishing a program a frame later rarely waits. */
+void wgl_tev_poll(void)
+{
+    static uint32_t scan;
+    int issued = 0;
+    while (sWarm && sWarmPos < sWarmLen && issued < (sParallel ? 48 : 12)) {
+        WglKey k;
+        int n = (int)sWarm[sWarmPos++];
+        if (n <= 0 || n > WGL_KEY_WORDS || sWarmPos + n > sWarmLen) { sWarmPos = sWarmLen; break; }
+        memcpy(k.w, sWarm + sWarmPos, (size_t)n * 4);
+        k.n = n;
+        sWarmPos += n;
+        uint32_t h = key_hash(&k);
+        CacheEntry *e = find_entry(&k, h);
+        if (!e || e->used) continue;
+        if (!start_program(&e->prog, &k)) continue;
+        e->used = 1;
+        e->pending = 1;
+        e->hash = h;
+        e->key = k;
+        issued++;
+        wgl_stats_cur.programsWarmed++;
+    }
+    /* finish completed ones (bounded work per frame) */
+    int finished = 0;
+    for (int i = 0; i < 256 && finished < 24; i++) {
+        CacheEntry *e = &sCache[scan++ & (CACHE_SIZE - 1)];
+        if (!e->used || !e->pending) continue;
+        if (sParallel) {
+            GLint done = 0;
+            glGetProgramiv(e->prog.prog, 0x91B1 /* GL_COMPLETION_STATUS_KHR */, &done);
+            if (!done) continue;
+        } else if (issued) {
+            continue; /* give the GPU process a frame */
+        }
+        e->pending = 0;
+        finish_program(&e->prog);
+        finished++;
+    }
 }
 
 /* Exposed for the test harness: the GLSL of the last generated shader. */

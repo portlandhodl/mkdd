@@ -27,6 +27,23 @@ OSTime port_vi_next_retrace(void)
 
 u32 port_vi_retrace_count(void) { return sRetraceCount; }
 
+/* Widescreen option (MKDD_GFX_WIDESCREEN, include/macros.h DECOMP_WIDE): the game's 3D
+ * projections (and with them the view-frustum culling) use 4/3 the aspect ratio, and
+ * the renderer shows the 4:3 frame stretched to 16:9. The 2D layout stays 4:3, so the
+ * HUD is drawn stretched. Re-read whenever the page changes the graphics settings. */
+float port_wide_aspect = 1.0f;
+EM_JS(int, port_js_gfx_version, (void), { return (typeof Module !== 'undefined' && Module.gfxVersion) | 0; });
+EM_JS(int, port_js_gfx_wide, (void), { return (typeof Module !== 'undefined' && Module.env && parseInt(Module.env.MKDD_GFX_WIDESCREEN, 10) > 0) ? 1 : 0; });
+static void update_wide_aspect(void)
+{
+    static int version = -1;
+    int v = port_js_gfx_version();
+    if (v == version)
+        return;
+    version = v;
+    port_wide_aspect = port_js_gfx_wide() ? 4.0f / 3.0f : 1.0f;
+}
+
 /* ---- frame-time accounting (MKDD_PERF=1) ---- */
 
 int port_perf_enabled;
@@ -108,6 +125,7 @@ void port_vi_retrace(void)
         sPerfMissed += (u32)((now - sNextRetrace) / RETRACE_TICKS) + 1;
         sNextRetrace = now + RETRACE_TICKS;
     }
+    update_wide_aspect();
     if (sPreCallback)
         sPreCallback(sRetraceCount);
     sCurrentFB = sNextFB;

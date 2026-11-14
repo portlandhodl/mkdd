@@ -1,5 +1,6 @@
 /* WebGL2 backend: texture cache (RAM textures decoded with texdec) and the
  * registry of EFB copies that later texture loads resolve to. */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "webgl_internal.h"
@@ -30,7 +31,7 @@ static uint64_t hash_bytes(const uint8_t *p, uint32_t n, uint64_t seed)
 struct TexEntry {
     uint32_t addr, tlutOff;
     uint16_t w, h;
-    uint8_t fmt, levels, tlutFmt, used;
+    uint8_t fmt, levels, tlutFmt, used, arbitraryMips;
     uint64_t hash;
     uint32_t checkedFrame, lastUsed;
     GLuint tex;
@@ -41,7 +42,7 @@ struct TexEntry {
 
 static TexEntry *sTex;
 static int sTexCount;
-static uint8_t *sDecode; /* 1024 x 1024 RGBA8 */
+static uint8_t *sDecode, *sPrevLevel; /* 1024 x 1024 RGBA8 */
 static GLuint sWhite;
 static GLuint sSampler[8];
 static uint64_t sSamplerKey[8];
@@ -51,7 +52,8 @@ static GLuint sBound[8];
 
 struct CopyEntry {
     uint32_t addr, bytes;
-    int fmt, w, h;
+    int fmt, w, h; /* native size */
+    int scale;     /* the texture is w * scale x h * scale */
     uint64_t ramHash;
     uint32_t checkedFrame;
     GLuint tex;
@@ -64,6 +66,7 @@ void wgl_tex_init(void)
 {
     if (!sTex) sTex = (TexEntry *)calloc(TEX_SLOTS, sizeof(TexEntry));
     if (!sDecode) sDecode = (uint8_t *)malloc(1024 * 1024 * 4);
+    if (!sPrevLevel) sPrevLevel = (uint8_t *)malloc(512 * 512 * 4);
     glGenTextures(1, &sWhite);
     glBindTexture(GL_TEXTURE_2D, sWhite);
     static const uint8_t white[4] = { 255, 255, 255, 255 };
@@ -104,18 +107,63 @@ static void evict_old(void)
     sTexCount = n;
 }
 
+/* Mean absolute difference (0-255 per channel) between level `prev` (pw x ph) box-filtered
+ * down to lw x lh and the next level `cur`. */
+static float mip_difference(const uint8_t *prev, int pw, int ph, const uint8_t *cur, int lw, int lh)
+{
+    uint64_t sum = 0;
+    for (int y = 0; y < lh; y++)
+        for (int x = 0; x < lw; x++) {
+            int x0 = x * 2 < pw ? x * 2 : pw - 1, x1 = x * 2 + 1 < pw ? x * 2 + 1 : pw - 1;
+            int y0 = y * 2 < ph ? y * 2 : ph - 1, y1 = y * 2 + 1 < ph ? y * 2 + 1 : ph - 1;
+            for (int c = 0; c < 4; c++) {
+                int v = (prev[(y0 * pw + x0) * 4 + c] + prev[(y0 * pw + x1) * 4 + c] + prev[(y1 * pw + x0) * 4 + c] +
+                         prev[(y1 * pw + x1) * 4 + c] + 2) >> 2;
+                int d = v - cur[(y * lw + x) * 4 + c];
+                sum += (uint64_t)(d < 0 ? -d : d);
+            }
+        }
+    return (float)sum / (float)(lw * lh * 4);
+}
+
 static void upload(int unit, TexEntry *e, const uint8_t *src, const uint8_t *tlut, int tlutCount)
 {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, e->tex);
     sBound[unit] = e->tex;
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    int pw = 0, ph = 0, diffN = 0;
+    float diffSum = 0.0f;
     for (int l = 0; l < e->levels; l++) {
         int lw = texdec_mip_dim(e->w, l), lh = texdec_mip_dim(e->h, l);
         const uint8_t *ls = src + texdec_mip_offset(e->fmt, e->w, e->h, l);
         if (texdec_decode(sDecode, ls, e->fmt, lw, lh, tlut, e->tlutFmt, tlutCount) != 0)
             memset(sDecode, 0xFF, (size_t)lw * lh * 4);
         glTexImage2D(GL_TEXTURE_2D, l, GL_RGBA8, lw, lh, 0, GL_RGBA, GL_UNSIGNED_BYTE, sDecode);
+        /* Arbitrary mipmaps (levels that aren't downscaled copies of the level above, e.g. a
+         * distance fade drawn into the mips): detected as Dolphin does, so the LOD bias can
+         * keep their level choice native at a higher internal resolution. */
+        if (l == 0) {
+            e->arbitraryMips = 0;
+            diffSum = 0.0f;
+            diffN = 0;
+        } else if (pw * ph * 4 <= 512 * 512 * 4 && lw >= 4 && lh >= 4) {
+            diffSum += mip_difference(sPrevLevel, pw, ph, sDecode, lw, lh);
+            diffN++;
+        }
+        if (e->levels > 1 && l + 1 < e->levels && lw * lh <= 512 * 512) {
+            memcpy(sPrevLevel, sDecode, (size_t)lw * lh * 4);
+            pw = lw;
+            ph = lh;
+        } else {
+            pw = ph = 0;
+        }
+    }
+    /* threshold set above the block-compression noise of MKDD's CMPR mip chains (up to ~51) */
+    e->arbitraryMips = diffN && diffSum / (float)diffN > 64.0f;
+    if (e->arbitraryMips) {
+        static int nlog;
+        if (nlog++ < 8) fprintf(stderr, "[webgl] arbitrary mipmaps: texture %08x %dx%d format %d (mean level difference %.1f)\n", e->addr, e->w, e->h, e->fmt, diffSum / (float)diffN);
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, e->levels - 1);
@@ -158,7 +206,7 @@ static CopyEntry *find_copy(uint32_t addr, int w, int h)
     return NULL;
 }
 
-GLuint wgl_tex_copy_target(uint32_t addr, int fmt, int w, int h)
+GLuint wgl_tex_copy_target(uint32_t addr, int fmt, int w, int h, int scale)
 {
     CopyEntry *slot = NULL;
     for (int i = 0; i < MAX_COPIES && !slot; i++)
@@ -172,9 +220,9 @@ GLuint wgl_tex_copy_target(uint32_t addr, int fmt, int w, int h)
         slot->addr = 0;
     }
     if (!slot->tex) glGenTextures(1, &slot->tex);
-    if (slot->addr != addr || slot->w != w || slot->h != h) {
+    if (slot->addr != addr || slot->w != w || slot->h != h || slot->scale != scale) {
         glBindTexture(GL_TEXTURE_2D, slot->tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w * scale, h * scale, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
         wgl_tex_forget_bindings();
@@ -183,6 +231,7 @@ GLuint wgl_tex_copy_target(uint32_t addr, int fmt, int w, int h)
     slot->fmt = fmt;
     slot->w = w;
     slot->h = h;
+    slot->scale = scale;
     return slot->tex;
 }
 
@@ -209,9 +258,16 @@ void wgl_tex_new_frame(void)
 
 extern "C" int gpu_webgl_live_textures(void) { return sTexCount; }
 
-static void set_sampler(int unit, uint32_t mode0, uint32_t mode1, int levels)
+void wgl_tex_settings_changed(void)
 {
-    uint64_t key = (uint64_t)(mode0 & 0x1FFFFF) | (uint64_t)(mode1 & 0xFFFF) << 21 | (uint64_t)(levels & 31) << 37;
+    for (int i = 0; i < 8; i++) sSamplerKey[i] = ~0ull;
+}
+
+/* flags: 1 an EFB copy, 2 arbitrary mipmaps */
+static void set_sampler(int unit, uint32_t mode0, uint32_t mode1, int levels, int flags)
+{
+    uint64_t key = (uint64_t)(mode0 & 0x1FFFFF) | (uint64_t)(mode1 & 0xFFFF) << 21 | (uint64_t)(levels & 31) << 37 |
+                   (uint64_t)flags << 42;
     if (sSamplerKey[unit] == key) return;
     sSamplerKey[unit] = key;
     GLuint s = sSampler[unit];
@@ -229,6 +285,29 @@ static void set_sampler(int unit, uint32_t mode0, uint32_t mode1, int levels)
     default: minf = GL_NEAREST; break;
     }
     if (levels <= 1) minf = (minf == GL_NEAREST || minf == GL_NEAREST_MIPMAP_NEAREST || minf == GL_NEAREST_MIPMAP_LINEAR) ? GL_NEAREST : GL_LINEAR;
+    /* enhancements (never for EFB copies, whose texels map to screen pixels) */
+    int tf = (flags & 1) ? 0 : wgl_gfx.texFilter;
+    if (tf >= 1 && levels > 1) { /* trilinear: blend between mip levels */
+        if (minf == GL_LINEAR_MIPMAP_NEAREST) minf = GL_LINEAR_MIPMAP_LINEAR;
+        else if (minf == GL_NEAREST_MIPMAP_NEAREST) minf = GL_NEAREST_MIPMAP_LINEAR;
+    }
+    if (tf >= 2) { /* force linear (Dolphin's "force texture filtering") */
+        minf = levels > 1 ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
+        glSamplerParameteri(s, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+    if (wgl_max_aniso > 0) {
+        /* as Dolphin: every texture that isn't point-sampled (min and mag nearest) is
+         * filtered linearly, between mips too, with anisotropy */
+        float an = 1.0f;
+        int point = !((mode0 >> 4) & 1) && !((mode0 >> 7) & 1);
+        if (wgl_gfx.aniso > 1 && !point && !(flags & 2)) { /* arbitrary mips: not with anisotropy (Dolphin) */
+            an = (float)wgl_gfx.aniso;
+            if (an > wgl_max_aniso) an = wgl_max_aniso;
+            minf = levels > 1 ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
+            glSamplerParameteri(s, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        }
+        glSamplerParameterf(s, 0x84FE /* GL_TEXTURE_MAX_ANISOTROPY_EXT */, an);
+    }
     glSamplerParameteri(s, GL_TEXTURE_MIN_FILTER, minf);
     glSamplerParameterf(s, GL_TEXTURE_MIN_LOD, (float)(mode1 & 0xFF) / 16.0f);
     glSamplerParameterf(s, GL_TEXTURE_MAX_LOD, (float)((mode1 >> 8) & 0xFF) / 16.0f);
@@ -269,7 +348,7 @@ void wgl_tex_bind(const WglSnap *s, int map, WglTexInfo *out)
         out->levels = 1;
         out->isCopy = 1;
         bind_unit(map, c->tex);
-        set_sampler(map, mode0, mode1, 1);
+        set_sampler(map, mode0, mode1, 1, 1);
         return;
     }
 
@@ -288,7 +367,7 @@ void wgl_tex_bind(const WglSnap *s, int map, WglTexInfo *out)
         out->w = out->h = 1;
         out->levels = 1;
         bind_unit(map, sWhite);
-        set_sampler(map, mode0, mode1, 1);
+        set_sampler(map, mode0, mode1, 1, 0);
         return;
     }
 
@@ -338,8 +417,9 @@ void wgl_tex_bind(const WglSnap *s, int map, WglTexInfo *out)
     }
     e->lastUsed = wgl_frame;
     out->tex = e->tex;
+    out->arbitraryMips = e->arbitraryMips;
     bind_unit(map, e->tex);
-    set_sampler(map, mode0, mode1, levels);
+    set_sampler(map, mode0, mode1, levels, e->arbitraryMips ? 2 : 0);
 }
 
 /* Called when a texture object is deleted elsewhere / the backend binds other
