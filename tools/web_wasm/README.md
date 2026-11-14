@@ -25,6 +25,9 @@ MKDD_ISO=/path/GM4E01.iso node tools/web_wasm/web/smoke.mjs
 
 `--tag NAME` builds into separate `obj-*-NAME` / `<target>-NAME` directories.
 
+Online play (lobby server, WebRTC transport, `port_net_*` bridge for the game):
+`net/README.md`.
+
 ## Patch set
 
 `src/`, `libs/` and `include/` hold only matching-decomp code. Anything the

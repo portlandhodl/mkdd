@@ -1,0 +1,143 @@
+# Online play: lobby and transport
+
+The lobby server, the WebRTC transport and the wasm bridge that the state-sync
+netcode (`NETCODE.md`, on the `netcode` branch) runs on. This layer has no game
+protocol: it carries the netcode's messages between players. Each player loads
+their own disc image; only lobby messages go to the server and game messages go
+peer-to-peer.
+
+| Path | Contents |
+| --- | --- |
+| `server/` | lobby + WebRTC signalling server (Node, `ws`), optional static file server |
+| `net_bridge.c/.h` | the game's side: `port_net_send` / `port_net_recv` / session info / host clock |
+| `../web/net.js` | `Lobby`, `Mesh` (peers, channels, RTT, host clock, events), wasm bridge |
+| `../web/netui.js` | Multiplayer panel (`index.html` `#mp`) and in-game overlay |
+| `test/` | server tests, transport tests on mock WebRTC, two-Chrome end-to-end test |
+
+## Running the server
+
+```sh
+npm ci --prefix tools/web_wasm/net/server           # installs ws into ./node_modules only
+node tools/web_wasm/net/server/server.mjs           # ws://127.0.0.1:8095/ws
+# one process for page + lobby:
+STATIC_DIR=build/web_wasm/web HOST=0.0.0.0 node tools/web_wasm/net/server/server.mjs
+```
+
+Or keep `tools/web_wasm/web/serve.sh` for the page and run the server next to it:
+the page's default lobby URL is `ws://<page host>:8095/ws` (a page served by the
+server itself uses its own origin). The URL is editable in the panel; `?netserver=`
+sets it.
+
+| Env | Default | |
+| --- | --- | --- |
+| `PORT`, `HOST` | `8095`, `127.0.0.1` | listen address (`0.0.0.0` for other machines) |
+| `STATIC_DIR` | - | also serve this directory (the web build) over HTTP |
+| `MAX_MEMBERS` | 8 | players per room (2-8) |
+| `STUN_URLS` | Google + Cloudflare public STUN | comma list, empty for none |
+| `TURN_URLS` | - | comma list, e.g. `turn:turn.example.org:3478?transport=udp` |
+| `TURN_USERNAME`, `TURN_CREDENTIAL` | - | static TURN credentials, handed to clients |
+| `TURN_SECRET`, `TURN_TTL` | -, 6 h | coturn `use-auth-secret`: per-client time-limited credentials instead |
+| `MAX_ROOMS`, `MAX_CONN_PER_IP`, `ROOMS_PER_MIN` | 500, 16, 10 | limits |
+| `MAX_MSG_BYTES`, `MSG_RATE`, `MSG_BURST` | 64 KiB, 60/s, 200 | per-connection message limits |
+| `HEARTBEAT_MS`, `ROOM_IDLE_MS` | 10 s, 6 h | dead-socket check, idle room expiry |
+| `TRUST_PROXY` | - | `1`: use `X-Forwarded-For` for the per-IP limits (behind a reverse proxy) |
+
+## Playing with a friend over the internet
+
+1. Host the page and the lobby where both can reach them, e.g. on your machine with
+   `STATIC_DIR=build/web_wasm/web HOST=0.0.0.0 PORT=8095`, forward TCP 8095 on your
+   router and give your friend `http://<your public IP>:8095/`. Behind a TLS reverse
+   proxy use `wss://` (an `https` page picks `wss`).
+2. Both choose their own disc image (same game ID, e.g. GM4E01) and use the same
+   build (the room refuses a different `mkdd.wasm`).
+3. One creates a room, the other joins with the 6-character code, picks drivers and
+   kart and ticks Ready; the host picks slots and the race and presses Start session.
+
+Game traffic is peer-to-peer (WebRTC data channels over UDP). STUN is enough for
+most home NATs; two symmetric NATs (some mobile/CGNAT networks) need a TURN relay:
+run coturn and set `TURN_URLS` with credentials (`TURN_SECRET` for coturn's
+`use-auth-secret`). Without TURN such peers stay at "connecting".
+
+## Lobby protocol (JSON over WebSocket, `/ws`)
+
+Client to server: `hello {name, gameId, build, proto}`, `create`, `join {code}`,
+`leave`, `name {name}`, `ready {ready}`, `profile {profile}` (own choice, any JSON
+object up to 2 KB, e.g. `{char1, char2, kart}`), `settings {game, slots}` (host:
+`game` is any JSON object up to 2 KB, e.g. `{course, cc, laps, mirror}`; `slots`
+maps member id to slot 0..7 or -1), `start` (host, everyone else ready), `end`
+(host), `kick {id}` (host), `signal {to, data}` (SDP/ICE relay), `ping {ts}`.
+
+Server to client: `welcome {id, proto, iceServers}`, `room {code, host, state
+(lobby|playing), settings, maxMembers, gameId, build, members[{id, name, slot,
+ready, profile}]}`, `peer-left {id, reason}`, `host-changed {host, reason}` (the
+longest-standing member takes over, also during a session), `ended`, `signal
+{from, data}`, `pong`, `error {code, msg, re}`. Every joiner's game ID and build
+fingerprint (64-bit hash of `mkdd.wasm`) must equal the room's.
+
+## Transport (net.js `Mesh`)
+
+A full mesh of RTCPeerConnections (the lower member id offers) with two negotiated
+data channels per peer: `unrel` (unordered, `maxRetransmits: 0`) and `rel`
+(ordered, reliable).
+
+```js
+const mesh = new MkddNet.Mesh(lobby, { sim: { lag, jitter, loss }, log });
+mesh.send(to /* member id | peer | 'all' */, MkddNet.KIND.UNRELIABLE | KIND.RELIABLE, Uint8Array);
+mesh.on('message', (peer, kind, bytes) => ...);
+mesh.on('peer-join' | 'peer-leave' | 'peer-lost' | 'peer-back', (peer) => ...);
+mesh.on('start', (session) => ...);   // { code, host, self, settings, members[{id, name, slot, profile}] }
+mesh.on('end' | 'host' | 'peers', ...);
+mesh.hostTime();                      // the host's clock in ms; mesh.clockSynced()
+mesh.peers.get(id).rtt;               // smoothed RTT (ms), also rttMax
+```
+
+- Message bytes start with the message type, `0x00-0xEF`; `0xF0-0xFF` are the
+  transport's: `PING 0xF0 (u32 seq, f64 t)` and `PONG 0xF1 (u32 seq, f64 t echoed,
+  f64 t_responder)` every 250 ms on the unreliable channel.
+- Host clock: offset = median of the last 16 samples of `t_host + rtt/2 - t_local`
+  from pongs of the host (`NETCODE.md` §9). Reset when the host changes.
+- Liveness: a joined peer silent for 5 s or with a disconnected ICE link is `lost`
+  until a packet arrives again; leaving the room is `peer-leave`.
+- Session start: when the host starts, the room state becomes `playing` and every
+  page emits `start` with the member list (slots, profiles) and the host's game
+  settings; membership is then frozen (leaves are marked, nobody new joins).
+- Simulated network (tests): `?netlag=ms&netjitter=ms&netloss=0..1` on the page,
+  latency on both channels (reliable order kept), loss on the unreliable one.
+
+## Game side (`net_bridge.h`)
+
+At session start the page boots the game with `MKDD_NET_ONLINE=1` and attaches the
+mesh (`Mesh.attachModule(Module)` -> `Module.netBridge`). C/C++ (e.g. `netkart.cpp`):
+
+```c
+#include "net_bridge.h"
+port_net_active();  port_net_self();  port_net_host();
+port_net_members(ids, max);  port_net_slot(id);  port_net_rtt(id);
+port_net_host_time();  port_net_clock_synced();
+port_net_session_json(buf, cap);         /* the start event's JSON */
+port_net_send(PORT_NET_ALL or id, PORT_NET_UNRELIABLE or PORT_NET_RELIABLE, data, len);
+while ((n = port_net_recv(&from, &kind, buf, sizeof buf)) > 0) { ... }  /* once per frame */
+```
+
+Incoming messages queue in JS (up to 4096; when full the oldest unreliable message
+is dropped). Peer and session changes arrive in the same queue as `PORT_NET_EVENT`
+messages: `u8 code (PORT_NET_EV_JOIN/LEAVE/LOST/BACK/START/END/HOST), 3 x 0, u32
+member id`. Without a page or session every call reports "nothing" (node runs work).
+
+## Testing
+
+```sh
+npm test --prefix tools/web_wasm/net/server                 # lobby server (node:test)
+node --test tools/web_wasm/net/test/mesh.test.mjs           # Mesh on mock WebRTC
+python tools/web_wasm/tools/build.py --target web --tag netweb
+MKDD_ISO=/path/GM4E01.iso node tools/web_wasm/net/test/e2e.mjs
+NET_LAG=50 NET_JITTER=10 NET_LOSS=0.1 MKDD_ISO=... node tools/web_wasm/net/test/e2e.mjs
+```
+
+`e2e.mjs` serves `build/web_wasm/web-netweb` from the lobby server on port 18610,
+starts two headless Chrome instances (debug ports 19610/19611), creates and joins a
+room through the panel, sets a profile and the race, starts the session without
+booting the game (`?netnoboot=1`; only the disc header is read), then checks
+messages both ways on both channels, the wasm bridge (`port_net_send` on one page,
+`port_net_recv` on the other), the session JSON, host-clock agreement and a stream
+of 600 56-byte unreliable packets.
