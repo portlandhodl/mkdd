@@ -1,6 +1,7 @@
 # Online multiplayer netcode: design
 
-Status: design and spike (branch `netcode`). Scope: the WebAssembly port
+Status: phase 1 implemented (branch `netcode-p1`; see §15): two to eight browsers
+race each other, each driving its own kart, items off. Scope: the WebAssembly port
 (`tools/web_wasm`). Decomp files stay pristine. Game-side hooks are patches in
 `tools/web_wasm/patches/`, and port-side code lives in `tools/web_wasm/net/`.
 
@@ -718,3 +719,61 @@ Estimates are for one experienced engineer familiar with this repository.
 8. **Open question for the user:** is victim authority acceptable for item hits (shooter occasionally sees a hit not register), or should hits favour the shooter (requires rewinding the victim's history, which we do not have)?
 9. **Open question:** allow CPU karts online in VS (host simulates them and sends them like players, about +20 KB/s for 4 CPUs), or humans only at first?
 10. **Open question:** phase-1 session UX. Is the custom lobby UI plus `RACE_SETUP` enough, or should the in-game character/kart menus be used before going online?
+
+---
+
+## 15. Phase 1 (implemented)
+
+Code: `tools/web_wasm/net/netonline.cpp` (+ `netonline_js.c` for page exports), the
+shared wire format and correction helpers in `netkart.cpp/.h`, patch
+`0021-netcode-session` (`LogoApp.cpp`, `JugemStart.cpp`, `PauseManager.cpp`) next to
+`0020-netcode-remote-kart`. How to play: `README.md`.
+
+| Piece | As built |
+| --- | --- |
+| Session | No `RACE_SETUP` message: the lobby's start event already carries everything, so every peer reads `port_net_session_json()` (host settings `course/cc/laps/mirror`, members with slot and `profile {char1, char2, kart}`). Karts are the members with a slot, in slot order (= grid position). Seed = FNV-1a of the room code. `gRaceInfo`: `setRace(VERSUS_RACE, n, n, 1, 1)`, level from cc (mirror = `LVL_MIRROR`), `mVsLapNum`, `setItemSlotType(1)` (VS "no items": no item boxes), local kart `gpaKartPad[0]`, others `KartGamePad(Port_unknown, PORT_NET, NETWORK)` (kind 3), console 0 on the local kart (a member without a slot watches kart 0). `mIsLanMode` stays off |
+| Boot | With `MKDD_NET_ONLINE=1` `LogoApp` skips the logo waits and, instead of the opening movie, calls `port_net_boot_race()`: set up `gRaceInfo`, `ResMgr::loadCourseData`, wait for the course and the keep archives (MRAM, MRAMLoc, Race2D, **ARAM**: entering the race before ARAM.arc is mounted crashes in `readAnmResTask`), then `RaceApp::call()`. The course intro demo plays as usual (A skips it) |
+| Start | `TJugem::doFunc_StartWaitBlend` holds before the lights while `port_net_countdown_hold()`. Each peer sends `READY 0x41 {attempt, frame time}` to the host every second while waiting; once all live members are there (or after 30 s) the host sends `GO 0x42 {attempt, f64 T_go}` with `T_go = now + max(1.5 s, 1 s + 2 RTT) + 240 × slowest frame time`. A peer starts its 240-frame countdown at `T_go − 240 × its own frame time`, and `doFunc_StartUp` holds `mIsAbleStart` until `T_go` (the state does not leave 0xF before). A late GO is re-sent on the next READY; without any GO a peer starts alone after 45 s. A retry from the results menu is a new attempt |
+| Wire | Kart state as §10.1, 30 Hz (every second shared frame, or every game frame below 30 fps), **frame field = shared clock frame** `round(host ms / 16.683)` instead of a race frame: the age of a sample is then known on every peer without a race-frame mapping, also when the sender runs slow. `FINISH 0x31 {slot, u32 ms}` (reliable) when the local kart's `KartChecker` reaches the goal |
+| Remote karts | Hybrid (mode 1 of the spike) for up to 7 remote karts: newest input held on the PORT_NET pad (item buttons masked), the game's physics, then pose/velocity pulled toward the newest state extrapolated to now. Extrapolation uses the displacement per shared frame measured from the last two samples (falls back to `mEffctVel`), because `mEffctVel` is per game frame of a sender that may run below 60 fps. Blend 0.15 per 60 Hz frame compounded over the local frame time; snap above 1500 units. No state for 0.5 s: frozen in place (zero velocity, inputs released). Peer LOST: frozen and `mGameStatus |= 0x10` (no collisions) until it is back; LEAVE: also hidden (`KartDrawer::hide`) |
+| Collisions | Local vs remote bumps are the game's own `CheckBodyHit` on both machines; the remote kart is pulled back to its owner's state within ~100 ms. No status effects (no items in phase 1) |
+| Pause, end | The Start-button pause is off online. Race end and results are local (VS with only human karts ends when all but one have finished, as on the console); remote karts' laps come from their replicated positions. Reload the page to race again |
+| Busy waits | `port_poll()` returns to the browser event loop at least every 50 ms during a session (`yield_for_net`, `sdk/os_thread.c`), so a game loop that polls `VIGetRetraceCount`/`OSGetTime` cannot starve the data channels |
+| Measurement | Each received state (the sender's truth at shared frame f) is compared with the replica's position at f, interpolated in a local history, once the local game has passed f. Once a second: `[net] stats <name>: err avg/max` in the page log, `Module.netStats`/`Module.netStatsLog` (also used by the overlay) |
+
+### Two-Chrome test (`net/test/e2e-race.mjs`)
+
+Both instances on one loaded 12-core machine with SwiftShader WebGL: **8–9 fps** per
+game (the countdown and GO logic are frame-rate aware; the karts themselves are in
+slow motion at that rate, which is what the error numbers mostly measure). Luigi
+Circuit, 150cc, the in-page bot drives each kart toward the course ahead with
+keyboard events; 60 s from GO.
+
+| Network | Replica of | Error avg | p95 of 1 s means | max | States/s | Sample age | GO vs shared time |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| direct (loopback) | Bob on Alice's screen | 66 | 267 | 934 | 6.8 | 7.7 frames | +63 ms |
+| direct (loopback) | Alice on Bob's screen | 165 | 455 | 963 | 6.5 | 6.3 frames | +47 ms |
+| 50 ms ± 10 ms, 5 % loss | Bob on Alice's screen | 145 | 570 | 1147 | 6.5 | 21 frames | +48 ms |
+| 50 ms ± 10 ms, 5 % loss | Alice on Bob's screen | 203 | 553 | 975 | 6.3 | 22 frames | +16 ms |
+
+Units are world units (a kart is about 200 long); each row is about 340 samples. The
+states/s are below 30 because a game at 9 fps sends once per game frame. Earlier
+runs of the same build ranged 66–210 average. The GO frames of both games landed
+within 70 ms of the shared time once the start accounts for the frame rate (before
+that, a 240-frame countdown at 9 fps made GO 21 s late). Screenshots from both
+browsers show the other player's kart where its owner has it, the same ranks on
+both screens and the overlay with the live error; they are game imagery and stay
+out of the repository.
+
+At 60 fps the same extrapolation and blend gave 1–50 units in the spike (§12); the
+headless numbers are dominated by 7 shared frames passing per local frame. Note that
+the page's `?netloss=` is a fraction (`0.05` = 5 %).
+
+### Not done in phase 1
+
+Items (boxes are off), host-authoritative laps/results (`LAP`/`RESULTS`, `KartChecker`
+overrides for net karts), CPU karts, rank corrections, return to the lobby after the
+race, hazards re-phased at GO (object timers run from course load, so a peer that
+waited longer at the start sees them out of phase), victim-side contact effects,
+visual-offset smoothing. `MKDD_AUTOPILOT` cannot drive an online kart: VS without
+CPUs has no rival data (`RivalBodyCtrl::getTopComKartIndex` asserts).

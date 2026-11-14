@@ -10,6 +10,8 @@ peer-to-peer.
 | --- | --- |
 | `server/` | lobby + WebRTC signalling server (Node, `ws`), optional static file server |
 | `net_bridge.c/.h` | the game's side: `port_net_send` / `port_net_recv` / session info / host clock |
+| `netonline.cpp`, `netonline_js.c` | online race (phase 1): session → `RaceInfo`, start sync, kart state stream, remote karts, stats |
+| `netkart.cpp/.h` | kart state wire format, remote-kart correction, the single-process spike harness |
 | `../web/net.js` | `Lobby`, `Mesh` (peers, channels, RTT, host clock, events), wasm bridge |
 | `../web/netui.js` | Multiplayer panel (`index.html` `#mp`) and in-game overlay |
 | `test/` | server tests, transport tests on mock WebRTC, two-Chrome end-to-end test |
@@ -41,6 +43,50 @@ sets it.
 | `MAX_MSG_BYTES`, `MSG_RATE`, `MSG_BURST` | 64 KiB, 60/s, 200 | per-connection message limits |
 | `HEARTBEAT_MS`, `ROOM_IDLE_MS` | 10 s, 6 h | dead-socket check, idle room expiry |
 | `TRUST_PROXY` | - | `1`: use `X-Forwarded-For` for the per-IP limits (behind a reverse proxy) |
+
+## How to play with a friend (phase 1: race together, no items)
+
+What you get: each browser drives its own kart full-screen and sees the other
+players' karts (up to 8) move over the network (`NETCODE.md`). VS race, humans only
+(no CPU karts), items off, no pause. After the race each player sees their own
+results; reload the page to race again.
+
+Build once (both players must use the same build, the room checks the `mkdd.wasm`
+fingerprint):
+
+```sh
+source ~/emsdk/emsdk_env.sh
+python tools/web_wasm/tools/build.py --target web            # build/web_wasm/web
+npm ci --prefix tools/web_wasm/net/server
+```
+
+**Same LAN.** On one machine (say `192.168.1.20`) serve the page and the lobby from one
+process:
+
+```sh
+STATIC_DIR=build/web_wasm/web HOST=0.0.0.0 PORT=8095 node tools/web_wasm/net/server/server.mjs
+```
+
+Both players open `http://192.168.1.20:8095/` (the page finds the lobby on its own
+origin), choose their own disc image, open Multiplayer, type a name and Connect.
+One presses Create room and reads out the 6-letter code; the other types it and
+Joins. Everyone picks Driver, Partner and Kart; the host picks Course, Class, Laps
+and Mirror (and slots = grid positions). Non-hosts tick Ready, the host presses
+Start. Both games boot straight into the race (about 10-20 s to load the course),
+wait for each other at the Lakitu, and the countdown ends on the same host-clock
+moment everywhere. Keys: X accelerate, arrows steer, Z brake, Q/W drift; a gamepad
+works too. The overlay (top left) shows ping, the race phase and, per other player,
+`live` / `stale` / `lost` / `left` and how far off their kart is (units; a kart is
+about 200 long).
+
+**Over the internet.** Same as below: host page and lobby where both can reach them
+(port forward TCP 8095, or a TLS reverse proxy and `wss://`), then as on a LAN with
+`http://<your public IP or host name>:8095/`. Game traffic is peer-to-peer over
+WebRTC; behind symmetric NATs set up TURN (see below).
+
+Notes: a browser tab in the background is throttled and its kart stops being sent
+(others see it frozen, then `lost` after 5 s); keep the game tab visible. A player
+whose machine cannot hold 60 fps is in slow motion for themselves and starts late.
 
 ## Playing with a friend over the internet
 
@@ -141,3 +187,21 @@ booting the game (`?netnoboot=1`; only the disc header is read), then checks
 messages both ways on both channels, the wasm bridge (`port_net_send` on one page,
 `port_net_recv` on the other), the session JSON, host-clock agreement and a stream
 of 600 56-byte unreliable packets.
+
+```sh
+MKDD_ISO=/path/GM4E01.iso node tools/web_wasm/net/test/e2e-race.mjs
+NET_LAG=50 NET_JITTER=10 NET_LOSS=0.05 MKDD_ISO=... node tools/web_wasm/net/test/e2e-race.mjs
+```
+
+`e2e-race.mjs` (same server and Chrome ports, output in `build/web_wasm/net-race`)
+does the same lobby steps without `netnoboot`: both pages boot the game into one
+online race on Luigi Circuit. An in-page bot drives each player's own kart with
+KeyboardEvents toward the course ahead (the karts steer into each other for the
+first second after GO), canvas screenshots are taken from both browsers
+(`RACE_SHOTS` seconds after GO), and the replica error each game measured is
+summarised in `summary.json`. Debug exports used by it: `Module.netStats`,
+`Module.netStatsLog`, `Module.netPhase`, `Module._port_net_debug_frame()`,
+`Module._port_net_debug_kart(ptr)` (`net/netonline_js.c`). Node runs can boot the
+online path without a page: `MKDD_NET_ONLINE=1 MKDD_NET_SESSION='<session JSON>'`
+(the other members count as lost; `MKDD_NET_TRACE=N` prints the local kart's
+position every N frames).
