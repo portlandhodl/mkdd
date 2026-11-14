@@ -394,6 +394,7 @@
     // Messages for the game are queued here and pulled by port_net_recv(); peer and
     // session changes are queued as KIND.EVENT messages. port_net_send() lands in send().
     attachModule(module) {
+      if (module.netBridge && module.netBridge.mesh === this) return module.netBridge; // once per mesh
       const queue = [];
       const MAX_QUEUE = 4096;
       const push = (from, kind, bytes) => {

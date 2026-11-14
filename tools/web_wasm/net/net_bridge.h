@@ -59,6 +59,22 @@ int port_net_recv(int *from, int *kind, void *buf, int cap);
 /* Session description as JSON (see above); returns its length, 0 without a session,
  * or -length when cap is too small. */
 int port_net_session_json(char *buf, int cap);
+/* 1 while this page is in a lobby room with the transport attached (no session needed): the
+ * in-game multiplayer menus (netsync.cpp, sceneonline.cpp) talk to the other members then. */
+int port_net_live(void);
+
+/* ---- game <-> page event bus (net/netbus.c, web/netbus.js) ----
+ * port_net_emit: an event or command for the page, type + JSON object text (NULL for {}). Commands
+ * the page understands: "lobby" {"op":"connect"|"disconnect"|"create"|"join","code"|"leave"|
+ * "ready","ready"|"name","name"|"profile",...}; every event is also passed on as a window
+ * "mkdd-game" CustomEvent {type, data} (e.g. "phase" {"phase":"menu"}) for the page UI.
+ * port_net_poll_event: the next event from the page (e.g. "lobby-error" {"msg"}): returns the JSON
+ * length (type in type[tcap]), 0 when there is none, -needed when json[jcap] is too small (kept).
+ * port_net_lobby_json: the page's current lobby state {"state":"offline"|"connecting"|"connected"|
+ * "room","server","name","self","code","host","error","members":[{"id","name","ready","link"}]}. */
+void port_net_emit(const char *type, const char *json);
+int port_net_poll_event(char *type, int tcap, char *json, int jcap);
+int port_net_lobby_json(char *buf, int cap);
 
 #ifdef __cplusplus
 }

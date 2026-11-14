@@ -281,10 +281,11 @@ static void yield_for_reads(void)
  * loop too. A thread that polls in a loop (VIGetRetraceCount, OSGetTime) without ever idling the
  * scheduler would starve them, so in a session return to the event loop at least every 50 ms. */
 int port_net_active(void);
+int port_net_live(void);
 static void yield_for_net(void)
 {
     double now = emscripten_get_now();
-    if (now - sLastHostYield < 50.0 || !port_net_active())
+    if (now - sLastHostYield < 50.0 || !(port_net_active() || port_net_live()))
         return;
     emscripten_sleep(0);
     sLastHostYield = emscripten_get_now();

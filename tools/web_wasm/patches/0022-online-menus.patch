@@ -1,0 +1,267 @@
+In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title's fourth entry (the LAN mode slot, which needs a broadband adapter the port does not have) is always offered and opens the MULTIPLAYER scene instead of SceneLanEntry. In a room the host's START takes everyone to the normal menus, which run in lockstep with one controller per player (port_netsync_scene at each menu scene's init; the player count is the room's; the menus' wall-clock random seeds use port_netsync_time). Course/map select hands the agreed race to netonline.cpp (port_net_race_begin before RaceApp::call) and the race returns to the multiplayer scene.
+
+--- a/src/Kameda/SceneTitle.cpp
++++ b/src/Kameda/SceneTitle.cpp
+@@ -24,6 +24,8 @@
+ #include "dolphin/os.h"
+ #include "mathHelper.h"
+ 
++extern "C" void port_netsync_scene(int scene);
++
+ u8 SceneTitleParam::mDemoType;
+ int SceneTitle::mDemoFlag = 1;
+ 
+@@ -97,6 +99,7 @@
+     }
+ 
+     System::getDisplay()->startFadeIn(15);
++    port_netsync_scene(SCENE_TITLE);
+     mPrintMemoryCard->reset();
+     mPrintMemoryCard->init(PrintMemoryCard::mcMsg40);
+ }
+@@ -247,15 +250,8 @@
+         return;
+     }
+ 
+-    switch (BBAMgr::mspBBAMgr->getState()) {
+-    case 1:
+-    case 2:
+-        mIsLanEnable = 1;
+-        break;
+-    default:
+-        mIsLanEnable = 0;
+-        break;
+-    }
++    // the fourth entry is MULTIPLAYER (sceneonline.cpp) on the host, not the broadband adapter's LAN mode
++    mIsLanEnable = 1;
+ 
+     if (gGamePad1P.mButtons.mRepeat & 0x08000000) {
+         GetGameAudioMain()->startSystemSe(0x20000);
+@@ -302,9 +298,12 @@
+             mNextScene = SCENE_RECORD;
+             break;
+         case 3:
+-            mPrintMemoryCard->init(PrintMemoryCard::mcTooManyFilesContinue);
+-            mPrintMemoryCard->calc();
+-            mIsPrintCard = true;
++            mTimer = 0;
++            mPrevState = 4;
++            mState = 5;
++            GetGameAudioMain()->fadeOutAll(15);
++            GetGameAudioMain()->startSystemSe(0x20002);
++            mNextScene = SCENE_LAN_ENTRY;
+             break;
+         }
+     }
+--- a/src/Kameda/SceneFactory.cpp
++++ b/src/Kameda/SceneFactory.cpp
+@@ -161,6 +161,8 @@
+     SysDebug::getManager()->setDefaultHeapGroup(heap);
+ }
+ 
++Scene *port_net_create_scene(JKRArchive *archive, JKRHeap *heap);
++
+ Scene *SceneFactory::createScene(Scene::SceneType id, JKRHeap *heap)
+ {
+ #line 214
+@@ -209,7 +211,7 @@
+         break;
+     case Scene::SCENE_LAN_ENTRY:
+         SysDebug::getManager()->setHeapGroup("LanEntry", heap);
+-        scene = new (heap, 0) SceneLanEntry(mArchives[ARC_LAN_ENTRY], heap);
++        scene = port_net_create_scene(mArchives[ARC_LAN_ENTRY], heap);
+         break;
+     case Scene::SCENE_SECRET:
+         SysDebug::getManager()->setHeapGroup("Secret", heap);
+--- a/src/Kameda/SceneMenu.cpp
++++ b/src/Kameda/SceneMenu.cpp
+@@ -35,6 +35,10 @@
+ #include "Osako/FontMgr.h"
+ #include "Osako/ResMgr.h"
+ 
++extern "C" void port_netsync_scene(int scene);
++extern "C" int port_netsync_online(void);
++extern "C" int port_netsync_player_count(void);
++
+ const u32 SceneMenu::mCharVoice[] = {
+     0x00020014, 0x00020015, 0x00020012, 0x00020013, 
+     0x00020018, 0x00020019, 0x0002000E, 0x0002000F, 
+@@ -1168,12 +1172,15 @@
+ 
+ void SceneMenu::init()
+ {
++    port_netsync_scene(SCENE_MENU);
+     System::getDisplay()->startFadeIn(15);
+ 
+     mCharacterSelect3D->init();
+     j3dSys.reinitGX();
+ 
+     Scene::SceneType seq = SequenceApp::ptr()->getPrevScene();
++    if (seq == Scene::SCENE_LAN_ENTRY) // from the multiplayer scene: as from the title
++        seq = Scene::SCENE_TITLE;
+     if (gSequenceInfo._28)
+         seq = (Scene::SceneType)12;
+     gSequenceInfo._28 = 0;
+@@ -2164,6 +2171,9 @@
+ 
+ void SceneMenu::entry()
+ {
++    // online: as many drivers as players in the room
++    if (port_netsync_online())
++        mInfo.playerNum = port_netsync_player_count() - 1;
+     if (gpaGamePad[0]->mButtons.mTrigger & 0x100)
+     {
+         GameAudio::Main::getAudio()->startSystemSe(0x20003);
+@@ -2196,7 +2206,10 @@
+         mInfo.mode = 2;
+         mInfo.oldMode = 1;
+         mInfo.timer = 0;
+-        mInfo.nextScene = Scene::SCENE_TITLE;
++        mInfo.nextScene = port_netsync_online() ? Scene::SCENE_LAN_ENTRY : Scene::SCENE_TITLE;
++    }
++    else if (port_netsync_online())
++    {
+     }
+     else if (gpaGamePad[0]->mButtons.mRepeat & 0x08000000)
+     {
+@@ -5921,7 +5934,7 @@
+ void SceneMenu::nextScene()
+ {
+ #line 6206
+-    JUT_ASSERT(mInfo.nextScene == Scene::SCENE_TITLE || mInfo.nextScene == Scene::SCENE_COURSE || mInfo.nextScene == Scene::SCENE_MAP_SELECT || mInfo.nextScene == Scene::SCENE_GHOST_LOAD_SAVE);
++    JUT_ASSERT(mInfo.nextScene == Scene::SCENE_TITLE || mInfo.nextScene == Scene::SCENE_LAN_ENTRY || mInfo.nextScene == Scene::SCENE_COURSE || mInfo.nextScene == Scene::SCENE_MAP_SELECT || mInfo.nextScene == Scene::SCENE_GHOST_LOAD_SAVE);
+ 
+     if (SEQUENCEAPP_isReady(mInfo.nextScene))
+     {
+--- a/src/Kameda/SceneCourseSelect.cpp
++++ b/src/Kameda/SceneCourseSelect.cpp
+@@ -22,6 +22,10 @@
+ #include "Osako/system.h"
+ #include "kartEnums.h"
+ #include "mathHelper.h"
++
++extern "C" void port_netsync_scene(int scene);
++extern "C" u32 port_netsync_time(u32 fallback);
++extern "C" int port_net_race_begin(void);
+ 
+ int SceneCourseSelect::mCup; // ERaceGpCup?
+ int SceneCourseSelect::mCourse; // ECourseID?
+@@ -290,6 +294,7 @@
+ }
+ 
+ void SceneCourseSelect::init() {
++    port_netsync_scene(SCENE_COURSE);
+     SceneType prevScene = SequenceApp::ptr()->getPrevScene();
+     if (gSequenceInfo._28)
+         prevScene = SCENE_12;
+@@ -732,6 +737,8 @@
+         gRaceInfo.mItemSlotType = itemSlotType;
+         gRaceInfo.mVsLapNum = vsLapNum;
+         gRaceInfo.mGpCup = mRaceGpCup[mCup];
++        if (!port_net_race_begin()) // online: wait until the host's race description is in
++            return;
+         RaceApp::call();
+     }
+ }
+@@ -1013,7 +1020,7 @@
+ }
+ 
+ void SceneCourseSelect::rndRoulette() {
+-    u32 time = OSGetTime();
++    u32 time = port_netsync_time(OSGetTime());
+     switch (mState) {
+     case 0:
+         if (mTimer % 7 == 0) {
+--- a/src/Kameda/SceneMapSelect.cpp
++++ b/src/Kameda/SceneMapSelect.cpp
+@@ -22,6 +22,10 @@
+ 
+ #include "mathHelper.h"
+ 
++extern "C" void port_netsync_scene(int scene);
++extern "C" u32 port_netsync_time(u32 fallback);
++extern "C" int port_net_race_begin(void);
++
+ const SceneMapSelect::MapData SceneMapSelect::mMapData[] = {
+     MINI_7, "BattleMapSnap1.bti", "Mozi_Map1.bti",
+     MINI_2, "BattleMapSnap3.bti", "Mozi_Map3.bti",
+@@ -191,6 +195,7 @@
+ }
+ 
+ void SceneMapSelect::init() {
++    port_netsync_scene(SCENE_MAP_SELECT);
+     SceneType prev = SequenceApp::ptr()->getPrevScene();
+     if (gSequenceInfo._28)
+         prev = SCENE_12;
+@@ -494,6 +499,10 @@
+         for (int i = 0; i < num; i++)
+             gSequenceInfo.setStartNo(i, order[i]);
+ 
++        for (int i = 0; i < gRaceInfo.getKartNumber(); i++)
++            gRaceInfo.setStartPosIdx(i, gSequenceInfo.getStartNo(i));
++        if (!port_net_race_begin()) // online: wait until the host's race description is in
++            return;
+         AppMgr::deleteCurrentApp();
+         for (int i = 0; i < gRaceInfo.getKartNumber(); i++) {
+             gRaceInfo.setStartPosIdx(i, gSequenceInfo.getStartNo(i));
+@@ -556,7 +565,7 @@
+ void SceneMapSelect::rndRoulette() {
+     if (mTimer % 5 == 0) {
+         GetGameAudioMain()->startSystemSe(0x20000);
+-        u32 time = OSGetTime();
++        u32 time = port_netsync_time(OSGetTime());
+         u32 rem = time % (mMapCount - 1);
+         mMapIndex = (mMapIndex + (int)rem + 1) % mMapCount;
+     }
+--- a/src/Kameda/SequenceInfo.cpp
++++ b/src/Kameda/SequenceInfo.cpp
+@@ -88,7 +88,10 @@
+ 
+ }
+ 
+-void SequenceInfo::setRandomSeed() { mRnd.setSeed(OSGetTime()); }
++extern "C" u32 port_netsync_time(u32 fallback);
++
++// online menus: the same seed on every player's machine (net/netsync.cpp)
++void SequenceInfo::setRandomSeed() { mRnd.setSeed(port_netsync_time(OSGetTime())); }
+ 
+ u32 SequenceInfo::getRandom() { return mRnd.get(); }
+ 
+--- a/src/Osako/RaceApp.cpp
++++ b/src/Osako/RaceApp.cpp
+@@ -26,6 +26,9 @@
+ volatile u16 RaceApp::msStaffGhostFlag;
+ 
+ #include "mathHelper.h"
++
++extern "C" int port_net_menu_race(void);
++extern "C" void port_net_menu_race_end(void);
+ 
+ RaceApp *RaceApp::create()
+ {
+@@ -354,6 +357,12 @@
+             }
+             NetGateApp::call(true);
+         }
++        else if (port_net_menu_race())
++        {
++            // online (net/netonline.cpp): every result menu choice leads back to the multiplayer scene
++            port_net_menu_race_end();
++            SequenceApp::call(Scene::SCENE_LAN_ENTRY);
++        }
+         else
+         {
+ 
+@@ -372,6 +381,12 @@
+         break;
+     case PHASE_4:
+     {
++        if (port_net_menu_race())
++        {
++            // online: no retry for one player alone, back to the room
++            mState = 3;
++            break;
++        }
+         if (mRecorder)
+         {
+             if (gRaceInfo.getRaceMode() == TIME_ATTACK && !(gSystemRecord.mOptions & 8))

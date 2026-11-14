@@ -14,6 +14,7 @@ EM_JS(int, net_bridge_js_info, (int what, int arg), {
     case 3: { var mem = b.member(arg); return mem && mem.slot !== undefined && mem.slot !== null ? mem.slot : -1; }
     case 4: { if (arg === m.lobby.id) return 0; var p = m.peers.get(arg); return p && p.rtt ? Math.round(p.rtt) : -1; }
     case 5: return m.clockSynced() ? 1 : 0;
+    case 6: return m.lobby && m.lobby.room && !m.closed ? 1 : 0;
     }
     return 0;
 });
@@ -78,3 +79,4 @@ EMSCRIPTEN_KEEPALIVE int port_net_recv(int *from, int *kind, void *buf, int cap)
 }
 
 EMSCRIPTEN_KEEPALIVE int port_net_session_json(char *buf, int cap) { return net_bridge_js_session(buf, cap); }
+EMSCRIPTEN_KEEPALIVE int port_net_live(void) { return net_bridge_js_info(6, 0); }

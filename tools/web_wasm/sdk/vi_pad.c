@@ -209,10 +209,14 @@ EMSCRIPTEN_KEEPALIVE void port_pad_set(int chan, u16 button, s8 sx, s8 sy, s8 cx
 
 BOOL PADInit(void) { return TRUE; }
 
-/* Port 1 holds a standard controller (keyboard/gamepad); 2-4 are empty. */
+/* Port 1 holds a standard controller (keyboard/gamepad); 2-4 are empty, except in the online menus
+ * (net/netsync.cpp), where port i+1 is the controller of the room's player i. */
+int port_netsync_ports(void);
+int port_netsync_pad(PADStatus *status);
 u32 SIProbe(s32 chan)
 {
-    return chan == 0 ? SI_GC_CONTROLLER : SI_ERROR_NO_RESPONSE;
+    int n = port_netsync_ports();
+    return chan == 0 || chan < n ? SI_GC_CONTROLLER : SI_ERROR_NO_RESPONSE;
 }
 
 /* Scripted input for headless runs: MKDD_PAD="900:1000:10,1000:0:10:-80:0" holds
@@ -281,6 +285,7 @@ u32 PADRead(PADStatus *status)
         status[i] = sHostPad[i];
         status[i].err = i == 0 ? PAD_ERR_NONE : PAD_ERR_NO_CONTROLLER;
     }
+    port_netsync_pad(status);
     return 0;
 }
 

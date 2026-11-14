@@ -41,12 +41,15 @@
 #include "JSystem/JKernel/JKRHeap.h"
 #include "net_bridge.h"
 #include "netkart.h"
+#include "jsonlite.h"
 
 extern "C" void netonline_js_stats(const char *json);
+extern "C" void port_netsync_message(int from, int kind, const u8 *m, int n);
 extern "C" void netonline_js_phase(const char *phase);
 extern "C" u32 port_vi_retrace_count(void);
 
 using namespace netkart;
+using namespace jsonlite;
 
 namespace {
 
@@ -93,6 +96,9 @@ struct Remote {
 };
 
 int sOnline = -1;
+bool sMenuRace;          // a race started from the online menus (netsync.cpp), not the boot session
+const char *sMenuJson;   // its session JSON
+int sRaceHost;           // the member that sends GO ("host" of the session JSON)
 Member sMembers[MAX_MEMBERS];
 int sNumMembers;
 int sKartMember[8]; // kart index -> member index
@@ -100,6 +106,7 @@ int sNumKarts;
 int sSelf, sSelfKart = -1, sSelfSlot = -1;
 int sCourse = LUIGI_CIRCUIT, sLaps = 3;
 ERaceLevel sLevel = LVL_150CC;
+ERaceMode sMode = VERSUS_RACE; // battles come from the online menus (no items yet)
 u32 sSeed;
 char sCode[16];
 KartGamePad *sNetPad[8];
@@ -119,119 +126,11 @@ int sFrames, sSent, sGoFrame;
 bool sFinished;
 int sGoalTime;
 
-// ---- tiny JSON reader for port_net_session_json() ----
-const char *jws(const char *p)
-{
-    while (*p == ' ' || *p == '\n' || *p == '\r' || *p == '\t')
-        p++;
-    return p;
-}
-const char *jstr(const char *p) // p at '"': past the string
-{
-    for (p++; *p && *p != '"'; p++)
-        if (*p == '\\' && p[1])
-            p++;
-    return *p ? p + 1 : p;
-}
-const char *jskip(const char *p)
-{
-    p = jws(p);
-    if (*p == '"')
-        return jstr(p);
-    if (*p == '{' || *p == '[') {
-        int depth = 0;
-        while (*p) {
-            if (*p == '"') {
-                p = jstr(p);
-                continue;
-            }
-            if (*p == '{' || *p == '[')
-                depth++;
-            else if ((*p == '}' || *p == ']') && --depth == 0)
-                return p + 1;
-            p++;
-        }
-        return p;
-    }
-    while (*p && *p != ',' && *p != '}' && *p != ']')
-        p++;
-    return p;
-}
-// value of `key` in the object at p, or nullptr
-const char *jfield(const char *p, const char *key)
-{
-    if (!p)
-        return nullptr;
-    p = jws(p);
-    if (*p != '{')
-        return nullptr;
-    p++;
-    size_t n = strlen(key);
-    for (;;) {
-        p = jws(p);
-        if (*p != '"')
-            return nullptr;
-        const char *k = p + 1, *ke = jstr(p);
-        p = jws(ke);
-        if (*p != ':')
-            return nullptr;
-        p = jws(p + 1);
-        if ((size_t)(ke - 1 - k) == n && !memcmp(k, key, n))
-            return p;
-        p = jws(jskip(p));
-        if (*p != ',')
-            return nullptr;
-        p++;
-    }
-}
-// element i of the array at p, or nullptr
-const char *jelem(const char *p, int i)
-{
-    if (!p || *(p = jws(p)) != '[')
-        return nullptr;
-    p = jws(p + 1);
-    for (int k = 0; *p && *p != ']'; k++) {
-        if (k == i)
-            return p;
-        p = jws(jskip(p));
-        if (*p == ',')
-            p = jws(p + 1);
-    }
-    return nullptr;
-}
-int jint(const char *p, int def)
-{
-    if (!p)
-        return def;
-    int sign = 1, v = 0;
-    if (*p == '-') {
-        sign = -1;
-        p++;
-    }
-    if (*p < '0' || *p > '9')
-        return def;
-    while (*p >= '0' && *p <= '9')
-        v = v * 10 + (*p++ - '0');
-    return sign * v;
-}
-void jcopy(const char *p, char *out, int cap) // printable ASCII of a string value
-{
-    int n = 0;
-    if (p && *p == '"')
-        for (p++; *p && *p != '"' && n < cap - 1; p++) {
-            if (*p == '\\' && p[1])
-                p++;
-            if (*p >= 0x20 && *p < 0x7f && *p != '"' && *p != '\\')
-                out[n++] = *p;
-        }
-    out[n] = 0;
-}
-
 double hostNow() { return port_net_host_time(); }
 double clockFrame() { return hostNow() / FRAME_MS; }
 // without a page (node runs with MKDD_NET_SESSION) this peer is the host and nobody else is connected
-bool isHost() { return port_net_host() == sSelf || !port_net_active(); }
-bool clockSynced() { return port_net_clock_synced() || !port_net_active(); }
+bool isHost() { return sRaceHost ? sRaceHost == sSelf : port_net_host() == sSelf || !port_net_active(); }
+bool clockSynced() { return port_net_clock_synced() || (!port_net_active() && !sMenuRace); }
 
 Member *memberById(int id)
 {
@@ -244,8 +143,11 @@ Member *memberById(int id)
 bool loadSession()
 {
     static char buf[16384];
-    int n = port_net_session_json(buf, sizeof buf);
-    if (n <= 0) {
+    int n = sMenuJson ? 0 : port_net_session_json(buf, sizeof buf);
+    if (sMenuJson) {
+        strncpy(buf, sMenuJson, sizeof buf - 1);
+        buf[sizeof buf - 1] = 0;
+    } else if (n <= 0) {
         // node / tests without a page: the session JSON from the environment
         char *e = gpu_js_env_str("MKDD_NET_SESSION");
         if (!e)
@@ -255,7 +157,8 @@ bool loadSession()
         free(e);
     }
     const char *settings = jfield(buf, "settings");
-    sSelf = jint(jfield(buf, "self"), 0);
+    sSelf = sMenuJson ? port_net_self() : jint(jfield(buf, "self"), 0);
+    sRaceHost = sMenuJson ? jint(jfield(buf, "host"), 0) : 0;
     jcopy(jfield(buf, "code"), sCode, sizeof sCode);
     int course = jint(jfield(settings, "course"), LUIGI_CIRCUIT);
     sCourse = (course >= BABY_PARK && course <= SHERBET_LAND) ? course : LUIGI_CIRCUIT;
@@ -263,6 +166,11 @@ bool loadSession()
     sLevel = cc <= 50 ? LVL_50CC : cc <= 100 ? LVL_100CC : LVL_150CC;
     if (jint(jfield(settings, "mirror"), 0))
         sLevel = LVL_MIRROR;
+    int mode = jint(jfield(settings, "mode"), VERSUS_RACE);
+    sMode = mode == BALLOON_BATTLE || mode == ESCAPE_BATTLE || mode == BOMB_BATTLE ? (ERaceMode)mode : VERSUS_RACE;
+    int level = jint(jfield(settings, "level"), -1); // the menus' ERaceLevel
+    if (level >= LVL_50CC && level <= LVL_MIRROR)
+        sLevel = (ERaceLevel)level;
     sLaps = jint(jfield(settings, "laps"), 3);
     if (sLaps < 1 || sLaps > 9)
         sLaps = 3;
@@ -308,7 +216,7 @@ bool loadSession()
         fprintf(stderr, "[net]   kart %d: slot %d %s (member %d) chars %d+%d kart %d%s\n", k, m.slot, m.name, m.id, m.c1,
                 m.c2, m.kartId, k == sSelfKart ? " (you)" : "");
     }
-    if (!port_net_active())
+    if (!port_net_active() && !sMenuRace)
         for (int i = 0; i < sNumMembers; i++)
             if (sMembers[i].id != sSelf)
                 sMembers[i].status = ST_LOST;
@@ -326,7 +234,7 @@ KartGamePad *netPad(int k)
 // LANEntry::setRaceInfo for one console: VS, n human karts, no CPUs
 void setupRaceInfo()
 {
-    gRaceInfo.setRace(VERSUS_RACE, sNumKarts, sNumKarts, 1, 1);
+    gRaceInfo.setRace(sMode, sNumKarts, sNumKarts, 1, 1);
     gRaceInfo.setRaceLevel(sLevel);
     gRaceInfo.setRandomSeed(sSeed);
     gRaceInfo.setItemSlotType(1); // VS "no items": no item boxes (NETCODE.md phase 1)
@@ -511,6 +419,7 @@ void pump()
         if (kind == PORT_NET_EVENT) {
             if (n >= 8)
                 onEvent(buf[0], (int)get32(buf + 4));
+            port_netsync_message(from, kind, buf, n);
             continue;
         }
         switch (buf[0]) {
@@ -552,6 +461,9 @@ void pump()
                     fprintf(stderr, "[net] %s finished: %d:%02d.%03d\n", m->name, ms / 60000, ms / 1000 % 60, ms % 1000);
                 }
             }
+            break;
+        default: // the online menus' (a START for the next round can come during a race)
+            port_netsync_message(from, kind, buf, n);
             break;
         }
     }
@@ -755,7 +667,7 @@ bool enabled()
         if (port_env("MKDD_NET_ONLINE") && loadSession())
             sOnline = 1;
     }
-    return sOnline == 1;
+    return sOnline == 1 || sMenuRace;
 }
 
 // the running race is the session's (not one started from the menus after it)
@@ -764,7 +676,7 @@ bool sessionRace()
     RaceMgr *rcm = RaceMgr::getManager();
     KartCtrl *ctrl = KartCtrl::getKartCtrl();
     return rcm && ctrl && rcm->getKartNumber() == sNumKarts && ctrl->GetKartNumber() == sNumKarts &&
-           rcm->getRaceMode() == VERSUS_RACE &&
+           rcm->getRaceMode() == sMode &&
            (sSelfKart < 0 || rcm->getKartInfo(sSelfKart)->getPad(0) == gpaKartPad[0]);
 }
 
@@ -998,4 +910,40 @@ extern "C" int netonline_local_kart(f32 *out)
         out[8] = (s->mFPoint->cpStart.z + s->mFPoint->cpEnd.z) * 0.5f;
     }
     return 1;
+}
+
+// netsync.cpp, at the end of the online menus: this race, described as session JSON by the host
+extern "C" int netonline_menu_race(const char *json)
+{
+    sMenuRace = true;
+    sMenuJson = json;
+    // a fresh start gate, kart streams and stats for every race
+    sAttempt = 0;
+    sWaiting = sStarted = sGoLogged = sFinished = false;
+    memset(sGoFor, 0, sizeof sGoFor);
+    memset(sFirstReady, 0, sizeof sFirstReady);
+    sAllReadySince = sLastReadySent = sGateSince = 0;
+    memset(sRemote, 0, sizeof sRemote);
+    sLastSentF = -1000;
+    sLastNow = sLastStats = 0;
+    sFrames = sSent = sGoFrame = 0;
+    sGateFrameMs = 0;
+    bool ok = loadSession();
+    sMenuJson = nullptr;
+    if (!ok) {
+        sMenuRace = false;
+        return 0;
+    }
+    setupRaceInfo();
+    setPhase("loading");
+    return 1;
+}
+
+// RaceApp, leaving a race of the online menus (patch 0022): back to the multiplayer scene
+extern "C" int port_net_menu_race(void) { return sMenuRace ? 1 : 0; }
+extern "C" void port_net_menu_race_end(void)
+{
+    if (sMenuRace)
+        setPhase("");
+    sMenuRace = false;
 }
