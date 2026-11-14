@@ -12,6 +12,10 @@ peer-to-peer.
 | `net_bridge.c/.h` | the game's side: `port_net_send` / `port_net_recv` / session info / host clock |
 | `netonline.cpp`, `netonline_js.c` | online race (phase 1): session → `RaceInfo`, start sync, kart state stream, remote karts, stats |
 | `netkart.cpp/.h` | kart state wire format, remote-kart correction, the single-process spike harness |
+| `sceneonline.cpp` | the game's MULTIPLAYER scene (title menu entry 4): connect, create/join (code picker), room |
+| `netsync.cpp` | online menus: START, lockstep controllers for the menu scenes, the agreed race for `netonline.cpp` |
+| `netbus.c`, `jsonlite.h` | game ↔ page event bus (`port_net_emit` / `port_net_poll_event` / `port_net_lobby_json`), tiny JSON reader |
+| `../web/netbus.js` | the bus's page side: lobby commands from the game, lobby state, bridge attachment, background connect |
 | `../web/net.js` | `Lobby`, `Mesh` (peers, channels, RTT, host clock, events), wasm bridge |
 | `../web/netui.js` | Multiplayer panel (`index.html` `#mp`) and in-game overlay |
 | `test/` | server tests, transport tests on mock WebRTC, two-Chrome end-to-end test |
@@ -49,7 +53,36 @@ The server logs room events to stdout: connections (name, game ID), room created
 left / host changes, starts (members, slots, settings), refused joins and starts with the
 reason, a member that could not boot into the race, ended sessions. No addresses are logged.
 
-## How to play with a friend (phase 1: race together, no items)
+## Playing online from the game's own menus
+
+The page is only settings: player name and lobby server (Multiplayer drawer, kept in
+localStorage; the server defaults to the page's own host). Once a disc is chosen it connects
+to the lobby in the background. Press Play; everything else happens in the game and needs no
+reload:
+
+1. Title screen: **MULTIPLAYER** (the fourth entry, where the console offered LAN MODE).
+2. The multiplayer scene shows the server and your name; Connect if the page did not already.
+   **Create room** shows the 6-character code big; **Join room** opens an on-screen picker
+   (stick/arrows choose, A types, B deletes, START joins). The room lists the members with
+   host / READY / ping. Others tick **Ready**; the host presses **Start** (up to 4 players).
+3. Every member's game goes to the normal menus, which run in lockstep: the room's players are
+   controller ports 1-4 (the host is port 1 and drives the mode, class and course screens as
+   player 1 does on one console), the player count is fixed to the room's, VS only (no co-op).
+   Each player picks their own drivers and kart in the character select and sees the others'
+   picks live.
+4. At the end of course select the host describes the race (karts in grid order with drivers
+   and kart, course, class, laps) and every game starts the state-sync race of `NETCODE.md`
+   (`netonline.cpp`) with one full-screen kart per browser and a shared GO.
+5. After the race, any result-menu choice returns to the room screen; the host can start the
+   next round.
+
+How it works: `NETCODE.md` §16. Limits for now: VS races of up to 4 players, items off (as in
+phase 1), no CPU karts (a Grand Prix runs as a VS race of the players), battles have no items.
+
+## How to play with a friend (page-started session, phase 1)
+
+The original phase 1 flow (the panel's Ready / GO! boots a fresh game straight into a race)
+is still there for tests and debugging behind `?netpageboot=1`.
 
 What you get: each browser drives its own kart full-screen and sees the other
 players' karts (up to 8) move over the network (`NETCODE.md`). VS race, humans only
@@ -168,6 +201,24 @@ mesh.peers.get(id).rtt;               // smoothed RTT (ms), also rttMax
   settings; membership is then frozen (leaves are marked, nobody new joins).
 - Simulated network (tests): `?netlag=ms&netjitter=ms&netloss=0..1` on the page,
   latency on both channels (reliable order kept), loss on the unreliable one.
+
+## Event bus (`net_bridge.h`, `netbus.c`, `../web/netbus.js`)
+
+Two-way JSON events between the game and the page, beside the binary transport:
+
+```c
+port_net_emit("lobby", "{\"op\":\"join\",\"code\":\"ABC234\"}"); /* commands for the page */
+port_net_emit("phase", "{\"phase\":\"menus\"}");                    /* anything: window 'mkdd-game' event */
+while ((n = port_net_poll_event(type, sizeof type, json, sizeof json)) != 0) ...  /* e.g. lobby-error */
+port_net_lobby_json(buf, cap);  /* {state, server, name, self, code, host, members[{id,name,ready,link,rtt}]} */
+```
+
+Lobby ops: `connect`, `disconnect`, `create`, `join {code}`, `leave`, `ready {ready}`, `name {name}`,
+`profile {profile}`, `hello` (the game is in its multiplayer menu). A game that drove the lobby
+reports status `{inGame: true}`, which the server accepts as able to race although the game is
+running (`idle` stays the rule for page-started sessions). `netbus.js` also attaches the wasm
+bridge (`Mesh.attachModule`) to the current mesh whenever the game runs in a room, so the game can
+talk to the other members without a lobby session (`port_net_live()`).
 
 ## Game side (`net_bridge.h`)
 

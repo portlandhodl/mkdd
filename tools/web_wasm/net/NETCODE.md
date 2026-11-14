@@ -777,3 +777,40 @@ race, hazards re-phased at GO (object timers run from course load, so a peer tha
 waited longer at the start sees them out of phase), victim-side contact effects,
 visual-offset smoothing. `MKDD_AUTOPILOT` cannot drive an online kart: VS without
 CPUs has no rival data (`RivalBodyCtrl::getTopComKartIndex` asserts).
+
+## 16. Online menus (implemented)
+
+Code: `sceneonline.cpp` (the MULTIPLAYER scene), `netsync.cpp` (lockstep menus, race hand-off),
+`netbus.c` + `../web/netbus.js` (game ↔ page events), patch `0022-online-menus`. How to play:
+`README.md`.
+
+**Why not the console's LAN mode.** LAN MODE (`NetGateApp`, `LANSelectMode`, `LANEntry`,
+`NetGameMgr`) runs its menus and races on a lockstep pad ring over UDP that needs every frame's pads
+to go round all consoles within about a frame (`NetGameMgr::adjustFrame` blocks otherwise), and gives
+everyone random drivers. Over the internet that stalls every frame. It stays unreachable (no
+broadband adapter: `EXIGetType` reports none); its title slot is reused for MULTIPLAYER.
+
+**Lockstep menus.** The normal menus (`SceneMenu`, `SceneCourseSelect`, `SceneMapSelect`) depend only
+on controller input, frame counters and a few wall-clock seeds, so every member runs them as if all
+players sat at one console with one controller each:
+
+| Piece | As built |
+| --- | --- |
+| Start | The host's Start sends `START {seq, consoles (host first, at most 4), input delay D, host's unlock flags}`; everyone applies the host's `mGameFlag/mSecretKart/mOptions` (the same choices are offered; restored when leaving multiplayer) and goes to `SCENE_MENU` as the title does (`gSequenceInfo.init`, `gRaceInfo.reset`) |
+| Barrier | Each lockstep scene's `init` calls `port_netsync_scene`: epoch + 1, `SCENE {seq, epoch, last frame sent in the previous epoch}` to everyone, neutral controllers for that first frame; the next `PADRead` waits until every console reached the epoch (60 s, then it plays on without the missing one) |
+| Frames | `PADRead` (SDK, `vi_pad.c`) sends the local controller as `PAD {epoch, f + D}` on the reliable channel and blocks (in `VIWaitForRetrace`, so loading threads run) until every console's pad for frame f is in; port i = console i, ports beyond the room are unplugged (`SIProbe`). Frames < D are neutral; a console that already moved on to the next scene counts as neutral after its last frame |
+| D | `max(3, (max RTT / 2 + 30 ms) / 16.7 ms + 1)` frames, at most 12 |
+| Seeds | `SequenceInfo::setRandomSeed` and the cup/map roulettes use `port_netsync_time()` (from seq, epoch, frame) |
+| Limits | player count = room size; "VS? CO-OP?" fixed to VS (one kart per machine) |
+| Race | `SceneCourseSelect/SceneMapSelect` call `port_net_race_begin` before `RaceApp::call`: the host builds session JSON from `gRaceInfo` (each player kart's pad → console → member, grid from the start positions, drivers, kart, course, level, laps) and sends `RACE`; the others wait for it. `netonline_menu_race` sets up the phase 1 race (local kart = kart 0, as the game's pad recorder and status views expect; the others on `PORT_NET` pads; GO on the host clock) |
+| After | Every result-menu choice (also retry/replay) returns to the multiplayer scene (`RaceApp`); START again for the next round |
+
+Messages `0x60-0x64` (START, SCENE, PAD, RACE, END) share the data channels with the race's;
+`netonline.cpp` hands what it does not know to `netsync.cpp`, so a START that arrives while a
+player is still racing waits for them in the room.
+
+Two-Chrome check (one loaded machine, SwiftShader, `MKDD_GFX_SKIP=4`, one lap of Baby Park via
+`MKDD_NET_LAPS=1`): title → MULTIPLAYER → connect → create / join by picker → ready → start →
+players → VS → class → each picks their own drivers and kart → cup/course → race (replica error
+40-150 units at 35-50 fps) → results → room, then a second round with other picks. Both screens
+showed the same menu state throughout.

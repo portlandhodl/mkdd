@@ -1,4 +1,13 @@
-In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title's fourth entry (the LAN mode slot, which needs a broadband adapter the port does not have) is always offered and opens the MULTIPLAYER scene instead of SceneLanEntry. In a room the host's START takes everyone to the normal menus, which run in lockstep with one controller per player (port_netsync_scene at each menu scene's init; the player count is the room's; the menus' wall-clock random seeds use port_netsync_time). Course/map select hands the agreed race to netonline.cpp (port_net_race_begin before RaceApp::call) and the race returns to the multiplayer scene.
+In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp). The title's fourth entry
+(the console's LAN MODE, which needs a broadband adapter the port does not have) is always offered,
+drawn as MULTIPLAYER, and opens the multiplayer scene instead of SceneLanEntry (SceneFactory). In a
+lobby room the host's START takes every member to the normal menus, which run in lockstep with one
+controller per player: port_netsync_scene at each menu scene's init, the player count fixed to the
+room's, VS only (no co-op: one kart per machine), the menus' wall-clock random seeds through
+port_netsync_time. Course/map select hands the agreed race to netonline.cpp (port_net_race_begin
+before RaceApp::call); every result-menu choice of such a race (also retry/replay) returns to the
+multiplayer scene (RaceApp), and the VS result panel shows the local player when the winner is
+another machine's kart (Result2D).
 
 --- a/src/Kameda/SceneTitle.cpp
 +++ b/src/Kameda/SceneTitle.cpp
@@ -145,7 +154,26 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
      }
      else if (gpaGamePad[0]->mButtons.mRepeat & 0x08000000)
      {
-@@ -5921,7 +5934,7 @@
+@@ -2838,6 +2851,9 @@
+ {
+     JUTGamePad *pad = gpaGamePad[0];
+     u32 trigger = pad->getTrigger();
++    // online: one kart per player, VS (co-op shares a kart between two players' machines)
++    if (port_netsync_online())
++        mInfo._18 = 0;
+     if (trigger & JUTGamePad::A)
+     {
+         GameAudio::Main::getAudio()->startSystemSe(0x20003);
+@@ -2854,7 +2870,7 @@
+         mInfo.oldMode = 4;
+         mInfo.timer = 0;
+     }
+-    else
++    else if (!port_netsync_online())
+     {
+         u32 repeat = pad->getRepeat();
+         if (repeat & JUTGamePad::MAINSTICK_UP)
+@@ -5921,7 +5937,7 @@
  void SceneMenu::nextScene()
  {
  #line 6206
@@ -299,3 +327,15 @@ In-game multiplayer (tools/web_wasm/net/sceneonline.cpp, netsync.cpp): the title
          for (int i = 0; i < 4; i++)
          {
              mRecorder->setRecord((u8)i, mPadRecord[i]);
+--- a/src/Kameda/Result2D.cpp
++++ b/src/Kameda/Result2D.cpp
+@@ -2284,6 +2284,9 @@
+             mScoreScreens[1][i]->show();
+         }
+     }
++    // online (net/netonline.cpp) the winner can be another player's kart: show the local player's panel
++    if (kartNo < 0)
++        kartNo = 0;
+ 
+     int player = -1;
+     if (gRaceInfo.getKartInfo(kartNo)->isTagMode()) {
