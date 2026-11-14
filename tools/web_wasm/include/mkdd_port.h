@@ -79,6 +79,12 @@ extern float port_wide_aspect;
 /* MSL FILE objects are not host FILEs: game code's fprintf goes to tools/web_wasm/sdk/msl.c. */
 #define fprintf port_msl_fprintf
 
+/* MKDD_COURSE=<decimal course ID> replaces every race course loaded (test aid, tools/web_wasm/sdk/autopilot.cpp). */
+#ifdef __cplusplus
+extern "C"
+#endif
+int port_course_override(int courseID);
+
 /* Host-order copy of an oscillator table embedded in big-endian sequence data. */
 #ifdef __cplusplus
 extern "C"

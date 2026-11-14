@@ -7,6 +7,16 @@
 
 extern "C" int port_env(const char *name);
 
+// MKDD_COURSE=<decimal ECourseID> swaps every race course ResMgr loads (menus, award and ending are left
+// alone), so scripted runs reach a given course through the first Grand Prix race.
+extern "C" int port_course_override(int courseID)
+{
+    static int course = -1;
+    if (course < 0)
+        course = port_env("MKDD_COURSE");
+    return (course && courseID >= BABY_PARK && courseID <= SHERBET_LAND) ? course : courseID;
+}
+
 extern "C" void port_autopilot(void)
 {
     static int enabled = -1;

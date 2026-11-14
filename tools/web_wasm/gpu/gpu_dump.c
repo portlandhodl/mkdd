@@ -41,6 +41,7 @@ static Xfb sXfb[4];
 static uint32_t sSerial;
 
 static int sEvery;
+static uint32_t sFrom; /* MKDD_DUMP_FROM: first present eligible for a dump */
 static char sDir[512];
 static uint32_t sPresents;
 static int sActive;     /* rasterising this retrace */
@@ -736,7 +737,7 @@ static void dump_present(void *ctx, uint32_t xfbAddr)
     int wasActive = sActive;
     (void)ctx;
     sPresents++;
-    if (sPresents % (uint32_t)sEvery == 0) {
+    if (sPresents % (uint32_t)sEvery == 0 && sPresents >= sFrom) {
         const Xfb *best = NULL;
         int i;
         for (i = 0; i < 4; i++) {
@@ -773,7 +774,7 @@ static void dump_present(void *ctx, uint32_t xfbAddr)
     }
     {
         uint32_t toNext = (uint32_t)sEvery - sPresents % (uint32_t)sEvery; /* presents until the next dump */
-        sActive = sEvery <= WINDOW || toNext <= WINDOW;
+        sActive = sPresents + WINDOW >= sFrom && (sEvery <= WINDOW || toNext <= WINDOW);
     }
     gpu_xform_enabled = sActive;
     if (sActive && !wasActive) {
@@ -795,13 +796,14 @@ const GpuBackend *gpu_dump_backend(void)
     sEvery = port_env("MKDD_DUMP_FRAMES");
     sMode = port_env("MKDD_DUMP_MODE");
     sTrace = port_env("MKDD_DUMP_TRACE");
+    sFrom = (uint32_t)port_env("MKDD_DUMP_FROM");
     if (sEvery <= 0)
         return NULL;
     dir = gpu_js_env_str("MKDD_DUMP_DIR");
     snprintf(sDir, sizeof sDir, "%s", dir ? dir : DEFAULT_DIR);
     free(dir);
     mkdirs(sDir);
-    sActive = sEvery <= WINDOW;
+    sActive = sEvery <= WINDOW && sFrom <= WINDOW;
     fprintf(stderr, "[gpu] debug rasteriser: dumping every %d frames to %s\n", sEvery, sDir);
     return &sDumpBackend;
 }

@@ -1,0 +1,13 @@
+MKDD_COURSE=<id> test hook: replace every loaded course (port_course_override in sdk/autopilot.cpp)
+
+--- a/src/Osako/ResMgr.cpp
++++ b/src/Osako/ResMgr.cpp
+@@ -571,7 +571,7 @@
+ 
+     void loadCourseData(ECourseID courseID, CourseOrder courseOrder)
+     {
+-        msCourseID = courseID;
++        msCourseID = (ECourseID)port_course_override(courseID);
+         msCourseOrder = courseOrder;
+ 
+         // Bug: compares courseOrder with msMountCourseID instead of msMountCourseOrder
