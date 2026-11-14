@@ -11,6 +11,7 @@ node. Independent of `ninja` and the matching build.
 | `include/` | force-included `mkdd_port.h` (intrinsics, `port_be16/32`), GX FIFO shim |
 | `patches/` | host patch set for decomp files, applied in `series` order |
 | `tools/` | `build.py`, `patches.py`, disc extraction, stub generation |
+| `net/` | online multiplayer: state-sync netcode design (`NETCODE.md`) and remote-kart spike (`netkart.cpp`) |
 | `web/` | page, input, audio, `serve.sh`, headless smoke test |
 
 ## Build and run

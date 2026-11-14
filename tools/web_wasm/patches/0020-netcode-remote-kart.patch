@@ -1,0 +1,30 @@
+Netcode hooks (tools/web_wasm/net/netkart.cpp): port_net_pre_dynamics() before a frame's kart physics feeds remote karts their network inputs; port_net_post_stage1() after collision/pose integration and before DoAccel/camera/display corrects remote karts toward their network state and samples local karts for sending.
+
+--- a/src/Yamamoto/kartCtrl.cpp
++++ b/src/Yamamoto/kartCtrl.cpp
+@@ -9,6 +9,9 @@
+ #include "JSystem/JAudio/JASFakeMatch2.h"
+ 
+ KartCtrl *KartCtrl::mCtrl;
++
++extern "C" void port_net_pre_dynamics(void);
++extern "C" void port_net_post_stage1(void);
+ 
+ // why is GetKartCtrl() used here sometimes?
+ 
+@@ -223,6 +226,7 @@
+     if (mBitfield & 1)
+         return;
+ 
++    port_net_pre_dynamics();
+     RivalKart::setRankAry();
+ 
+     for (i = 0; i < kartCount; i++)
+@@ -343,6 +347,7 @@
+     if (mBitfield & 1)
+         return;
+ 
++    port_net_post_stage1();
+     for (i = 0; i < kartCount; i++)
+     {
+         if (getKartBody(i)->getChecker()->CheckIndication())
