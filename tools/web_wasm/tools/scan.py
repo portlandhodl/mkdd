@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Syntax-check decomp sources with clang for wasm32 and summarize the errors.
+"""Syntax-check the patched decomp sources (build/web_wasm/tree) with clang for
+wasm32 and summarize the errors.
 
     python tools/web_wasm/tools/scan.py [--filter SUBSTR] [--top N] [--files]
 """
 import argparse, collections, concurrent.futures as cf, glob, os, re, subprocess
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import patches
+
+ROOT = patches.ROOT
+TREE = patches.TREE  # decomp tree + tools/web_wasm/patches (patches.materialise)
 FLAGS = [
     "--target=wasm32-unknown-emscripten", "-fsyntax-only", "-nostdinc", "-nostdinc++",
     "-std=gnu++03", "-fsigned-char", "-w", "-ferror-limit=0", "-fno-exceptions", "-fno-rtti",
-    "-I", "tools/web_wasm/include", "-I", "include", "-I", "libs/PowerPC_EABI_Support/include",
+    "-I", "tools/web_wasm/include", "-I", "build/web_wasm/tree/include", "-I", "build/web_wasm/tree/libs/PowerPC_EABI_Support/include",
     "-I", "build/MarioClub_us/include",
     "-DREGION_US=1", "-DDEBUG=1", "-DHIO_SCREENSHOT=1", "-DBUILD_VERSION=0", "-DVERSION_MarioClub_us",
     "-DMKDD_PORT=1", "-include", "tools/web_wasm/include/mkdd_port.h",
@@ -19,7 +23,7 @@ FLAGS = [
 def sources():
     out = []
     for d in ("src", "libs/JSystem"):
-        out += glob.glob(os.path.join(ROOT, d, "**", "*.cpp"), recursive=True)
+        out += glob.glob(os.path.join(TREE, d, "**", "*.cpp"), recursive=True)
     return sorted(out)
 
 def check(path):
@@ -38,6 +42,7 @@ def main():
     ap.add_argument("--top", type=int, default=40)
     ap.add_argument("--files", action="store_true")
     a = ap.parse_args()
+    patches.materialise()
     files = [f for f in sources() if a.filter in f]
     kinds, where, per_file = collections.Counter(), collections.Counter(), {}
     with cf.ThreadPoolExecutor(os.cpu_count()) as ex:

@@ -6,6 +6,8 @@ Reads declarations from tools/web_wasm/sdk/sdk_all.h via clang's JSON AST so the
 signatures match the callers. Symbols already defined in tools/web_wasm/sdk, tools/web_wasm/gpu, libs/dolphin/gd or libs/dolphin/gx are skipped.
 """
 import json, os, re, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import patches  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 FLAGS = open(os.path.join(ROOT, "tools/web_wasm/tools/flags.txt")).read().split()
@@ -43,9 +45,10 @@ def decl_param(t, name):
     return f"{t} {name}"
 
 def main():
+    patches.materialise()
     want = [l.strip() for l in open(sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build/web_wasm/undefined.txt"))]
     have = set()
-    for d in ("tools/web_wasm/sdk", "tools/web_wasm/gpu", "libs/dolphin/gd", "libs/dolphin/gx"):
+    for d in ("tools/web_wasm/sdk", "tools/web_wasm/gpu", "build/web_wasm/tree/libs/dolphin/gd", "build/web_wasm/tree/libs/dolphin/gx"):
         for f in os.listdir(os.path.join(ROOT, d)):
             if f.endswith((".c", ".cpp")) and f != "stubs_auto.c":
                 src = open(os.path.join(ROOT, d, f)).read()

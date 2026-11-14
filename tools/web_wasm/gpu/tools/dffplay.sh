@@ -6,7 +6,8 @@ ROOT=$(cd "$(dirname "$0")/../../../.." && pwd)
 OUT="$ROOT/build/web_wasm/dffplay${DFFPLAY_SUFFIX:-}"
 mkdir -p "$OUT/obj"
 cd "$ROOT"
-CFLAGS="-O2 -g1 -fsigned-char -fshort-wchar -w -DMKDD_PORT=1 -DREGION_US=1 -I include -I tools/web_wasm/include -I tools/web_wasm/sdk -I tools/web_wasm/gpu"
+python3 tools/web_wasm/tools/patches.py apply >/dev/null  # patched decomp headers
+CFLAGS="-O2 -g1 -fsigned-char -fshort-wchar -w -DMKDD_PORT=1 -DREGION_US=1 -I build/web_wasm/tree/include -I tools/web_wasm/include -I tools/web_wasm/sdk -I tools/web_wasm/gpu"
 for f in fifo gpu_vtx gpu_fifolog gpu_dump; do
   emcc -std=gnu11 $CFLAGS -Wno-typedef-redefinition -fno-strict-aliasing -c tools/web_wasm/gpu/$f.c -o "$OUT/obj/$f.o"
 done

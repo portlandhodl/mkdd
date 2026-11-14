@@ -1,25 +1,34 @@
 #!/usr/bin/env python3
 """Build the WebAssembly port: game + JSystem (decomp sources) and the SDK layer.
 
+Decomp sources are compiled from build/web_wasm/tree, the decomp tree with
+tools/web_wasm/patches applied (see patches.py); it is refreshed first.
+
     source ~/emsdk/emsdk_env.sh
     python tools/web_wasm/tools/build.py [--target node|web] [--jobs N] [-O2]
 Outputs build/web_wasm/<target>/mkdd.{js,wasm}. Incremental via clang depfiles.
 """
 import argparse, concurrent.futures as cf, glob, os, shutil, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import patches  # noqa: E402
 import scan  # noqa: E402
 
 ROOT = scan.ROOT
+TREE = scan.TREE
+# __FILE__ (assert messages) keeps naming the decomp path, not the patched copy
+REWRITE = os.path.join(ROOT, "build", "web_wasm", "rewrite")
+PREFIX_MAP = [f"-fmacro-prefix-map={TREE}/={ROOT}/", f"-fmacro-prefix-map={REWRITE}/={ROOT}/",
+              f"-fmacro-prefix-map={os.path.relpath(TREE, ROOT)}/="]
 EMSDK = os.environ.get("EMSDK", os.path.expanduser("~/emsdk"))
 CLANGXX = os.path.join(EMSDK, "upstream", "bin", "clang++")
 EMCC = shutil.which("emcc") or os.path.join(EMSDK, "upstream", "emscripten", "emcc")
 EMXX = shutil.which("em++") or os.path.join(EMSDK, "upstream", "emscripten", "em++")
 
-SDK_FLAGS = ["-std=gnu11", "-fsigned-char", "-fshort-wchar", "-Wno-typedef-redefinition", "-I", "include", "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk", "-I", "tools/web_wasm/gpu",
+SDK_FLAGS = ["-std=gnu11", "-fsigned-char", "-fshort-wchar", "-Wno-typedef-redefinition", "-I", "build/web_wasm/tree/include", "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk", "-I", "tools/web_wasm/gpu",
              "-DMKDD_PORT=1", "-DREGION_US=1", "-Wno-incompatible-library-redeclaration",
              "-fno-strict-aliasing"]
 SDK_CXX_FLAGS = ["-std=gnu++03", "-fsigned-char", "-fshort-wchar", "-fno-exceptions", "-fno-rtti", "-nostdinc", "-nostdinc++",
-                 "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk", "-I", "include", "-I", "libs/PowerPC_EABI_Support/include",
+                 "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk", "-I", "build/web_wasm/tree/include", "-I", "build/web_wasm/tree/libs/PowerPC_EABI_Support/include",
                  "-I", "build/MarioClub_us/include", "-DREGION_US=1", "-DDEBUG=1", "-DMKDD_PORT=1",
                  "-include", "tools/web_wasm/include/mkdd_port.h", "-fms-extensions", "-fms-compatibility",
                  "-fdelayed-template-parsing", "-Wno-error=extraneous-template-head", "-w"]
@@ -74,7 +83,7 @@ def stale(src, obj, dep):
     return any(not os.path.exists(os.path.join(ROOT, d)) or os.path.getmtime(os.path.join(ROOT, d)) > t for d in deps)
 
 def job(kind, src, outdir, opt):
-    rel = os.path.relpath(src, ROOT)
+    rel = os.path.relpath(src, TREE if src.startswith(TREE + os.sep) else ROOT)
     orig_src = src
     obj = os.path.join(outdir, rel + ".o")
     dep = obj + ".d"
@@ -84,13 +93,14 @@ def job(kind, src, outdir, opt):
         cmd = [CLANGXX, *flags, "-fshort-wchar", "-fno-strict-return", opt, "-fno-delete-null-pointer-checks", "-fno-strict-aliasing", "-g1"]
         text, changed = rewrite_long_chars(open(src, encoding="latin-1").read())
         if changed:
-            rw = os.path.join(ROOT, "build", "web_wasm", "rewrite", rel)
+            rw = os.path.join(REWRITE, rel)
             os.makedirs(os.path.dirname(rw), exist_ok=True)
-            open(rw, "w", encoding="latin-1").write(text)
+            if not os.path.exists(rw) or open(rw, encoding="latin-1").read() != text:
+                open(rw, "w", encoding="latin-1").write(text)
             cmd += ["-iquote", os.path.dirname(src)]
             src = rw
     elif kind == "gpucxx":
-        cmd = [EMXX, "-std=c++17", "-fno-exceptions", "-fno-rtti", "-I", "include", "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk",
+        cmd = [EMXX, "-std=c++17", "-fno-exceptions", "-fno-rtti", "-I", "build/web_wasm/tree/include", "-I", "tools/web_wasm/include", "-I", "tools/web_wasm/sdk",
                "-I", "tools/web_wasm/gpu", "-DMKDD_PORT=1", "-fshort-wchar", opt, "-g1"]
     elif kind == "conv":
         cmd = [EMXX, "-std=c++17", opt, "-g1"]
@@ -100,7 +110,7 @@ def job(kind, src, outdir, opt):
         cmd = [CLANGXX, "--target=wasm32-unknown-emscripten", *SDK_CXX_FLAGS, opt, "-g1"]
     else:
         cmd = [EMCC, *SDK_FLAGS, opt, "-g1"]
-    full = [*cmd, "-MMD", "-MF", dep, "-c", "-o", obj, src]
+    full = [*cmd, *PREFIX_MAP, "-MMD", "-MF", dep, "-c", "-o", obj, src]
     cmdfile = obj + ".cmd"
     if not stale(orig_src, obj, dep) and os.path.exists(cmdfile) and open(cmdfile).read() == " ".join(full):
         return rel, obj, None
@@ -128,13 +138,17 @@ def main():
     ap.add_argument("-O", dest="opt", default="2")
     ap.add_argument("--tag", default="", help="separate object/output directories (parallel builds)")
     a = ap.parse_args()
+    try:
+        patches.materialise()
+    except patches.PatchError as e:
+        sys.exit(f"patch set: {e}")
     opt = f"-O{a.opt}"
     suffix = f"-{a.tag}" if a.tag else ""
     outdir = os.path.join(ROOT, "build", "web_wasm", f"obj-O{a.opt}{suffix}")
     jobs = [("game", s) for s in scan.sources()]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/sdk/*.c")))]
-    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gd/*.c")))]
-    jobs += [("gx", s) for s in sorted(glob.glob(os.path.join(ROOT, "libs/dolphin/gx/*.c")))]
+    jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(TREE, "libs/dolphin/gd/*.c")))]
+    jobs += [("gx", s) for s in sorted(glob.glob(os.path.join(TREE, "libs/dolphin/gx/*.c")))]
     jobs += [("sdkcxx", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/sdk/*.cpp")))]
     jobs += [("conv", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/conv/*.cpp"))) if not s.endswith("cli.cpp")]
     jobs += [("sdk", s) for s in sorted(glob.glob(os.path.join(ROOT, "tools/web_wasm/gpu/*.c")))]

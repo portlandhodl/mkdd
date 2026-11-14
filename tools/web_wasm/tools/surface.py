@@ -24,6 +24,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--jobs", type=int, default=os.cpu_count())
     a = ap.parse_args()
+    scan.patches.materialise()
     objs, failed = [], []
     with cf.ThreadPoolExecutor(a.jobs) as ex:
         for rel, out in ex.map(compile_one, scan.sources()):
